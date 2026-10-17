@@ -12,6 +12,8 @@ import { createTask, type NewTask } from '../lib/tasks.ts';
 import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
+import { chapterGroups } from '../lib/board.ts';
+import { Icon } from './Icon.tsx';
 import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
@@ -244,18 +246,20 @@ export function App() {
     setSettings(saveSettings({ ...settings, token: '' }));
   };
 
-  // The writing screen fills the page: no menu or sync bar.
-  if (route.name === 'write' && view) {
+  // The writing screen fills the page with its own bars: no menu or sync bar.
+  if (route.name === 'write' && view && schema) {
     const note = view.notes[route.path];
     if (note) {
       const book = view.books.find((b) => route.path.startsWith(b.folder + '/')) || null;
       const at = book ? book.scenes.indexOf(route.path) : -1;
       const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
+      const groups = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)) : [];
       return (
-        <Editor key={route.path} source={source} note={note} next={next}
+        <Editor key={route.path} source={source} schema={schema} note={note} next={next}
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
-          bookFolder={book ? book.folder : null}
-          backTo={href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
+          book={book ? { title: book.title, folder: book.folder, groups } : null}
+          onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
+          backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
   }
@@ -285,53 +289,49 @@ export function App() {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} onMove={source.write ? onMove : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
-      body = <><BoardNav schema={schema} book={book} current={boardKey} />{screen}</>;
+      body = screen;
     }
   } else {
     body = <BookList index={view} />;
   }
 
-  // The Ideas tab opens the book on screen, or else the active book.
-  const ideasBook = view
+  // The top bar shows the boards of the book on screen, or else of the active book.
+  const navBook = view
     ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' ? view.books.find((b) => b.folder === route.folder) : null) ||
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) || activeBook(view)
     : null;
+  const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
+    : route.name === 'book' || (route.name === 'home' && navBook) ? 'chapter-grid' : '';
+
+  // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
+  const waitingText = [
+    queue.length ? (online ? 'Saving ' + (queue.length === 1 ? '1 choice' : queue.length + ' choices') + '.' : (queue.length === 1 ? '1 choice is' : queue.length + ' choices are') + ' saved on this device and go up when you are back online.') : '',
+    drafts ? (drafts === 1 ? 'Writing in 1 scene is' : 'Writing in ' + drafts + ' scenes is') + ' saved on this device' + (online ? '. Press to send it to the vault.' : ' and goes up when you are back online.') : ''
+  ].filter(Boolean).join(' ');
+  const syncLine = syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '. Press to sync again.' : 'Not synced yet.';
+  const chip = syncing ? 'Syncing…' : !online ? 'Offline' : queue.length ? 'Saving ' + queue.length + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
   return (
     <>
       <header class="top">
         <a class="brand" href="#/">Story Forge</a>
-        <nav>
-          <a href={href.books()} aria-current={route.name === 'books' ? 'page' : undefined}>Books</a>
-          {ideasBook && <a href={href.ideas(ideasBook.folder)} aria-current={route.name === 'ideas' ? 'page' : undefined}>Ideas</a>}
-          <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined}>To-do</a>
-          <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined}>Settings</a>
+        {navBook && schema && <BoardNav schema={schema} book={navBook} current={boardKey} />}
+        <nav class="top-right" aria-label="App">
+          {source instanceof DemoSource && <a class="demo-chip" href={href.settings()} title="This is the demo vault. Add your key in Settings to see your own books."><Icon name="demo" size={18} /><span class="bar-label">Demo</span></a>}
+          <button type="button" class={'sync-chip' + (!online || drafts ? ' warn' : '')} onClick={runSync} disabled={syncing || !online} title={syncLine + (waitingText ? ' ' + waitingText : '')}>
+            <Icon name={snap && !syncing && online && !queue.length && !drafts ? 'check' : 'sync'} size={18} /><span class="bar-label">{chip}</span>
+          </button>
+          <a href={href.books()} aria-current={route.name === 'books' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
+          <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
+          <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
         </nav>
       </header>
-      <div class="banner" role="status">
-        {source instanceof DemoSource && (
-          <p class="demo">This is the demo vault. <a href={href.settings()}>Add your token in Settings</a> to see your own books.</p>
-        )}
-        <p class="sync">
-          <span>
-            {syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '.' : 'Not synced yet.'}
-          </span>
-          <button type="button" onClick={runSync} disabled={syncing || !online}>Sync</button>
-        </p>
-        {queue.length > 0 && (
-          <p class="waiting">
-            {online
-              ? 'Saving ' + (queue.length === 1 ? '1 choice' : queue.length + ' choices') + '…'
-              : (queue.length === 1 ? '1 choice is' : queue.length + ' choices are') + ' saved on this device and go up when you are back online.'}
-          </p>
-        )}
-        {drafts > 0 && (
-          <p class="waiting">
-            {(drafts === 1 ? 'Writing in 1 scene is' : 'Writing in ' + drafts + ' scenes is') + ' saved on this device' + (online ? '. Press Sync to send it to the vault.' : ' and goes up when you are back online.')}
-          </p>
-        )}
-        {error && <p class="error">{error}</p>}
-      </div>
+      {(error || (!online && (queue.length > 0 || drafts > 0))) && (
+        <div class="banner" role="status">
+          {!online && waitingText && <p class="waiting">{waitingText}</p>}
+          {error && <p class="error">{error}</p>}
+        </div>
+      )}
       <main>{body}</main>
     </>
   );

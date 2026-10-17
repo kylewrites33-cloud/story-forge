@@ -11,6 +11,7 @@ import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts'
 import type { Choice } from '../lib/write-queue.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
+import { Icon } from './Icon.tsx';
 
 function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -84,6 +85,7 @@ type OnDecide = (path: string, decision: Decision, reason: string, fields?: Reco
 function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren }) {
   const [asking, setAsking] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [reason, setReason] = useState('');
   const accepted = !isEmptyValue(note.data.accepted);
   const send = (d: Decision) => { onDecide(note.path, d, reason); setReason(''); setAsking(false); };
@@ -107,13 +109,21 @@ function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Sche
           </div>
         </>
       ) : (
-        <div class="buttons">
-          {handle}
-          {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
-          <button type="button" onClick={() => setAsking(true)}>Needs work</button>
-          <a class="button" href={href.write(note.path)}>Write</a>
-          <button type="button" onClick={() => setEditing(true)}>Edit card</button>
-        </div>
+        <>
+          <div class="buttons card-row">
+            {handle}
+            {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
+            <a class="button" href={href.write(note.path)}><Icon name="pen" size={18} />Write</a>
+            <button type="button" class="icon-button" aria-label="More for this card" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon name="more" /></button>
+          </div>
+          {menu && (
+            <div class="card-menu" role="menu">
+              <button type="button" role="menuitem" onClick={() => { setMenu(false); setAsking(true); }}>Needs work</button>
+              <button type="button" role="menuitem" onClick={() => { setMenu(false); setEditing(true); }}>Edit card</button>
+              <a class="button" role="menuitem" href={href.note(note.path)}>Open the note</a>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -130,7 +140,7 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
   const accepted = !isEmptyValue(note.data.accepted);
   return (
     <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
-      <a class="card" href={href.note(note.path)}>
+      <a class="card" href={onDecide ? href.write(note.path) : href.note(note.path)}>
         <span class="card-top">
           <span class="card-id">{String(note.data.id || '')}{note.data.kind === 'test' ? ' · test drive' : ''}</span>
           <span class="pills">
@@ -260,7 +270,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
   const accepted = scenes.filter((s) => !isEmptyValue(s.data.accepted)).length;
 
   const handle = (path: string) => onMove && (
-    <button type="button" class="move-handle" aria-label="Move this card: hold and drag"
+    <button type="button" class="move-handle icon-button" title="Move" aria-label="Move this card: hold and drag"
       onPointerDown={(e) => {
         e.preventDefault();
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -288,7 +298,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
         onMove(book, d.path, g.num, g.title, d.at.before);
       }}
       onPointerCancel={() => put(null)}>
-      Move
+      <Icon name="move" />
     </button>
   );
   const shiftOf = (path: string) => (drag && drag.moved && drag.path === path ? [drag.x - drag.startX, drag.y + scrollY - drag.startY - drag.startScroll] : null);
@@ -306,7 +316,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
       <IdeasLink index={index} book={book} />
       {onMove && scenes.length > 1 && (
         <p class={'meta move-hint' + (hint ? ' shown' : '')}>
-          {hint ? 'Hold Move down and drag the card to where it goes, then let go.' : 'To change the order, hold a card\'s Move button and drag the card.'}
+          {hint ? 'Hold the dotted Move button down and drag the card to where it goes, then let go.' : 'Press a card to write it. To change the order, hold a card\'s dotted Move button and drag the card.'}
         </p>
       )}
       {!scenes.length && <p class="empty">This book has no scene notes yet. They appear here once they are in the book's Scenes folder.</p>}

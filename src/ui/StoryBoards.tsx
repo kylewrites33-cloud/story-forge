@@ -6,24 +6,30 @@ import { propDef } from '../lib/schema.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
 import { href } from './route.ts';
+import { Icon } from './Icon.tsx';
 
-/** The book's boards as a row of links, in the order the Story Juice chain uses them. */
+export interface BoardLink { key: string; title: string; to: string; icon: string }
+
+/** The book's boards, in the order the Story Juice chain uses them; boards the schema lacks are left out. */
+export function boardLinks(schema: Schema, folder: string): BoardLink[] {
+  return [
+    { key: 'chapter-grid', title: 'Chapter Grid', to: href.book(folder), icon: 'grid' },
+    { key: 'ideas', title: 'Ideas', to: href.ideas(folder), icon: 'idea' },
+    { key: 'story-juice', title: 'Story Juice', to: href.board('story-juice', folder), icon: 'juice' },
+    { key: 'characters', title: 'Characters', to: href.board('characters', folder), icon: 'people' },
+    { key: 'conflict-matrix', title: 'Conflict Matrix', to: href.board('conflict-matrix', folder), icon: 'conflict' },
+    { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', folder), icon: 'beats' },
+    { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' }
+  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || schema.boards[l.key])
+    .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
+}
+
+/** The book's boards as a row of links in the top bar. */
 export function BoardNav({ schema, book, current }: { schema: Schema; book: BookEntry; current: string }) {
-  const links: { key: string; title: string; to: string }[] = [
-    { key: 'chapter-grid', title: 'Chapter Grid', to: href.book(book.folder) },
-    { key: 'ideas', title: 'Ideas', to: href.ideas(book.folder) },
-    { key: 'story-juice', title: 'Story Juice', to: href.board('story-juice', book.folder) },
-    { key: 'characters', title: 'Characters', to: href.board('characters', book.folder) },
-    { key: 'conflict-matrix', title: 'Conflict Matrix', to: href.board('conflict-matrix', book.folder) },
-    { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', book.folder) },
-    { key: 'market', title: 'Market', to: href.board('market', book.folder) }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || schema.boards[l.key]);
   return (
     <nav class="board-nav" aria-label="Boards">
-      {links.map((l) => (
-        <a key={l.key} href={l.to} aria-current={l.key === current ? 'page' : undefined}>
-          {(schema.boards[l.key] && schema.boards[l.key].title) || l.title}
-        </a>
+      {boardLinks(schema, book.folder).map((l) => (
+        <a key={l.key} href={l.to} aria-current={l.key === current ? 'page' : undefined}><Icon name={l.icon} size={18} />{l.title}</a>
       ))}
     </nav>
   );
