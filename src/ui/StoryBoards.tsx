@@ -14,7 +14,8 @@ export function BoardNav({ schema, book, current }: { schema: Schema; book: Book
     { key: 'story-juice', title: 'Story Juice', to: href.board('story-juice', book.folder) },
     { key: 'characters', title: 'Characters', to: href.board('characters', book.folder) },
     { key: 'conflict-matrix', title: 'Conflict Matrix', to: href.board('conflict-matrix', book.folder) },
-    { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', book.folder) }
+    { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', book.folder) },
+    { key: 'market', title: 'Market', to: href.board('market', book.folder) }
   ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || schema.boards[l.key]);
   return (
     <nav class="board-nav" aria-label="Boards">
@@ -27,7 +28,7 @@ export function BoardNav({ schema, book, current }: { schema: Schema; book: Book
   );
 }
 
-const INTRO: Record<Exclude<StoryBoard, 'characters'>, { heading: string; intro: string; empty: string }> = {
+const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
   'story-juice': {
     heading: 'Story Juice',
     intro: 'The Story Juice chain for this book: premise, big issue, opinions, Core Drives and Core Needs, theme. Keep tells the team to build on it. Later puts it aside. Drop turns it down, and the note stays in the vault.',
@@ -48,7 +49,11 @@ const INTRO: Record<Exclude<StoryBoard, 'characters'>, { heading: string; intro:
 export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard }) {
   const { schema, index, book, board } = props;
   if (board === 'characters') return <CharactersBoard schema={schema} index={index} book={book} />;
-  const t = INTRO[board];
+  const t = board === 'market' ? {
+    heading: 'Market',
+    intro: 'The market case, comps, keyword sets and titles for the ' + book.seriesName + ' series. Every book in the series shares them. Keep tells the team to build on it. Later puts it aside. Drop turns it down, and the note stays in the vault. Money figures are Publisher Rocket estimates.',
+    empty: 'No market notes for this series yet. They appear here when the Market Analyst files them in the series\' Market folder.'
+  } : INTRO[board];
   return <ProposalBoard {...props} boardKey={board} heading={t.heading} intro={t.intro} emptyText={t.empty} notes={boardNotes(index, book, board)} />;
 }
 

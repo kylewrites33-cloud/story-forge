@@ -3,10 +3,11 @@
 // value in the schema shows up as a new group without an app change.
 import { idNumber, linkName, toNumber } from './links.ts';
 import { enumValues, propDef } from './schema.ts';
+import { MARKET_TYPES } from './vault-index.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from './types.ts';
 
 /** The boards the app has screens for, beyond the Chapter Grid and the Ideas board. */
-export const STORY_BOARDS = ['story-juice', 'beat-sheet', 'characters', 'conflict-matrix'] as const;
+export const STORY_BOARDS = ['story-juice', 'beat-sheet', 'characters', 'conflict-matrix', 'market'] as const;
 export type StoryBoard = (typeof STORY_BOARDS)[number];
 
 /** Idea kinds that belong to the Story Juice chain, in the chain's order. Other kinds stay on the Ideas board only. */
@@ -50,7 +51,8 @@ export function groupNotes(notes: NoteRecord[], by: string, order: string[]): Gr
 /** A group's heading: "big-issue" -> "Big issue"; no value -> the given fallback. */
 const LABELS: Record<string, string> = {
   'big-issue': 'Big issue', opinion: 'Opinions', character: 'Characters', 'story-juice': 'Story Juice', 'save-the-cat': 'Save the Cat',
-  'serial-chapter-model': 'Serial Chapter Model', 'three-act': 'Three acts', 'extra-personal': 'Extra-personal'
+  'serial-chapter-model': 'Serial Chapter Model', 'three-act': 'Three acts', 'extra-personal': 'Extra-personal',
+  'market-thesis': 'Market case', comp: 'Comps', 'keyword-set': 'Keyword sets', 'title-candidate': 'Titles'
 };
 
 export function groupLabel(key: string, fallback = 'Not set'): string {
@@ -66,6 +68,7 @@ function notesOf(index: VaultIndex, paths: string[] | undefined): NoteRecord[] {
 
 /** The group order a board uses: its groupBy property's enum, with fixed orders where the chain needs them. */
 export function groupOrder(schema: Schema, type: string, by: string): string[] {
+  if (by === 'type') return MARKET_TYPES;
   if (type === 'idea' && by === 'kind') return STORY_JUICE_KINDS;
   if (type === 'beat' && by === 'framework') return FRAMEWORK_ORDER;
   return enumValues(schema, propDef(schema, type, by));
@@ -76,6 +79,10 @@ export function boardNotes(index: VaultIndex, book: BookEntry, board: StoryBoard
   if (board === 'story-juice') return notesOf(index, book.ideas).filter((n) => STORY_JUICE_KINDS.indexOf(String(n.data.kind || '')) >= 0);
   if (board === 'beat-sheet') return notesOf(index, book.beats);
   if (board === 'conflict-matrix') return notesOf(index, book.conflicts);
+  if (board === 'market') {
+    const series = index.series.find((s) => s.folder === book.seriesFolder);
+    return notesOf(index, series && series.market);
+  }
   return castFor(index, book).map((c) => c.note);
 }
 
