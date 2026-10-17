@@ -13,7 +13,8 @@
     "computed": "filled by the tool, never by hand",
     "extraProperties": "a type with extraProperties true accepts properties it does not list (System/Config.md uses this for its settings)",
     "extends": "a note with an extends property is a book delta of a series note and holds only what differs",
-    "secrets": "twists and hidden facts go in a > [!secret] callout in the body; packets withhold them unless a scene's reveal list names the note"
+    "secrets": "twists and hidden facts go in a > [!secret] callout in the body; packets withhold them unless a scene's reveal list names the note. A callout titled with a scene (> [!secret] Book 1, S-039) is revealed by that scene and known in every packet after it",
+    "first_seen": "where a bible note first appears on the page, as Book 1, S-005; packets for earlier scenes leave the note out"
   },
   "statuses": {
     "proposal": ["inbox", "keep", "regenerate", "discard", "done"],
@@ -311,6 +312,7 @@
         "quirks": { "type": "list", "items": { "type": "string" } },
         "default_reaction": { "type": "string" },
         "relationships": { "type": "list", "items": { "type": "link", "to": "character" } },
+        "first_seen": { "type": "string" },
         "extends": { "type": "link", "to": "character" },
         "starting_state": { "type": "string" },
         "want_this_book": { "type": "string" },
@@ -360,7 +362,8 @@
         "cost": { "type": "string" },
         "limits": { "type": "string" },
         "summary": { "type": "string" },
-        "extends": { "type": "link", "to": "lore" }
+        "extends": { "type": "link", "to": "lore" },
+        "first_seen": { "type": "string" }
       },
       "body": "The full rule and its consequences. Secrets go in a > [!secret] callout."
     },
@@ -380,7 +383,8 @@
         "kind": { "enum": ["weapon", "tool", "artefact", "consumable", "currency", "other"] },
         "owner": { "type": "link", "to": "character" },
         "summary": { "type": "string" },
-        "extends": { "type": "link", "to": "item" }
+        "extends": { "type": "link", "to": "item" },
+        "first_seen": { "type": "string" }
       },
       "body": "Description, stats, history. Secrets go in a > [!secret] callout."
     },
@@ -400,6 +404,7 @@
         "kind": { "enum": ["main", "subplot", "romance", "mystery", "b-story", "arc"] },
         "question": { "type": "string" },
         "owner": { "type": "link", "to": "character" },
+        "first_seen": { "type": "string" },
         "extends": { "type": "link", "to": "thread" },
         "color": { "type": "string" }
       },
@@ -561,7 +566,7 @@
         "type": { "const": "session" },
         "title": { "type": "string" },
         "date": { "type": "datetime" },
-        "protocol": { "enum": ["room", "pitch", "develop", "outline", "draft", "notes", "revise", "table-read", "study", "reflect", "consolidate", "market", "conversation", "other"] },
+        "protocol": { "enum": ["room", "pitch", "develop", "outline", "draft", "notes", "revise", "table-read", "study", "reflect", "consolidate", "market", "breakdown", "import", "conversation", "other"] },
         "topic": { "type": "string" },
         "agent": { "type": "string" },
         "participants": { "type": "list", "items": { "type": "string" } },
@@ -689,7 +694,12 @@
         "title": { "type": "string" },
         "shelf": { "type": "string" },
         "framework": { "type": "string" },
-        "sources": { "type": "list", "items": { "type": "string" } }
+        "sources": { "type": "list", "items": { "type": "string" } },
+        "topic": { "type": "string" },
+        "researched": { "type": "date" },
+        "confidence": { "enum": ["high", "medium", "low", "unverified"] },
+        "author_agent": { "type": "string" },
+        "status": { "enum": "canon" }
       },
       "body": "The craft knowledge, with the framework or source named."
     },
