@@ -175,8 +175,8 @@ export function App() {
     }
   }, [source, runSync]);
 
-  const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
-    setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
+  const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
+    setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
   }, [setQueue, runFlush]);
 

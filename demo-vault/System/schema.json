@@ -16,7 +16,8 @@
     "secrets": "twists and hidden facts go in a > [!secret] callout in the body; packets withhold them unless a scene's reveal list names the note. A callout titled with a scene (> [!secret] Book 1, S-039) is revealed by that scene and known in every packet after it",
     "first_seen": "where a bible note first appears on the page, as Book 1, S-005; packets for earlier scenes leave the note out",
     "later": "an inbox idea tagged later is one Kyle put aside on the Ideas board to come back to; its status stays inbox. Keep and drop on the board set status keep or discard, the decided time and any reason in decision_note; nothing is moved or deleted",
-    "accepted": "Kyle accepts a scene card on the Chapter Grid; the app sets accepted to the time he tapped. Needs work removes accepted and puts his reason in decision_note. Beats and conflicts are kept or dropped on their boards the way ideas are, and market notes (market case, comps, keyword sets, titles) on the Market board"
+    "accepted": "Kyle accepts a scene card on the Chapter Grid; the app sets accepted to the time he tapped. Needs work removes accepted and puts his reason in decision_note. Beats and conflicts are kept or dropped on their boards the way ideas are, and market notes (market case, comps, keyword sets, titles) on the Market board",
+    "regenerate": "Rewrite on a board sets a proposal's status to regenerate, the decided time, and what Kyle wants changed in decision_note. The agent that owns the note rewrites it from that note and sets it back to inbox"
   },
   "statuses": {
     "proposal": ["inbox", "keep", "regenerate", "discard", "done"],

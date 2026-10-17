@@ -4,7 +4,8 @@ import { chapterGroups, chapterHeading } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
-import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
+import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
+import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
@@ -77,11 +78,12 @@ function StatusPill({ value }: { value: string }) {
   return <span class={'pill pill-' + value.replace(/[^a-z-]/gi, '')}>{value}</span>;
 }
 
-type OnDecide = (path: string, decision: Decision, reason: string) => void;
+type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 /** Accept a scene card, or say it needs work and why. The card's status (planned, drafted) does not change. */
-function CardActions({ note, waiting, onDecide, handle }: { note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren }) {
+function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren }) {
   const [asking, setAsking] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [reason, setReason] = useState('');
   const accepted = !isEmptyValue(note.data.accepted);
   const send = (d: Decision) => { onDecide(note.path, d, reason); setReason(''); setAsking(false); };
@@ -90,7 +92,10 @@ function CardActions({ note, waiting, onDecide, handle }: { note: NoteRecord; wa
     <div class="card-actions">
       {waiting && <p class={'pill' + (waiting.error ? ' pill-error' : '')}>{waiting.error ? 'Not saved: ' + waiting.error : 'Saving'}</p>}
       {!accepted && !isEmptyValue(note.data.decision_note) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
-      {asking ? (
+      {editing ? (
+        <EditFields schema={schema} note={note} fields={editableFields(schema, note.type)} onClose={() => setEditing(false)}
+          onSave={(f) => onDecide(note.path, 'edit', '', f)} />
+      ) : asking ? (
         <>
           <label class="reason">
             What should change?
@@ -107,6 +112,7 @@ function CardActions({ note, waiting, onDecide, handle }: { note: NoteRecord; wa
           {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
           <button type="button" onClick={() => setAsking(true)}>Needs work</button>
           <a class="button" href={href.write(note.path)}>Write</a>
+          <button type="button" onClick={() => setEditing(true)}>Edit card</button>
         </div>
       )}
     </div>
@@ -146,7 +152,7 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
         {words && <span class="card-words">{words}</span>}
         {note.error && <span class="card-error">Frontmatter problem: {note.error}</span>}
       </a>
-      {onDecide && <CardActions note={note} waiting={waiting} onDecide={onDecide} handle={handle} />}
+      {onDecide && <CardActions schema={schema} note={note} waiting={waiting} onDecide={onDecide} handle={handle} />}
     </li>
   );
 }

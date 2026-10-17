@@ -7,7 +7,7 @@ import type { NoteRecord } from './types.ts';
 
 /** What Kyle can do to a proposal. "inbox" puts a decided or later one back in the pile to decide.
  * "accept" and "rework" are for scene cards: accept sets the accepted time, rework clears it. */
-export type Decision = 'keep' | 'later' | 'drop' | 'inbox' | 'accept' | 'rework' | 'move';
+export type Decision = 'keep' | 'later' | 'drop' | 'inbox' | 'regenerate' | 'accept' | 'rework' | 'move' | 'edit';
 
 /** Where a scene card was dragged to on the Chapter Grid: its new order, chapter and that chapter's title. */
 export interface Move {
@@ -21,11 +21,12 @@ export interface Move {
 /** The tag that marks an inbox idea Kyle wants to come back to. Its status stays inbox. */
 export const LATER_TAG = 'later';
 
-export type Pile = 'decide' | 'later' | 'kept' | 'dropped' | 'other';
+export type Pile = 'decide' | 'later' | 'rewrite' | 'kept' | 'dropped' | 'other';
 
 export const PILES: { key: Pile; label: string }[] = [
   { key: 'decide', label: 'To decide' },
   { key: 'later', label: 'Later' },
+  { key: 'rewrite', label: 'To rewrite' },
   { key: 'kept', label: 'Kept' },
   { key: 'dropped', label: 'Dropped' },
   { key: 'other', label: 'Other' }
@@ -41,13 +42,14 @@ export function pileOf(data: Record<string, unknown>): Pile {
   const status = String(data.status || 'inbox');
   if (status === 'inbox') return tags(data).indexOf(LATER_TAG) >= 0 ? 'later' : 'decide';
   if (status === 'keep') return 'kept';
+  if (status === 'regenerate') return 'rewrite';
   if (status === 'discard') return 'dropped';
   return 'other';
 }
 
 /** Ideas in ID order, split into piles. */
 export function piles(notes: NoteRecord[]): Record<Pile, NoteRecord[]> {
-  const out: Record<Pile, NoteRecord[]> = { decide: [], later: [], kept: [], dropped: [], other: [] };
+  const out: Record<Pile, NoteRecord[]> = { decide: [], later: [], rewrite: [], kept: [], dropped: [], other: [] };
   notes
     .slice()
     .sort((a, b) => (idNumber(a.data.id) || 0) - (idNumber(b.data.id) || 0) || a.path.localeCompare(b.path))
@@ -78,6 +80,20 @@ export interface Change {
   order?: number;
   chapter?: number | '';
   chapterTitle?: string;
+  /** Kyle's own edits to a card: property values to set, '' to remove the line. */
+  fields?: Record<string, string>;
+}
+
+/** One line per value: a card edit never writes a line break into a property. */
+export function cleanField(v: string): string {
+  return v.replace(/\s+/g, ' ').trim();
+}
+
+/** What an edit sets: only the properties Kyle changed. */
+export function editChange(fields: Record<string, string>): Change {
+  const out: Record<string, string> = {};
+  Object.keys(fields).forEach((k) => { out[k] = cleanField(fields[k]); });
+  return { status: null, tags: null, decided: null, note: null, fields: out };
 }
 
 /** What a move sets. Only order, chapter and chapter_title change; the card's status stays. */
@@ -90,7 +106,7 @@ export function changeFor(data: Record<string, unknown>, decision: Decision, now
   const had = tags(data);
   const without = had.filter((t) => t !== LATER_TAG);
   const note = reason.trim() ? reason.trim().replace(/\s+/g, ' ') : null;
-  if (decision === 'move') return { status: null, tags: null, decided: null, note: null };
+  if (decision === 'move' || decision === 'edit') return { status: null, tags: null, decided: null, note: null };
   if (decision === 'accept') return { status: null, tags: null, decided: null, note, accepted: stamp(now) };
   if (decision === 'rework') return { status: null, tags: null, decided: null, note, accepted: data.accepted == null ? null : '' };
   if (decision === 'later') {
@@ -98,7 +114,8 @@ export function changeFor(data: Record<string, unknown>, decision: Decision, now
   }
   const tagsAfter = without.length === had.length ? null : without;
   if (decision === 'inbox') return { status: 'inbox', tags: tagsAfter, decided: data.decided == null ? null : '', note };
-  return { status: decision === 'keep' ? 'keep' : 'discard', tags: tagsAfter, decided: stamp(now), note };
+  const status = decision === 'keep' ? 'keep' : decision === 'regenerate' ? 'regenerate' : 'discard';
+  return { status, tags: tagsAfter, decided: stamp(now), note };
 }
 
 /** The properties after a change, for showing a choice before GitHub has it. */
@@ -117,6 +134,7 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
     out.chapter = c.chapter;
     if (c.chapterTitle) out.chapter_title = c.chapterTitle; else delete out.chapter_title;
   }
+  if (c.fields) Object.keys(c.fields).forEach((k) => { if (c.fields![k] === '') delete out[k]; else out[k] = c.fields![k]; });
   return out;
 }
 
@@ -160,6 +178,12 @@ export function applyToText(text: string, c: Change): string {
     if (c.chapterTitle) out = Frontmatter.setScalar(out, 'chapter_title', c.chapterTitle);
     else if (/^chapter_title[ \t]*:/m.test(Frontmatter.split(out).yaml || '')) out = setLines(out, 'chapter_title', null);
   }
+  if (c.fields) {
+    Object.keys(c.fields).forEach((k) => {
+      const v = c.fields![k];
+      out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
+    });
+  }
   return out;
 }
 
@@ -175,11 +199,11 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' }
 };
 
-const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', accept: 'accept card', rework: 'card needs work', move: 'move' };
+const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', regenerate: 'rewrite', edit: 'edit', accept: 'accept card', rework: 'card needs work', move: 'move' };
 
 /** The commit message for a decision. It has no Agent trailer: the choice is Kyle's. */
 export function commitMessage(data: Record<string, unknown>, decision: Decision): string {
   const k = KINDS[String(data.type || 'idea')] || KINDS.idea;
   const name = [data.id, data.title].filter(Boolean).join(' ');
-  return k.prefix + ': ' + VERBS[decision] + ' ' + (name || k.noun) + '\n\nChosen on the ' + k.board + ' in the Story Forge app.';
+  return k.prefix + ': ' + VERBS[decision] + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Story Forge app.';
 }

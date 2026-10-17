@@ -1,6 +1,6 @@
 // Kyle's choices on the Ideas board wait here until GitHub has them, so a choice made offline is not lost.
 // The queue lives in this browser's localStorage, one list per source; a newer choice on the same idea replaces the older one.
-import { applyToData, applyToText, changeFor, commitMessage, moveChange, type Change, type Decision, type Move } from './ideas.ts';
+import { applyToData, applyToText, changeFor, commitMessage, editChange, moveChange, type Change, type Decision, type Move } from './ideas.ts';
 import { Frontmatter } from './frontmatter.js';
 import { makeNote, resortScenes } from './vault-index.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
@@ -15,11 +15,15 @@ export interface Choice {
   error?: string;
   /** For a scene card dragged on the Chapter Grid: where it went. */
   move?: Move;
+  /** For a card Kyle edited: the properties he changed. */
+  fields?: Record<string, string>;
 }
 
 /** What a waiting choice does to a note with these properties. */
 export function changeOf(data: Record<string, unknown>, c: Choice): Change {
-  return c.decision === 'move' && c.move ? moveChange(c.move) : changeFor(data, c.decision, new Date(c.at), c.reason);
+  if (c.decision === 'move' && c.move) return moveChange(c.move);
+  if (c.decision === 'edit') return editChange(c.fields || {});
+  return changeFor(data, c.decision, new Date(c.at), c.reason);
 }
 
 const KEY = 'story-forge.queue.';
@@ -44,13 +48,20 @@ export function saveQueue(sourceKey: string, list: Choice[], storage: Storage | 
   }
 }
 
-/** A newer choice replaces an older one on the same note, except that a move and a decision (accept, keep) stand side by side. */
-export function sameSlot(a: Choice, b: Choice): boolean {
-  return a.path === b.path && (a.decision === 'move') === (b.decision === 'move');
+/** Moves, edits and decisions (accept, keep) each have their own slot on a note; a newer choice replaces an older one in its slot. */
+function slot(c: Choice): string {
+  return c.decision === 'move' || c.decision === 'edit' ? c.decision : 'decide';
 }
 
+export function sameSlot(a: Choice, b: Choice): boolean {
+  return a.path === b.path && slot(a) === slot(b);
+}
+
+/** Add a choice. A second edit to a note that has not saved yet joins the first, so neither is lost. */
 export function enqueue(list: Choice[], c: Choice): Choice[] {
-  return list.filter((x) => !sameSlot(x, c)).concat(c);
+  const prev = c.decision === 'edit' ? list.find((x) => sameSlot(x, c)) : null;
+  const next = prev ? { ...c, fields: { ...(prev.fields || {}), ...(c.fields || {}) } } : c;
+  return list.filter((x) => !sameSlot(x, c)).concat(next);
 }
 
 /** The index as Kyle should see it: every waiting choice already applied to its idea's properties. */

@@ -256,3 +256,12 @@ label.button:focus-within { outline: 2px solid var(--accent); outline-offset: 2p
 .cards.drop-end::after { position: absolute; left: 0; right: 0; bottom: -8px; }
 .move-hint.shown { color: var(--accent); }
 .scene-item.drop-before.side::before { left: -8px; right: auto; top: 0; bottom: 0; width: 4px; height: auto; }
+
+/* editing a card's words in place */
+.card-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.edit-fields { display: grid; gap: 10px; }
+.edit-fields label { display: grid; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+.edit-fields textarea, .edit-fields select {
+  font: inherit; font-size: 1rem; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; width: 100%; box-sizing: border-box; resize: vertical; min-height: 44px;
+}
