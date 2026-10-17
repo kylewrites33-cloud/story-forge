@@ -53,6 +53,11 @@ export interface VaultSource {
   readonly label: string;
   tree(): Promise<{ files: FileEntry[]; truncated: boolean }>;
   read(path: string, sha: string): Promise<string>;
+  /** A note's text and blob sha as the source has them right now, bypassing every cache. Sources Kyle can change have it. */
+  readFresh?(path: string): Promise<{ text: string; sha: string }>;
+  /** Replace a file whose current blob sha is `sha`, as one commit. Returns the new blob sha.
+   * Throws an error with `conflict: true` when the file changed since `sha`. */
+  write?(path: string, text: string, sha: string, message: string): Promise<string>;
 }
 
 export interface NoteRecord {
@@ -80,6 +85,8 @@ export interface BookEntry {
   stage: string;
   /** Paths of the book's scene notes. */
   scenes: string[];
+  /** Paths of the book's idea notes. Missing in copies saved before the Ideas board. */
+  ideas?: string[];
 }
 
 export interface VaultIndex {

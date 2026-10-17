@@ -3,6 +3,9 @@ import { parseSchema, SCHEMA_PATH } from './schema.ts';
 import { buildIndex } from './vault-index.ts';
 import type { Snapshot, VaultSource } from './types.ts';
 
+/** The app indexes the note types on boards of this phase and earlier (Chapter Grid is 1, Ideas is 2). */
+export const PHASE = 2;
+
 export async function sync(source: VaultSource, previous: Snapshot | null, now: () => Date = () => new Date()): Promise<Snapshot> {
   const { files, truncated } = await source.tree();
   const schemaFile = files.find((f) => f.path === SCHEMA_PATH);
@@ -10,7 +13,7 @@ export async function sync(source: VaultSource, previous: Snapshot | null, now: 
   const reuse = previous && previous.schemaSha === schemaFile.sha;
   const schemaText = reuse ? previous.schemaText : await source.read(SCHEMA_PATH, schemaFile.sha);
   const schema = parseSchema(schemaText);
-  const index = await buildIndex({ schema, files, read: (p, sha) => source.read(p, sha), previous: previous ? previous.index : null });
+  const index = await buildIndex({ schema, files, read: (p, sha) => source.read(p, sha), previous: previous ? previous.index : null, phase: PHASE });
   if (truncated) index.warnings.unshift('The vault has more files than GitHub lists in one go, so some notes may be missing.');
   return { key: source.key, schemaSha: schemaFile.sha, schemaText, index, lastSync: now().toISOString() };
 }

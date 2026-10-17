@@ -16,7 +16,7 @@ export class GitHubError extends Error {
 }
 
 /** A plain sentence for a failed GitHub response. */
-export function explain(res: Response, s: Settings, what: string): string {
+export function explain(res: Response, s: Settings, what: string, doing = 'read'): string {
   const where = s.owner + '/' + s.repo;
   if (res.status === 401) return 'GitHub did not accept the token. It may be mistyped or expired. Make a new one and paste it in Settings.';
   if (res.status === 403 || res.status === 429) {
@@ -25,11 +25,26 @@ export function explain(res: Response, s: Settings, what: string): string {
       const at = reset ? new Date(reset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'an hour';
       return 'GitHub\'s hourly limit for this token is used up. Try again after ' + at + '.';
     }
-    return 'The token is not allowed to read ' + where + '. Check that it covers that repository with Contents set to read and write.';
+    return 'The token is not allowed to ' + doing + ' ' + where + '. Check that it covers that repository with Contents set to read and write.';
   }
   if (res.status === 404) return 'GitHub cannot find ' + what + ' in ' + where + '. Check the owner, repository and branch in Settings, and that the token covers that repository.';
   if (res.status === 409) return where + ' is empty, so there is no vault to read yet.';
-  return 'GitHub answered ' + res.status + ' while reading ' + what + '. Try again in a minute.';
+  return 'GitHub answered ' + res.status + ' while ' + (doing === 'read' ? 'reading ' : 'saving ') + what + '. Try again in a minute.';
+}
+
+/** Text to base64 as UTF-8, for the contents API. */
+export function toBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+export function fromBase64(b64: string): string {
+  const bin = atob(b64.replace(/\s+/g, ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
 }
 
 export class GitHubSource implements VaultSource {
@@ -80,6 +95,44 @@ export class GitHubSource implements VaultSource {
   async read(path: string, sha: string): Promise<string> {
     const res = await this.get(this.repoUrl('/git/blobs/' + sha), path, 'application/vnd.github.raw+json');
     return res.text();
+  }
+
+  private contentsUrl(path: string): string {
+    const full = (this.s.root ? this.s.root + '/' : '') + path;
+    return this.repoUrl('/contents/' + full.split('/').map(encodeURIComponent).join('/'));
+  }
+
+  /** A note as the branch has it this moment, with its blob sha. */
+  async readFresh(path: string): Promise<{ text: string; sha: string }> {
+    const res = await this.get(this.contentsUrl(path) + '?ref=' + encodeURIComponent(this.s.branch), path, undefined, true);
+    const body = (await res.json()) as { sha?: string; content?: string; encoding?: string };
+    if (!body.sha || body.encoding !== 'base64' || typeof body.content !== 'string') {
+      throw new GitHubError(path + ' is too large for the app to change. Change it in Obsidian.', 413);
+    }
+    return { text: fromBase64(body.content), sha: body.sha };
+  }
+
+  /** Replace one file as one commit on the branch. The commit is made with Kyle's token, so it counts as his. */
+  async write(path: string, text: string, sha: string, message: string): Promise<string> {
+    let res: Response;
+    try {
+      res = await this.fetch(this.contentsUrl(path), {
+        method: 'PUT',
+        headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, content: toBase64(text), sha, branch: this.s.branch })
+      });
+    } catch {
+      throw new GitHubError('Cannot reach GitHub. Your choice is saved on this device and goes up when the connection is back.', 0);
+    }
+    if (res.status === 409) {
+      const err = new GitHubError(path + ' changed on GitHub while the app was saving it. Sync and try again.', res.status) as GitHubError & { conflict: boolean };
+      err.conflict = true;
+      throw err;
+    }
+    if (!res.ok) throw new GitHubError(explain(res, this.s, path, 'change'), res.status);
+    const body = (await res.json()) as { content?: { sha?: string } };
+    if (!body.content || !body.content.sha) throw new GitHubError('GitHub saved ' + path + ' but did not say how. Tap Sync to check.', 500);
+    return body.content.sha;
   }
 
   /** Checks the token, the repository and the branch, and says what it found in a plain sentence. */

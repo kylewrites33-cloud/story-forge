@@ -1,4 +1,5 @@
 // The demo vault bundled into the app, so the Pages preview shows a board before any token is entered.
+// Choices made on the demo vault live in memory until the page reloads; nothing is sent anywhere.
 import type { FileEntry, VaultSource } from './types.ts';
 
 const files = import.meta.glob('/demo-vault/**/*.{md,json}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -13,15 +14,31 @@ function hash(text: string): string {
 export class DemoSource implements VaultSource {
   readonly key = 'demo';
   readonly label = 'the demo vault';
+  private changed = new Map<string, string>();
+
+  private text(path: string): string {
+    const text = this.changed.has(path) ? this.changed.get(path) : files['/demo-vault/' + path];
+    if (text === undefined) throw new Error('The demo vault has no ' + path + '.');
+    return text;
+  }
 
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
-    const list = Object.keys(files).map((k) => ({ path: k.replace(/^\/demo-vault\//, ''), sha: hash(files[k]) }));
+    const list = Object.keys(files).map((k) => k.replace(/^\/demo-vault\//, '')).map((path) => ({ path, sha: hash(this.text(path)) }));
     return { files: list.sort((a, b) => a.path.localeCompare(b.path)), truncated: false };
   }
 
   async read(path: string): Promise<string> {
-    const text = files['/demo-vault/' + path];
-    if (text === undefined) throw new Error('The demo vault has no ' + path + '.');
-    return text;
+    return this.text(path);
+  }
+
+  async readFresh(path: string): Promise<{ text: string; sha: string }> {
+    const text = this.text(path);
+    return { text, sha: hash(text) };
+  }
+
+  async write(path: string, text: string, sha: string): Promise<string> {
+    if (hash(this.text(path)) !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
+    this.changed.set(path, text);
+    return hash(text);
   }
 }

@@ -126,7 +126,8 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
         title: String(n.data.title || basename(folder)),
         number: toNumber(n.data.number),
         stage: String(n.data.stage || 'spark'),
-        scenes: []
+        scenes: [],
+        ideas: []
       });
     } else {
       const m = n.path.match(/^(Series\/[^/]+\/Books\/[^/]+)\//);
@@ -137,6 +138,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   books.forEach((b) => {
     const list = (byBook[b.folder] || []).filter((n) => n.type === 'scene').sort(compareScenes);
     b.scenes = list.map((n) => n.path);
+    b.ideas = (byBook[b.folder] || []).filter((n) => n.type === 'idea').map((n) => n.path).sort();
     delete byBook[b.folder];
   });
   Object.keys(byBook).forEach((folder) => warnings.push(folder + ' has notes but no Book.md, so the app cannot show them.'));

@@ -4,6 +4,8 @@ The web app for Story Forge, Kyle Heath's writing studio. It shows the vault (th
 
 Phase 1 has one board: the **Chapter Grid**, read only. It shows a book's scenes grouped by chapter, in order. Tap a card to see the scene's properties and text.
 
+Phase 2 adds the **Ideas** board: each book's idea notes as cards, in piles (To decide, Later, Kept, Dropped). Keep sets `status: keep`, Drop sets `status: discard`, and both record `decided` and any reason in `decision_note`; Later leaves the idea `inbox` with a `later` tag. Nothing is moved or deleted. Each choice is one commit made with Kyle's token, with no `Agent:` trailer, so the vault counts it as his. Choices made offline wait on the device and go up on the next sync.
+
 ## Using it
 
 1. Open the app's GitHub Pages address. With no token it shows a small demo vault.
