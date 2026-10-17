@@ -196,14 +196,17 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   'market-thesis': { prefix: 'market', noun: 'a market case', board: 'Market board' },
   comp: { prefix: 'market', noun: 'a comp', board: 'Market board' },
   'keyword-set': { prefix: 'market', noun: 'a keyword set', board: 'Market board' },
-  'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' }
+  'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' },
+  task: { prefix: 'tasks', noun: 'a to-do', board: 'To-do list' }
 };
 
 const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', regenerate: 'rewrite', edit: 'edit', accept: 'accept card', rework: 'card needs work', move: 'move' };
 
 /** The commit message for a decision. It has no Agent trailer: the choice is Kyle's. */
-export function commitMessage(data: Record<string, unknown>, decision: Decision): string {
+export function commitMessage(data: Record<string, unknown>, decision: Decision, fields?: Record<string, string>): string {
   const k = KINDS[String(data.type || 'idea')] || KINDS.idea;
   const name = [data.id, data.title].filter(Boolean).join(' ');
-  return k.prefix + ': ' + VERBS[decision] + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Story Forge app.';
+  // An edit that only changes the status says so: "tasks: done T-005 ...".
+  const verb = decision === 'edit' && fields && Object.keys(fields).length === 1 && fields.status ? cleanField(fields.status) : VERBS[decision];
+  return k.prefix + ': ' + verb + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Story Forge app.';
 }
