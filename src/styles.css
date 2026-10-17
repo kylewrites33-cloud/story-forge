@@ -190,3 +190,42 @@ button.link {
 .pills { display: inline-flex; gap: 6px; }
 .pill-accepted { background: var(--accent); color: var(--on-accent); }
 .pill-plain { text-transform: none; }
+a.button {
+  display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; min-height: 44px; padding: 8px 16px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none;
+}
+a.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.card-actions .buttons a.button { flex: 1 1 auto; }
+
+/* writing screen */
+.writer { min-height: 100vh; min-height: 100dvh; background: var(--surface); }
+.writer-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: max(8px, env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 8px max(var(--gutter), env(safe-area-inset-left));
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.writer-title { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.writer-bar .buttons { flex-wrap: nowrap; gap: 6px; }
+.writer-status, .writer-panel {
+  max-width: 44rem; margin: 0 auto; padding: 8px max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+  color: var(--muted); font-size: 0.85rem;
+}
+.writer-status { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.writer-status p { flex-basis: 100%; margin: 0; }
+.writer-status .note-line { color: var(--text); }
+.writer-words { font-variant-numeric: tabular-nums; color: var(--text); }
+.writer-progress { flex-basis: 100%; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.writer-progress span { display: block; height: 100%; background: var(--accent); }
+.writer-panel { display: grid; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.writer-text {
+  display: block; width: 100%; max-width: 44rem; margin: 0 auto; min-height: 70vh; resize: none; overflow: hidden;
+  padding: 16px max(var(--gutter), env(safe-area-inset-right)) 40vh max(var(--gutter), env(safe-area-inset-left));
+  border: none; outline: none; background: transparent; color: var(--text);
+  font: 1.2rem/1.7 Georgia, "Times New Roman", serif; overflow-wrap: anywhere;
+}
+.copy-list { list-style: none; margin: 0; padding: 0; }
+.copy-view p { margin: 0; color: var(--text); }
+.copy-text {
+  white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; margin: 0; padding: 12px;
+  background: var(--bg); border-radius: 8px; font: 1rem/1.6 Georgia, serif; color: var(--text);
+}

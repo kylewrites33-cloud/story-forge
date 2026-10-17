@@ -104,6 +104,7 @@ function CardActions({ note, waiting, onDecide }: { note: NoteRecord; waiting?: 
         <div class="buttons">
           {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
           <button type="button" onClick={() => setAsking(true)}>Needs work</button>
+          <a class="button" href={href.write(note.path)}>Write</a>
         </div>
       )}
     </div>
@@ -204,6 +205,9 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
         <span class="path">{path}</span>
       </p>
       {note.error && <p class="error">The frontmatter cannot be read: {note.error}</p>}
+      {note.type === 'scene' && !note.error && (
+        <p class="buttons"><a class="button primary" href={href.write(path)}>Write this scene</a></p>
+      )}
       {keys.length > 0 && (
         <table class="props">
           <tbody>

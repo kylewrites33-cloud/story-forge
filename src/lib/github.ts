@@ -112,26 +112,28 @@ export class GitHubSource implements VaultSource {
     return { text: fromBase64(body.content), sha: body.sha };
   }
 
-  /** Replace one file as one commit on the branch. The commit is made with Kyle's token, so it counts as his. */
+  /** Replace one file as one commit on the branch, or add a new one when `sha` is empty.
+   * The commit is made with Kyle's token, so it counts as his. */
   async write(path: string, text: string, sha: string, message: string): Promise<string> {
     let res: Response;
     try {
       res = await this.fetch(this.contentsUrl(path), {
         method: 'PUT',
         headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, content: toBase64(text), sha, branch: this.s.branch })
+        body: JSON.stringify(sha ? { message, content: toBase64(text), sha, branch: this.s.branch } : { message, content: toBase64(text), branch: this.s.branch })
       });
     } catch {
       throw new GitHubError('Cannot reach GitHub. Your choice is saved on this device and goes up when the connection is back.', 0);
     }
-    if (res.status === 409) {
+    // 409: the file changed since `sha`. 422 without a sha: a file of that name is already there.
+    if (res.status === 409 || (res.status === 422 && !sha)) {
       const err = new GitHubError(path + ' changed on GitHub while the app was saving it. Sync and try again.', res.status) as GitHubError & { conflict: boolean };
       err.conflict = true;
       throw err;
     }
     if (!res.ok) throw new GitHubError(explain(res, this.s, path, 'change'), res.status);
     const body = (await res.json()) as { content?: { sha?: string } };
-    if (!body.content || !body.content.sha) throw new GitHubError('GitHub saved ' + path + ' but did not say how. Tap Sync to check.', 500);
+    if (!body.content || !body.content.sha) throw new GitHubError('GitHub saved ' + path + ' but did not say how. Press Sync to check.', 500);
     return body.content.sha;
   }
 

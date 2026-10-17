@@ -7,8 +7,9 @@ import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
-import type { Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
+import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
@@ -16,6 +17,7 @@ import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
 import { href, useRoute } from './route.ts';
 import { BookList, ChapterGrid, NoteView } from './screens.tsx';
 import { SettingsScreen } from './SettingsScreen.tsx';
+import { Editor } from './Editor.tsx';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -45,6 +47,18 @@ export function App() {
 
   useEffect(() => { setQueue(loadQueue(source.key)); }, [source, setQueue]);
 
+  /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. */
+  const foldNotes = useCallback(async (saved: NoteRecord[]) => {
+    const cur = snapRef.current;
+    if (!saved.length || !cur || cur.key !== source.key) return;
+    const notes = { ...cur.index.notes };
+    saved.forEach((n) => { notes[n.path] = n; });
+    const next = { ...cur, index: { ...cur.index, notes } };
+    snapRef.current = next;
+    setSnap(next);
+    await writeSnapshot(next);
+  }, [source]);
+
   /** Send waiting choices to GitHub, then fold the saved notes into the saved copy. */
   const runFlush = useCallback(async (): Promise<string | null> => {
     if (flushing.current || !queueRef.current.length || !navigator.onLine) return null;
@@ -58,21 +72,13 @@ export function App() {
       left = later.reduce(enqueue, left);
       setQueue(left);
       if (res.error) setError(res.error);
-      const cur = snapRef.current;
-      if (res.saved.length && cur && cur.key === source.key) {
-        const notes = { ...cur.index.notes };
-        res.saved.forEach((n) => { notes[n.path] = n; });
-        const next = { ...cur, index: { ...cur.index, notes } };
-        snapRef.current = next;
-        setSnap(next);
-        await writeSnapshot(next);
-      }
+      await foldNotes(res.saved);
       if (left.some((c) => later.indexOf(c) >= 0)) setTimeout(() => runFlushRef.current(), 0);
       return res.error;
     } finally {
       flushing.current = false;
     }
-  }, [source, setQueue]);
+  }, [source, setQueue, foldNotes]);
   const runFlushRef = useRef(runFlush);
   runFlushRef.current = runFlush;
 
@@ -80,7 +86,9 @@ export function App() {
     if (!navigator.onLine) return;
     setSyncing(true);
     try {
-      const saveError = await runFlush();
+      const written = await flushDrafts(source, source.key, new Date());
+      await foldNotes(written.saved);
+      const saveError = (await runFlush()) || written.error;
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       setSnap(next);
       setError(saveError);
@@ -90,7 +98,7 @@ export function App() {
     } finally {
       setSyncing(false);
     }
-  }, [source, runFlush]);
+  }, [source, runFlush, foldNotes]);
 
   const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
@@ -147,11 +155,22 @@ export function App() {
     setSettings(saveSettings({ ...settings, token: '' }));
   };
 
+  // The writing screen fills the page: no menu or sync bar.
+  if (route.name === 'write' && view) {
+    const note = view.notes[route.path];
+    if (note) {
+      return <Editor key={route.path} source={source} note={note} backTo={href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} />;
+    }
+  }
+
+  const drafts = pendingCount(source.key);
   let body;
   if (route.name === 'settings') {
     body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
   } else if (!snap || !schema || !view) {
-    body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and tap Sync.'}</p>;
+    body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
+  } else if (route.name === 'write') {
+    body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
   } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board' || (route.name === 'home' && activeBook(view))) {
@@ -202,6 +221,11 @@ export function App() {
             {online
               ? 'Saving ' + (queue.length === 1 ? '1 choice' : queue.length + ' choices') + '…'
               : (queue.length === 1 ? '1 choice is' : queue.length + ' choices are') + ' saved on this device and go up when you are back online.'}
+          </p>
+        )}
+        {drafts > 0 && (
+          <p class="waiting">
+            {(drafts === 1 ? 'Writing in 1 scene is' : 'Writing in ' + drafts + ' scenes is') + ' saved on this device' + (online ? '. Press Sync to send it to the vault.' : ' and goes up when you are back online.')}
           </p>
         )}
         {error && <p class="error">{error}</p>}

@@ -7,6 +7,7 @@ export type Route =
   | { name: 'ideas'; folder: string }
   | { name: 'board'; board: string; folder: string }
   | { name: 'note'; path: string }
+  | { name: 'write'; path: string }
   | { name: 'settings' };
 
 export function parseHash(hash: string): Route {
@@ -18,6 +19,7 @@ export function parseHash(hash: string): Route {
   if (head === 'ideas' && tail) return { name: 'ideas', folder: tail };
   if (head === 'board' && rest.length > 1) return { name: 'board', board: rest[0], folder: decodeURIComponent(rest.slice(1).join('/')) };
   if (head === 'note' && tail) return { name: 'note', path: tail };
+  if (head === 'write' && tail) return { name: 'write', path: tail };
   if (head === 'settings') return { name: 'settings' };
   return { name: 'home' };
 }
@@ -28,6 +30,7 @@ export const href = {
   ideas: (folder: string) => '#/ideas/' + encodeURIComponent(folder),
   board: (board: string, folder: string) => '#/board/' + board + '/' + encodeURIComponent(folder),
   note: (path: string) => '#/note/' + encodeURIComponent(path),
+  write: (path: string) => '#/write/' + encodeURIComponent(path),
   settings: () => '#/settings'
 };
 

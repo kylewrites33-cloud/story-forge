@@ -23,7 +23,8 @@ export class DemoSource implements VaultSource {
   }
 
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
-    const list = Object.keys(files).map((k) => k.replace(/^\/demo-vault\//, '')).map((path) => ({ path, sha: hash(this.text(path)) }));
+    const paths = new Set(Object.keys(files).map((k) => k.replace(/^\/demo-vault\//, '')).concat([...this.changed.keys()]));
+    const list = [...paths].map((path) => ({ path, sha: hash(this.text(path)) }));
     return { files: list.sort((a, b) => a.path.localeCompare(b.path)), truncated: false };
   }
 
@@ -37,7 +38,8 @@ export class DemoSource implements VaultSource {
   }
 
   async write(path: string, text: string, sha: string): Promise<string> {
-    if (hash(this.text(path)) !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
+    const now = this.changed.has(path) || files['/demo-vault/' + path] !== undefined ? hash(this.text(path)) : '';
+    if (now !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
     this.changed.set(path, text);
     return hash(text);
   }
