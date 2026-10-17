@@ -43,3 +43,37 @@ export class FsSource implements VaultSource {
 }
 
 export const demoSchemaText = () => fs.readFileSync(path.join(DEMO, 'System', 'schema.json'), 'utf8');
+
+/** A vault in memory that writes the way GitHub does: a stale sha is a conflict, and an empty sha adds a file. */
+export class MemSource implements VaultSource {
+  readonly key = 'mem';
+  readonly label = 'memory';
+  files = new Map<string, string>();
+  writes: { path: string; message: string }[] = [];
+  offline = false;
+  sha(text: string) { let h = 7; for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0; return h.toString(16); }
+  async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
+    return { files: [...this.files].map(([p, t]) => ({ path: p, sha: this.sha(t) })), truncated: false };
+  }
+  async read(p: string) { return this.files.get(p) as string; }
+  async readFresh(p: string) {
+    if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
+    const t = this.files.get(p);
+    if (t === undefined) throw Object.assign(new Error('gone'), { status: 404 });
+    return { text: t, sha: this.sha(t) };
+  }
+  async write(p: string, text: string, sha: string, message: string) {
+    const cur = this.files.get(p);
+    if ((cur === undefined ? '' : this.sha(cur)) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
+    this.files.set(p, text);
+    this.writes.push({ path: p, message });
+    return this.sha(text);
+  }
+  async remove(p: string, sha: string, message: string) {
+    const cur = this.files.get(p);
+    if (cur === undefined || this.sha(cur) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
+    this.files.delete(p);
+    this.writes.push({ path: p, message: 'REMOVE ' + message });
+  }
+}
+

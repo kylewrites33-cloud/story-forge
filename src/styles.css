@@ -229,3 +229,4 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
   white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; margin: 0; padding: 12px;
   background: var(--bg); border-radius: 8px; font: 1rem/1.6 Georgia, serif; color: var(--text);
 }
+.add-scene { display: grid; gap: 10px; margin-top: 12px; max-width: 36rem; }
