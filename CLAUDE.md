@@ -10,8 +10,12 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
 - Renders boards from the vault's `System/schema.json`. A new note type or card field needs a schema change, not an app change.
 - Phase 1: the Chapter Grid, read only. Phase 2 adds the Ideas board (keep, later, drop, written back with a write queue).
   Phase 3 adds the Story Juice, Beat Sheet, Conflict Matrix (keep, later, drop) and Characters (read only) boards, and
-  Accept card / Needs work on the Chapter Grid (sets or clears a scene's `accepted` time). Drag to reorder, status
-  toggles and inline edit come later.
+  Accept card / Needs work on the Chapter Grid (sets or clears a scene's `accepted` time). Phase 6 (first part) adds the
+  writing screen: Kyle writes and edits a scene's prose full screen, kept on the device as he types and saved to the vault
+  on Done, after two quiet minutes, or when the connection is back; word targets; copies (snapshots) saved and restored.
+  Split and merge, drag to reorder and status toggles come later.
+- A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
+  If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
   a choice on a board is Kyle's. The app never sets `keep` on anything Kyle did not tap.
 
@@ -38,6 +42,8 @@ src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sent
 src/lib/demo-source.ts   the bundled demo vault as a source
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
+src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see below)
+src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
@@ -48,8 +54,8 @@ tests/                   Node test runner tests
 ## Rules the code keeps
 
 - Parse notes exactly as the `sf` tool does. `src/lib/frontmatter.js` is the FRONTMATTER section of
-  `author-business/System/Tools/sf.js`. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
-  A test fails if the copy drifts, whenever the vault is checked out beside this repository.
+  `author-business/System/Tools/sf.js`, and `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
+  A test fails if either copy drifts, whenever the vault is checked out beside this repository.
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
 - Errors shown to Kyle are plain sentences that say what to do.
 - iPad first: large type, one accent colour, light and dark, 16 px side gutter, no horizontal scroll, 44 px tap targets.

@@ -56,7 +56,7 @@ export interface VaultSource {
   read(path: string, sha: string): Promise<string>;
   /** A note's text and blob sha as the source has them right now, bypassing every cache. Sources Kyle can change have it. */
   readFresh?(path: string): Promise<{ text: string; sha: string }>;
-  /** Replace a file whose current blob sha is `sha`, as one commit. Returns the new blob sha.
+  /** Replace a file whose current blob sha is `sha`, or add a new file when `sha` is '', as one commit. Returns the new blob sha.
    * Throws an error with `conflict: true` when the file changed since `sha`. */
   write?(path: string, text: string, sha: string, message: string): Promise<string>;
 }
