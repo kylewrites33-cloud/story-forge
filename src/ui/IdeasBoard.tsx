@@ -1,9 +1,10 @@
 import { useState } from 'preact/hooks';
+import { groupLabel, groupNotes, groupOrder } from '../lib/boards.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { PILES, piles, type Decision, type Pile } from '../lib/ideas.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
-import { cardFields, propDef } from '../lib/schema.ts';
+import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
@@ -20,7 +21,12 @@ export interface IdeasProps {
 /** The choice that puts an idea back in the pile it came from. */
 const BACK: Record<Exclude<Pile, 'other'>, Decision> = { decide: 'inbox', later: 'later', kept: 'keep', dropped: 'drop' };
 
-const DONE: Record<Decision, string> = { keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide' };
+const DONE: Record<Decision, string> = {
+  keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide', accept: 'Card accepted', rework: 'Marked as needing work'
+};
+
+/** Properties a card never repeats in Read more: the card already shows them, or they are bookkeeping. */
+const QUIET = ['type', 'id', 'title', 'status', 'kind', 'pitch', 'created', 'updated', 'tags', 'source'];
 
 /** The buttons a card shows, by the pile it is in. */
 function actions(pile: Pile): { decision: Decision; text: string; primary?: boolean }[] {
@@ -29,16 +35,18 @@ function actions(pile: Pile): { decision: Decision; text: string; primary?: bool
   return [{ decision: 'inbox', text: 'Move back to To decide' }];
 }
 
-function IdeaCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting?: Choice; onDecide: IdeasProps['onDecide'] }) {
+/** A card for any note Kyle keeps, puts aside or drops: an idea, a beat or a conflict. */
+export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting?: Choice; onDecide: IdeasProps['onDecide'] }) {
   const { schema, note, pile, waiting } = props;
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState('');
   const d = note.data;
   const title = String(d.title || basename(note.path));
-  const shown = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'status' && k !== 'kind' && k !== 'pitch' && !isEmptyValue(d[k]));
+  const shown = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'status' && k !== 'kind' && k !== 'pitch' && k !== 'summary' && !isEmptyValue(d[k]));
   const decided = pile === 'kept' || pile === 'dropped';
-  const more = ['reasoning', 'risk', 'target', 'decision_note', 'decided'].filter((k) => !isEmptyValue(d[k]) && shown.indexOf(k) < 0);
+  const more = propertyOrder(schema, note.type, d).filter((k) => QUIET.indexOf(k) < 0 && shown.indexOf(k) < 0 && k !== 'summary' && !isEmptyValue(d[k]));
+  const blurb = !isEmptyValue(d.pitch) ? d.pitch : d.summary;
   const decide = (decision: Decision) => {
     props.onDecide(note.path, decision, reason);
     setReason('');
@@ -51,7 +59,7 @@ function IdeaCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting
         {waiting && <span class={'pill' + (waiting.error ? ' pill-error' : '')}>{waiting.error ? 'Not saved' : 'Saving'}</span>}
       </span>
       <span class="card-title">{title}</span>
-      {!isEmptyValue(d.pitch) && <p class="pitch">{String(d.pitch)}</p>}
+      {!isEmptyValue(blurb) && <p class="pitch">{String(blurb)}</p>}
       {shown.length > 0 && (
         <p class="meta">{shown.map((k) => label(k) + ': ' + formatValue(k, d[k], propDef(schema, note.type, k))).join(' · ')}</p>
       )}
@@ -94,15 +102,37 @@ function IdeaCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting
   );
 }
 
+export interface ProposalBoardProps extends IdeasProps {
+  /** The schema board this screen draws: its title, and the property its groups come from. */
+  boardKey: string;
+  heading: string;
+  intro: string;
+  notes: NoteRecord[];
+  /** What the board calls an empty book. */
+  emptyText: string;
+}
+
 export function IdeasBoard(props: IdeasProps) {
-  const { schema, index, book } = props;
+  const notes = (props.book.ideas || []).map((p) => props.index.notes[p]).filter(Boolean);
+  return (
+    <ProposalBoard {...props} boardKey="ideas" heading="Ideas" notes={notes}
+      intro={'The team\'s proposals for ' + props.book.title + '. Keep tells the team to use it. Later puts it aside to come back to. Drop turns it down, and the note stays in the vault.'}
+      emptyText="This book has no ideas yet. They appear here when an agent files one in the book's Ideas folder." />
+  );
+}
+
+/** Piles (to decide, later, kept, dropped) of one kind of proposal, grouped the way the schema's board says. */
+export function ProposalBoard(props: ProposalBoardProps) {
+  const { schema, index, book, notes } = props;
   const [pile, setPile] = useState<Pile>('decide');
   const [last, setLast] = useState<{ path: string; title: string; decision: Decision; from: Pile } | null>(null);
-  const notes = (book.ideas || []).map((p) => index.notes[p]).filter(Boolean);
   const byPile = piles(notes);
-  const board = schema.boards.ideas;
+  const board = schema.boards[props.boardKey];
+  const by = props.boardKey === 'ideas' ? '' : (board && board.groupBy) || '';
   const tabs = PILES.filter((p) => p.key !== 'other' || byPile.other.length > 0);
   const list = byPile[pile];
+  const type = (board && board.types[0]) || 'idea';
+  const groups = by ? groupNotes(list, by, groupOrder(schema, type, by)) : [{ key: '', notes: list }];
 
   const onDecide = (path: string, decision: Decision, reason: string) => {
     const n = index.notes[path];
@@ -114,12 +144,13 @@ export function IdeasBoard(props: IdeasProps) {
     props.onDecide(last.path, BACK[last.from as Exclude<Pile, 'other'>], '');
     setLast(null);
   };
+  const card = (n: NoteRecord) => <ProposalCard key={n.path} schema={schema} note={n} pile={pile} waiting={props.waiting[n.path]} onDecide={onDecide} />;
 
   return (
     <section>
-      <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a> · {(board && board.title) || 'Ideas'}</p>
-      <h1>Ideas</h1>
-      <p class="meta">The team's proposals for {book.title}. Keep tells the team to use it. Later puts it aside to come back to. Drop turns it down, and the note stays in the vault.</p>
+      <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a> · {(board && board.title) || props.heading}</p>
+      <h1>{(board && board.title) || props.heading}</h1>
+      <p class="meta">{props.intro}</p>
       <div class="tabs" role="tablist">
         {tabs.map((t) => (
           <button key={t.key} type="button" role="tab" aria-selected={pile === t.key} onClick={() => { setPile(t.key); setLast(null); }}>
@@ -132,13 +163,18 @@ export function IdeasBoard(props: IdeasProps) {
           {DONE[last.decision]}: {last.title}. <button type="button" class="link" onClick={undo}>Undo</button>
         </p>
       )}
-      {!notes.length && <p class="empty">This book has no ideas yet. They appear here when an agent files one in the book's Ideas folder.</p>}
+      {!notes.length && <p class="empty">{props.emptyText}</p>}
       {notes.length > 0 && !list.length && (
-        <p class="empty">{pile === 'decide' ? 'Nothing to decide. Every idea for this book has an answer.' : 'Nothing here.'}</p>
+        <p class="empty">{pile === 'decide' ? 'Nothing to decide. Everything on this board has an answer.' : 'Nothing here.'}</p>
       )}
-      <ul class="cards ideas">
-        {list.map((n) => <IdeaCard key={n.path} schema={schema} note={n} pile={pile} waiting={props.waiting[n.path]} onDecide={onDecide} />)}
-      </ul>
+      {by
+        ? groups.map((g) => (
+          <section class="group" key={g.key}>
+            <h2>{groupLabel(g.key)} <span class="meta">{g.notes.length}</span></h2>
+            <ul class="cards ideas">{g.notes.map(card)}</ul>
+          </section>
+        ))
+        : <ul class="cards ideas">{list.map(card)}</ul>}
     </section>
   );
 }

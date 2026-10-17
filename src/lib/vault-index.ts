@@ -18,15 +18,22 @@ export function skipped(path: string): boolean {
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** A pattern for the files where notes of this type live, from the type's scope, folder and file name. */
+/** A pattern for the files where notes of this type live, from the type's scope, folder and file name,
+ * and from the scope and folder of each variant (a character's book delta lives in the book's Characters folder). */
 export function pathPattern(def: TypeDef): RegExp {
+  const forms: { scope: string | string[]; folder?: string }[] = [def];
+  Object.values(def.variants || {}).forEach((v) => { if (v && v.scope) forms.push({ scope: v.scope, folder: v.folder ?? def.folder }); });
+  return new RegExp(forms.map((f) => formPattern(f, def.filename)).join('|'));
+}
+
+function formPattern(def: { scope: string | string[]; folder?: string }, filename?: string): string {
   const scopes = Array.isArray(def.scope) ? def.scope : [def.scope];
   const prefixes = scopes.map((s) => (s === 'book' ? 'Series/[^/]+/Books/[^/]+/' : s === 'series' ? 'Series/[^/]+/' : ''));
   const folder = (def.folder || '').replace(/^\/+|\/+$/g, '');
-  const fixedName = def.filename && def.filename.indexOf('{') < 0 ? esc(def.filename) : null;
+  const fixedName = filename && filename.indexOf('{') < 0 ? esc(filename) : null;
   // A folder holds any number of notes (in subfolders too); no folder means one note with a fixed name.
   const inner = folder ? esc(folder) + '/(?:[^/]+/)*[^/]+' : fixedName || '[^/]+';
-  return new RegExp('^(?:' + prefixes.join('|') + ')' + inner + '\\.md$');
+  return '^(?:' + prefixes.join('|') + ')' + inner + '\\.md$';
 }
 
 export interface BuildOptions {
@@ -102,6 +109,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   const series: SeriesEntry[] = [];
   const books: BookEntry[] = [];
   const byBook: Record<string, NoteRecord[]> = {};
+  const seriesChars: NoteRecord[] = [];
 
   records.forEach((n) => {
     if (n.path === CONFIG_PATH) return;
@@ -117,7 +125,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
       return;
     }
     if (n.type === 'series') {
-      series.push({ path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))) });
+      series.push({ path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [] });
     } else if (n.type === 'book') {
       const folder = dirname(n.path);
       const seriesFolder = folder.replace(/\/Books\/[^/]+$/, '');
@@ -127,18 +135,29 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
         number: toNumber(n.data.number),
         stage: String(n.data.stage || 'spark'),
         scenes: [],
-        ideas: []
+        ideas: [], beats: [], conflicts: [], characters: []
       });
     } else {
       const m = n.path.match(/^(Series\/[^/]+\/Books\/[^/]+)\//);
       if (m) (byBook[m[1]] = byBook[m[1]] || []).push(n);
+      else if (n.type === 'character') seriesChars.push(n);
     }
   });
+
+  seriesChars.forEach((n) => {
+    const s = series.find((x) => n.path.startsWith(x.folder + '/'));
+    if (s) s.characters!.push(n.path);
+  });
+  series.forEach((s) => s.characters!.sort());
 
   books.forEach((b) => {
     const list = (byBook[b.folder] || []).filter((n) => n.type === 'scene').sort(compareScenes);
     b.scenes = list.map((n) => n.path);
-    b.ideas = (byBook[b.folder] || []).filter((n) => n.type === 'idea').map((n) => n.path).sort();
+    const of = (type: string) => (byBook[b.folder] || []).filter((n) => n.type === type).map((n) => n.path).sort();
+    b.ideas = of('idea');
+    b.beats = of('beat');
+    b.conflicts = of('conflict');
+    b.characters = of('character');
     delete byBook[b.folder];
   });
   Object.keys(byBook).forEach((folder) => warnings.push(folder + ' has notes but no Book.md, so the app cannot show them.'));

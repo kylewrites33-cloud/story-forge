@@ -5,6 +5,7 @@ export type Route =
   | { name: 'books' }
   | { name: 'book'; folder: string }
   | { name: 'ideas'; folder: string }
+  | { name: 'board'; board: string; folder: string }
   | { name: 'note'; path: string }
   | { name: 'settings' };
 
@@ -15,6 +16,7 @@ export function parseHash(hash: string): Route {
   if (head === 'books') return { name: 'books' };
   if (head === 'book' && tail) return { name: 'book', folder: tail };
   if (head === 'ideas' && tail) return { name: 'ideas', folder: tail };
+  if (head === 'board' && rest.length > 1) return { name: 'board', board: rest[0], folder: decodeURIComponent(rest.slice(1).join('/')) };
   if (head === 'note' && tail) return { name: 'note', path: tail };
   if (head === 'settings') return { name: 'settings' };
   return { name: 'home' };
@@ -24,6 +26,7 @@ export const href = {
   books: () => '#/books',
   book: (folder: string) => '#/book/' + encodeURIComponent(folder),
   ideas: (folder: string) => '#/ideas/' + encodeURIComponent(folder),
+  board: (board: string, folder: string) => '#/board/' + board + '/' + encodeURIComponent(folder),
   note: (path: string) => '#/note/' + encodeURIComponent(path),
   settings: () => '#/settings'
 };

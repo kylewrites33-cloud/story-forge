@@ -15,7 +15,8 @@
     "extends": "a note with an extends property is a book delta of a series note and holds only what differs",
     "secrets": "twists and hidden facts go in a > [!secret] callout in the body; packets withhold them unless a scene's reveal list names the note. A callout titled with a scene (> [!secret] Book 1, S-039) is revealed by that scene and known in every packet after it",
     "first_seen": "where a bible note first appears on the page, as Book 1, S-005; packets for earlier scenes leave the note out",
-    "later": "an inbox idea tagged later is one Kyle put aside on the Ideas board to come back to; its status stays inbox. Keep and drop on the board set status keep or discard, the decided time and any reason in decision_note; nothing is moved or deleted"
+    "later": "an inbox idea tagged later is one Kyle put aside on the Ideas board to come back to; its status stays inbox. Keep and drop on the board set status keep or discard, the decided time and any reason in decision_note; nothing is moved or deleted",
+    "accepted": "Kyle accepts a scene card on the Chapter Grid; the app sets accepted to the time he tapped. Needs work removes accepted and puts his reason in decision_note. Beats and conflicts are kept or dropped on their boards the way ideas are"
   },
   "statuses": {
     "proposal": ["inbox", "keep", "regenerate", "discard", "done"],
@@ -445,6 +446,8 @@
         "order": { "type": "number" },
         "summary": { "type": "string" },
         "scenes": { "type": "list", "items": { "type": "string" } },
+        "decided": { "type": "datetime" },
+        "decision_note": { "type": "string" },
         "status": { "enum": "proposal", "default": "inbox" }
       },
       "board": { "default": "beat-sheet", "card": ["title", "position", "summary", "status"] },
@@ -465,6 +468,8 @@
         "between": { "type": "list", "items": { "type": "string" } },
         "beats": { "type": "list", "items": { "type": "string" } },
         "feeds": { "type": "list", "items": { "type": "string" } },
+        "decided": { "type": "datetime" },
+        "decision_note": { "type": "string" },
         "status": { "enum": "proposal", "default": "inbox" }
       },
       "board": { "default": "conflict-matrix", "card": ["title", "source", "between", "status"] },
@@ -498,6 +503,8 @@
         "reveal": { "type": "list", "items": { "type": "link" } },
         "beat": { "type": "link", "to": "beat" },
         "status": { "enum": "scene", "default": "planned" },
+        "accepted": { "type": "datetime" },
+        "decision_note": { "type": "string" },
         "target_words": { "type": "integer" },
         "words": { "type": "integer", "computed": true },
         "published": { "type": "date" },
@@ -738,7 +745,7 @@
     "market": { "title": "Market", "types": ["market-thesis", "comp", "keyword-set", "title-candidate"], "groupBy": "type", "phase": 2 },
     "ideas": { "title": "Ideas", "types": ["idea"], "groupBy": "status", "phase": 2 },
     "story-juice": { "title": "Story Juice", "types": ["idea"], "groupBy": "kind", "phase": 3 },
-    "beat-sheet": { "title": "Beat Sheet", "types": ["beat"], "sortBy": "order", "phase": 3 },
+    "beat-sheet": { "title": "Beat Sheet", "types": ["beat"], "groupBy": "framework", "sortBy": "order", "phase": 3 },
     "characters": { "title": "Characters", "types": ["character"], "groupBy": "role", "phase": 3 },
     "conflict-matrix": { "title": "Conflict Matrix", "types": ["conflict"], "groupBy": "source", "phase": 3 },
     "edit-queue": { "title": "Edit Queue", "types": ["task", "idea"], "groupBy": "status", "phase": 4 }

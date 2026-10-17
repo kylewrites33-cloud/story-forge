@@ -26,7 +26,7 @@ test('finds the series, the book and its scenes in reading order', async () => {
   assert.equal(book.title, 'Ash Bell');
   assert.equal(book.number, 1);
   assert.equal(book.seriesName, 'Ember Road');
-  assert.deepEqual(book.scenes.map((p) => index.notes[p].data.id), ['S-001', 'S-002', 'S-003', 'S-004', 'S-005', 'S-006', 'S-007']);
+  assert.deepEqual(book.scenes.map((p) => index.notes[p].data.id), ['S-001', 'S-002', 'S-003', 'S-004', 'S-005', 'S-006', 'S-007', 'S-008']);
   assert.equal(activeBook(index)?.folder, BOOK, 'System/Config.md names the active book');
   assert.deepEqual(index.warnings, []);
 });
@@ -48,8 +48,8 @@ test('groups the Chapter Grid by chapter, with unplaced scenes last', async () =
   const { index } = await demoIndex();
   const scenes = index.books[0].scenes.map((p) => index.notes[p]);
   const groups = chapterGroups(schema, scenes);
-  assert.deepEqual(groups.map(chapterHeading), ['Chapter 1: Frost', 'Chapter 2: Thaw', 'Chapter 3: Ledger', 'No chapter yet']);
-  assert.deepEqual(groups.map((g) => g.scenes.length), [2, 2, 2, 1]);
+  assert.deepEqual(groups.map(chapterHeading), ['Chapter 1: Frost', 'Chapter 2: Thaw', 'Chapter 3: Ledger', 'Chapter 4', 'No chapter yet']);
+  assert.deepEqual(groups.map((g) => g.scenes.length), [2, 2, 2, 1, 1]);
   assert.equal(groups[0].words, 37);
 });
 

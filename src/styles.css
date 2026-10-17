@@ -171,3 +171,22 @@ button.link {
 .pill-error { border-color: var(--danger); color: var(--danger); }
 .banner .waiting { color: var(--text); }
 .reason-shown { margin: 0; font-style: italic; }
+
+/* story juice boards */
+.board-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 1rem; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.board-nav a {
+  flex: 0 0 auto; min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); text-decoration: none; color: var(--text); white-space: nowrap;
+}
+.board-nav a[aria-current="page"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.group h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.group h2 .meta { font-weight: 400; }
+.card dl.wide div { grid-template-columns: 6.5em 1fr; }
+.scene-item { display: flex; flex-direction: column; gap: 6px; }
+.scene-item .card { flex: 1 1 auto; }
+.card-actions { display: grid; gap: 6px; }
+.card-actions .buttons button { flex: 1 1 auto; }
+.card-actions p { margin: 0; }
+.pills { display: inline-flex; gap: 6px; }
+.pill-accepted { background: var(--accent); color: var(--on-accent); }
+.pill-plain { text-transform: none; }
