@@ -24,7 +24,9 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   `regenerate`, with what to change in `decision_note`) and Edit (the card's text fields, one line each, never the title or
   ID); a scene card's Edit card also changes its status (planned, drafted, revised, final). The To-do list (Phase 4's
   Edit Queue tasks) shows every task note by status, with Start, Done, Drop and Reopen, and Add a to-do writes a new
-  `Tasks/T-NNN` note.
+  `Tasks/T-NNN` note. The writing screen shows `*italics*` and `**bold**` as styled text (stars kept, faint) in an
+  editable page whose characters are exactly the Markdown; Ctrl or Cmd+B and I (and the iPad's B and I keys) add stars;
+  a per-device switch in Scene goes back to the plain text box.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -54,6 +56,7 @@ src/lib/demo-source.ts   the bundled demo vault as a source
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
 src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see below)
+src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML that keeps every character
 src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
