@@ -9,9 +9,9 @@ import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
-import { activeBook } from '../lib/vault-index.ts';
+import { activeBook, resortScenes } from '../lib/vault-index.ts';
 import { flushDrafts, pendingCount } from '../lib/drafts.ts';
-import { enqueue, flush, loadQueue, overlay, saveQueue, type Choice } from '../lib/write-queue.ts';
+import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
@@ -54,7 +54,7 @@ export function App() {
     if (!saved.length || !cur || cur.key !== source.key) return;
     const notes = { ...cur.index.notes };
     saved.forEach((n) => { notes[n.path] = n; });
-    const next = { ...cur, index: { ...cur.index, notes } };
+    const next = { ...cur, index: resortScenes({ ...cur.index, notes }) };
     snapRef.current = next;
     setSnap(next);
     await writeSnapshot(next);
@@ -69,7 +69,7 @@ export function App() {
       const res = await flush(source, sent);
       // Choices made while saving stay in the queue; a newer choice on the same idea replaces what was sent.
       const later = queueRef.current.filter((c) => sent.indexOf(c) < 0);
-      let left = res.left.filter((c) => !later.some((x) => x.path === c.path));
+      let left = res.left.filter((c) => !later.some((x) => sameSlot(x, c)));
       left = later.reduce(enqueue, left);
       setQueue(left);
       if (res.error) setError(res.error);
@@ -121,6 +121,43 @@ export function App() {
       return (e as Error).message;
     }
   }, [source, runSync]);
+
+  /** A card dragged to a new place on the Chapter Grid: give it an order between its new neighbours (and the chapter it went into). */
+  const onMove = useCallback((book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => {
+    const cur = snapRef.current;
+    if (!cur) return;
+    const shown = overlay(cur.index, queueRef.current);
+    const b = shown.books.find((x) => x.folder === book.folder);
+    if (!b) return;
+    const rest = b.scenes.filter((p) => p !== path).map((p) => shown.notes[p]).filter(Boolean);
+    let prev: NoteRecord | null, next: NoteRecord | null;
+    if (before) {
+      const at = rest.findIndex((n) => n.path === before);
+      next = at >= 0 ? rest[at] : null;
+      prev = at > 0 ? rest[at - 1] : null;
+    } else {
+      const same = (n: NoteRecord) => (chapter == null ? typeof n.data.chapter !== 'number' : n.data.chapter === chapter);
+      const inCh = rest.filter(same);
+      prev = inCh.length ? inCh[inCh.length - 1] : null;
+      next = prev ? rest[rest.indexOf(prev) + 1] || null : null;
+    }
+    const at = new Date().toISOString();
+    let list = enqueue(queueRef.current, { path, decision: 'move', reason: '', at, move: { order: orderBetween(prev, next), chapter, chapterTitle } });
+    // A chapter's title lives on its scenes. If the card that carried it leaves, the next scene in that chapter takes it on.
+    const moved = shown.notes[path];
+    const oldTitle = moved && typeof moved.data.chapter_title === 'string' ? moved.data.chapter_title : '';
+    const oldCh = moved && typeof moved.data.chapter === 'number' ? moved.data.chapter : null;
+    if (oldTitle && oldCh != null && oldCh !== chapter) {
+      const left = rest.filter((n) => n.data.chapter === oldCh);
+      if (left.length && !left.some((n) => n.data.chapter_title)) {
+        const heir = left[0];
+        const order = typeof heir.data.order === 'number' ? heir.data.order : orderBetween(rest[rest.indexOf(heir) - 1] || null, rest[rest.indexOf(heir) + 1] || null);
+        list = enqueue(list, { path: heir.path, decision: 'move', reason: '', at, move: { order, chapter: oldCh, chapterTitle: oldTitle } });
+      }
+    }
+    setQueue(list);
+    runFlush();
+  }, [setQueue, runFlush]);
 
   const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
@@ -213,7 +250,7 @@ export function App() {
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} />;
       } else if (boardKey === 'chapter-grid') {
-        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} />;
+        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} onMove={source.write ? onMove : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = <><BoardNav schema={schema} book={book} current={boardKey} />{screen}</>;

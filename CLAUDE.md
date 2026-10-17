@@ -16,7 +16,9 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   Then: Add a scene (per chapter, or start a new chapter) on the Chapter Grid; in the writing screen, Split here (the words
   after the cursor become a new scene; a copy is saved first), Join the next scene (its note moves to the book's Archive
   with a note saying why, and an open Notes to the Team note asks the team to repoint its old ID), and Mark as drafted.
-  Drag to reorder and other status toggles come later.
+  On the Chapter Grid, hold a card's Move button and drag it (finger or mouse) to a new place or chapter: only its `order`,
+  `chapter` and `chapter_title` change, through the write queue (a chapter title the card carried passes to the chapter's
+  next scene). Other status toggles come later.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -38,7 +40,7 @@ src/lib/frontmatter.js   the vault tool's YAML reader, copied as is (do not edit
 src/lib/schema.ts        parse System/schema.json; card fields, enums, property order
 src/lib/vault-index.ts   which files to read, parse them, build series/books/scenes; warnings
 src/lib/board.ts         Chapter Grid grouping
-src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept and needs work make
+src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make
 src/lib/boards.ts        Story Juice boards: which notes, grouped and ordered by the schema; the cast with book deltas
 src/lib/write-queue.ts   choices waiting to save (localStorage), sending them, showing them before they land
 src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors

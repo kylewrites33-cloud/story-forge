@@ -22,7 +22,7 @@ export interface IdeasProps {
 const BACK: Record<Exclude<Pile, 'other'>, Decision> = { decide: 'inbox', later: 'later', kept: 'keep', dropped: 'drop' };
 
 const DONE: Record<Decision, string> = {
-  keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide', accept: 'Card accepted', rework: 'Marked as needing work'
+  keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide', accept: 'Card accepted', rework: 'Marked as needing work', move: 'Moved'
 };
 
 /** Properties a card never repeats in Read more: the card already shows them, or they are bookkeeping. */
