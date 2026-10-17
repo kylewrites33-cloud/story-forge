@@ -96,6 +96,15 @@ export function compareScenes(a: NoteRecord, b: NoteRecord): number {
   return (idNumber(a.data.id) || 0) - (idNumber(b.data.id) || 0);
 }
 
+/** The index with each book's scenes put back in reading order, after a card was moved. */
+export function resortScenes(index: VaultIndex): VaultIndex {
+  const books = index.books.map((b) => ({ ...b, scenes: b.scenes.slice().sort((x, y) => {
+    const a = index.notes[x], c = index.notes[y];
+    return a && c ? compareScenes(a, c) : 0;
+  }) }));
+  return { ...index, books };
+}
+
 export function assemble(schema: Schema, records: NoteRecord[], phase = 1): VaultIndex {
   const notes: Record<string, NoteRecord> = {};
   const warnings: string[] = [];

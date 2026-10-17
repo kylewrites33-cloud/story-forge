@@ -1,8 +1,8 @@
 // Kyle's choices on the Ideas board wait here until GitHub has them, so a choice made offline is not lost.
 // The queue lives in this browser's localStorage, one list per source; a newer choice on the same idea replaces the older one.
-import { applyToData, applyToText, changeFor, commitMessage, type Decision } from './ideas.ts';
+import { applyToData, applyToText, changeFor, commitMessage, moveChange, type Change, type Decision, type Move } from './ideas.ts';
 import { Frontmatter } from './frontmatter.js';
-import { makeNote } from './vault-index.ts';
+import { makeNote, resortScenes } from './vault-index.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export interface Choice {
@@ -13,6 +13,13 @@ export interface Choice {
   at: string;
   /** The last plain-sentence failure, if saving it failed for a reason other than being offline. */
   error?: string;
+  /** For a scene card dragged on the Chapter Grid: where it went. */
+  move?: Move;
+}
+
+/** What a waiting choice does to a note with these properties. */
+export function changeOf(data: Record<string, unknown>, c: Choice): Change {
+  return c.decision === 'move' && c.move ? moveChange(c.move) : changeFor(data, c.decision, new Date(c.at), c.reason);
 }
 
 const KEY = 'story-forge.queue.';
@@ -37,8 +44,13 @@ export function saveQueue(sourceKey: string, list: Choice[], storage: Storage | 
   }
 }
 
+/** A newer choice replaces an older one on the same note, except that a move and a decision (accept, keep) stand side by side. */
+export function sameSlot(a: Choice, b: Choice): boolean {
+  return a.path === b.path && (a.decision === 'move') === (b.decision === 'move');
+}
+
 export function enqueue(list: Choice[], c: Choice): Choice[] {
-  return list.filter((x) => x.path !== c.path).concat(c);
+  return list.filter((x) => !sameSlot(x, c)).concat(c);
 }
 
 /** The index as Kyle should see it: every waiting choice already applied to its idea's properties. */
@@ -48,9 +60,10 @@ export function overlay(index: VaultIndex, list: Choice[]): VaultIndex {
   list.forEach((c) => {
     const n = notes[c.path];
     if (!n) return;
-    notes[c.path] = { ...n, data: applyToData(n.data, changeFor(n.data, c.decision, new Date(c.at), c.reason)) };
+    notes[c.path] = { ...n, data: applyToData(n.data, changeOf(n.data, c)) };
   });
-  return { ...index, notes };
+  const out = { ...index, notes };
+  return list.some((c) => c.decision === 'move') ? resortScenes(out) : out;
 }
 
 /** Save one choice: read the note as GitHub has it now, change only the lines the choice touches, and write it back. */
@@ -59,7 +72,7 @@ export async function saveChoice(source: VaultSource, c: Choice): Promise<NoteRe
   for (let attempt = 0; ; attempt++) {
     const { text, sha } = await source.readFresh(c.path);
     const data = Frontmatter.parse(text).data || {};
-    const next = applyToText(text, changeFor(data, c.decision, new Date(c.at), c.reason));
+    const next = applyToText(text, changeOf(data, c));
     if (next === text) return makeNote(c.path, sha, text);
     try {
       const newSha = await source.write(c.path, next, sha, commitMessage(data, c.decision));

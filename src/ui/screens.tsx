@@ -1,4 +1,5 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { chapterGroups, chapterHeading } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { basename } from '../lib/links.ts';
@@ -79,7 +80,7 @@ function StatusPill({ value }: { value: string }) {
 type OnDecide = (path: string, decision: Decision, reason: string) => void;
 
 /** Accept a scene card, or say it needs work and why. The card's status (planned, drafted) does not change. */
-function CardActions({ note, waiting, onDecide }: { note: NoteRecord; waiting?: Choice; onDecide: OnDecide }) {
+function CardActions({ note, waiting, onDecide, handle }: { note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren }) {
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState('');
   const accepted = !isEmptyValue(note.data.accepted);
@@ -102,6 +103,7 @@ function CardActions({ note, waiting, onDecide }: { note: NoteRecord; waiting?: 
         </>
       ) : (
         <div class="buttons">
+          {handle}
           {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
           <button type="button" onClick={() => setAsking(true)}>Needs work</button>
           <a class="button" href={href.write(note.path)}>Write</a>
@@ -111,7 +113,9 @@ function CardActions({ note, waiting, onDecide }: { note: NoteRecord; waiting?: 
   );
 }
 
-function SceneCard({ schema, note, waiting, onDecide }: { schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide }) {
+function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
+  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null;
+}) {
   const fields = cardFields(schema, note.type);
   const title = String(note.data.title || basename(note.path));
   const rows = fields.filter((k) => k !== 'title' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
@@ -119,7 +123,7 @@ function SceneCard({ schema, note, waiting, onDecide }: { schema: Schema; note: 
   const words = fields.indexOf('words') >= 0 ? formatValue('words', note.data.words, null) : '';
   const accepted = !isEmptyValue(note.data.accepted);
   return (
-    <li class="scene-item">
+    <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
       <a class="card" href={href.note(note.path)}>
         <span class="card-top">
           <span class="card-id">{String(note.data.id || '')}{note.data.kind === 'test' ? ' · test drive' : ''}</span>
@@ -142,7 +146,7 @@ function SceneCard({ schema, note, waiting, onDecide }: { schema: Schema; note: 
         {words && <span class="card-words">{words}</span>}
         {note.error && <span class="card-error">Frontmatter problem: {note.error}</span>}
       </a>
-      {onDecide && <CardActions note={note} waiting={waiting} onDecide={onDecide} />}
+      {onDecide && <CardActions note={note} waiting={waiting} onDecide={onDecide} handle={handle} />}
     </li>
   );
 }
@@ -187,9 +191,59 @@ function AddScene({ book, chapter, chapterTitle, label, onAdd }: {
   );
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd }: {
-  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd;
+/** A card dropped on the Chapter Grid: the scene, the chapter it goes into, and the scene it now comes before (null: the chapter's end). */
+export type OnMove = (book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => void;
+
+interface DropAt { key: string; before: string | null; /** Cards sit side by side here, so the line goes beside the card. */ side: boolean }
+interface Dragging { path: string; pointer: number; startX: number; startY: number; startScroll: number; x: number; y: number; moved: boolean; at: DropAt | null }
+
+/** Where a card held at (x, y) would land: before the card under it (its top or left half) or after it, or at a chapter's start or end.
+ * On a wide screen cards sit side by side and read left to right, so there the left and right halves decide. */
+function dropAt(x: number, y: number, dragged: string): DropAt | null {
+  const els = document.elementsFromPoint(x, y);
+  for (const el of els) {
+    const item = (el as HTMLElement).closest('[data-scene]') as HTMLElement | null;
+    const ch = (el as HTMLElement).closest('[data-chapter]') as HTMLElement | null;
+    if (!ch) continue;
+    const key = ch.dataset.chapter || '';
+    const others = [...ch.querySelectorAll<HTMLElement>('[data-scene]')].filter((e) => e.dataset.scene !== dragged);
+    const list = ch.querySelector('.cards');
+    const side = !!list && getComputedStyle(list).gridTemplateColumns.trim().split(/\s+/).length > 1;
+    if (item && item.dataset.scene !== dragged) {
+      const r = item.getBoundingClientRect();
+      if (side ? x < r.left + r.width / 2 : y < r.top + r.height / 2) return { key, before: item.dataset.scene || null, side };
+      const after = others[others.indexOf(item) + 1];
+      return { key, before: after ? after.dataset.scene || null : null, side };
+    }
+    if (item) continue;
+    if ((el as HTMLElement).closest('h2')) return { key, before: others[0] ? others[0].dataset.scene || null : null, side };
+    return { key, before: null, side };
+  }
+  return null;
+}
+
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onMove }: {
+  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onMove?: OnMove;
 }) {
+  const [drag, setDrag] = useState<Dragging | null>(null);
+  const [hint, setHint] = useState(false);
+  const dragRef = useRef<Dragging | null>(null);
+  const put = (d: Dragging | null) => { dragRef.current = d; setDrag(d); };
+  // Near the top or bottom of the screen the page scrolls, so a card can travel to a far chapter.
+  useEffect(() => {
+    if (!drag) return;
+    const t = setInterval(() => {
+      const d = dragRef.current;
+      if (!d || !d.moved) return;
+      const edge = 80;
+      const step = d.y < edge ? -Math.ceil((edge - d.y) / 4) : d.y > innerHeight - edge ? Math.ceil((d.y - innerHeight + edge) / 4) : 0;
+      if (!step) return;
+      scrollBy(0, step);
+      put({ ...d, at: dropAt(d.x, d.y, d.path) || d.at });
+    }, 30);
+    return () => clearInterval(t);
+  }, [drag && drag.path]);
+
   const scenes = book.scenes.map((p) => index.notes[p]).filter(Boolean);
   const groups = chapterGroups(schema, scenes);
   const words = groups.reduce((n, g) => n + g.words, 0);
@@ -198,6 +252,42 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd }: {
   const order = schema.statuses.scene || Object.keys(counts);
   const board = schema.boards['chapter-grid'];
   const accepted = scenes.filter((s) => !isEmptyValue(s.data.accepted)).length;
+
+  const handle = (path: string) => onMove && (
+    <button type="button" class="move-handle" aria-label="Move this card: hold and drag"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        setHint(false);
+        put({ path, pointer: e.pointerId, startX: e.clientX, startY: e.clientY, startScroll: scrollY, x: e.clientX, y: e.clientY, moved: false, at: null });
+      }}
+      onPointerMove={(e) => {
+        const d = dragRef.current;
+        if (!d || d.pointer !== e.pointerId) return;
+        const moved = d.moved || Math.abs(e.clientY - d.startY) > 6 || Math.abs(e.clientX - d.startX) > 6;
+        put({ ...d, x: e.clientX, y: e.clientY, moved, at: moved ? dropAt(e.clientX, e.clientY, d.path) || d.at : null });
+      }}
+      onPointerUp={(e) => {
+        const d = dragRef.current;
+        put(null);
+        if (!d || d.pointer !== e.pointerId) return;
+        if (!d.moved) { setHint(true); return; }
+        if (!d.at) return;
+        const g = groups.find((x) => x.key === d.at!.key);
+        if (!g) return;
+        // Dropped where it already was: nothing to save.
+        const inG = g.scenes.map((n) => n.path);
+        const was = inG.indexOf(d.path);
+        if (was >= 0 && (d.at.before === d.path || d.at.before === (inG[was + 1] || null))) return;
+        onMove(book, d.path, g.num, g.title, d.at.before);
+      }}
+      onPointerCancel={() => put(null)}>
+      Move
+    </button>
+  );
+  const shiftOf = (path: string) => (drag && drag.moved && drag.path === path ? [drag.x - drag.startX, drag.y + scrollY - drag.startY - drag.startScroll] : null);
+  const clsOf = (g: { key: string }, path: string) =>
+    drag && drag.moved && drag.path === path ? 'dragging' : drag && drag.at && drag.at.key === g.key && drag.at.before === path ? 'drop-before' + (drag.at.side ? ' side' : '') : '';
   return (
     <section>
       <p class="crumb">{book.seriesName} · {(board && board.title) || 'Chapter Grid'}</p>
@@ -208,14 +298,24 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd }: {
         {onDecide && scenes.length > 0 ? ' · ' + accepted + ' of ' + scenes.length + ' cards accepted' : ''}
       </p>
       <IdeasLink index={index} book={book} />
+      {onMove && scenes.length > 1 && (
+        <p class={'meta move-hint' + (hint ? ' shown' : '')}>
+          {hint ? 'Hold Move down and drag the card to where it goes, then let go.' : 'To change the order, hold a card\'s Move button and drag the card.'}
+        </p>
+      )}
       {!scenes.length && <p class="empty">This book has no scene notes yet. They appear here once they are in the book's Scenes folder.</p>}
       {groups.map((g) => (
-        <section class="chapter" key={g.key}>
+        <section class="chapter" key={g.key} data-chapter={g.key}>
           <h2>
             {chapterHeading(g)}
             <span class="meta"> {g.scenes.length === 1 ? '1 scene' : g.scenes.length + ' scenes'}{g.words ? ' · ' + g.words.toLocaleString('en-US') + ' words' : ''}</span>
           </h2>
-          <ul class="cards">{g.scenes.map((s) => <SceneCard key={s.path} schema={schema} note={s} waiting={waiting && waiting[s.path]} onDecide={onDecide} />)}</ul>
+          <ul class={'cards' + (drag && drag.moved && drag.at && drag.at.key === g.key && drag.at.before === null ? ' drop-end' : '')}>
+            {g.scenes.map((s) => (
+              <SceneCard key={s.path} schema={schema} note={s} waiting={waiting && waiting[s.path]} onDecide={onDecide}
+                handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} />
+            ))}
+          </ul>
           {onAdd && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}
         </section>
       ))}

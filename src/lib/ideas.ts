@@ -7,7 +7,16 @@ import type { NoteRecord } from './types.ts';
 
 /** What Kyle can do to a proposal. "inbox" puts a decided or later one back in the pile to decide.
  * "accept" and "rework" are for scene cards: accept sets the accepted time, rework clears it. */
-export type Decision = 'keep' | 'later' | 'drop' | 'inbox' | 'accept' | 'rework';
+export type Decision = 'keep' | 'later' | 'drop' | 'inbox' | 'accept' | 'rework' | 'move';
+
+/** Where a scene card was dragged to on the Chapter Grid: its new order, chapter and that chapter's title. */
+export interface Move {
+  order: number;
+  /** null when it goes to "No chapter yet". */
+  chapter: number | null;
+  /** The chapter's title, '' when it has none. */
+  chapterTitle: string;
+}
 
 /** The tag that marks an inbox idea Kyle wants to come back to. Its status stays inbox. */
 export const LATER_TAG = 'later';
@@ -65,6 +74,15 @@ export interface Change {
   note: string | null;
   /** For scene cards: a datetime to set, '' to remove the line, null to leave it. */
   accepted?: string | null;
+  /** For a moved scene card: the new order; chapter and chapter_title to set, or '' to remove the line. */
+  order?: number;
+  chapter?: number | '';
+  chapterTitle?: string;
+}
+
+/** What a move sets. Only order, chapter and chapter_title change; the card's status stays. */
+export function moveChange(m: Move): Change {
+  return { status: null, tags: null, decided: null, note: null, order: m.order, chapter: m.chapter == null ? '' : m.chapter, chapterTitle: m.chapterTitle };
 }
 
 /** What a decision sets, given the note's current properties. */
@@ -72,6 +90,7 @@ export function changeFor(data: Record<string, unknown>, decision: Decision, now
   const had = tags(data);
   const without = had.filter((t) => t !== LATER_TAG);
   const note = reason.trim() ? reason.trim().replace(/\s+/g, ' ') : null;
+  if (decision === 'move') return { status: null, tags: null, decided: null, note: null };
   if (decision === 'accept') return { status: null, tags: null, decided: null, note, accepted: stamp(now) };
   if (decision === 'rework') return { status: null, tags: null, decided: null, note, accepted: data.accepted == null ? null : '' };
   if (decision === 'later') {
@@ -92,6 +111,12 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
   if (c.decided === '') delete out.decided;
   else if (c.decided) out.decided = c.decided;
   if (c.note) out.decision_note = c.note;
+  if (c.order != null) out.order = c.order;
+  if (c.chapter === '') { delete out.chapter; delete out.chapter_title; }
+  else if (c.chapter != null) {
+    out.chapter = c.chapter;
+    if (c.chapterTitle) out.chapter_title = c.chapterTitle; else delete out.chapter_title;
+  }
   return out;
 }
 
@@ -128,6 +153,13 @@ export function applyToText(text: string, c: Change): string {
   if (c.decided === '') out = setLines(out, 'decided', null);
   else if (c.decided) out = Frontmatter.setScalar(out, 'decided', c.decided);
   if (c.note) out = Frontmatter.setScalar(out, 'decision_note', c.note);
+  if (c.order != null) out = Frontmatter.setScalar(out, 'order', c.order);
+  if (c.chapter === '') out = setLines(setLines(out, 'chapter', null), 'chapter_title', null);
+  else if (c.chapter != null) {
+    out = Frontmatter.setScalar(out, 'chapter', c.chapter);
+    if (c.chapterTitle) out = Frontmatter.setScalar(out, 'chapter_title', c.chapterTitle);
+    else if (/^chapter_title[ \t]*:/m.test(Frontmatter.split(out).yaml || '')) out = setLines(out, 'chapter_title', null);
+  }
   return out;
 }
 
@@ -139,7 +171,7 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   scene: { prefix: 'scenes', noun: 'a scene card', board: 'Chapter Grid' }
 };
 
-const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', accept: 'accept card', rework: 'card needs work' };
+const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', accept: 'accept card', rework: 'card needs work', move: 'move' };
 
 /** The commit message for a decision. It has no Agent trailer: the choice is Kyle's. */
 export function commitMessage(data: Record<string, unknown>, decision: Decision): string {

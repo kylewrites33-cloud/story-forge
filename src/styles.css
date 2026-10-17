@@ -230,3 +230,18 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
   background: var(--bg); border-radius: 8px; font: 1rem/1.6 Georgia, serif; color: var(--text);
 }
 .add-scene { display: grid; gap: 10px; margin-top: 12px; max-width: 36rem; }
+
+/* Moving a card on the Chapter Grid: the held card follows the finger or mouse; a line shows where it will land. */
+.move-handle { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.scene-item { position: relative; }
+.scene-item.dragging { z-index: 5; opacity: 0.95; background: var(--surface); outline: 2px solid var(--accent); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); border-radius: 12px; }
+.scene-item.dragging .move-handle { cursor: grabbing; }
+.scene-item.drop-before::before,
+.cards.drop-end::after {
+  content: ''; display: block; height: 4px; border-radius: 2px; background: var(--accent);
+}
+.scene-item.drop-before::before { position: absolute; left: 0; right: 0; top: -8px; }
+.cards { position: relative; }
+.cards.drop-end::after { position: absolute; left: 0; right: 0; bottom: -8px; }
+.move-hint.shown { color: var(--accent); }
+.scene-item.drop-before.side::before { left: -8px; right: auto; top: 0; bottom: 0; width: 4px; height: auto; }
