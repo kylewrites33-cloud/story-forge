@@ -17,6 +17,8 @@ export interface Draft {
   body: string;
   /** A word target Kyle set in the editor, saved with the next save; null leaves the note's target alone. */
   target: number | null;
+  /** A status Kyle chose in the editor (planned to drafted), saved with the next save. Missing or null leaves it. */
+  status?: string | null;
   /** Words when this sitting started, for "+312 this sitting". */
   startWords: number;
   updatedAt: string;
@@ -81,13 +83,13 @@ export function openDraft(note: NoteRecord, existing: Draft | undefined, now: Da
     startWords: bodyWords(note.body), updatedAt: now.toISOString(), pending: false
   });
   if (!existing) return fresh();
-  const unsaved = existing.body !== existing.baseBody || existing.target != null;
+  const unsaved = isUnsaved(existing);
   if (!unsaved && existing.baseSha !== note.sha) return fresh();
   return existing;
 }
 
 export function isUnsaved(d: Draft): boolean {
-  return d.body !== d.baseBody || d.target != null;
+  return d.body !== d.baseBody || d.target != null || d.status != null;
 }
 
 /** The note's text with a new body. The property block is kept byte for byte, apart from the lines named in `set`. */
@@ -187,8 +189,9 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
       clash = await saveSnapshot(source, cur, cur.body, 'changed elsewhere', now);
     }
     const set: Record<string, unknown> = {};
+    if (d.status && cur.data.status !== d.status) set.status = d.status;
     if (cur.type === 'scene') {
-      const w = sceneWords(cur.data.status, d.body);
+      const w = sceneWords(d.status || cur.data.status, d.body);
       if (cur.data.words !== w) set.words = w;
     }
     if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;

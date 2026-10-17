@@ -59,6 +59,8 @@ export interface VaultSource {
   /** Replace a file whose current blob sha is `sha`, or add a new file when `sha` is '', as one commit. Returns the new blob sha.
    * Throws an error with `conflict: true` when the file changed since `sha`. */
   write?(path: string, text: string, sha: string, message: string): Promise<string>;
+  /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
+  remove?(path: string, sha: string, message: string): Promise<void>;
 }
 
 export interface NoteRecord {

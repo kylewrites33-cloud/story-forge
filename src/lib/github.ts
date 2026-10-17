@@ -137,6 +137,26 @@ export class GitHubSource implements VaultSource {
     return body.content.sha;
   }
 
+  /** Remove one file as one commit on the branch. A stale sha is a conflict, as for write. */
+  async remove(path: string, sha: string, message: string): Promise<void> {
+    let res: Response;
+    try {
+      res = await this.fetch(this.contentsUrl(path), {
+        method: 'DELETE',
+        headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, sha, branch: this.s.branch })
+      });
+    } catch {
+      throw new GitHubError('Cannot reach GitHub. Check the connection and try again.', 0);
+    }
+    if (res.status === 409) {
+      const err = new GitHubError(path + ' changed on GitHub while the app was working on it. Sync and try again.', res.status) as GitHubError & { conflict: boolean };
+      err.conflict = true;
+      throw err;
+    }
+    if (!res.ok) throw new GitHubError(explain(res, this.s, path, 'change'), res.status);
+  }
+
   /** Checks the token, the repository and the branch, and says what it found in a plain sentence. */
   async test(): Promise<string> {
     await this.get(this.repoUrl(''), 'the repository', undefined, true);

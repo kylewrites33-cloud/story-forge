@@ -15,8 +15,10 @@ export class DemoSource implements VaultSource {
   readonly key = 'demo';
   readonly label = 'the demo vault';
   private changed = new Map<string, string>();
+  private removed = new Set<string>();
 
   private text(path: string): string {
+    if (this.removed.has(path)) throw new Error('The demo vault has no ' + path + '.');
     const text = this.changed.has(path) ? this.changed.get(path) : files['/demo-vault/' + path];
     if (text === undefined) throw new Error('The demo vault has no ' + path + '.');
     return text;
@@ -24,7 +26,7 @@ export class DemoSource implements VaultSource {
 
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
     const paths = new Set(Object.keys(files).map((k) => k.replace(/^\/demo-vault\//, '')).concat([...this.changed.keys()]));
-    const list = [...paths].map((path) => ({ path, sha: hash(this.text(path)) }));
+    const list = [...paths].filter((p) => !this.removed.has(p)).map((path) => ({ path, sha: hash(this.text(path)) }));
     return { files: list.sort((a, b) => a.path.localeCompare(b.path)), truncated: false };
   }
 
@@ -38,9 +40,16 @@ export class DemoSource implements VaultSource {
   }
 
   async write(path: string, text: string, sha: string): Promise<string> {
-    const now = this.changed.has(path) || files['/demo-vault/' + path] !== undefined ? hash(this.text(path)) : '';
+    const now = !this.removed.has(path) && (this.changed.has(path) || files['/demo-vault/' + path] !== undefined) ? hash(this.text(path)) : '';
     if (now !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
     this.changed.set(path, text);
+    this.removed.delete(path);
     return hash(text);
+  }
+
+  async remove(path: string, sha: string): Promise<void> {
+    if (hash(this.text(path)) !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
+    this.removed.add(path);
+    this.changed.delete(path);
   }
 }

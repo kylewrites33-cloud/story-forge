@@ -7,7 +7,9 @@ import {
 } from '../lib/drafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
+import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
+import { href } from './route.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
@@ -18,15 +20,25 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, note, backTo, onSaved }: {
-  source: VaultSource; note: NoteRecord; backTo: string; onSaved: (n: NoteRecord) => void;
+export function Editor({ source, note, next, nextMentions, bookFolder, backTo, onSaved, onChanged }: {
+  source: VaultSource; note: NoteRecord;
+  /** The scene after this one in reading order, for Join, and the book's notes that name it. */
+  next: NoteRecord | null;
+  nextMentions: NoteRecord[];
+  bookFolder: string | null;
+  backTo: string;
+  onSaved: (n: NoteRecord) => void;
+  /** Sync after scenes were added or removed, so the boards show them. */
+  onChanged: () => Promise<void>;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
   const draftRef = useRef(draft);
   const [state, setState] = useState<Saving>('idle');
   const [message, setMessage] = useState<string | null>(null);
-  const [panel, setPanel] = useState<null | 'target' | 'copies'>(null);
+  const [panel, setPanel] = useState<null | 'target' | 'copies' | 'scene'>(null);
+  const caret = useRef<number | null>(null);
+  const [made, setMade] = useState<NoteRecord | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,7 +76,7 @@ export function Editor({ source, note, backTo, onSaved }: {
       onSaved(r.note);
       const now = draftRef.current;
       // Words typed while it was saving stay in the draft for the next save.
-      const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, pending: false, error: undefined };
+      const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, pending: false, error: undefined };
       if (closing && !isUnsaved(next)) { draftRef.current = next; putDraft(source.key, d.path, null); }
       else setDraft(next);
       setState('saved');
@@ -110,6 +122,53 @@ export function Editor({ source, note, backTo, onSaved }: {
     };
   }, [source, save, setDraft]);
 
+  const mark = () => { const el = box.current; if (el) caret.current = el.selectionStart; };
+
+  /** Split at the cursor: the words after it become a new scene right after this one. */
+  const split = async (newTitle: string): Promise<string | null> => {
+    if (!bookFolder || !canSave) return 'Splitting needs your own vault, not the demo.';
+    if (!navigator.onLine) return 'Connect to the internet to split a scene.';
+    const d = draftRef.current;
+    const { lead, text: words } = splitLead(d.body);
+    const at = caret.current == null ? words.length : Math.min(caret.current, words.length);
+    const parts = splitAt(words, at);
+    if (!parts.after.trim()) return 'Put the cursor where the new scene should start, then press Split.';
+    if (!parts.before.trim()) return 'The cursor is at the very start. Put it where the new scene should start.';
+    try {
+      const created = await splitOff(source, note, next, d.body, parts.after, newTitle, bookFolder, new Date());
+      setDraft({ ...draftRef.current, body: lead + parts.before });
+      setTimeout(grow, 0);
+      await save(false);
+      await onChanged();
+      setMade(created);
+      setMessage(null);
+      return null;
+    } catch (e) {
+      return offlineError(e) ? 'Connect to the internet to split a scene.' : (e as Error).message;
+    }
+  };
+
+  /** Join the next scene onto the end of this one; the next scene's note moves to the Archive. */
+  const join = async (): Promise<string | null> => {
+    if (!next || !canSave || !source.remove) return 'Joining needs your own vault, not the demo.';
+    if (!navigator.onLine) return 'Connect to the internet to join scenes.';
+    try {
+      const taken = await archiveForJoin(source, note, next, new Date());
+      setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body) });
+      setTimeout(grow, 0);
+      if (!(await save(false)) || isUnsaved(draftRef.current)) return 'The joined words did not save, so ' + String(next.data.id || 'the next scene') + ' stays where it is. Its copy is in the Archive.';
+      await removeJoined(source, next, taken.sha, title);
+      setMade(null);
+      const told = bookFolder ? await noteJoinForTeam(source, bookFolder, next, note, nextMentions, new Date()) : null;
+      await onChanged();
+      setMessage(String(next.data.id || 'The next scene') + ' is joined onto the end. Its old note is in the book\'s Archive folder.' +
+        (told ? ' The team has a note to update anything that still names ' + String(next.data.id || 'it') + '.' : ''));
+      return null;
+    } catch (e) {
+      return offlineError(e) ? 'Connect to the internet to join scenes.' : (e as Error).message;
+    }
+  };
+
   const done = async () => {
     if (quiet.current) clearTimeout(quiet.current);
     const ok = await save(true);
@@ -137,6 +196,7 @@ export function Editor({ source, note, backTo, onSaved }: {
         <span class="buttons">
           <button type="button" onClick={() => setPanel(panel === 'target' ? null : 'target')} aria-expanded={panel === 'target'}>Target</button>
           <button type="button" onClick={() => setPanel(panel === 'copies' ? null : 'copies')} aria-expanded={panel === 'copies'}>Copies</button>
+          <button type="button" onClick={() => setPanel(panel === 'scene' ? null : 'scene')} aria-expanded={panel === 'scene'}>Scene</button>
         </span>
       </header>
       <div class="writer-status" role="status">
@@ -146,21 +206,82 @@ export function Editor({ source, note, backTo, onSaved }: {
         <span class={state === 'error' ? 'error' : ''}>{status}</span>
         {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
         {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
+        {made && <p class="note-line">The rest is now <a href={href.write(made.path)}>{[made.data.id, made.data.title].filter(Boolean).join(' ')}</a>.</p>}
       </div>
       {panel === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); setPanel(null); }} />}
       {panel === 'copies' && (
         <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
           onUse={(body) => { setDraft({ ...draftRef.current, body }); setPanel(null); setTimeout(grow, 0); }} />
       )}
+      {panel === 'scene' && (
+        <ScenePanel status={String(draft.status || note.data.status || '')} next={next}
+          onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
+          onSplit={split} onJoin={join} />
+      )}
       <textarea
         ref={box}
         class="writer-text"
         value={text}
         onInput={onInput}
+        onSelect={mark}
+        onKeyUp={mark}
+        onClick={mark}
+        onBlur={mark}
         spellcheck
         autocapitalize="sentences"
         aria-label={'Text of ' + title}
       />
+    </div>
+  );
+}
+
+function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
+  status: string; next: NoteRecord | null; onDrafted: () => void;
+  onSplit: (title: string) => Promise<string | null>; onJoin: () => Promise<string | null>;
+}) {
+  const [title, setTitle] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sure, setSure] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async (fn: () => Promise<string | null>) => {
+    setBusy(true);
+    setError(null);
+    const err = await fn();
+    setBusy(false);
+    setError(err);
+    if (!err) { setTitle(''); setSure(false); }
+  };
+  const nextName = next ? [next.data.id, next.data.title].filter(Boolean).join(' ') : '';
+  return (
+    <div class="writer-panel">
+      {status === 'planned' && (
+        <div>
+          <p class="hint">This scene is still marked planned, so its words do not count on the Chapter Grid yet.</p>
+          <div class="buttons"><button type="button" class="primary" onClick={onDrafted}>Mark as drafted</button></div>
+        </div>
+      )}
+      <label class="reason">
+        Split at the cursor. The words after the cursor become a new scene with this title:
+        <input type="text" value={title} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} placeholder="Title of the new scene" />
+      </label>
+      <div class="buttons">
+        <button type="button" class="primary" disabled={busy || !title.trim()} onClick={() => run(() => onSplit(title.trim()))}>Split here</button>
+      </div>
+      {next && (
+        <div>
+          <p class="hint">Join {nextName} onto the end of this scene. Its old note moves to the book's Archive folder.</p>
+          <div class="buttons">
+            {sure ? (
+              <>
+                <button type="button" class="primary" disabled={busy} onClick={() => run(onJoin)}>Yes, join {String(next.data.id || 'it')}</button>
+                <button type="button" onClick={() => setSure(false)}>Cancel</button>
+              </>
+            ) : <button type="button" disabled={busy} onClick={() => setSure(true)}>Join the next scene</button>}
+          </div>
+        </div>
+      )}
+      {busy && <p class="hint">Working…</p>}
+      {error && <p class="error">{error}</p>}
     </div>
   );
 }

@@ -7,7 +7,8 @@ import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
-import type { NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
+import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
+import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, saveQueue, type Choice } from '../lib/write-queue.ts';
@@ -100,6 +101,27 @@ export function App() {
     }
   }, [source, runFlush, foldNotes]);
 
+  /** Add a scene to a book, sync so every screen has it, and open it for writing. */
+  const onAddScene = useCallback(async (book: BookEntry, chapter: number | null, chapterTitle: string, title: string): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a scene.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    // After the chapter's last scene, or after the book's last scene for a new chapter.
+    const inCh = scenes.filter((n) => chapter != null && n.data.chapter === chapter);
+    const prev = inCh.length ? inCh[inCh.length - 1] : chapter == null || !scenes.some((n) => typeof n.data.chapter === 'number' && n.data.chapter > chapter) ? scenes[scenes.length - 1] || null : null;
+    const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
+    try {
+      const made = await createScene(source, { bookFolder: book.folder, title, chapter, chapterTitle, order: orderBetween(prev, next), status: 'drafted', body: '' },
+        new Date(), 'Added in the Story Forge app.');
+      await runSync();
+      location.hash = href.write(made.path);
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
     runFlush();
@@ -159,7 +181,15 @@ export function App() {
   if (route.name === 'write' && view) {
     const note = view.notes[route.path];
     if (note) {
-      return <Editor key={route.path} source={source} note={note} backTo={href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} />;
+      const book = view.books.find((b) => route.path.startsWith(b.folder + '/')) || null;
+      const at = book ? book.scenes.indexOf(route.path) : -1;
+      const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
+      return (
+        <Editor key={route.path} source={source} note={note} next={next}
+          nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
+          bookFolder={book ? book.folder : null}
+          backTo={href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
+      );
     }
   }
 
@@ -182,7 +212,9 @@ export function App() {
       if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} />;
-      } else if (boardKey === 'chapter-grid') screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
+      } else if (boardKey === 'chapter-grid') {
+        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} />;
+      }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = <><BoardNav schema={schema} book={book} current={boardKey} />{screen}</>;
     }

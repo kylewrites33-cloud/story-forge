@@ -147,8 +147,48 @@ function SceneCard({ schema, note, waiting, onDecide }: { schema: Schema; note: 
   );
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide }: {
-  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide;
+type OnAdd = (book: BookEntry, chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
+
+/** "Add a scene" under a chapter (or "Start chapter N" at the end): asks for a title, then opens the new scene for writing. */
+function AddScene({ book, chapter, chapterTitle, label, onAdd }: {
+  book: BookEntry; chapter: number | null; chapterTitle: string; label: string; onAdd: OnAdd;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [chTitle, setChTitle] = useState(chapterTitle);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const newChapter = !chapterTitle && label.startsWith('Start');
+  if (!open) return <div class="buttons add-scene"><button type="button" onClick={() => setOpen(true)}>{label}</button></div>;
+  const go = async () => {
+    setBusy(true);
+    const err = await onAdd(book, chapter, newChapter ? chTitle.trim() : chapterTitle, title.trim());
+    setBusy(false);
+    setError(err);
+  };
+  return (
+    <div class="add-scene">
+      {newChapter && (
+        <label class="reason">
+          Chapter title (you can leave it empty)
+          <input type="text" value={chTitle} onInput={(e) => setChTitle((e.currentTarget as HTMLInputElement).value)} />
+        </label>
+      )}
+      <label class="reason">
+        Title of the new scene
+        <input type="text" value={title} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} placeholder="For example Grey lies to Rue" />
+      </label>
+      <div class="buttons">
+        <button type="button" class="primary" disabled={busy || !title.trim()} onClick={go}>{busy ? 'Adding…' : 'Add and start writing'}</button>
+        <button type="button" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+      </div>
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd }: {
+  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd;
 }) {
   const scenes = book.scenes.map((p) => index.notes[p]).filter(Boolean);
   const groups = chapterGroups(schema, scenes);
@@ -176,8 +216,13 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide }: {
             <span class="meta"> {g.scenes.length === 1 ? '1 scene' : g.scenes.length + ' scenes'}{g.words ? ' · ' + g.words.toLocaleString('en-US') + ' words' : ''}</span>
           </h2>
           <ul class="cards">{g.scenes.map((s) => <SceneCard key={s.path} schema={schema} note={s} waiting={waiting && waiting[s.path]} onDecide={onDecide} />)}</ul>
+          {onAdd && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}
         </section>
       ))}
+      {onAdd && (() => {
+        const last = groups.filter((g) => g.num != null).reduce((m, g) => Math.max(m, g.num as number), 0);
+        return <AddScene book={book} chapter={last + 1} chapterTitle="" label={'Start chapter ' + (last + 1)} onAdd={onAdd} />;
+      })()}
     </section>
   );
 }
