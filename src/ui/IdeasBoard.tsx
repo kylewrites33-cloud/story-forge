@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { groupLabel, groupNotes, groupOrder } from '../lib/boards.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
@@ -111,6 +112,8 @@ export interface ProposalBoardProps extends IdeasProps {
   notes: NoteRecord[];
   /** What the board calls an empty book. */
   emptyText: string;
+  /** Anything the board shows under its introduction, such as the Market board's Rocket files. */
+  extra?: ComponentChildren;
 }
 
 export function IdeasBoard(props: IdeasProps) {
@@ -152,6 +155,7 @@ export function ProposalBoard(props: ProposalBoardProps) {
       <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a> · {(board && board.title) || props.heading}</p>
       <h1>{(board && board.title) || props.heading}</h1>
       <p class="meta">{props.intro}</p>
+      {props.extra}
       <div class="tabs" role="tablist">
         {tabs.map((t) => (
           <button key={t.key} type="button" role="tab" aria-selected={pile === t.key} onClick={() => { setPile(t.key); setLast(null); }}>
