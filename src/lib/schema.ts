@@ -71,3 +71,16 @@ export function indexedTypes(schema: Schema, phase: number): string[] {
   });
   return out;
 }
+
+/** Card text Kyle can change on a board: the card's one-line text properties and its blurb (pitch, summary, what a comp
+ * proves). Never the title or ID (the file is named after them), nor who made it; a scene card also offers its status. */
+export function editableFields(schema: Schema, type: string): string[] {
+  const def = schema.types[type];
+  if (!def) return [];
+  const props = def.properties || {};
+  const skip = ['title', 'id', 'type', 'source', 'status'];
+  const keys = cardFields(schema, type).concat(['pitch', 'summary', 'proves']).filter((k, i, a) => a.indexOf(k) === i);
+  const out = keys.filter((k) => skip.indexOf(k) < 0 && props[k] && props[k].type === 'string' && !props[k].computed);
+  if (type === 'scene' && props.status) out.push('status');
+  return out;
+}

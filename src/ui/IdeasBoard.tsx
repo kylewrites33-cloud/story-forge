@@ -5,7 +5,8 @@ import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { PILES, piles, type Decision, type Pile } from '../lib/ideas.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
-import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
+import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
+import { EditFields } from './EditFields.tsx';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
@@ -16,14 +17,14 @@ export interface IdeasProps {
   book: BookEntry;
   /** Choices not yet on GitHub, by note path. */
   waiting: Record<string, Choice>;
-  onDecide: (path: string, decision: Decision, reason: string) => void;
+  onDecide: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 }
 
 /** The choice that puts an idea back in the pile it came from. */
-const BACK: Record<Exclude<Pile, 'other'>, Decision> = { decide: 'inbox', later: 'later', kept: 'keep', dropped: 'drop' };
+const BACK: Record<Exclude<Pile, 'other'>, Decision> = { decide: 'inbox', later: 'later', rewrite: 'regenerate', kept: 'keep', dropped: 'drop' };
 
 const DONE: Record<Decision, string> = {
-  keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide', accept: 'Card accepted', rework: 'Marked as needing work', move: 'Moved'
+  keep: 'Kept', later: 'Saved for later', drop: 'Dropped', inbox: 'Back in To decide', regenerate: 'Sent back to rewrite', edit: 'Saved your edit', accept: 'Card accepted', rework: 'Marked as needing work', move: 'Moved'
 };
 
 /** Properties a card never repeats in Read more: the card already shows them, or they are bookkeeping. */
@@ -31,8 +32,13 @@ const QUIET = ['type', 'id', 'title', 'status', 'kind', 'pitch', 'created', 'upd
 
 /** The buttons a card shows, by the pile it is in. */
 function actions(pile: Pile): { decision: Decision; text: string; primary?: boolean }[] {
-  if (pile === 'decide') return [{ decision: 'keep', text: 'Keep', primary: true }, { decision: 'later', text: 'Later' }, { decision: 'drop', text: 'Drop' }];
-  if (pile === 'later' || pile === 'other') return [{ decision: 'keep', text: 'Keep', primary: true }, { decision: 'drop', text: 'Drop' }, { decision: 'inbox', text: 'To decide' }];
+  const keep = { decision: 'keep' as Decision, text: 'Keep', primary: true };
+  const rewrite = { decision: 'regenerate' as Decision, text: 'Rewrite' };
+  const drop = { decision: 'drop' as Decision, text: 'Drop' };
+  const back = { decision: 'inbox' as Decision, text: 'To decide' };
+  if (pile === 'decide') return [keep, { decision: 'later', text: 'Later' }, rewrite, drop];
+  if (pile === 'later' || pile === 'other') return [keep, rewrite, drop, back];
+  if (pile === 'rewrite') return [keep, drop, back];
   return [{ decision: 'inbox', text: 'Move back to To decide' }];
 }
 
@@ -49,10 +55,16 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
   const more = propertyOrder(schema, note.type, d).filter((k) => QUIET.indexOf(k) < 0 && shown.indexOf(k) < 0 && k !== 'summary' && k !== 'proves' && !isEmptyValue(d[k]));
   // The line that says what the card is for: an idea's pitch, a beat's summary, what a comp proves.
   const blurb = [d.pitch, d.summary, d.proves].find((v) => !isEmptyValue(v));
+  const [rewriting, setRewriting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const editable = editableFields(schema, note.type);
   const decide = (decision: Decision) => {
+    // Rewrite needs to say what should change, so the first press opens the box and the second sends it.
+    if (decision === 'regenerate' && !rewriting) { setRewriting(true); setAsking(true); return; }
     props.onDecide(note.path, decision, reason);
     setReason('');
     setAsking(false);
+    setRewriting(false);
   };
   return (
     <li class="idea">
@@ -66,9 +78,15 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
         <p class="meta">{shown.map((k) => label(k) + ': ' + formatValue(k, d[k], propDef(schema, note.type, k))).join(' · ')}</p>
       )}
       {decided && !isEmptyValue(d.decision_note) && <p class="reason-shown">Your reason: {String(d.decision_note)}</p>}
+      {pile === 'rewrite' && !isEmptyValue(d.decision_note) && <p class="reason-shown">What to change: {String(d.decision_note)}</p>}
       {waiting && waiting.error && <p class="error">{waiting.error}</p>}
       {note.error && <p class="error">Its properties cannot be read: {note.error}</p>}
-      <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Read more'}</button>
+      {editing
+        ? <EditFields schema={schema} note={note} fields={editable} onClose={() => setEditing(false)} onSave={(f) => props.onDecide(note.path, 'edit', '', f)} />
+        : <span class="card-links">
+          <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Read more'}</button>
+          {editable.length > 0 && !note.error && <button type="button" class="link" onClick={() => setEditing(true)}>Edit</button>}
+        </span>}
       {open && (
         <div class="idea-more">
           {more.length > 0 && (
@@ -87,7 +105,7 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
       )}
       {decided ? null : asking ? (
         <label class="reason">
-          Why? The team learns most from your reasons.
+          {rewriting ? 'What should the team change? Then press Send to rewrite.' : 'Why? The team learns most from your reasons.'}
           <input type="text" value={reason} onInput={(e) => setReason((e.currentTarget as HTMLInputElement).value)} placeholder="Optional, one line" />
         </label>
       ) : (
@@ -95,9 +113,14 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
       )}
       {!note.error && (
         <div class="buttons">
-          {actions(pile).map((a) => (
-            <button key={a.decision} type="button" class={a.primary ? 'primary' : undefined} onClick={() => decide(a.decision)}>{a.text}</button>
-          ))}
+          {rewriting
+            ? <>
+              <button type="button" class="primary" onClick={() => decide('regenerate')}>Send to rewrite</button>
+              <button type="button" onClick={() => { setRewriting(false); setAsking(false); }}>Cancel</button>
+            </>
+            : actions(pile).map((a) => (
+              <button key={a.decision} type="button" class={a.primary ? 'primary' : undefined} onClick={() => decide(a.decision)}>{a.text}</button>
+            ))}
         </div>
       )}
     </li>
@@ -120,7 +143,7 @@ export function IdeasBoard(props: IdeasProps) {
   const notes = (props.book.ideas || []).map((p) => props.index.notes[p]).filter(Boolean);
   return (
     <ProposalBoard {...props} boardKey="ideas" heading="Ideas" notes={notes}
-      intro={'The team\'s proposals for ' + props.book.title + '. Keep tells the team to use it. Later puts it aside to come back to. Drop turns it down, and the note stays in the vault.'}
+      intro={'The team\'s proposals for ' + props.book.title + '. Keep tells the team to use it. Later puts it aside to come back to. Rewrite sends it back to the team with what to change. Drop turns it down, and the note stays in the vault.'}
       emptyText="This book has no ideas yet. They appear here when an agent files one in the book's Ideas folder." />
   );
 }
@@ -138,10 +161,11 @@ export function ProposalBoard(props: ProposalBoardProps) {
   const type = (board && board.types[0]) || 'idea';
   const groups = by ? groupNotes(list, by, groupOrder(schema, type, by)) : [{ key: '', notes: list }];
 
-  const onDecide = (path: string, decision: Decision, reason: string) => {
+  const onDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     const n = index.notes[path];
-    setLast({ path, title: String((n && (n.data.id || n.data.title)) || basename(path)), decision, from: pile });
-    props.onDecide(path, decision, reason);
+    // An edit leaves the card in its pile, so there is nothing to undo.
+    if (decision !== 'edit') setLast({ path, title: String((n && (n.data.id || n.data.title)) || basename(path)), decision, from: pile });
+    props.onDecide(path, decision, reason, fields);
   };
   const undo = () => {
     if (!last) return;
@@ -170,7 +194,7 @@ export function ProposalBoard(props: ProposalBoardProps) {
       )}
       {!notes.length && <p class="empty">{props.emptyText}</p>}
       {notes.length > 0 && !list.length && (
-        <p class="empty">{pile === 'decide' ? 'Nothing to decide. Everything on this board has an answer.' : 'Nothing here.'}</p>
+        <p class="empty">{pile === 'decide' ? 'Nothing to decide. Everything on this board has an answer.' : pile === 'rewrite' ? 'Nothing waiting for a rewrite. Rewrite sends a card back to the team with what to change.' : 'Nothing here.'}</p>
       )}
       {by
         ? groups.map((g) => (

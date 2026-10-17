@@ -20,7 +20,9 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   `chapter` and `chapter_title` change, through the write queue (a chapter title the card carried passes to the chapter's
   next scene). The Market board shows the series' market case, comps, keyword sets and titles with keep, later and drop,
   the same way as the Ideas board, and Add a Rocket file saves a Publisher Rocket CSV from the device, unchanged, into the
-  series' `Market/Rocket Exports` (never replacing an earlier file). Other status toggles come later.
+  series' `Market/Rocket Exports` (never replacing an earlier file). Every proposal board also has Rewrite (status
+  `regenerate`, with what to change in `decision_note`) and Edit (the card's text fields, one line each, never the title or
+  ID); a scene card's Edit card also changes its status (planned, drafted, revised, final).
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -54,6 +56,7 @@ src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved 
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
+src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview

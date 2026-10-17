@@ -93,12 +93,23 @@ test('stamp gives minutes and an offset', () => {
 
 test('piles sort by ID and put later ideas apart', () => {
   const n = (id: string, extra: string) => makeNote(id + '.md', id, '---\ntype: idea\nid: ' + id + '\n' + extra + '\n---\n');
-  const p = piles([n('I-010', 'status: inbox'), n('I-002', 'status: inbox'), n('I-003', 'status: inbox\ntags: [later]'), n('I-004', 'status: keep'), n('I-005', 'status: discard'), n('I-006', 'status: regenerate')]);
+  const p = piles([n('I-010', 'status: inbox'), n('I-002', 'status: inbox'), n('I-003', 'status: inbox\ntags: [later]'), n('I-004', 'status: keep'), n('I-005', 'status: discard'), n('I-006', 'status: regenerate'), n('I-007', 'status: done')]);
   assert.deepEqual(p.decide.map((x) => x.data.id), ['I-002', 'I-010']);
   assert.deepEqual(p.later.map((x) => x.data.id), ['I-003']);
   assert.equal(p.kept.length, 1);
   assert.equal(p.dropped.length, 1);
-  assert.equal(p.other.length, 1);
+  assert.deepEqual(p.rewrite.map((x) => x.data.id), ['I-006']);
+  assert.deepEqual(p.other.map((x) => x.data.id), ['I-007']);
+});
+
+test('Rewrite sends a proposal back to the team with what to change', () => {
+  const text = '---\ntype: idea\nid: I-009\ntitle: A\nstatus: inbox\ntags:\n  - later\n---\nBody\n';
+  const out = applyToText(text, changeFor({ status: 'inbox', tags: ['later'] }, 'regenerate', new Date('2026-10-17T23:00:00Z'), 'Make the stakes personal'));
+  assert.match(out, /^status: regenerate$/m);
+  assert.doesNotMatch(out, /later/);
+  assert.match(out, /^decision_note: Make the stakes personal$/m);
+  assert.match(out, /^decided: 2026-10-17T/m);
+  assert.match(commitMessage({ type: 'idea', id: 'I-009', title: 'A' }, 'regenerate'), /^ideas: rewrite I-009 A/);
 });
 
 /** A source over a folder that can also be written, the way the app writes GitHub. */
@@ -211,4 +222,18 @@ test('the schema has an Ideas board the app indexes', () => {
   const schema = parseSchema(fs.readFileSync(path.join(DEMO, 'System', 'schema.json'), 'utf8'));
   assert.deepEqual(schema.boards.ideas.types, ['idea']);
   assert.ok((schema.boards.ideas.phase ?? 1) <= PHASE);
+});
+
+test('an edit changes only the lines Kyle changed, one line each, and two unsaved edits join', async () => {
+  const { enqueue } = await import('../src/lib/write-queue.ts');
+  const { editChange } = await import('../src/lib/ideas.ts');
+  const text = '---\ntype: scene\nid: S-001\ntitle: A\nstatus: planned\norder: 1\nturn: Old turn\nhook: "Old: hook"\n---\nBody\n';
+  const out = applyToText(text, editChange({ turn: 'New\nturn  here', hook: '', status: 'drafted' }));
+  assert.equal(out, '---\ntype: scene\nid: S-001\ntitle: A\nstatus: drafted\norder: 1\nturn: New turn here\n---\nBody\n');
+  let q = enqueue([], { path: 'a.md', decision: 'edit', reason: '', at: 'x', fields: { turn: 'T' } });
+  q = enqueue(q, { path: 'a.md', decision: 'accept', reason: '', at: 'y' });
+  q = enqueue(q, { path: 'a.md', decision: 'edit', reason: '', at: 'z', fields: { hook: 'H' } });
+  assert.equal(q.length, 2);
+  assert.deepEqual(q.find((c) => c.decision === 'edit')!.fields, { turn: 'T', hook: 'H' });
+  assert.match(commitMessage({ type: 'scene', id: 'S-001', title: 'A' }, 'edit'), /^scenes: edit S-001 A\n\nEdited on the Chapter Grid/);
 });

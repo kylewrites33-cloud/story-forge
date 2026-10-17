@@ -32,17 +32,17 @@ export function BoardNav({ schema, book, current }: { schema: Schema; book: Book
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
   'story-juice': {
     heading: 'Story Juice',
-    intro: 'The Story Juice chain for this book: premise, big issue, opinions, Core Drives and Core Needs, theme. Keep tells the team to build on it. Later puts it aside. Drop turns it down, and the note stays in the vault.',
+    intro: 'The Story Juice chain for this book: premise, big issue, opinions, Core Drives and Core Needs, theme. Keep tells the team to build on it. Later puts it aside. Rewrite sends it back to the team with what to change. Drop turns it down, and the note stays in the vault.',
     empty: 'No Story Juice proposals for this book yet. Premise, big issue, opinion, character and theme ideas appear here.'
   },
   'beat-sheet': {
     heading: 'Beat Sheet',
-    intro: 'The beats of this book, in story order: first the Story Juice act drawers, then the same story on Save the Cat. Keep the beats that are right; drop the ones that are not, with a reason.',
+    intro: 'The beats of this book, in story order: first the Story Juice act drawers, then the same story on Save the Cat. Keep the beats that are right, send back for a rewrite the ones that are close, and drop the rest, with a reason.',
     empty: 'No beats for this book yet. They appear here when the Plot Specialist files them in the book\'s Beats folder.'
   },
   'conflict-matrix': {
     heading: 'Conflict Matrix',
-    intro: 'The pressure system: the collisions that squeeze Grey, by where they come from. Each runs for at least three cause-and-effect steps. Keep the ones the book should use.',
+    intro: 'The pressure system: the collisions that squeeze the hero, by where they come from. Each runs for at least three cause-and-effect steps. Keep the ones the book should use.',
     empty: 'No conflicts for this book yet. They appear here when the Plot Specialist files them in the book\'s Conflicts folder.'
   }
 };
@@ -92,7 +92,7 @@ export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard; onAddR
   if (board === 'characters') return <CharactersBoard schema={schema} index={index} book={book} />;
   const t = board === 'market' ? {
     heading: 'Market',
-    intro: 'The market case, comps, keyword sets and titles for the ' + book.seriesName + ' series. Every book in the series shares them. Keep tells the team to build on it. Later puts it aside. Drop turns it down, and the note stays in the vault. Money figures are Publisher Rocket estimates.',
+    intro: 'The market case, comps, keyword sets and titles for the ' + book.seriesName + ' series. Every book in the series shares them. Keep tells the team to build on it. Later puts it aside. Rewrite sends it back to the team with what to change. Drop turns it down, and the note stays in the vault. Money figures are Publisher Rocket estimates.',
     empty: 'No market notes for this series yet. They appear here when the Market Analyst files them in the series\' Market folder.'
   } : INTRO[board];
   const extra = board === 'market' ? <RocketFiles book={book} index={index} onAdd={props.onAddRocket && ((f) => props.onAddRocket!(book, f))} /> : undefined;
