@@ -8,7 +8,10 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
 - Reads the vault through the GitHub REST API with a fine-grained token Kyle pastes into Settings. The token lives in
   localStorage only. Never ask for it, log it, or put any token, key or address in this repository.
 - Renders boards from the vault's `System/schema.json`. A new note type or card field needs a schema change, not an app change.
-- Phase 1: the Chapter Grid, read only. Phase 2 adds drag to reorder, status toggles, inline edit and a write queue.
+- Phase 1: the Chapter Grid, read only. Phase 2 adds the Ideas board (keep, later, drop, written back with a write queue);
+  drag to reorder, status toggles and inline edit come later.
+- Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
+  a choice on a board is Kyle's. The app never sets `keep` on anything Kyle did not tap.
 
 ## Stack
 
@@ -26,6 +29,8 @@ src/lib/frontmatter.js   the vault tool's YAML reader, copied as is (do not edit
 src/lib/schema.ts        parse System/schema.json; card fields, enums, property order
 src/lib/vault-index.ts   which files to read, parse them, build series/books/scenes; warnings
 src/lib/board.ts         Chapter Grid grouping
+src/lib/ideas.ts         Ideas board piles, and the line edits keep, later and drop make
+src/lib/write-queue.ts   choices waiting to save (localStorage), sending them, showing them before they land
 src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors
 src/lib/demo-source.ts   the bundled demo vault as a source
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files

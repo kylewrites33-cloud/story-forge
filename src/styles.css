@@ -139,3 +139,35 @@ button:disabled { opacity: 0.5; cursor: default; }
 .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 .warnings { margin-top: 2rem; color: var(--muted); }
 .warnings summary { cursor: pointer; min-height: 44px; display: list-item; }
+
+/* ideas board */
+.ideas-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
+.book-list .ideas-link { padding: 0 16px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 1rem 0; }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.tabs .count { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.tabs button[aria-selected="true"] .count { color: inherit; }
+.toast { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 12px; }
+.idea {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line); overflow-wrap: anywhere;
+}
+.idea .pitch { margin: 0; }
+.idea .buttons { margin-top: auto; padding-top: 6px; }
+.idea .buttons button { flex: 1 1 auto; }
+.idea-more dl { margin: 0.5em 0; display: grid; gap: 6px; font-size: 0.95rem; }
+.idea-more dt { color: var(--muted); font-size: 0.85rem; }
+.idea-more dd { margin: 0; }
+.idea-more .prose { font-size: 1rem; }
+.reason { display: grid; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+.reason input {
+  font: inherit; color: var(--text); min-height: 44px; padding: 8px 12px; width: 100%; min-width: 0;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+}
+button.link {
+  align-self: flex-start; background: none; border: none; padding: 0; min-height: 44px; color: var(--accent);
+  font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px;
+}
+.pill-error { border-color: var(--danger); color: var(--danger); }
+.banner .waiting { color: var(--text); }
+.reason-shown { margin: 0; font-style: italic; }

@@ -6,8 +6,11 @@ import { GitHubSource } from '../lib/github.ts';
 import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
-import type { Schema, Snapshot, VaultSource } from '../lib/types.ts';
+import type { Decision } from '../lib/ideas.ts';
+import type { Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
+import { enqueue, flush, loadQueue, overlay, saveQueue, type Choice } from '../lib/write-queue.ts';
+import { IdeasBoard } from './IdeasBoard.tsx';
 import { href, useRoute } from './route.ts';
 import { BookList, ChapterGrid, NoteView } from './screens.tsx';
 import { SettingsScreen } from './SettingsScreen.tsx';
@@ -28,21 +31,69 @@ export function App() {
   const [, tick] = useState(0);
   const snapRef = useRef<Snapshot | null>(null);
   snapRef.current = snap;
+  const [queue, setQueueState] = useState<Choice[]>(() => loadQueue(source.key));
+  const queueRef = useRef<Choice[]>(queue);
+  const flushing = useRef(false);
+
+  const setQueue = useCallback((list: Choice[]) => {
+    queueRef.current = list;
+    setQueueState(list);
+    saveQueue(source.key, list);
+  }, [source]);
+
+  useEffect(() => { setQueue(loadQueue(source.key)); }, [source, setQueue]);
+
+  /** Send waiting choices to GitHub, then fold the saved notes into the saved copy. */
+  const runFlush = useCallback(async (): Promise<string | null> => {
+    if (flushing.current || !queueRef.current.length || !navigator.onLine) return null;
+    flushing.current = true;
+    try {
+      const sent = queueRef.current;
+      const res = await flush(source, sent);
+      // Choices made while saving stay in the queue; a newer choice on the same idea replaces what was sent.
+      const later = queueRef.current.filter((c) => sent.indexOf(c) < 0);
+      let left = res.left.filter((c) => !later.some((x) => x.path === c.path));
+      left = later.reduce(enqueue, left);
+      setQueue(left);
+      if (res.error) setError(res.error);
+      const cur = snapRef.current;
+      if (res.saved.length && cur && cur.key === source.key) {
+        const notes = { ...cur.index.notes };
+        res.saved.forEach((n) => { notes[n.path] = n; });
+        const next = { ...cur, index: { ...cur.index, notes } };
+        snapRef.current = next;
+        setSnap(next);
+        await writeSnapshot(next);
+      }
+      if (left.some((c) => later.indexOf(c) >= 0)) setTimeout(() => runFlushRef.current(), 0);
+      return res.error;
+    } finally {
+      flushing.current = false;
+    }
+  }, [source, setQueue]);
+  const runFlushRef = useRef(runFlush);
+  runFlushRef.current = runFlush;
 
   const runSync = useCallback(async () => {
     if (!navigator.onLine) return;
     setSyncing(true);
     try {
+      const saveError = await runFlush();
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       setSnap(next);
-      setError(null);
+      setError(saveError);
       await writeSnapshot(next);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setSyncing(false);
     }
-  }, [source]);
+  }, [source, runFlush]);
+
+  const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
+    setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
+    runFlush();
+  }, [setQueue, runFlush]);
 
   // Show the saved copy at once, then refresh it.
   useEffect(() => {
@@ -80,6 +131,13 @@ export function App() {
     try { return parseSchema(snap.schemaText); } catch { return null; }
   }, [snap]);
 
+  const view = useMemo<VaultIndex | null>(() => (snap ? overlay(snap.index, queue) : null), [snap, queue]);
+  const waiting = useMemo(() => {
+    const out: Record<string, Choice> = {};
+    queue.forEach((c) => { out[c.path] = c; });
+    return out;
+  }, [queue]);
+
   const onSave = (s: Settings) => setSettings(saveSettings(s));
   const onForget = async () => {
     await clearSnapshots();
@@ -90,17 +148,26 @@ export function App() {
   let body;
   if (route.name === 'settings') {
     body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
-  } else if (!snap || !schema) {
+  } else if (!snap || !schema || !view) {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and tap Sync.'}</p>;
   } else if (route.name === 'note') {
-    body = <NoteView schema={schema} index={snap.index} path={route.path} />;
+    body = <NoteView schema={schema} index={view} path={route.path} />;
+  } else if (route.name === 'ideas') {
+    const book = view.books.find((b) => b.folder === route.folder);
+    body = book ? <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} /> : <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
   } else if (route.name === 'book') {
-    const book = snap.index.books.find((b) => b.folder === route.folder);
-    body = book ? <ChapterGrid schema={schema} index={snap.index} book={book} /> : <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
+    const book = view.books.find((b) => b.folder === route.folder);
+    body = book ? <ChapterGrid schema={schema} index={view} book={book} /> : <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
   } else {
-    const active = route.name === 'home' ? activeBook(snap.index) : null;
-    body = active ? <ChapterGrid schema={schema} index={snap.index} book={active} /> : <BookList index={snap.index} />;
+    const active = route.name === 'home' ? activeBook(view) : null;
+    body = active ? <ChapterGrid schema={schema} index={view} book={active} /> : <BookList index={view} />;
   }
+
+  // The Ideas tab opens the book on screen, or else the active book.
+  const ideasBook = view
+    ? (route.name === 'book' || route.name === 'ideas' ? view.books.find((b) => b.folder === route.folder) : null) ||
+      (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) || activeBook(view)
+    : null;
 
   return (
     <>
@@ -108,6 +175,7 @@ export function App() {
         <a class="brand" href="#/">Story Forge</a>
         <nav>
           <a href={href.books()} aria-current={route.name === 'books' ? 'page' : undefined}>Books</a>
+          {ideasBook && <a href={href.ideas(ideasBook.folder)} aria-current={route.name === 'ideas' ? 'page' : undefined}>Ideas</a>}
           <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined}>Settings</a>
         </nav>
       </header>
@@ -121,6 +189,13 @@ export function App() {
           </span>
           <button type="button" onClick={runSync} disabled={syncing || !online}>Sync</button>
         </p>
+        {queue.length > 0 && (
+          <p class="waiting">
+            {online
+              ? 'Saving ' + (queue.length === 1 ? '1 choice' : queue.length + ' choices') + '…'
+              : (queue.length === 1 ? '1 choice is' : queue.length + ' choices are') + ' saved on this device and go up when you are back online.'}
+          </p>
+        )}
         {error && <p class="error">{error}</p>}
       </div>
       <main>{body}</main>

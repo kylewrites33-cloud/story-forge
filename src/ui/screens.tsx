@@ -3,6 +3,7 @@ import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
 import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
+import { piles } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
@@ -46,6 +47,7 @@ export function BookList({ index }: { index: VaultIndex }) {
                     {active && active.folder === b.folder ? ' · active book' : ''}
                   </span>
                 </a>
+                <IdeasLink index={index} book={b} />
               </li>
             ))}
           </ul>
@@ -53,6 +55,18 @@ export function BookList({ index }: { index: VaultIndex }) {
       ))}
       <Warnings list={index.warnings} />
     </section>
+  );
+}
+
+/** "12 ideas to decide", linking to the book's Ideas board. */
+export function IdeasLink({ index, book }: { index: VaultIndex; book: BookEntry }) {
+  const notes = (book.ideas || []).map((p) => index.notes[p]).filter(Boolean);
+  if (!notes.length) return null;
+  const n = piles(notes).decide.length;
+  return (
+    <a class="ideas-link" href={href.ideas(book.folder)}>
+      {n ? (n === 1 ? '1 idea to decide' : n + ' ideas to decide') : 'Ideas: nothing to decide'}
+    </a>
   );
 }
 
@@ -107,6 +121,7 @@ export function ChapterGrid({ schema, index, book }: { schema: Schema; index: Va
         Stage {book.stage} · {scenes.length === 1 ? '1 scene' : scenes.length + ' scenes'} · {words.toLocaleString('en-US')} words
         {order.filter((s) => counts[s]).map((s) => ' · ' + counts[s] + ' ' + s)}
       </p>
+      <IdeasLink index={index} book={book} />
       {!scenes.length && <p class="empty">This book has no scene notes yet. They appear here once they are in the book's Scenes folder.</p>}
       {groups.map((g) => (
         <section class="chapter" key={g.key}>
@@ -131,7 +146,10 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
     <article class="note">
       {book && <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a></p>}
       <h1>{title}</h1>
-      <p class="meta">Read only for now. Edit in Obsidian. <span class="path">{path}</span></p>
+      <p class="meta">
+        {note.type === 'idea' && book ? <><a href={href.ideas(book.folder)}>Decide it on the Ideas board</a>, or edit it in Obsidian. </> : 'Read only for now. Edit in Obsidian. '}
+        <span class="path">{path}</span>
+      </p>
       {note.error && <p class="error">The frontmatter cannot be read: {note.error}</p>}
       {keys.length > 0 && (
         <table class="props">
