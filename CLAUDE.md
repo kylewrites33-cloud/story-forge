@@ -62,6 +62,8 @@ tests/                   Node test runner tests
   A test fails if either copy drifts, whenever the vault is checked out beside this repository.
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
 - Errors shown to Kyle are plain sentences that say what to do.
+- The iPad and desktop Chrome get the same app with the same features (Kyle, 2026-10-17). Nothing is iPad-only or
+  desktop-only; test both sizes. Keyboard shortcuts are extras (Ctrl or Cmd+S saves in the writing screen), never the only way.
 - iPad first: large type, one accent colour, light and dark, 16 px side gutter, no horizontal scroll, 44 px tap targets.
 - Files are fetched by blob sha, so an unchanged note is never downloaded twice.
 - `demo-vault/System/schema.json` is a copy of the vault's schema. Refresh it when the schema changes, and keep the demo

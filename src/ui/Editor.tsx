@@ -169,6 +169,20 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
     }
   };
 
+  // Ctrl+S (Cmd+S on a Mac) saves to the vault now, instead of the browser's "save page" box. Same on any keyboard,
+  // including one attached to the iPad.
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (quiet.current) clearTimeout(quiet.current);
+        save(false);
+      }
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [save]);
+
   const done = async () => {
     if (quiet.current) clearTimeout(quiet.current);
     const ok = await save(true);
