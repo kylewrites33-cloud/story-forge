@@ -71,15 +71,22 @@ export function setSelection(root: HTMLElement, start: number, end = start) {
 
 interface Step { text: string; caret: number; at: number }
 
-export function StyledEditor({ value, onChange, onCaret, label }: {
+/** What the tool row above the page can ask the writing box to do. */
+export interface EditorCommands { bold: () => void; italic: () => void; undo: () => void; redo: () => void }
+
+export function StyledEditor({ value, onChange, onCaret, label, commands }: {
   /** The text to start with. Later changes to it are ignored; give the editor a new key to load other text. */
   value: string;
   onChange: (text: string) => void;
   /** Where the cursor is, in characters from the start, for Split here. */
   onCaret: (offset: number) => void;
   label: string;
+  /** Filled in with the tool row's commands. */
+  commands?: { current: EditorCommands | null };
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // The last selection in the page. A button press can move focus away first, so bold and italic fall back to it.
+  const lastSel = useRef<{ start: number; end: number } | null>(null);
   const shown = useRef<string | null>(null);
   const html = useRef('');
   const composing = useRef(false);
@@ -121,7 +128,7 @@ export function StyledEditor({ value, onChange, onCaret, label }: {
     const el = ref.current;
     if (!el) return;
     const text = shown.current ?? '';
-    const sel = selectionOffsets(el) || { start: text.length, end: text.length };
+    const sel = selectionOffsets(el) || lastSel.current || { start: text.length, end: text.length };
     remember(text, sel.start);
     undo.current[undo.current.length - 1].at = 0;
     if (wrap) {
@@ -129,9 +136,11 @@ export function StyledEditor({ value, onChange, onCaret, label }: {
       const next = text.slice(0, sel.start) + wrap + inner + wrap + text.slice(sel.end);
       commit(next, inner ? sel.end + wrap.length * 2 : sel.start + wrap.length);
       if (inner) setSelection(el, sel.start + wrap.length, sel.end + wrap.length);
+      lastSel.current = inner ? { start: sel.start + wrap.length, end: sel.end + wrap.length } : { start: sel.start + wrap.length, end: sel.start + wrap.length };
       return;
     }
     commit(text.slice(0, sel.start) + insert + text.slice(sel.end), sel.start + insert.length);
+    lastSel.current = { start: sel.start + insert.length, end: sel.start + insert.length };
   };
 
   const step = (from: { current: Step[] }, to: { current: Step[] }) => {
@@ -166,6 +175,7 @@ export function StyledEditor({ value, onChange, onCaret, label }: {
     const text = readText(el);
     const s = selectionOffsets(el);
     const caret = s ? s.start : text.length;
+    lastSel.current = s;
     const h = styledHtml(text) + '<br>';
     shown.current = text;
     if (el.innerHTML !== h) { el.innerHTML = h; setSelection(el, caret); }
@@ -194,8 +204,18 @@ export function StyledEditor({ value, onChange, onCaret, label }: {
   const mark = () => {
     const el = ref.current;
     const s = el && selectionOffsets(el);
-    if (s) onCaret(s.start);
+    if (s) { lastSel.current = s; onCaret(s.start); }
   };
+
+  if (commands) {
+    const focus = () => { const el = ref.current; if (el && document.activeElement !== el) { el.focus(); if (lastSel.current) setSelection(el, lastSel.current.start, lastSel.current.end); } };
+    commands.current = {
+      bold: () => { focus(); replace('', '**'); },
+      italic: () => { focus(); replace('', '*'); },
+      undo: () => { focus(); step(undo, redo); },
+      redo: () => { focus(); step(redo, undo); }
+    };
+  }
 
   useEffect(() => {
     const el = ref.current;

@@ -8,9 +8,14 @@ import {
 import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
 import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
-import type { NoteRecord, VaultSource } from '../lib/types.ts';
+import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
+import { formatValue, isEmptyValue, label as fieldLabel } from '../lib/format.ts';
+import { cardFields, propDef } from '../lib/schema.ts';
+import type { NoteRecord, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
-import { StyledEditor } from './StyledEditor.tsx';
+import { Icon } from './Icon.tsx';
+import { boardLinks } from './StoryBoards.tsx';
+import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -24,29 +29,51 @@ function saveStyled(on: boolean) {
 }
 const num = (n: number) => n.toLocaleString('en-US');
 
+// The chapter list (left) and scene panel (right) sit beside the page when there is room, and slide over it when there
+// is not: the list needs 900 px, both need 1200 px. On a wide screen, whether each is open is remembered on the device.
+const WIDE_LEFT = '(min-width: 900px)';
+const WIDE_RIGHT = '(min-width: 1200px)';
+const wide = (q: string) => typeof matchMedia === 'function' && matchMedia(q).matches;
+function loadSide(key: string, fallback: boolean): boolean {
+  try { const v = localStorage.getItem('story-forge.' + key); return v == null ? fallback : v === 'open'; } catch { return fallback; }
+}
+function saveSide(key: string, open: boolean) {
+  try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
+}
+type Tab = 'card' | 'copies' | 'target' | 'tools';
+
+export interface EditorBook { title: string; folder: string; groups: ChapterGroup[] }
+
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
 function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, note, next, nextMentions, bookFolder, backTo, onSaved, onChanged }: {
-  source: VaultSource; note: NoteRecord;
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd }: {
+  source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
   nextMentions: NoteRecord[];
-  bookFolder: string | null;
+  /** The book the scene is in, for the chapter list. */
+  book: EditorBook | null;
   backTo: string;
   onSaved: (n: NoteRecord) => void;
   /** Sync after scenes were added or removed, so the boards show them. */
   onChanged: () => Promise<void>;
+  /** Add a scene to a chapter and open it. */
+  onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
 }) {
+  const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
   const draftRef = useRef(draft);
   const [state, setState] = useState<Saving>('idle');
   const [message, setMessage] = useState<string | null>(null);
-  const [panel, setPanel] = useState<null | 'target' | 'copies' | 'scene'>(null);
+  const [left, setLeft] = useState(() => wide(WIDE_LEFT) && loadSide('chapters', true));
+  const [right, setRight] = useState(() => wide(WIDE_RIGHT) && loadSide('scene-panel', true));
+  const [tab, setTab] = useState<Tab>('card');
+  const commands = useRef<EditorCommands | null>(null);
   const caret = useRef<number | null>(null);
   const [made, setMade] = useState<NoteRecord | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -199,17 +226,41 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
     return () => window.removeEventListener('keydown', key);
   }, [save]);
 
-  const done = async () => {
+  /** Leave the writing screen for another page, saving first (as Done does). */
+  const go = async (to: string) => {
     if (quiet.current) clearTimeout(quiet.current);
     const ok = await save(true);
-    if (ok) location.hash = backTo;
+    if (ok) location.hash = to;
   };
+  const done = () => go(backTo);
+  const link = (to: string) => ({ href: to, onClick: (e: MouseEvent) => { e.preventDefault(); go(to); } });
+
+  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); };
+  const toggleRight = () => { const v = !right; setRight(v); if (wide(WIDE_RIGHT)) saveSide('scene-panel', v); };
+  const openTab = (t: Tab) => { setTab(t); if (!right) setRight(true); };
+  // The dimmed page behind a panel that slides over it: pressing it closes that panel.
+  const closeOver = () => { if (!wide(WIDE_LEFT)) setLeft(false); if (!wide(WIDE_RIGHT)) setRight(false); };
+
+  /** Bold or italic in the plain text box: put stars around the selection. */
+  const wrapPlain = (stars: string) => {
+    const el = box.current;
+    if (!el) return;
+    const a = el.selectionStart, b = el.selectionEnd, v = el.value;
+    const nv = v.slice(0, a) + stars + v.slice(a, b) + stars + v.slice(b);
+    el.value = nv;
+    changed(nv);
+    el.focus();
+    el.setSelectionRange(a + stars.length, b + stars.length);
+  };
+  // Tool buttons must not take the cursor out of the page.
+  const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
   const { text } = splitLead(draft.body);
   const words = bodyWords(draft.body);
   const target = draft.target != null ? draft.target : toNumber(note.data.target_words);
   const sitting = words - draft.startWords;
   const title = [note.data.id, note.data.title].filter(Boolean).join(' ') || note.path;
+  const sceneName = String(note.data.title || note.data.id || 'this scene');
   const unsaved = isUnsaved(draft);
   const status =
     state === 'saving' ? 'Saving to the vault…'
@@ -217,53 +268,191 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
         : !kept.current ? 'This device would not keep a copy. Press Done to save.'
           : unsaved ? (draft.pending || !navigator.onLine ? 'Saved on this device. It goes to the vault when you are back online.' : 'Saved on this device.')
             : state === 'saved' ? 'Saved to the vault.' : 'Nothing changed yet.';
+  // The short form for the top bar. The full sentence shows under the heading when it needs attention.
+  const chip =
+    state === 'saving' ? { text: 'Saving…', cls: '' }
+      : state === 'error' || !kept.current ? { text: 'Not saved', cls: 'bad' }
+        : unsaved ? { text: draft.pending || !navigator.onLine ? 'On this device' : 'Saved on device', cls: draft.pending || !navigator.onLine ? 'warn' : '' }
+          : { text: 'Saved', cls: 'good' };
+  const loud = state === 'error' || !kept.current || (unsaved && (draft.pending || !navigator.onLine));
+  const sceneStatus = String(draft.status || note.data.status || '');
+  const group = book ? book.groups.find((g) => g.scenes.some((n) => n.path === note.path)) || null : null;
+  const heading = group && group.num != null ? chapterHeading(group) : String(note.data.title || title);
+  const sub = [group && group.num != null ? title : String(note.data.id || ''), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
+    .filter(Boolean).join(' · ');
+  const nextName = next ? String(next.data.title || next.data.id || 'Next scene') : '';
 
   return (
-    <div class="writer">
+    <div class={'writer' + (left ? ' left-open' : '') + (right ? ' right-open' : '')}>
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
-        <span class="writer-title">{title}</span>
-        <span class="buttons">
-          <button type="button" onClick={() => setPanel(panel === 'target' ? null : 'target')} aria-expanded={panel === 'target'}>Target</button>
-          <button type="button" onClick={() => setPanel(panel === 'copies' ? null : 'copies')} aria-expanded={panel === 'copies'}>Copies</button>
-          <button type="button" onClick={() => setPanel(panel === 'scene' ? null : 'scene')} aria-expanded={panel === 'scene'}>Scene</button>
-        </span>
-      </header>
-      <div class="writer-status" role="status">
+        {book && (
+          <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
+            <Icon name="list" /><span class="bar-label">Chapters</span>
+          </button>
+        )}
+        <span class="writer-title">{book ? book.title : title}</span>
         <span class="writer-words">
-          {num(words)} words{target ? ' of ' + num(target) : ''}{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) + ' this sitting' : ''}
+          {num(words)}{target ? ' / ' + num(target) : ''} words{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) : ''}
         </span>
-        <span class={state === 'error' ? 'error' : ''}>{status}</span>
-        {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
-        {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
-        {made && <p class="note-line">The rest is now <a href={href.write(made.path)}>{[made.data.id, made.data.title].filter(Boolean).join(' ')}</a>.</p>}
+        <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>
+        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label="Scene panel">
+          <Icon name="panel" /><span class="bar-label">Scene</span>
+        </button>
+      </header>
+      <div class="writer-cols">
+        {book && left && (
+          <aside class="writer-side" aria-label="Chapters">
+            <div class="side-head">
+              <strong>{book.title}</strong>
+              <button type="button" class="icon-button" onClick={toggleLeft} aria-label="Hide the chapter list"><Icon name="left" /></button>
+            </div>
+            <nav class="scene-list">
+              {book.groups.map((g) => (
+                <div key={g.key}>
+                  <p class="side-chapter">{chapterHeading(g)}</p>
+                  {g.scenes.map((n) => (
+                    <a key={n.path} {...link(href.write(n.path))} class="side-scene" aria-current={n.path === note.path ? 'page' : undefined}>
+                      <span>{String(n.data.title || n.data.id || n.path)}</span>
+                      <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
+                    </a>
+                  ))}
+                </div>
+              ))}
+              {onAdd && <AddInList onAdd={async (t) => {
+                if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+                return onAdd(group ? group.num : null, group ? group.title : '', t);
+              }} chapter={group && group.num != null ? group.num : null} />}
+            </nav>
+            <nav class="side-boards" aria-label="Boards">
+              {boardLinks(schema, book.folder).map((l) => (
+                <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
+              ))}
+            </nav>
+          </aside>
+        )}
+        <div class="writer-page">
+          <div class="writer-tools" role="toolbar" aria-label="Formatting">
+            <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" {...keepFocus}
+              onClick={() => (styled ? commands.current && commands.current.bold() : wrapPlain('**'))}><b>B</b></button>
+            <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" {...keepFocus}
+              onClick={() => (styled ? commands.current && commands.current.italic() : wrapPlain('*'))}><i>I</i></button>
+            {styled && <>
+              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+            </>}
+            <span class="tool-gap" />
+            <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="bar-label">Split here</span></button>
+            {next && <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="bar-label">Join next</span></button>}
+          </div>
+          <div class="page-head">
+            <h1>{heading}</h1>
+            {sub && <p class="meta">{sub}</p>}
+            {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
+            {loud && <p class={state === 'error' ? 'error' : 'note-line'}>{status}</p>}
+            {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
+            {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, made.data.title].filter(Boolean).join(' ')}</a>.</p>}
+          </div>
+          {styled ? (
+            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} commands={commands} />
+          ) : <textarea
+            ref={box}
+            class="writer-text"
+            value={text}
+            onInput={onInput}
+            onSelect={mark}
+            onKeyUp={mark}
+            onClick={mark}
+            onBlur={mark}
+            spellcheck
+            autocapitalize="sentences"
+            aria-label={'Text of ' + title}
+          />}
+          <div class="writer-done">
+            <span>Done with {sceneName}?</span>
+            <span class="buttons">
+              {sceneStatus === 'planned' && <button type="button" onClick={() => setDraft({ ...draftRef.current, status: 'drafted' })}>Mark as drafted</button>}
+              {next
+                ? <a class="button primary" {...link(href.write(next.path))}>Next: {nextName} <Icon name="right" size={18} /></a>
+                : <button type="button" class="primary" onClick={done}>Back to the Chapter Grid</button>}
+            </span>
+          </div>
+        </div>
+        {right && (
+          <aside class="writer-right" aria-label="Scene panel">
+            <div class="side-head">
+              <strong>Scene</strong>
+              <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
+            </div>
+            <div class="panel-tabs" role="tablist">
+              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['tools', 'Split and join']] as [Tab, string][]).map(([k, l]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
+              ))}
+            </div>
+            {tab === 'card' && <CardPanel schema={schema} note={note} status={sceneStatus} link={link} />}
+            {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
+            {tab === 'copies' && (
+              <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
+                onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setTimeout(grow, 0); }} />
+            )}
+            {tab === 'tools' && (
+              <ScenePanel status={sceneStatus} next={next}
+                styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
+                onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
+                onSplit={split} onJoin={join} />
+            )}
+          </aside>
+        )}
+        {(left || right) && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
       </div>
-      {panel === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); setPanel(null); }} />}
-      {panel === 'copies' && (
-        <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
-          onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setPanel(null); setTimeout(grow, 0); }} />
-      )}
-      {panel === 'scene' && (
-        <ScenePanel status={String(draft.status || note.data.status || '')} next={next}
-          styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
-          onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
-          onSplit={split} onJoin={join} />
-      )}
-      {styled ? (
-        <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} />
-      ) : <textarea
-        ref={box}
-        class="writer-text"
-        value={text}
-        onInput={onInput}
-        onSelect={mark}
-        onKeyUp={mark}
-        onClick={mark}
-        onBlur={mark}
-        spellcheck
-        autocapitalize="sentences"
-        aria-label={'Text of ' + title}
-      />}
+    </div>
+  );
+}
+
+/** The scene's card beside the page: its turn, hook and the rest, read only. */
+function CardPanel({ schema, note, status, link }: {
+  schema: Schema; note: NoteRecord; status: string; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+}) {
+  const rows = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'words' && k !== 'status' && !isEmptyValue(note.data[k]));
+  return (
+    <div class="writer-panel">
+      {status && <p class="hint">Status: {status}{!isEmptyValue(note.data.accepted) ? ' · card accepted' : ''}</p>}
+      {rows.length ? rows.map((k) => (
+        <div class="panel-card" key={k}>
+          <span class="panel-key">{fieldLabel(k)}</span>
+          {formatValue(k, note.data[k], propDef(schema, note.type, k))}
+        </div>
+      )) : <p class="hint">This scene's card is empty.</p>}
+      {!isEmptyValue(note.data.decision_note) && isEmptyValue(note.data.accepted) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
+      <a class="button" {...link(href.note(note.path))}>Open the whole note</a>
+    </div>
+  );
+}
+
+/** Add a scene from the chapter list: a title, then it opens for writing. */
+function AddInList({ onAdd, chapter }: { onAdd: (title: string) => Promise<string | null>; chapter: number | null }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!open) return <button type="button" class="side-add" onClick={() => setOpen(true)}><Icon name="plus" size={18} />Add a scene{chapter != null ? ' to chapter ' + chapter : ''}</button>;
+  const go = async () => {
+    setBusy(true);
+    const err = await onAdd(title.trim());
+    setBusy(false);
+    setError(err);
+  };
+  return (
+    <div class="side-add-form">
+      <label class="reason">
+        Title of the new scene
+        <input type="text" value={title} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} />
+      </label>
+      <div class="buttons">
+        <button type="button" class="primary" disabled={busy || !title.trim()} onClick={go}>{busy ? 'Adding…' : 'Add'}</button>
+        <button type="button" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+      </div>
+      {error && <p class="error">{error}</p>}
     </div>
   );
 }
