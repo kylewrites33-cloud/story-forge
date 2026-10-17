@@ -11,6 +11,8 @@ import type { Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts'
 import { activeBook } from '../lib/vault-index.ts';
 import { enqueue, flush, loadQueue, overlay, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
+import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
+import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
 import { href, useRoute } from './route.ts';
 import { BookList, ChapterGrid, NoteView } from './screens.tsx';
 import { SettingsScreen } from './SettingsScreen.tsx';
@@ -152,20 +154,26 @@ export function App() {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and tap Sync.'}</p>;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
-  } else if (route.name === 'ideas') {
-    const book = view.books.find((b) => b.folder === route.folder);
-    body = book ? <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} /> : <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
-  } else if (route.name === 'book') {
-    const book = view.books.find((b) => b.folder === route.folder);
-    body = book ? <ChapterGrid schema={schema} index={view} book={book} /> : <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
+  } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board' || (route.name === 'home' && activeBook(view))) {
+    const book = route.name === 'home' ? activeBook(view) : view.books.find((b) => b.folder === route.folder);
+    const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas' : 'chapter-grid';
+    if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
+    else {
+      let screen;
+      if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
+      else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} />;
+      } else if (boardKey === 'chapter-grid') screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
+      else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
+      body = <><BoardNav schema={schema} book={book} current={boardKey} />{screen}</>;
+    }
   } else {
-    const active = route.name === 'home' ? activeBook(view) : null;
-    body = active ? <ChapterGrid schema={schema} index={view} book={active} /> : <BookList index={view} />;
+    body = <BookList index={view} />;
   }
 
   // The Ideas tab opens the book on screen, or else the active book.
   const ideasBook = view
-    ? (route.name === 'book' || route.name === 'ideas' ? view.books.find((b) => b.folder === route.folder) : null) ||
+    ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' ? view.books.find((b) => b.folder === route.folder) : null) ||
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) || activeBook(view)
     : null;
 

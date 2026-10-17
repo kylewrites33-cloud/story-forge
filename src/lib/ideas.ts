@@ -1,11 +1,13 @@
-// The Ideas board: a book's idea notes in piles, and what a keep, later or drop does to a note's text.
-// Edits touch only the lines they change, the way sf's setScalar does, so Kyle's own formatting survives.
+// Kyle's choices on the boards: ideas, beats and conflicts in piles (keep, later, drop), scene cards accepted or sent back,
+// and what each choice does to a note's text. Edits touch only the lines they change, the way sf's setScalar does,
+// so Kyle's own formatting survives.
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import type { NoteRecord } from './types.ts';
 
-/** What Kyle can do to an idea. "inbox" puts a decided or later idea back in the pile to decide. */
-export type Decision = 'keep' | 'later' | 'drop' | 'inbox';
+/** What Kyle can do to a proposal. "inbox" puts a decided or later one back in the pile to decide.
+ * "accept" and "rework" are for scene cards: accept sets the accepted time, rework clears it. */
+export type Decision = 'keep' | 'later' | 'drop' | 'inbox' | 'accept' | 'rework';
 
 /** The tag that marks an inbox idea Kyle wants to come back to. Its status stays inbox. */
 export const LATER_TAG = 'later';
@@ -53,13 +55,16 @@ export function stamp(d: Date): string {
 }
 
 export interface Change {
-  status: string;
+  /** The status to set; null leaves it (scene cards keep their status). */
+  status: string | null;
   /** Tags after the change; null leaves the tags line alone. */
   tags: string[] | null;
   /** A datetime to set, '' to remove the line, null to leave it. */
   decided: string | null;
   /** A reason to set; null leaves any reason there already. */
   note: string | null;
+  /** For scene cards: a datetime to set, '' to remove the line, null to leave it. */
+  accepted?: string | null;
 }
 
 /** What a decision sets, given the note's current properties. */
@@ -67,6 +72,8 @@ export function changeFor(data: Record<string, unknown>, decision: Decision, now
   const had = tags(data);
   const without = had.filter((t) => t !== LATER_TAG);
   const note = reason.trim() ? reason.trim().replace(/\s+/g, ' ') : null;
+  if (decision === 'accept') return { status: null, tags: null, decided: null, note, accepted: stamp(now) };
+  if (decision === 'rework') return { status: null, tags: null, decided: null, note, accepted: data.accepted == null ? null : '' };
   if (decision === 'later') {
     return { status: 'inbox', tags: had.indexOf(LATER_TAG) >= 0 ? null : had.concat(LATER_TAG), decided: null, note };
   }
@@ -77,7 +84,10 @@ export function changeFor(data: Record<string, unknown>, decision: Decision, now
 
 /** The properties after a change, for showing a choice before GitHub has it. */
 export function applyToData(data: Record<string, unknown>, c: Change): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...data, status: c.status };
+  const out: Record<string, unknown> = { ...data };
+  if (c.status) out.status = c.status;
+  if (c.accepted === '') delete out.accepted;
+  else if (c.accepted) out.accepted = c.accepted;
   if (c.tags) { if (c.tags.length) out.tags = c.tags; else delete out.tags; }
   if (c.decided === '') delete out.decided;
   else if (c.decided) out.decided = c.decided;
@@ -111,7 +121,9 @@ function setLines(text: string, key: string, replacement: string[] | null): stri
 export function applyToText(text: string, c: Change): string {
   const p = Frontmatter.parse(text);
   if (p.error) throw new Error('This note\'s properties cannot be read (' + p.error + '). Fix it in Obsidian, then try again.');
-  let out = Frontmatter.setScalar(text, 'status', c.status);
+  let out = c.status ? Frontmatter.setScalar(text, 'status', c.status) : text;
+  if (c.accepted === '') out = setLines(out, 'accepted', null);
+  else if (c.accepted) out = Frontmatter.setScalar(out, 'accepted', c.accepted);
   if (c.tags) out = setLines(out, 'tags', c.tags.length ? ['tags:'].concat(c.tags.map((t) => '  - ' + Frontmatter.emitScalar(t))) : null);
   if (c.decided === '') out = setLines(out, 'decided', null);
   else if (c.decided) out = Frontmatter.setScalar(out, 'decided', c.decided);
@@ -119,9 +131,19 @@ export function applyToText(text: string, c: Change): string {
   return out;
 }
 
+/** Commit prefix, what a note is called, and the board it is decided on, by note type. */
+const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
+  idea: { prefix: 'ideas', noun: 'an idea', board: 'Ideas board' },
+  beat: { prefix: 'beats', noun: 'a beat', board: 'Beat Sheet' },
+  conflict: { prefix: 'conflicts', noun: 'a conflict', board: 'Conflict Matrix' },
+  scene: { prefix: 'scenes', noun: 'a scene card', board: 'Chapter Grid' }
+};
+
+const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', accept: 'accept card', rework: 'card needs work' };
+
 /** The commit message for a decision. It has no Agent trailer: the choice is Kyle's. */
 export function commitMessage(data: Record<string, unknown>, decision: Decision): string {
-  const what = decision === 'drop' ? 'drop' : decision === 'inbox' ? 'back to inbox' : decision;
+  const k = KINDS[String(data.type || 'idea')] || KINDS.idea;
   const name = [data.id, data.title].filter(Boolean).join(' ');
-  return 'ideas: ' + what + ' ' + (name || 'an idea') + '\n\nChosen on the Ideas board in the Story Forge app.';
+  return k.prefix + ': ' + VERBS[decision] + ' ' + (name || k.noun) + '\n\nChosen on the ' + k.board + ' in the Story Forge app.';
 }

@@ -21,7 +21,8 @@ export interface TypeDef {
   properties?: Record<string, PropertyDef>;
   board?: { default?: string; card?: string[] };
   body?: string;
-  variants?: Record<string, unknown>;
+  /** Other forms of the type, such as a character's book delta: { delta: { marker, scope, folder } }. */
+  variants?: Record<string, { marker?: string; scope?: string | string[]; folder?: string; required?: string[] }>;
 }
 
 export interface BoardDef {
@@ -73,6 +74,8 @@ export interface SeriesEntry {
   path: string;
   folder: string;
   name: string;
+  /** Paths of the series' character notes. Missing in copies saved before the Characters board. */
+  characters?: string[];
 }
 
 export interface BookEntry {
@@ -87,6 +90,10 @@ export interface BookEntry {
   scenes: string[];
   /** Paths of the book's idea notes. Missing in copies saved before the Ideas board. */
   ideas?: string[];
+  /** Paths of the book's beats, conflicts and character deltas. Missing in copies saved before the Story Juice boards. */
+  beats?: string[];
+  conflicts?: string[];
+  characters?: string[];
 }
 
 export interface VaultIndex {
