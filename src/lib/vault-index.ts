@@ -16,6 +16,9 @@ export function skipped(path: string): boolean {
   return parts.some((p) => p.charAt(0) === '.' || SKIP_ANYWHERE.has(p));
 }
 
+/** The note types the Market board shows, in the order it shows them. */
+export const MARKET_TYPES = ['market-thesis', 'comp', 'keyword-set', 'title-candidate'];
+
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** A pattern for the files where notes of this type live, from the type's scope, folder and file name,
@@ -119,6 +122,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   const books: BookEntry[] = [];
   const byBook: Record<string, NoteRecord[]> = {};
   const seriesChars: NoteRecord[] = [];
+  const seriesMarket: NoteRecord[] = [];
 
   records.forEach((n) => {
     if (n.path === CONFIG_PATH) return;
@@ -134,7 +138,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
       return;
     }
     if (n.type === 'series') {
-      series.push({ path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [] });
+      series.push({ path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [] });
     } else if (n.type === 'book') {
       const folder = dirname(n.path);
       const seriesFolder = folder.replace(/\/Books\/[^/]+$/, '');
@@ -150,6 +154,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
       const m = n.path.match(/^(Series\/[^/]+\/Books\/[^/]+)\//);
       if (m) (byBook[m[1]] = byBook[m[1]] || []).push(n);
       else if (n.type === 'character') seriesChars.push(n);
+      else if (MARKET_TYPES.indexOf(n.type) >= 0) seriesMarket.push(n);
     }
   });
 
@@ -157,7 +162,11 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
     const s = series.find((x) => n.path.startsWith(x.folder + '/'));
     if (s) s.characters!.push(n.path);
   });
-  series.forEach((s) => s.characters!.sort());
+  seriesMarket.forEach((n) => {
+    const s = series.find((x) => n.path.startsWith(x.folder + '/'));
+    if (s) s.market!.push(n.path);
+  });
+  series.forEach((s) => { s.characters!.sort(); s.market!.sort(); });
 
   books.forEach((b) => {
     const list = (byBook[b.folder] || []).filter((n) => n.type === 'scene').sort(compareScenes);

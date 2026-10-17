@@ -78,6 +78,8 @@ export interface SeriesEntry {
   name: string;
   /** Paths of the series' character notes. Missing in copies saved before the Characters board. */
   characters?: string[];
+  /** Paths of the series' market notes: market cases, comps, keyword sets and title candidates. Missing in copies saved before the Market board. */
+  market?: string[];
 }
 
 export interface BookEntry {

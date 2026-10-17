@@ -43,10 +43,11 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
   const [reason, setReason] = useState('');
   const d = note.data;
   const title = String(d.title || basename(note.path));
-  const shown = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'status' && k !== 'kind' && k !== 'pitch' && k !== 'summary' && !isEmptyValue(d[k]));
+  const shown = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'status' && k !== 'kind' && k !== 'pitch' && k !== 'summary' && k !== 'proves' && !isEmptyValue(d[k]));
   const decided = pile === 'kept' || pile === 'dropped';
-  const more = propertyOrder(schema, note.type, d).filter((k) => QUIET.indexOf(k) < 0 && shown.indexOf(k) < 0 && k !== 'summary' && !isEmptyValue(d[k]));
-  const blurb = !isEmptyValue(d.pitch) ? d.pitch : d.summary;
+  const more = propertyOrder(schema, note.type, d).filter((k) => QUIET.indexOf(k) < 0 && shown.indexOf(k) < 0 && k !== 'summary' && k !== 'proves' && !isEmptyValue(d[k]));
+  // The line that says what the card is for: an idea's pitch, a beat's summary, what a comp proves.
+  const blurb = [d.pitch, d.summary, d.proves].find((v) => !isEmptyValue(v));
   const decide = (decision: Decision) => {
     props.onDecide(note.path, decision, reason);
     setReason('');

@@ -2,7 +2,7 @@
 import { linkName, nameList, toNumber } from './links.ts';
 import type { PropertyDef } from './types.ts';
 
-const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU' };
+const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU', sub_subgenre: 'Niche', protagonist_type: 'Hero' };
 
 export function label(key: string): string {
   if (LABELS[key]) return LABELS[key];
@@ -19,6 +19,14 @@ export function formatValue(key: string, v: unknown, def: PropertyDef | null): s
   if (key === 'words') {
     const n = toNumber(v) || 0;
     return n.toLocaleString('en-US') + (n === 1 ? ' word' : ' words');
+  }
+  if (key === 'monthly_earnings') {
+    const n = toNumber(v);
+    if (n != null) return '$' + n.toLocaleString('en-US') + ' a month';
+  }
+  if (key === 'price') {
+    const n = toNumber(v);
+    if (n != null) return '$' + n.toFixed(2);
   }
   if (def && def.type === 'list') return nameList(v).join(', ');
   if (def && def.type === 'link') return linkName(v);

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { boardNotes, castFor, groupNotes, groupOrder, ideasAbout } from '../src/lib/boards.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
-import { applyToData, applyToText, changeFor, commitMessage } from '../src/lib/ideas.ts';
+import { applyToData, applyToText, changeFor, commitMessage, piles } from '../src/lib/ideas.ts';
+import { formatValue } from '../src/lib/format.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { buildIndex, pathPattern } from '../src/lib/vault-index.ts';
@@ -88,4 +89,19 @@ test('commit messages name the board and carry no Agent trailer', () => {
   assert.match(commitMessage({ type: 'conflict', id: 'C-001' }, 'drop'), /^conflicts: drop C-001/);
   assert.match(commitMessage({ id: 'I-001', title: 'Tobin Lies' }, 'keep'), /^ideas: keep I-001 Tobin Lies/);
   ['keep', 'accept', 'rework'].forEach((d) => assert.ok(!/Agent:/.test(commitMessage({ type: 'scene' }, d as 'keep'))));
+});
+
+test('the Market board shows the series market notes, the market case first, and keeps or drops them like ideas', async () => {
+  const { index, book } = await phase3();
+  const notes = boardNotes(index, book, 'market');
+  assert.equal(notes.length, 3);
+  const groups = groupNotes(notes, 'type', groupOrder(schema, 'market-thesis', 'type'));
+  assert.deepEqual(groups.map((g) => g.key), ['market-thesis', 'comp']);
+  assert.deepEqual(piles(notes).later.map((n) => n.data.title), ['The Quiet Mill']);
+  const comp = notes.find((n) => n.data.title === 'Lanterns of Low Harbor')!;
+  assert.equal(formatValue('monthly_earnings', comp.data.monthly_earnings, null), '$4,200 a month');
+  assert.equal(formatValue('price', comp.data.price, null), '$3.99');
+  const msg = commitMessage(comp.data, 'keep');
+  assert.match(msg, /^market: keep Lanterns of Low Harbor\n\nChosen on the Market board/);
+  assert.doesNotMatch(msg, /Agent:/);
 });

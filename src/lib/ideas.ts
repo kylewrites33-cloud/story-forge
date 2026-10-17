@@ -168,7 +168,11 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   idea: { prefix: 'ideas', noun: 'an idea', board: 'Ideas board' },
   beat: { prefix: 'beats', noun: 'a beat', board: 'Beat Sheet' },
   conflict: { prefix: 'conflicts', noun: 'a conflict', board: 'Conflict Matrix' },
-  scene: { prefix: 'scenes', noun: 'a scene card', board: 'Chapter Grid' }
+  scene: { prefix: 'scenes', noun: 'a scene card', board: 'Chapter Grid' },
+  'market-thesis': { prefix: 'market', noun: 'a market case', board: 'Market board' },
+  comp: { prefix: 'market', noun: 'a comp', board: 'Market board' },
+  'keyword-set': { prefix: 'market', noun: 'a keyword set', board: 'Market board' },
+  'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' }
 };
 
 const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', accept: 'accept card', rework: 'card needs work', move: 'move' };
