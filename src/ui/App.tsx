@@ -8,6 +8,7 @@ import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/s
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
+import { createTask, type NewTask } from '../lib/tasks.ts';
 import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
@@ -20,6 +21,7 @@ import { href, useRoute } from './route.ts';
 import { BookList, ChapterGrid, NoteView } from './screens.tsx';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
+import { TodoList } from './TodoList.tsx';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -175,6 +177,18 @@ export function App() {
     }
   }, [source, runSync]);
 
+  /** Add a to-do to the vault's Tasks folder, then sync so the list shows it. */
+  const onAddTask = useCallback(async (t: NewTask): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a to-do.';
+    try {
+      await createTask(source, t, new Date());
+      await runSync();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -254,6 +268,8 @@ export function App() {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
   } else if (route.name === 'write') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
+  } else if (route.name === 'todo') {
+    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
   } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board' || (route.name === 'home' && activeBook(view))) {
@@ -288,6 +304,7 @@ export function App() {
         <nav>
           <a href={href.books()} aria-current={route.name === 'books' ? 'page' : undefined}>Books</a>
           {ideasBook && <a href={href.ideas(ideasBook.folder)} aria-current={route.name === 'ideas' ? 'page' : undefined}>Ideas</a>}
+          <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined}>To-do</a>
           <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined}>Settings</a>
         </nav>
       </header>

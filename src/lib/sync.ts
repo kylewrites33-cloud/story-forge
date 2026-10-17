@@ -3,8 +3,8 @@ import { parseSchema, SCHEMA_PATH } from './schema.ts';
 import { buildIndex } from './vault-index.ts';
 import type { Snapshot, VaultSource } from './types.ts';
 
-/** The app indexes the note types on boards of this phase and earlier (Chapter Grid is 1, Ideas is 2, Story Juice boards 3). */
-export const PHASE = 3;
+/** The app indexes the note types on boards of this phase and earlier (Chapter Grid is 1, Ideas is 2, Story Juice boards 3, the Edit Queue's tasks 4). */
+export const PHASE = 4;
 
 export async function sync(source: VaultSource, previous: Snapshot | null, now: () => Date = () => new Date()): Promise<Snapshot> {
   const { files, truncated } = await source.tree();

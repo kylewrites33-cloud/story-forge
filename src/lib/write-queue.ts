@@ -86,7 +86,7 @@ export async function saveChoice(source: VaultSource, c: Choice): Promise<NoteRe
     const next = applyToText(text, changeOf(data, c));
     if (next === text) return makeNote(c.path, sha, text);
     try {
-      const newSha = await source.write(c.path, next, sha, commitMessage(data, c.decision));
+      const newSha = await source.write(c.path, next, sha, commitMessage(data, c.decision, c.fields));
       return makeNote(c.path, newSha, next);
     } catch (e) {
       // Someone (Obsidian, an agent) changed the note between our read and our write: read it again and redo the edit once.

@@ -107,6 +107,8 @@ export interface VaultIndex {
   series: SeriesEntry[];
   books: BookEntry[];
   notes: Record<string, NoteRecord>;
+  /** Paths of every task note: the vault's Tasks folder and each book's. Missing in copies saved before the to-do list. */
+  tasks?: string[];
   /** Plain sentences about notes the app could not read or place. */
   warnings: string[];
 }
