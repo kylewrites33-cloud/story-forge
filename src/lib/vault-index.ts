@@ -2,6 +2,7 @@
 // Paths follow the layout the sf tool reads (Series/<Series>/Books/<N Title>/...), and skip the same folders.
 import { Frontmatter } from './frontmatter.js';
 import { basename, dirname, idNumber, toNumber } from './links.ts';
+import { rocketFiles } from './market.ts';
 import { CONFIG_PATH, indexedTypes } from './schema.ts';
 import type { BookEntry, FileEntry, NoteRecord, Schema, SeriesEntry, TypeDef, VaultIndex } from './types.ts';
 
@@ -86,7 +87,9 @@ export async function buildIndex(opts: BuildOptions): Promise<VaultIndex> {
     if (old && old.sha === f.sha) return old;
     return makeNote(f.path, f.sha, await read(f.path, f.sha));
   });
-  return assemble(schema, records, opts.phase ?? 1);
+  const index = assemble(schema, records, opts.phase ?? 1);
+  index.series.forEach((s) => { s.rocket = rocketFiles(opts.files, s.folder); });
+  return index;
 }
 
 /** Sort scenes the way sf does: by order, then chapter, then ID number. */

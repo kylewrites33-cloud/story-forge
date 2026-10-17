@@ -19,7 +19,8 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   On the Chapter Grid, hold a card's Move button and drag it (finger or mouse) to a new place or chapter: only its `order`,
   `chapter` and `chapter_title` change, through the write queue (a chapter title the card carried passes to the chapter's
   next scene). The Market board shows the series' market case, comps, keyword sets and titles with keep, later and drop,
-  the same way as the Ideas board. Other status toggles come later.
+  the same way as the Ideas board, and Add a Rocket file saves a Publisher Rocket CSV from the device, unchanged, into the
+  series' `Market/Rocket Exports` (never replacing an earlier file). Other status toggles come later.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -50,6 +51,7 @@ src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
 src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see below)
 src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
+src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/ui/                  screens (Preact)

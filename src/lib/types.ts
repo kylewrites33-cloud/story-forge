@@ -80,6 +80,8 @@ export interface SeriesEntry {
   characters?: string[];
   /** Paths of the series' market notes: market cases, comps, keyword sets and title candidates. Missing in copies saved before the Market board. */
   market?: string[];
+  /** File names in the series' Market/Rocket Exports folder. Missing in copies saved before the Market board. */
+  rocket?: string[];
 }
 
 export interface BookEntry {

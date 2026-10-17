@@ -7,6 +7,7 @@ import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
+import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
@@ -159,6 +160,21 @@ export function App() {
     runFlush();
   }, [setQueue, runFlush]);
 
+  /** Save a Publisher Rocket export into the series' Market folder, then sync so the board lists it. */
+  const onAddRocket = useCallback(async (book: BookEntry, file: File): Promise<{ error: boolean; text: string }> => {
+    const problem = rocketProblem(file.name, file.size);
+    if (problem) return { error: true, text: problem };
+    if (!navigator.onLine) return { error: true, text: 'Connect to the internet to add a Rocket file.' };
+    const series = snapRef.current && snapRef.current.index.series.find((s) => s.folder === book.seriesFolder);
+    try {
+      const path = await addRocketFile(source, book.seriesFolder, (series && series.rocket) || [], file.name, await file.text());
+      await runSync();
+      return { error: false, text: 'Saved ' + path.slice(path.lastIndexOf('/') + 1) + ' in the vault. Ask the team in the project chat to read it.' };
+    } catch (e) {
+      return { error: true, text: (e as Error).message };
+    }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString() }));
     runFlush();
@@ -248,7 +264,7 @@ export function App() {
       let screen;
       if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} />;
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} />;
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} onMove={source.write ? onMove : undefined} />;
       }

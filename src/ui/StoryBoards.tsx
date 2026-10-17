@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { boardNotes, castFor, groupLabel, groupNotes, groupOrder, ideasAbout, type StoryBoard } from '../lib/boards.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { pileOf } from '../lib/ideas.ts';
@@ -46,7 +47,47 @@ const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: str
   }
 };
 
-export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard }) {
+/** The Market board's Rocket files: the ones the vault has, and a button to add one from this device. */
+function RocketFiles({ book, index, onAdd }: { book: BookEntry; index: VaultIndex; onAdd?: (file: File) => Promise<{ error: boolean; text: string }> }) {
+  const series = index.series.find((s) => s.folder === book.seriesFolder);
+  const files = (series && series.rocket) || [];
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [open, setOpen] = useState(false);
+  const pick = async (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file || !onAdd) return;
+    setBusy(true);
+    setMessage(null);
+    setMessage(await onAdd(file));
+    setBusy(false);
+  };
+  return (
+    <section class="rocket">
+      <h2>Publisher Rocket files <span class="meta">{files.length}</span></h2>
+      <p class="meta">
+        Exports from Publisher Rocket that the Market Analyst reads. Add one straight from this device: in Rocket, export the search as CSV, then press Add a Rocket file.
+      </p>
+      {files.length > 0 && (
+        <>
+          <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide the files' : 'Show the files'}</button>
+          {open && <ul class="file-list">{files.map((f) => <li key={f}>{f}</li>)}</ul>}
+        </>
+      )}
+      {onAdd && (
+        <label class={'button' + (busy ? ' disabled' : '')}>
+          {busy ? 'Adding…' : 'Add a Rocket file'}
+          <input type="file" accept=".csv,text/csv" class="visually-hidden" disabled={busy} onChange={pick} />
+        </label>
+      )}
+      {message && <p class={message.error ? 'error' : 'toast'} role="status">{message.text}</p>}
+    </section>
+  );
+}
+
+export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard; onAddRocket?: (book: BookEntry, file: File) => Promise<{ error: boolean; text: string }> }) {
   const { schema, index, book, board } = props;
   if (board === 'characters') return <CharactersBoard schema={schema} index={index} book={book} />;
   const t = board === 'market' ? {
@@ -54,7 +95,8 @@ export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard }) {
     intro: 'The market case, comps, keyword sets and titles for the ' + book.seriesName + ' series. Every book in the series shares them. Keep tells the team to build on it. Later puts it aside. Drop turns it down, and the note stays in the vault. Money figures are Publisher Rocket estimates.',
     empty: 'No market notes for this series yet. They appear here when the Market Analyst files them in the series\' Market folder.'
   } : INTRO[board];
-  return <ProposalBoard {...props} boardKey={board} heading={t.heading} intro={t.intro} emptyText={t.empty} notes={boardNotes(index, book, board)} />;
+  const extra = board === 'market' ? <RocketFiles book={book} index={index} onAdd={props.onAddRocket && ((f) => props.onAddRocket!(book, f))} /> : undefined;
+  return <ProposalBoard {...props} extra={extra} boardKey={board} heading={t.heading} intro={t.intro} emptyText={t.empty} notes={boardNotes(index, book, board)} />;
 }
 
 /** What a character card shows, when the note has it. The book's own want and arc come before the series ones. */
