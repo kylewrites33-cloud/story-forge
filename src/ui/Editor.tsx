@@ -10,8 +10,18 @@ import { toNumber } from '../lib/links.ts';
 import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
+import { StyledEditor } from './StyledEditor.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
+const STYLED_KEY = 'story-forge.styled';
+
+/** Styled text is on unless Kyle turned it off on this device. */
+function loadStyled(): boolean {
+  try { return localStorage.getItem(STYLED_KEY) !== 'off'; } catch { return true; }
+}
+function saveStyled(on: boolean) {
+  try { if (on) localStorage.removeItem(STYLED_KEY); else localStorage.setItem(STYLED_KEY, 'off'); } catch { /* the choice lasts until reload */ }
+}
 const num = (n: number) => n.toLocaleString('en-US');
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
@@ -98,8 +108,12 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
     }
   }, [source, canSave, onSaved, setDraft]);
 
-  const onInput = (e: Event) => {
-    const text = (e.currentTarget as HTMLTextAreaElement).value;
+  const [styled, setStyled] = useState(loadStyled);
+  // Bumped when the text changes from outside the writing box (copy restored, split, join), so the styled box reloads.
+  const [loaded, setLoaded] = useState(0);
+  const reload = () => setLoaded((n) => n + 1);
+  const onInput = (e: Event) => changed((e.currentTarget as HTMLTextAreaElement).value);
+  const changed = (text: string) => {
     setDraft({ ...draftRef.current, body: splitLead(draftRef.current.body).lead + text, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
     grow();
@@ -137,6 +151,7 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
     try {
       const created = await splitOff(source, note, next, d.body, parts.after, newTitle, bookFolder, new Date());
       setDraft({ ...draftRef.current, body: lead + parts.before });
+      reload();
       setTimeout(grow, 0);
       await save(false);
       await onChanged();
@@ -155,6 +170,7 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
     try {
       const taken = await archiveForJoin(source, note, next, new Date());
       setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body) });
+      reload();
       setTimeout(grow, 0);
       if (!(await save(false)) || isUnsaved(draftRef.current)) return 'The joined words did not save, so ' + String(next.data.id || 'the next scene') + ' stays where it is. Its copy is in the Archive.';
       await removeJoined(source, next, taken.sha, title);
@@ -225,14 +241,17 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
       {panel === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); setPanel(null); }} />}
       {panel === 'copies' && (
         <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
-          onUse={(body) => { setDraft({ ...draftRef.current, body }); setPanel(null); setTimeout(grow, 0); }} />
+          onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setPanel(null); setTimeout(grow, 0); }} />
       )}
       {panel === 'scene' && (
         <ScenePanel status={String(draft.status || note.data.status || '')} next={next}
+          styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
           onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
           onSplit={split} onJoin={join} />
       )}
-      <textarea
+      {styled ? (
+        <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} />
+      ) : <textarea
         ref={box}
         class="writer-text"
         value={text}
@@ -244,13 +263,13 @@ export function Editor({ source, note, next, nextMentions, bookFolder, backTo, o
         spellcheck
         autocapitalize="sentences"
         aria-label={'Text of ' + title}
-      />
+      />}
     </div>
   );
 }
 
-function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
-  status: string; next: NoteRecord | null; onDrafted: () => void;
+function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled }: {
+  status: string; next: NoteRecord | null; onDrafted: () => void; styled: boolean; onStyled: (on: boolean) => void;
   onSplit: (title: string) => Promise<string | null>; onJoin: () => Promise<string | null>;
 }) {
   const [title, setTitle] = useState('');
@@ -294,6 +313,10 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
           </div>
         </div>
       )}
+      <label class="check">
+        <input type="checkbox" checked={styled} onChange={(e) => onStyled((e.currentTarget as HTMLInputElement).checked)} />
+        Show italics and bold as styled text on this device. Turn it off to see the plain text with its stars.
+      </label>
       {busy && <p class="hint">Working…</p>}
       {error && <p class="error">{error}</p>}
     </div>
