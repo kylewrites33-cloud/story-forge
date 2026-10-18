@@ -2122,6 +2122,35 @@
       },
       "body": "Free text from Kyle. Agents read it; they never edit it."
     },
+    "scene-notes": {
+      "description": "A scene's planning notes, kept beside its prose so the writing screen shows only the story: Kyle's outline, the team's notes and questions, and where the scene came from. One note per scene; the writing screen shows it under the scene's card.",
+      "scope": "book",
+      "folder": "Scene Notes",
+      "filename": "{scene} {title}",
+      "required": [
+        "type",
+        "scene",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "scene-notes"
+        },
+        "scene": {
+          "type": "string",
+          "pattern": "^S-\\d{3}$",
+          "description": "The scene these notes are about."
+        },
+        "title": {
+          "type": "string",
+          "description": "The scene's title, so the file is easy to find."
+        },
+        "chapter": {
+          "type": "integer"
+        }
+      },
+      "body": "Callouts as they stood in the scene: Kyle's outline, Team notes (bible proposals and continuity questions), Open for Kyle questions and Source lines. Agents add new team notes here, not in the prose."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

@@ -69,7 +69,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, todos, onTodo, onAddTodo, waiting, timer }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -90,6 +90,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   codex?: CodexEntry[];
   /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
   braindump?: NoteRecord | null;
+  /** This scene's notes (Kyle's outline, Team notes, questions), shown under its card, never on the page. */
+  sceneNotes?: NoteRecord | null;
   /** The book's to-dos (its Tasks folder); the To-dos tab shows this chapter's. */
   todos?: NoteRecord[];
   /** Tick or untick a to-do (a status edit through the write queue). */
@@ -584,7 +586,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'card' && (picked
               ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} />
-              : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} />)}
+              : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
             {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
@@ -612,9 +614,9 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
 }
 
 /** The scene's card beside the page: its turn, hook and the rest, read only. */
-function CardPanel({ schema, note, status, link, named, onPick }: {
+function CardPanel({ schema, note, status, link, named, onPick, notes }: {
   schema: Schema; note: NoteRecord; status: string; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
-  named: { entry: CodexEntry; count: number }[]; onPick: (e: CodexEntry) => void;
+  named: { entry: CodexEntry; count: number }[]; onPick: (e: CodexEntry) => void; notes: NoteRecord | null;
 }) {
   const rows = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'words' && k !== 'status' && !isEmptyValue(note.data[k]));
   return (
@@ -627,6 +629,13 @@ function CardPanel({ schema, note, status, link, named, onPick }: {
         </div>
       )) : <p class="hint">This scene's card is empty.</p>}
       {!isEmptyValue(note.data.decision_note) && isEmptyValue(note.data.accepted) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
+      {notes && notes.body.trim() && (
+        <div class="scene-notes">
+          <span class="panel-key">Notes for this scene</span>
+          <div class="prose small" dangerouslySetInnerHTML={{ __html: render(notes.body) }} />
+          <a class="link" {...link(href.note(notes.path))}>Open these notes</a>
+        </div>
+      )}
       <a class="button" {...link(href.note(note.path))}>Open the whole note</a>
       {named.length > 0 && (
         <div>

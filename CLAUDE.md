@@ -74,11 +74,14 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   chapter's to-dos beside the page. They are `task` notes in the book's own `Tasks/` folder with `chapter` (and `scene`);
   Kyle adds one in a line and ticks it off; the team's carry `generated: true` and `found_by` and show a Generated label.
   Ask the team to check this chapter (`chapter-check`) and to tick off fixed ones (`todo-review`, which sets `done_note`).
-  The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs. Kyle's "~" notes in scenes stay as they are.
+  The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs. Kyle's "~" notes in Quest Declined became to-dos (Kyle, 2026-10-18).
   The Pomodoro timer (Kyle, 2026-10-18): 25 or 50 minutes of writing, 5 or 10 of break, kept on the device. It floats at the
   bottom right outside the writing screens and sits in their top bar (beside Leave focus in Focus mode), so it never
   covers the page or the toolbar. Each finished Pomodoro adds a line to the vault's `Writing Log/YYYY-MM-DD.md`
   (`writing-day`: pomodoros, minutes, words) with the words written in it; offline ones wait on the device.
+  Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
+  Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
+  per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -116,7 +119,7 @@ src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, new on
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, the Writing Log notes
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
-src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore
+src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
 src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
