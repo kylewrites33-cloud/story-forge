@@ -15,6 +15,8 @@ import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { appearances, codexFor, matcher } from '../lib/codex.ts';
+import { StageStrip } from './Overview.tsx';
+import { askAboutScene } from './Team.tsx';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -112,6 +114,7 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
               <button type="button" role="menuitem" onClick={() => { setMenu(false); setEditing(true); }}>Edit card</button>
               {onJob && sceneId && status === 'planned' && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('draft')}>Draft this scene</button>}
               {onJob && sceneId && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('check')}>The team's deeper check for AI-sounding phrases</button>}
+              {sceneId && <a class="button" role="menuitem" href={href.chat(sceneId, bookFolder || '')} onClick={() => askAboutScene(note.data)}>Ask the team about this scene</a>}
               <a class="button" role="menuitem" href={href.note(note.path)}>Open the note</a>
             </div>
           )}
@@ -460,6 +463,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
     drag && drag.moved && drag.path === path ? 'dragging' : drag && drag.at && drag.at.key === g.key && drag.at.before === path ? 'drop-before' + (drag.at.side ? ' side' : '') : '';
   return (
     <section>
+      <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
       <div class="grid-head">
         {source && <GridCover source={source} book={book} />}
         <div>
@@ -571,7 +575,10 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
       </p>
       {note.error && <p class="error">The frontmatter cannot be read: {note.error}</p>}
       {note.type === 'scene' && !note.error && (
-        <p class="buttons"><a class="button primary" href={href.write(path)}>Write this scene</a></p>
+        <p class="buttons">
+          <a class="button primary" href={href.write(path)}>Write this scene</a>
+          {note.data.id != null && <a class="button" href={href.chat(String(note.data.id), book ? book.folder : '')} onClick={() => askAboutScene(note.data)}><Icon name="chat" size={18} /> Ask the team about this scene</a>}
+        </p>
       )}
       {keys.length > 0 && (
         <table class="props">

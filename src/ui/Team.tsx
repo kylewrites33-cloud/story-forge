@@ -1,7 +1,7 @@
 // The AI team, its skills and what it has done: the Team page (a table like the first Story Forge's, with Recently
 // used, A to Z and By team), one page per agent, the Skills page (every skill and who can use it) and History.
 // Everything comes from the vault's .claude folder, the job notes and the vault's recent saves.
-import { Fragment } from 'preact';
+import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { render } from '../lib/markdown.ts';
 import {
@@ -15,13 +15,22 @@ import { href } from './route.ts';
 
 const PREFILL = 'sf-chat-prefill';
 
-/** Words to start a new conversation with, set by Talk and taken once by the Chat screen. */
-export function takeChatPrefill(): string {
+/** Words to start a new conversation with (or, given a thread, the next message in it), set by Talk or "Ask the team
+ * about this scene" and taken once by the Chat screen. */
+export function takeChatPrefill(thread = ''): string {
+  const key = PREFILL + (thread ? ':' + thread : '');
   try {
-    const v = sessionStorage.getItem(PREFILL) || '';
-    sessionStorage.removeItem(PREFILL);
+    const v = sessionStorage.getItem(key) || '';
+    sessionStorage.removeItem(key);
     return v;
   } catch { return ''; }
+}
+
+/** "Ask the team about this scene": the scene's conversation opens with a first line for Kyle to finish. */
+export function askAboutScene(data: Record<string, unknown>) {
+  const id = String(data.id || '');
+  const name = [id, String(data.title || '')].filter(Boolean).join(' ');
+  try { if (id) sessionStorage.setItem(PREFILL + ':' + id, 'About ' + name + ': '); } catch { /* the box starts empty */ }
 }
 
 function talkTo(name: string) {
@@ -65,7 +74,7 @@ function loadSort(): TeamSort {
 }
 
 /** The whole team as a table: agent, specialty, last used, ideas, kept, lessons and Talk. */
-export function TeamScreen({ index, schema, canTalk }: { index: VaultIndex; schema: Schema | null; canTalk: boolean }) {
+export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultIndex; schema: Schema | null; canTalk: boolean; extra?: ComponentChildren }) {
   const team = useTeam(index);
   const [sort, setSort] = useState<TeamSort>(loadSort);
   const stats = useMemo(() => {
@@ -82,6 +91,7 @@ export function TeamScreen({ index, schema, canTalk }: { index: VaultIndex; sche
         {team.members.length} agents, {team.skills.length} skills. Ideas counts the proposals each agent wrote; Kept is the share of
         those you kept, of the ones you decided. <a href={href.skills()}>See every skill</a> · <a href={href.history()}>What the team has done</a>
       </p>
+      {extra}
       {!team.members.length ? <NoTeam /> : (
         <>
           <div class="tabs" role="tablist" aria-label="Order">

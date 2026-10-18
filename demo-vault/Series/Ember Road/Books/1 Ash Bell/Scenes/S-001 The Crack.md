@@ -19,7 +19,9 @@ cast:
 place: "[[Cinder Ford]]"
 turn: The crack runs the full height of the bell.
 hook: She calls for Tobin, who is supposed to be asleep.
-status: drafted
+status: final
+published: 2026-10-11
+platform: rr
 words: 61
 ---
 

@@ -159,6 +159,23 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   (tool row, and Whole chapter) reads the page aloud with the browser's speech, a sentence at a time with the marks taken
   out (`src/lib/listen.ts`): Pause, Resume, Back, Next, Stop, speed and voice (kept per device), the sentence being read
   highlighted and scrolled into view. On a narrow page the new tools show icons only and the Ask the team heading goes.
+  Running the book (Kyle, 2026-10-18, from Writers Room): Overview (`#/board/overview/<book>`, the sidebar's item under
+  Book details) shows words against `target_words`, scenes per status, what is waiting on Kyle (proposals to decide, open
+  chapter to-dos, open Notes to the Team, questions in the scene notes, finished jobs not marked seen on this device), the
+  warnings of every check (`bookWarnings`), and the Release runway: chapters posted (a scene has `published`), chapters
+  ready (all final, none posted) and weeks of buffer at `cadence` (chapters a week; red under two). Target and pace are
+  changed in place (written as numbers). A stage strip (the schema's `book_stage` list) tops the Overview and the Chapter
+  Grid; pressing a stage asks first, then changes only the book's `stage`. The guided next step (`src/lib/nextstep.ts`) is
+  one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
+  `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
+  one waits). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
+  one agent, Mark done and Reopen, and where each was answered. Sessions (`#/board/sessions/<book>`, Review): the book's
+  session notes newest first; a session note opens speaker by speaker (`> [!voice] Name` callouts or `**Name:**` lines),
+  each agent in its own `--voice-N` colour, Kyle in the accent, then the ideas it filed (its `ideas` list and ideas whose
+  `session` links it). "Ask the team about this scene" (a Chapter Grid card's ••• menu, a scene's note view) opens the
+  scene's conversation with "About S-012 Title: " filled in. Recipes (`#/recipes`, the sidebar's foot): the vault's
+  `Recipes/` notes, Add and Edit (renaming moves the file); the writing screen's Team tab has "With a recipe", which adds
+  "Use the recipe [[Name]]" to every job sent from there. The Team page has Forge a new specialist (one line, a `forge` job).
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -241,6 +258,16 @@ src/ui/CheckPanel.tsx    the Check tab beside the page (and Whole chapter's Chec
 src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options tab
 src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
 src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
+src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
+src/lib/nextstep.ts      the guided next step from the book's stage and notes, and its next-step job
+src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, new ones
+src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
+src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, add, edit and rename
+src/ui/Overview.tsx      the Overview page, the stage strip and the next step button
+src/ui/NotesToTeam.tsx   the Notes to the Team screen
+src/ui/Sessions.tsx      the Sessions list and one session
+src/ui/Recipes.tsx       the Recipes page and the "With a recipe" picker
+src/ui/Forge.tsx         Forge a new specialist on the Team page
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview

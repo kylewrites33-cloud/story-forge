@@ -13,7 +13,7 @@ cast:
   - "[[Tobin Quill]]"
   - "[[Mara Quill]]"
 place: "[[Cinder Ford]]"
-status: planned
+status: final
 goal: Walk the bell across the frozen ford before the Warden's riders reach the bank.
 turn: The ice holds Tobin and cracks under the bell.
 hook: Mara tells Tobin to let it sink.

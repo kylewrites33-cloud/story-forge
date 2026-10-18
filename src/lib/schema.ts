@@ -78,6 +78,8 @@ export function indexedTypes(schema: Schema, phase: number): string[] {
 export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump', 'scene-notes', 'writing-day', 'chapter-beats', 'chapter-plan'];
 // Promises, threads and themes for the Promises board, the Plot Grid and the Themes heatmap.
 EXTRA_TYPES.push('promise', 'thread', 'theme');
+/** Notes to the Team, sessions and recipes (the Overview, Notes to the Team, Sessions and Recipes pages). */
+EXTRA_TYPES.push('note', 'session', 'recipe');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

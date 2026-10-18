@@ -8,7 +8,7 @@ import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
-  | 'combine' | 'variations' | 'learn-taste' | 'options';
+  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'next-step' | 'forge';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -39,6 +39,8 @@ export function jobLabel(kind: unknown): string {
     case 'variations': return 'Variations on this idea';
     case 'learn-taste': return 'Update my taste';
     case 'options': return 'Options for a passage';
+    case 'next-step': return 'The next step';
+    case 'forge': return 'Forge a new specialist';
     default: return 'Ask the team';
   }
 }
@@ -131,6 +133,12 @@ export function jobAsk(kind: JobKind, target: string, words: string): string {
     case 'learn-taste':
       return 'Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, '
         + 'with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.' + his;
+    case 'forge':
+      return 'Kyle wants a new specialist on the team: ' + (words.trim() || target) + '. Forge it the way Writers Room\'s /forge did. '
+        + 'First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). '
+        + 'Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), '
+        + 'with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. '
+        + 'Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.';
     default:
       return words.trim();
   }
@@ -172,6 +180,7 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
     case 'combine': return 'Combine ' + what;
     case 'variations': return 'Variations on ' + what;
     case 'learn-taste': return 'Update my taste';
+    case 'forge': return 'Forge a new specialist: ' + what;
     default: return 'Ask the team';
   }
 }

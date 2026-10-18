@@ -64,7 +64,11 @@ const PATHS: Record<string, string> = {
   swap: 'M4 8h14l-3.5-3.5M20 16H6l3.5 3.5',
   play: 'M7 4.5l12 7.5-12 7.5z',
   pause: 'M7 5h3v14H7zM14 5h3v14h-3z',
-  stop: 'M6.5 6.5h11v11h-11z'
+  stop: 'M6.5 6.5h11v11h-11z',
+  gauge: 'M4 18a8 8 0 1 1 16 0M12 18l4-6M8 18h8',
+  note: 'M5 4h14v12l-4 4H5zM15 20v-4h4M8.5 9h7M8.5 12.5h4',
+  sessions: 'M3 5h11v8H7l-4 3zM10 16h7l4 3v-8h-4',
+  recipe: 'M6 3h10a2 2 0 0 1 2 2v16H8a2 2 0 0 1-2-2zM6 17a2 2 0 0 1 2-2h10M10 7h5M10 10.5h5'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
