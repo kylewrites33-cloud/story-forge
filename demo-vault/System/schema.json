@@ -806,6 +806,29 @@
           "items": {
             "type": "link"
           }
+        },
+        "reasons": {
+          "type": "list",
+          "items": {
+            "enum": [
+              "love-it",
+              "surprising",
+              "specific",
+              "raises-stakes",
+              "not-now",
+              "needs-work",
+              "could-combine",
+              "cliche",
+              "wrong-tone",
+              "already-have",
+              "too-clever"
+            ]
+          },
+          "description": "One-press reasons Kyle gave with Keep, Later or Drop. They teach the team his taste."
+        },
+        "round": {
+          "type": "integer",
+          "description": "The brainstorm round the idea came from (1 blind pitch, 2 response, 3 fusion), so the keep rate per round shows if later rounds earn their cost."
         }
       },
       "board": {
@@ -975,6 +998,17 @@
         },
         "color": {
           "type": "string"
+        },
+        "arc_points": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "The character's arc scene by scene, as \"S-012: 4\": 0 is fully in the Lie, 10 fully living the Truth (Character Arcs)."
+        },
+        "arc_draft": {
+          "type": "boolean",
+          "description": "True while arc_points are the team's guess and Kyle has not changed or confirmed them."
         }
       },
       "board": {
@@ -1581,6 +1615,42 @@
           "type": "link",
           "to": "beat"
         },
+        "threads": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "thread"
+          },
+          "description": "Story threads this scene moves (Plot Grid)."
+        },
+        "day": {
+          "type": "number",
+          "description": "Story day the scene happens on, counting from day 1 (Timeline)."
+        },
+        "tension": {
+          "type": "integer",
+          "description": "How tense the scene is, 1 to 10 (Tension and Pacing)."
+        },
+        "outcome": {
+          "enum": [
+            "yes",
+            "yes-but",
+            "no",
+            "no-and"
+          ],
+          "description": "How the point-of-view character's goal turns out: yes, yes-but, no, no-and."
+        },
+        "mood": {
+          "type": "integer",
+          "description": "How the scene feels, from -5 (dark) to 5 (bright) (story shape)."
+        },
+        "card_draft": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "Card fields the team filled in that Kyle has not confirmed yet (the app shows them as the team's guess until he changes or confirms them)."
+        },
         "status": {
           "enum": "scene",
           "default": "planned"
@@ -1856,6 +1926,29 @@
         "answered_in": {
           "type": "link",
           "to": "session"
+        }
+      },
+      "body": "The instruction in Kyle's words."
+    },
+    "recipe": {
+      "description": "A standing instruction of Kyle's in plain English, used by name (\"draft chapter 4 with the cliffhanger recipe\"). Any agent that is handed a recipe follows it on top of its usual rules.",
+      "scope": "vault",
+      "folder": "Recipes",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "recipe"
+        },
+        "title": {
+          "type": "string"
+        },
+        "use_for": {
+          "type": "string",
+          "description": "What it is for, in a few words (a chapter end, a stat block)."
         }
       },
       "body": "The instruction in Kyle's words."
@@ -2356,7 +2449,16 @@
             "todo-review",
             "summaries",
             "beats",
-            "fill"
+            "fill",
+            "combine",
+            "variations",
+            "options",
+            "forge",
+            "next-step",
+            "voice-check",
+            "compare-read",
+            "learn-taste",
+            "fill-cards"
           ]
         },
         "target": {
