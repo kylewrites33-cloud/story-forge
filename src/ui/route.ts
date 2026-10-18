@@ -11,6 +11,8 @@ export type Route =
   | { name: 'write'; path: string }
   | { name: 'todo' }
   | { name: 'jobs' }
+  /** thread '' is the list of conversations, 'new' a conversation not started yet; book is the book it is for. */
+  | { name: 'chat'; thread: string; book: string }
   | { name: 'settings' };
 
 export function parseHash(hash: string): Route {
@@ -27,6 +29,7 @@ export function parseHash(hash: string): Route {
   if (head === 'settings') return { name: 'settings' };
   if (head === 'todo') return { name: 'todo' };
   if (head === 'jobs') return { name: 'jobs' };
+  if (head === 'chat') return { name: 'chat', thread: decodeURIComponent(rest[0] || ''), book: decodeURIComponent(rest.slice(1).join('/')) };
   return { name: 'home' };
 }
 
@@ -42,6 +45,7 @@ export const href = {
   write: (path: string) => '#/write/' + encodeURIComponent(path),
   todo: () => '#/todo',
   jobs: () => '#/jobs',
+  chat: (thread = '', book = '') => '#/chat' + (thread ? '/' + encodeURIComponent(thread) + (book ? '/' + encodeURIComponent(book) : '') : ''),
   settings: () => '#/settings'
 };
 
