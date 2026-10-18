@@ -18,6 +18,7 @@ import { boardLinks } from './StoryBoards.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
+import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -42,7 +43,7 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'card' | 'copies' | 'target' | 'tools' | 'page';
+type Tab = 'card' | 'copies' | 'target' | 'tools' | 'page' | 'team';
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[] }
 
@@ -52,7 +53,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -65,6 +66,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   onChanged: () => Promise<void>;
   /** Add a scene to a chapter and open it. */
   onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
+  /** Ask the team for a job on this scene, its chapter or the book. */
+  onJob?: OnJob;
 }) {
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
@@ -433,7 +436,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
-              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join']] as [Tab, string][]).map(([k, l]) => (
+              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
@@ -442,6 +445,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             {tab === 'copies' && (
               <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
                 onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setTimeout(grow, 0); }} />
+            )}
+            {tab === 'team' && (
+              <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
+                bookFolder={bookFolder} onJob={onJob} link={link} />
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
             {tab === 'tools' && (
@@ -557,6 +564,52 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
       </label>
       {busy && <p class="hint">Working…</p>}
       {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+/** Ask the team: each button writes a job note the vault's GitHub workflow runs. Kyle's words never get drafted over. */
+function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
+  status: string; id: string; title: string; chapter: number | null; bookFolder: string | null; onJob?: OnJob;
+  link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+}) {
+  const [asking, setAsking] = useState(false);
+  const [ask, setAsk] = useState('');
+  const [busy, setBusy] = useState<JobKind | ''>('');
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  if (!onJob) return <div class="writer-panel"><p class="hint">Asking the team needs your own vault, not the demo.</p></div>;
+  const send = async (kind: JobKind, target: string, words = '') => {
+    setBusy(kind);
+    setSaid(null);
+    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' ? '' : title);
+    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: words });
+    setBusy('');
+    setSaid(r);
+    if (!r.error && kind === 'custom') { setAsk(''); setAsking(false); }
+  };
+  const chapterTarget = chapter != null ? 'Chapter ' + chapter : '';
+  return (
+    <div class="writer-panel team-panel">
+      {status === 'planned'
+        ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
+        : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
+      <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('notes', chapterTarget)}>{busy === 'notes' ? 'Sending…' : 'Notes on this chapter'}</button>
+      <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'Check for AI-sounding phrases'}</button>
+      <button type="button" disabled={busy !== ''} onClick={() => send('learn', '')}>{busy === 'learn' ? 'Sending…' : 'Learn from my edits'}</button>
+      {asking ? (
+        <div class="side-add-form">
+          <label class="reason">
+            What do you want the team to do?
+            <input type="text" value={ask} onInput={(e) => setAsk((e.currentTarget as HTMLInputElement).value)} placeholder="One line" />
+          </label>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={busy !== '' || !ask.trim()} onClick={() => send('custom', '', ask)}>{busy === 'custom' ? 'Sending…' : 'Send'}</button>
+            <button type="button" onClick={() => { setAsking(false); setAsk(''); }}>Cancel</button>
+          </div>
+        </div>
+      ) : <button type="button" disabled={busy !== ''} onClick={() => { setAsking(true); setSaid(null); }}>Ask the team…</button>}
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+      <p class="hint">Each press writes a job into the vault. GitHub runs it in a few minutes and the answer lands on the <a {...link(href.jobs())}>Jobs</a> screen.</p>
     </div>
   );
 }
