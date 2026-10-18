@@ -139,6 +139,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   const seriesMarket: NoteRecord[] = [];
 
   const tasks: string[] = [];
+  const jobs: string[] = [];
   records.forEach((n) => {
     if (n.path === CONFIG_PATH) return;
     if (n.error) warnings.push(n.path + ' has frontmatter the app cannot read: ' + n.error);
@@ -153,6 +154,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
       return;
     }
     if (n.type === 'task') tasks.push(n.path);
+    if (n.type === 'job') jobs.push(n.path);
     if (n.type === 'series') {
       series.push({
         path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [],
@@ -202,7 +204,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
 
   series.sort((a, b) => a.name.localeCompare(b.name));
   books.sort((a, b) => a.seriesName.localeCompare(b.seriesName) || (a.number ?? Infinity) - (b.number ?? Infinity) || a.title.localeCompare(b.title));
-  return { config, series, books, notes, tasks: tasks.sort(), warnings };
+  return { config, series, books, notes, tasks: tasks.sort(), jobs: jobs.sort(), warnings };
 }
 
 /** The book System/Config.md names as active, if the vault has it. */

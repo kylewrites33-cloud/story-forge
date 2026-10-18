@@ -210,7 +210,8 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   comp: { prefix: 'market', noun: 'a comp', board: 'Market board' },
   'keyword-set': { prefix: 'market', noun: 'a keyword set', board: 'Market board' },
   'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' },
-  task: { prefix: 'tasks', noun: 'a to-do', board: 'To-do list' }
+  task: { prefix: 'tasks', noun: 'a to-do', board: 'To-do list' },
+  job: { prefix: 'jobs', noun: 'a job', board: 'Jobs screen' }
 };
 
 const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', regenerate: 'rewrite', edit: 'edit', accept: 'accept card', rework: 'card needs work', move: 'move' };
