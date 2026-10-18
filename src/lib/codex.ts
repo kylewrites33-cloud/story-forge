@@ -28,17 +28,29 @@ function usable(t: string): boolean {
   return t.length >= 3 && !/^\d+$/.test(t);
 }
 
-/** Words that start names but are not first names ("The Warden", "King Slime"). */
-const NOT_FIRST = ['The', 'A', 'An', 'Old', 'Young', 'Little', 'Big', 'Mr', 'Mrs', 'Ms', 'Dr', 'Sir', 'Lady', 'Lord', 'King', 'Queen', 'Prince', 'Princess',
-  'Saint', 'St', 'Captain', 'General', 'Master', 'Mother', 'Father', 'Brother', 'Sister', 'Aunt', 'Uncle', 'Doctor', 'Professor', 'Demon', 'Witch'];
+/** Words that start names but are not first names ("The Warden", "King Slime", "the Demon Lord"), in any case. */
+const NOT_FIRST = ['the', 'a', 'an', 'old', 'young', 'little', 'big', 'mr', 'mrs', 'ms', 'dr', 'sir', 'lady', 'lord', 'king', 'queen', 'prince', 'princess',
+  'saint', 'st', 'captain', 'general', 'master', 'mother', 'father', 'brother', 'sister', 'aunt', 'uncle', 'doctor', 'professor', 'demon', 'witch'];
 
-function termsOf(name: string, data: Record<string, unknown>, firstName: boolean): string[] {
+/** Everyday words that never light up on their own, even when a name or an alias is one of them. */
+const COMMON = new Set(NOT_FIRST.concat(['and', 'but', 'for', 'nor', 'not', 'yet', 'with', 'from', 'into', 'onto', 'over', 'this', 'that',
+  'these', 'those', 'his', 'her', 'hers', 'him', 'she', 'they', 'them', 'their', 'you', 'your', 'our', 'its', 'who', 'what', 'when',
+  'where', 'which', 'was', 'were', 'are', 'has', 'had', 'have', 'will', 'one', 'two', 'all', 'any', 'some', 'out', 'off', 'down', 'back',
+  'here', 'there', 'then', 'than', 'now', 'just', 'like', 'very', 'about', 'after', 'before', 'man', 'woman', 'boy', 'girl', 'people']));
+
+/** A one-word term that is an everyday word, or one that starts small ("the", "village"), would light up in every line. */
+function everyday(t: string): boolean {
+  if (/\s/.test(t)) return false;
+  return COMMON.has(t.toLowerCase()) || !/^\p{Lu}/u.test(t);
+}
+
+export function termsOf(name: string, data: Record<string, unknown>, firstName: boolean): string[] {
   const out = [name].concat(nameList(data.aliases));
   if (firstName) {
     const first = name.split(/\s+/)[0].replace(/\.$/, '');
-    if (first !== name && NOT_FIRST.indexOf(first) < 0) out.push(first);
+    if (first !== name && NOT_FIRST.indexOf(first.toLowerCase()) < 0) out.push(first);
   }
-  return out.map((t) => t.trim()).filter(usable).filter((t, i, a) => a.indexOf(t) === i);
+  return out.map((t) => t.trim()).filter(usable).filter((t) => !everyday(t)).filter((t, i, a) => a.indexOf(t) === i);
 }
 
 const NOTES = (index: VaultIndex, paths: string[] | undefined) => (paths || []).map((p) => index.notes[p]).filter(Boolean);
