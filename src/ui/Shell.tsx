@@ -22,7 +22,7 @@ const GROUPS: [string, string[]][] = [
   ['Write', ['chapter-grid']],
   ['Plan', ['ideas', 'story-juice', 'beat-sheet', 'conflict-matrix']],
   ['Codex', ['characters', 'matrix']],
-  ['Review', ['edit-queue']],
+  ['Review', ['edit-queue', 'taste']],
   ['Publish', ['market']]
 ];
 

@@ -52,6 +52,7 @@ const PATHS: Record<string, string> = {
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
+  taste: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z',
   bracket: 'M9 4H5v16h4M15 4h4v16h-4'
 };
 
