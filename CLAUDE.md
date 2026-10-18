@@ -155,6 +155,7 @@ src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
+src/lib/theme.ts         colour themes per device: Match this device, five light, five dark (colours in styles.css)
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
@@ -188,7 +189,8 @@ tests/                   Node test runner tests
 - Errors shown to Kyle are plain sentences that say what to do.
 - The iPad and desktop Chrome get the same app with the same features (Kyle, 2026-10-17). Nothing is iPad-only or
   desktop-only; test both sizes. Keyboard shortcuts are extras (Ctrl or Cmd+S saves in the writing screen), never the only way.
-- iPad first: large type, one accent colour, light and dark, 16 px side gutter, no horizontal scroll, 44 px tap targets.
+- iPad first: large type, one accent colour, light and dark (Settings, Colours: five light and five dark themes per device,
+  Kyle 2026-10-18; every colour is a CSS variable, so new styles use the variables, never fixed colours), 16 px side gutter, no horizontal scroll, 44 px tap targets.
 - Files are fetched by blob sha, so an unchanged note is never downloaded twice.
 - `demo-vault/System/schema.json` is a copy of the vault's schema. Refresh it when the schema changes, and keep the demo
   vault passing `sf validate` (a test runs it when the vault is beside this repository).
