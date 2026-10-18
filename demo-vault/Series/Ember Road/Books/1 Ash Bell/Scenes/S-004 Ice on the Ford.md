@@ -4,6 +4,10 @@ id: S-004
 title: Ice on the Ford
 chapter: 2
 order: 4
+day: 4
+threads:
+  - "[[The Warden's Hunt]]"
+  - "[[Mara and Tobin]]"
 pov: "[[Tobin Quill]]"
 cast:
   - "[[Tobin Quill]]"

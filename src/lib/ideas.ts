@@ -86,6 +86,8 @@ export interface Change {
 
 /** Card fields that are lists in the note but edited as one line with commas. */
 export const LIST_FIELDS = ['labels'];
+// A scene's threads (pressed on the Plot Grid) and the fields the team guessed (card_draft) are lists too.
+['threads', 'card_draft'].forEach((k) => { if (LIST_FIELDS.indexOf(k) < 0) LIST_FIELDS.push(k); });
 export function splitList(v: string): string[] {
   return v.split(',').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 }
