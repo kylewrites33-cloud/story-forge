@@ -37,7 +37,6 @@ import { TodoList } from './TodoList.tsx';
 import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
-import { BeatsPage } from './BeatsPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { planFor } from '../lib/plans.ts';
@@ -454,7 +453,7 @@ export function App() {
   };
 
   // The writing screen fills the page with its own bars: no menu or sync bar.
-  if (route.name === 'write' && view && schema) {
+  if ((route.name === 'write' || route.name === 'beats') && view && schema) {
     const note = view.notes[route.path];
     if (note) {
       if (lastOpened.current !== route.path) { lastOpened.current = route.path; noteRecent(source.key, route.path); }
@@ -462,8 +461,15 @@ export function App() {
       const at = book ? book.scenes.indexOf(route.path) : -1;
       const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
       const groups = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)) : [];
+      // Beats mode: the chapter by its beats in the page's place.
+      const chapter = typeof note.data.chapter === 'number' ? note.data.chapter : null;
+      const beats = route.name === 'beats' && book && chapter != null ? {
+        note: beatsNoteFor(view.notes, book.folder, chapter),
+        asking: jobNotes(view).find((j) => String(j.data.kind || '') === 'beats' && String(j.data.target || '') === 'Chapter ' + chapter && String(j.data.book || '') === book.folder
+          && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null
+      } : null;
       return (
-        <Editor key={route.path} source={source} schema={schema} note={note} next={next}
+        <Editor key={route.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next}
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
@@ -488,21 +494,6 @@ export function App() {
     if (book && group) {
       return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
         backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} />} />;
-    }
-  }
-
-  if (route.name === 'beats' && view && schema) {
-    const note = view.notes[route.path];
-    const book = note ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null;
-    const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
-    if (book && group && group.num != null) {
-      const target = 'Chapter ' + group.num;
-      const asking = jobNotes(view).find((j) => String(j.data.kind || '') === 'beats' && String(j.data.target || '') === target && String(j.data.book || '') === book.folder
-        && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null;
-      return <BeatsPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} bookFolder={book.folder}
-        beatsNote={beatsNoteFor(view.notes, book.folder, group.num)} codex={codexFor(view, book)} startAt={route.path} backTo={href.book(book.folder)}
-        onSaved={(n) => { foldNotes([n]); }} onJob={source.write ? onJob : undefined} asking={asking}
-        timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} />} />;
     }
   }
 

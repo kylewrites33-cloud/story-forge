@@ -15,6 +15,7 @@ import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../l
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
+import { BeatsView } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
@@ -83,7 +84,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -121,7 +122,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   convo?: Conversation | null;
   /** The chapter's plan (Chapter Plans), for the Plan tab; null when the chapter has none yet. */
   plan?: NoteRecord | null;
+  /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
+  beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
 }) {
+  const beatsMode = Boolean(beats);
+  const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
+  const [beatsChip, setBeatsChip] = useState({ text: 'Saved', cls: 'good' });
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
@@ -355,6 +361,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   /** Leave the writing screen for another page, saving first (as Done does). */
   const go = async (to: string) => {
     if (quiet.current) clearTimeout(quiet.current);
+    if (beatsSaver.current && !(await beatsSaver.current(true))) return;
     const ok = await save(true);
     if (ok) location.hash = to;
   };
@@ -447,6 +454,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // The team's answers: put each one into the page once, where its bracket is now.
   const filled = useRef<Set<string>>(loadFilled(source.key));
   useEffect(() => {
+    if (beatsMode) return;
     const start = pageText();
     let cur = start;
     const maps: ((n: number) => number)[] = [];
@@ -488,6 +496,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const merging = useRef(false);
   useEffect(() => {
     const d0 = draftRef.current;
+    if (beatsMode) return;
     if (saving.current || merging.current || !source.readFresh || !navigator.onLine) return;
     if (note.sha === d0.baseSha || note.body === d0.baseBody || seen.current.has(note.sha)) return;
     merging.current = true;
@@ -535,7 +544,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // Fill brackets on their own: 20 quiet seconds after the last change, any closed bracket the cursor is not in goes.
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!autoFill || !newBrackets) return;
+    if (beatsMode || !autoFill || !newBrackets) return;
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => {
       const at = caret.current;
@@ -603,17 +612,21 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         <span class="writer-words">
           {num(words)}{target ? ' / ' + num(target) : ''} words{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) : ''}
         </span>
-        <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>
+        {beatsMode
+          ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
+          : <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>}
         {group && group.scenes.length > 1 && (
           <button type="button" class="bar-button compact" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
             <Icon name="page" /><span class="bar-label">Whole chapter</span>
           </button>
         )}
-        {group && group.num != null && (
-          <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
-            <Icon name="beats" /><span class="bar-label">Beats</span>
-          </button>
-        )}
+        {group && group.num != null && (beatsMode
+          ? <button type="button" class="bar-button compact" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
+              <Icon name="page" /><span class="bar-label">Page</span>
+            </button>
+          : <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
+              <Icon name="beats" /><span class="bar-label">Beats</span>
+            </button>)}
         {book && (
           <button type="button" class="bar-button compact" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
             aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
@@ -645,7 +658,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 <div key={g.key}>
                   <p class="side-chapter">{chapterHeading(g)}</p>
                   {g.scenes.map((n) => (
-                    <a key={n.path} {...link(href.write(n.path))} class="side-scene" aria-current={n.path === note.path ? 'page' : undefined}>
+                    <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene" aria-current={n.path === note.path ? 'page' : undefined}>
                       <span>{sceneHeader(n.data, n.path)}</span>
                       <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
                     </a>
@@ -665,7 +678,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             </nav>
           </aside>
         )}
-        <div class="writer-page">
+        <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>
+          {beats && group && group.num != null && bookFolder ? (
+            <BeatsView source={source} group={group} bookFolder={bookFolder} beatsNote={beats.note} codex={codex || []} startAt={note.path}
+              onSaved={onSaved} onJob={onJob} asking={beats.asking} saver={beatsSaver}
+              onStatus={(text, cls) => setBeatsChip({ text, cls })} onOpen={(p) => go(href.write(p))} />
+          ) : <>
           <div class="writer-tools" role="toolbar" aria-label="Writing tools">
             <div class="tool-group" role="group" aria-label="Undo and redo">
               <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
@@ -786,6 +804,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 : <button type="button" class="primary" onClick={done}>Back to the Chapter Grid</button>}
             </span>
           </div>
+          </>}
         </div>
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
