@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { conversation, conversations, firstWords, isSceneThread, isThread, type ChatMessage, type Conversation } from '../lib/chat.ts';
+import { conversation, conversations, firstWords, isSceneThread, isThread, loadSideThread, saveSideThread, type ChatMessage, type Conversation } from '../lib/chat.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { render } from '../lib/markdown.ts';
 import type { VaultIndex } from '../lib/types.ts';
@@ -10,7 +10,7 @@ import { href } from './route.ts';
 import { takeChatPrefill } from './Team.tsx';
 
 /** Send Kyle's words in a conversation. Answers the thread the message went into (a new conversation gets its name here), or a plain-sentence error. */
-export type OnChat = (thread: string, words: string, book: string) => Promise<{ thread: string; book: string } | { error: string }>;
+export type OnChat = (thread: string, words: string, book: string, page?: string) => Promise<{ thread: string; book: string } | { error: string }>;
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 /** The last thing said in a conversation, for its row in the list. */
@@ -164,10 +164,16 @@ export function ChatScreen({ index, thread, book, onChat, onDecide, waiting, dem
 
 /** A scene's conversation in the writing screen's right-hand column: the same messages as the Chat screen, narrower,
  * with the newest at the bottom and the box to write in under them. */
-export function SceneChat({ convo, thread, book, onChat, fullHref }: {
+export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro }: {
   convo: Conversation | null; thread: string; book: string; onChat?: OnChat;
   /** The Chat screen's page for this conversation, opened with the page saved first. */
-  fullHref: { href: string; onClick: (e: MouseEvent) => void };
+  fullHref?: { href: string; onClick?: (e: MouseEvent) => void };
+  /** What Kyle is looking at, sent with each message (## Page). */
+  page?: string;
+  /** Told the thread a message went into (a new conversation gets its name when the first message is sent). */
+  onSent?: (thread: string) => void;
+  /** The line shown before the first message. */
+  intro?: string;
 }) {
   const [words, setWords] = useState('');
   const [busy, setBusy] = useState(false);
@@ -181,16 +187,17 @@ export function SceneChat({ convo, thread, book, onChat, fullHref }: {
     if (!w || !onChat || busy) return;
     setBusy(true);
     setError('');
-    const r = await onChat(thread, w, book);
+    const r = await onChat(thread, w, book, page);
     setBusy(false);
     if ('error' in r) { setError(r.error); return; }
     setWords('');
+    if (onSent) onSent(r.thread);
   };
   const firstPending = messages.findIndex((m) => m.state === 'waiting' || m.state === 'working');
   return (
     <div class="writer-panel side-chat">
       <div class="chat-log" aria-live="polite">
-        {!messages.length && <p class="hint">Ask the team about this scene while you write: what she would wear, how a squash vine looks after a storm, what to cut. The answer comes here.</p>}
+        {!messages.length && <p class="hint">{intro || 'Ask the team about this scene while you write: what she would wear, how a squash vine looks after a storm, what to cut. The answer comes here.'}</p>}
         {messages.map((m, i) => (
           <div class="chat-pair" key={m.path}>
             <div class="chat-msg kyle"><div class="prose" dangerouslySetInnerHTML={{ __html: render(m.ask) }} /></div>
@@ -209,7 +216,44 @@ export function SceneChat({ convo, thread, book, onChat, fullHref }: {
         </form>
       ) : <p class="hint">Chatting with the team needs your own vault.</p>}
       {error && <p class="error">{error}</p>}
-      {messages.length > 0 && <a class="link" {...fullHref}>Open this conversation full size</a>}
+      {messages.length > 0 && fullHref && <a class="link" {...fullHref}>Open this conversation full size</a>}
     </div>
+  );
+}
+
+/** The team column beside a board or page: one conversation per book on this device, with what is on screen sent along
+ * with each message so the team can guess what Kyle means. New conversation starts another; the Chat screen shows it full size. */
+export function TeamSide({ index, sourceKey, book, page, where, onChat, onClose }: {
+  index: VaultIndex; sourceKey: string;
+  /** The book's folder, or '' when no book is on screen (the active book is used). */
+  book: string;
+  /** The ## Page text for each message. */
+  page: string;
+  /** The page's name, for the line under the heading. */
+  where: string;
+  onChat?: OnChat;
+  onClose: () => void;
+}) {
+  const [thread, setThread] = useState(() => loadSideThread(sourceKey, book));
+  useEffect(() => { setThread(loadSideThread(sourceKey, book)); }, [sourceKey, book]);
+  const c = thread === 'new' ? null : conversation(index, thread, book);
+  const pick = (t: string) => { saveSideThread(sourceKey, book, t); setThread(t); };
+  return (
+    <aside class="team-side" aria-label="Chat with the team">
+      <div class="team-side-head">
+        <div class="team-side-title">
+          <h2>{c && c.messages.length ? c.title : 'Chat with the team'}</h2>
+          <p class="meta">The team sees you are on {where}.</p>
+        </div>
+        {thread !== 'new' && (
+          <button type="button" class="icon-button" title="New conversation" aria-label="New conversation" onClick={() => pick('new')}><Icon name="plus" size={20} /></button>
+        )}
+        <button type="button" class="icon-button" title="Hide the chat" aria-label="Hide the chat" onClick={onClose}><Icon name="right" size={20} /></button>
+      </div>
+      <SceneChat key={thread} convo={c} thread={thread} book={book} onChat={onChat} page={page}
+        onSent={(t) => { if (t !== thread) pick(t); }}
+        fullHref={thread !== 'new' ? { href: href.chat(thread, c ? c.book : book) } : undefined}
+        intro="Ask the team about what is on this page: which ideas to keep, what a character wants, what the next chapter needs. The answer comes here, and the conversation follows you from page to page." />
+    </aside>
   );
 }

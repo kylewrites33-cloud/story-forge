@@ -162,9 +162,9 @@ export function nextChatThread(index: VaultIndex): string {
 }
 
 /** The job for one message. A message may follow one that has no reply yet: the runner answers them in ID order. */
-export function chatJob(thread: string, words: string, book: string): NewJob {
+export function chatJob(thread: string, words: string, book: string, page = ''): NewJob {
   const ask = String(words || '').trim();
-  return {
+  const j: NewJob = {
     title: firstWords(ask, 60) || 'Chat',
     kind: 'chat',
     target: isSceneThread(thread) ? thread : '',
@@ -172,6 +172,8 @@ export function chatJob(thread: string, words: string, book: string): NewJob {
     ask,
     thread
   };
+  if (page.trim()) j.page = page.trim();
+  return j;
 }
 
 /** The writing screen's team tools, like Sudowrite's: each sends one message about the words on the page to the
@@ -216,4 +218,40 @@ export function passageMessage(tool: PassageTool, scene: string, passage: string
     default:
       return 'Write a suggestion for the next 150 to 250 words of ' + scene + ', carrying on from where this passage ends.' + keep + quoted;
   }
+}
+
+// The team column beside the boards and pages (Kyle, 2026-10-18): one conversation per book on this device, kept until
+// Kyle starts a new one. 'new' means none yet; the first message sent gets the next chat-NNN. Open or shut is per device.
+const SIDE = 'story-forge.side-chat.';
+const SIDE_OPEN = 'story-forge.side-chat-open';
+
+export function loadSideThreads(sourceKey: string): Record<string, string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(SIDE + sourceKey) || '{}');
+    const out: Record<string, string> = {};
+    if (v && typeof v === 'object') Object.keys(v).forEach((k) => { if (typeof v[k] === 'string' && isThread(v[k])) out[k] = v[k]; });
+    return out;
+  } catch { return {}; }
+}
+
+/** The side conversation for a book ('' for none): its chat-NNN, or 'new'. */
+export function loadSideThread(sourceKey: string, book: string): string {
+  return loadSideThreads(sourceKey)[book] || 'new';
+}
+
+export function saveSideThread(sourceKey: string, book: string, thread: string) {
+  try {
+    const all = loadSideThreads(sourceKey);
+    if (isThread(thread)) all[book] = thread; else delete all[book];
+    localStorage.setItem(SIDE + sourceKey, JSON.stringify(all));
+  } catch { /* lasts until reload */ }
+}
+
+/** Open or shut: as Kyle last left it on this device; open the first time on a screen wide enough to sit it beside the page. */
+export function loadSideOpen(wide: boolean): boolean {
+  try { const v = localStorage.getItem(SIDE_OPEN); return v == null ? wide : v === '1'; } catch { return wide; }
+}
+
+export function saveSideOpen(open: boolean) {
+  try { localStorage.setItem(SIDE_OPEN, open ? '1' : '0'); } catch { /* this visit only */ }
 }

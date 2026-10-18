@@ -4,11 +4,13 @@
 // narrow strip of icons with short names, and the menu button opens it in full over the page; narrower still, a slim
 // bar with the menu button sits at the top. Every size has every place. Below the foot, at the bottom of the scroll,
 // the AI team and its skills are listed (each folds away, remembered on the device), with the team's history; the
-// narrow strip shows them as three icons instead.
+// narrow strip shows them as three icons instead. On the right, the team chat sits beside the page from 1200 px wide and
+// slides over it narrower; a round Chat button at the bottom right opens it, and its arrow hides it (per device).
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { teamColour } from '../lib/team.ts';
 import { loadRecent } from '../lib/home.ts';
+import { loadSideOpen, saveSideOpen } from '../lib/chat.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
 import { boardLinks, type BoardLink } from './StoryBoards.tsx';
 import { Cover } from './Home.tsx';
@@ -47,6 +49,8 @@ export interface ShellProps {
   sync: { label: string; title: string; good: boolean; warn: boolean; busy: boolean; onSync: () => void };
   /** The page's name for the slim top bar. */
   title: string;
+  /** The team chat column for this page, given a way to hide it; none on pages that are themselves the chat. */
+  side?: ((close: () => void) => ComponentChildren) | null;
   children: ComponentChildren;
 }
 
@@ -58,14 +62,24 @@ function useFold(key: string, start: boolean): [boolean, (open: boolean) => void
   return [open, (v: boolean) => { setOpen(v); try { localStorage.setItem('sf-rail-' + key, v ? '1' : '0'); } catch { /* this visit only */ } }];
 }
 
-export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, children }: ShellProps) {
+const WIDE_SIDE = '(min-width: 1200px)';
+
+export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, children }: ShellProps) {
   const [open, setOpen] = useState(false);
+  const [sideOpen, setSideOpenState] = useState(() => loadSideOpen(typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches));
+  const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
+  const showSide = Boolean(side) && sideOpen;
   const team = useTeam(index);
   const [teamOpen, setTeamOpen] = useFold('team', true);
   const [skillsOpen, setSkillsOpen] = useFold('skills', true);
   useEffect(() => {
     const close = () => setOpen(false);
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      // Over the page (narrow screens), Escape hides the chat too; beside it, the chat stays.
+      if (!matchMedia(WIDE_SIDE).matches && document.querySelector('.shell.side-open')) setSideOpen(false);
+    };
     window.addEventListener('hashchange', close);
     window.addEventListener('keydown', key);
     return () => { window.removeEventListener('hashchange', close); window.removeEventListener('keydown', key); };
@@ -82,7 +96,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   );
 
   return (
-    <div class={'shell' + (open ? ' rail-open' : '')}>
+    <div class={'shell' + (open ? ' rail-open' : '') + (side ? ' has-side' : '') + (showSide ? ' side-open' : '')}>
       <aside class="rail" aria-label="Story Forge">
         <div class="rail-head">
           <a class="brand" href="#/" title="Story Forge home"><span class="brand-mark" aria-hidden="true">SF</span><span class="rail-label brand-name">Story Forge</span></a>
@@ -167,6 +181,17 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
         </header>
         {children}
       </div>
+      {side && showSide && (
+        <>
+          <button type="button" class="side-backdrop" aria-label="Hide the chat" tabIndex={-1} onClick={() => setSideOpen(false)} />
+          {side(() => setSideOpen(false))}
+        </>
+      )}
+      {side && !showSide && (
+        <button type="button" class="side-open-button" title="Chat with the team" aria-label="Chat with the team" onClick={() => setSideOpen(true)}>
+          <Icon name="chat" size={24} />
+        </button>
+      )}
     </div>
   );
 }
