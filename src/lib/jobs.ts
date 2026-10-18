@@ -7,7 +7,7 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'custom';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -80,6 +80,8 @@ export interface NewJob {
   book: string;
   /** Kyle's words for the ## Ask section, or '' for the default sentence. */
   ask: string;
+  /** For kind chat: the conversation, a scene ID or chat-NNN (see chat.ts). */
+  thread?: string;
 }
 
 /** The ## Ask for the kinds the runner has no fixed steps for: exactly what to do, then Kyle's own words.
@@ -109,6 +111,7 @@ export function jobText(id: string, j: NewJob, now: Date): string {
   const data: Record<string, unknown> = { type: 'job', id, title: j.title, kind: j.kind };
   if (j.target) data.target = j.target;
   if (j.book) data.book = j.book;
+  if (j.thread) data.thread = j.thread;
   data.status = 'requested';
   data.requested_by = 'Kyle';
   data.created = ymd(now);

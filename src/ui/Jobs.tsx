@@ -12,7 +12,7 @@ import { href } from './route.ts';
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 /** "2026-10-17T09:09" or "2026-10-17" from the vault, as "17 Oct, 09:09" or "17 Oct". */
-function when(v: unknown): string {
+export function when(v: unknown): string {
   const s = v == null ? '' : String(v);
   const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(s);
   if (!m) return s;
@@ -81,7 +81,8 @@ function JobCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: 
 
 /** Every job Kyle asked the team for, by status. GitHub runs them and writes the results back into the notes. */
 export function JobsScreen({ index, waiting, onDecide, syncing }: { index: VaultIndex; waiting: Record<string, Choice>; onDecide?: OnDecide; syncing?: boolean }) {
-  const all = jobNotes(index);
+  // Chat messages are jobs too, but they read as conversations on the Chat screen.
+  const all = jobNotes(index).filter((n) => String(n.data.kind || '') !== 'chat');
   const groups = jobGroups(all);
   const busy = all.filter((n) => ['requested', 'running'].indexOf(String(n.data.status || 'requested')) >= 0).length;
   return (
@@ -90,6 +91,7 @@ export function JobsScreen({ index, waiting, onDecide, syncing }: { index: Vault
       <p class="meta">
         {busy === 0 ? 'Nothing is waiting on the team.' : busy === 1 ? '1 job is with the team.' : busy + ' jobs are with the team.'}
         {' '}Ask for one from a scene's Team tab or a card's ••• menu. GitHub picks it up within a few minutes; this list refreshes itself every minute while it is open{syncing ? ' (refreshing now)' : ''}.
+        {' '}Conversations with the team are on the <a href={href.chat()}>Chat</a> screen.
       </p>
       {!all.length && <p class="empty">No jobs yet. They live in the vault's Jobs folder.</p>}
       {groups.map((g) => {

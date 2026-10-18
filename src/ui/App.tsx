@@ -36,6 +36,8 @@ import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
+import { ChatScreen } from './Chat.tsx';
+import { chatJob, conversation, isThread, nextChatThread } from '../lib/chat.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -223,6 +225,33 @@ export function App() {
     }
   }, [source, runSync]);
 
+  /** Send a message in a conversation with the team: one chat job note, shown at once, then a sync in the background.
+   * A conversation not started yet ('new') gets the next free chat-NNN. A message may follow one still waiting for a reply. */
+  const onChat = useCallback(async (thread: string, words: string, book: string): Promise<{ thread: string; book: string } | { error: string }> => {
+    if (!navigator.onLine) return { error: 'Connect to the internet to send a message.' };
+    const cur = snapRef.current;
+    if (!cur) return { error: 'Press Sync first.' };
+    const shown = overlay(cur.index, queueRef.current);
+    const t = thread === 'new' ? nextChatThread(shown) : thread;
+    if (!isThread(t)) return { error: 'That conversation has no name the team knows. Start a new conversation instead.' };
+    const folder = book || (activeBook(shown) || shown.books[0] || { folder: '' }).folder;
+    try {
+      const made = await createJob(source, chatJob(t, words, folder), new Date());
+      const now = snapRef.current;
+      if (now && now.key === source.key) {
+        const jobs = (now.index.jobs || []).filter((p) => p !== made.path).concat(made.path).sort();
+        const next = { ...now, index: { ...now.index, notes: { ...now.index.notes, [made.path]: made }, jobs } };
+        snapRef.current = next;
+        setSnap(next);
+        await writeSnapshot(next);
+      }
+      runSync();
+      return { thread: t, book: folder };
+    } catch (e) {
+      return { error: (e as Error).message };
+    }
+  }, [source, runSync]);
+
   /** A picture from the device becomes the book's cover: shrunk here, saved as Cover.jpg in the book's folder. */
   const onCover = useCallback(async (book: BookEntry, file: File): Promise<string | null> => {
     const problem = coverProblem(file);
@@ -345,12 +374,24 @@ export function App() {
     window.addEventListener('offline', down);
     document.addEventListener('visibilitychange', visible);
     // The clock on the screen ticks every minute; on the Jobs screen the vault is read again too, so a finished job shows up.
-    const timer = setInterval(() => { tick((n) => n + 1); if (parseHash(location.hash).name === 'jobs' && document.visibilityState === 'visible') runSync(); }, 60000);
+    const timer = setInterval(() => {
+      tick((n) => n + 1);
+      const name = parseHash(location.hash).name;
+      if ((name === 'jobs' || name === 'chat') && document.visibilityState === 'visible') runSync();
+    }, 60000);
+    // An open conversation waiting on a reply is read again every 15 seconds, about as often as the runner looks for work.
+    const quick = setInterval(() => {
+      const r = parseHash(location.hash);
+      const cur = snapRef.current;
+      if (r.name !== 'chat' || !r.thread || r.thread === 'new' || !cur || document.visibilityState !== 'visible') return;
+      if (conversation(cur.index, r.thread, r.book).pending) runSync();
+    }, 15000);
     return () => {
       window.removeEventListener('online', up);
       window.removeEventListener('offline', down);
       document.removeEventListener('visibilitychange', visible);
       clearInterval(timer);
+      clearInterval(quick);
     };
   }, [runSync]);
 
@@ -414,6 +455,9 @@ export function App() {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'jobs') {
     body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;
+  } else if (route.name === 'chat') {
+    body = <ChatScreen index={view} thread={route.thread} book={route.book} onChat={source.write ? onChat : undefined}
+      onDecide={source.write ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
   } else if (route.name === 'todo') {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'note') {
@@ -474,6 +518,7 @@ export function App() {
           </button>
           <a href={href.home()} aria-current={route.name === 'books' || route.name === 'home' || route.name === 'series' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
           <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
+          <a href={href.chat()} aria-current={route.name === 'chat' ? 'page' : undefined} title="Chat with the team"><Icon name="chat" /><span class="bar-label">Chat</span></a>
           <a href={href.jobs()} aria-current={route.name === 'jobs' ? 'page' : undefined} title="Jobs"><Icon name="team" /><span class="bar-label">Jobs</span></a>
           <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
         </nav>

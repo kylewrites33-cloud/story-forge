@@ -35,6 +35,8 @@ const PATHS: Record<string, string> = {
   cards: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   demo: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5',
   team: 'M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M17 14.5c3 .5 5 2.5 5 5.5',
+  chat: 'M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5',
+  send: 'M4 12l16-8-6 16-3-7z',
   out: 'M14 4h6v6M20 4l-9 9M18 14v5H5V6h5',
   marker: 'M15 4l5 5-8.5 8.5H6.5v-5zM4 20h9',
   up: 'M6 15l6-6 6 6',
