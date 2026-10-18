@@ -10,6 +10,9 @@ pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"
   - "[[The Warden]]"
+tension: 4
+outcome: yes-but
+mood: -3
 status: planned
 labels:
   - needs research

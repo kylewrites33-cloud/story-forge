@@ -86,6 +86,11 @@ export interface Change {
 
 /** Card fields that are lists in the note but edited as one line with commas. */
 export const LIST_FIELDS = ['labels'];
+// Card fields the Writers Room charts write: the team's-guess list and a character's arc points are lists too.
+LIST_FIELDS.push('card_draft', 'arc_points');
+/** Card fields that are whole numbers in the note (Tension and Pacing, story shape): written without quotes. */
+export const NUMBER_FIELDS = ['tension', 'mood'];
+const asNumber = (k: string, v: string) => (NUMBER_FIELDS.indexOf(k) >= 0 && /^-?\d+$/.test(v.trim()) ? parseInt(v, 10) : null);
 export function splitList(v: string): string[] {
   return v.split(',').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 }
@@ -143,7 +148,7 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
   if (c.fields) Object.keys(c.fields).forEach((k) => {
     const v = c.fields![k];
     if (v === '' || (LIST_FIELDS.indexOf(k) >= 0 && !splitList(v).length)) delete out[k];
-    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : v;
+    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : asNumber(k, v) ?? v;
   });
   return out;
 }
@@ -194,7 +199,7 @@ export function applyToText(text: string, c: Change): string {
       if (LIST_FIELDS.indexOf(k) >= 0) {
         const items = splitList(v);
         out = setLines(out, k, items.length ? [k + ':'].concat(items.map((x) => '  - ' + Frontmatter.emitScalar(x))) : null);
-      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
+      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, asNumber(k, v) ?? v);
     });
   }
   return out;
@@ -211,7 +216,8 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   'keyword-set': { prefix: 'market', noun: 'a keyword set', board: 'Market board' },
   'title-candidate': { prefix: 'market', noun: 'a title', board: 'Market board' },
   task: { prefix: 'tasks', noun: 'a to-do', board: 'To-do list' },
-  job: { prefix: 'jobs', noun: 'a job', board: 'Jobs screen' }
+  job: { prefix: 'jobs', noun: 'a job', board: 'Jobs screen' },
+  character: { prefix: 'characters', noun: 'a character', board: 'Character Arcs' }
 };
 
 const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', regenerate: 'rewrite', edit: 'edit', accept: 'accept card', rework: 'card needs work', move: 'move' };

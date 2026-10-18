@@ -33,7 +33,7 @@ test('a character pattern covers series notes and book deltas', () => {
 
 test('a book lists its beats, conflicts and character deltas; the series lists its cast', async () => {
   const { index, book } = await phase3();
-  assert.deepEqual(book.beats!.map((p) => index.notes[p].data.id), ['B-001', 'B-002', 'B-003']);
+  assert.deepEqual(book.beats!.map((p) => index.notes[p].data.id), ['B-001', 'B-002', 'B-003', 'B-004', 'B-005', 'B-006']);
   assert.deepEqual(book.conflicts!.map((p) => index.notes[p].data.id), ['C-001', 'C-002']);
   assert.deepEqual(book.characters, [BOOK + '/Characters/Mara Quill.md']);
   assert.equal(index.series[0].characters!.length, 3);
@@ -56,7 +56,7 @@ test('boards group in the schema order, frameworks with Story Juice first', asyn
   const { index, book } = await phase3();
   const beats = groupNotes(boardNotes(index, book, 'beat-sheet'), 'framework', groupOrder(schema, 'beat', 'framework'));
   assert.deepEqual(beats.map((g) => g.key), ['story-juice', 'save-the-cat']);
-  assert.deepEqual(beats[1].notes.map((n) => n.data.id), ['B-001', 'B-002']);
+  assert.deepEqual(beats[1].notes.map((n) => n.data.id), ['B-001', 'B-002', 'B-004', 'B-005', 'B-006']);
   const conflicts = groupNotes(boardNotes(index, book, 'conflict-matrix'), 'source', groupOrder(schema, 'conflict', 'source'));
   assert.deepEqual(conflicts.map((g) => g.key), ['personal', 'extra-personal']);
   const juice = boardNotes(index, book, 'story-juice').map((n) => n.data.kind);

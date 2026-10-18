@@ -9,6 +9,13 @@ pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"
 place: "[[Cinder Ford]]"
+tension: 6
+outcome: yes
+mood: 0
+card_draft:
+  - tension
+  - outcome
+  - mood
 status: planned
 goal: Find the year the bell was last recast.
 turn: The page for that year has been cut out with a razor.

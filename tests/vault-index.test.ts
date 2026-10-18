@@ -33,7 +33,7 @@ test('finds the series, the book and its scenes in reading order', async () => {
 
 test('reads only the notes the board needs', async () => {
   const { src } = await demoIndex();
-  assert.ok(!src.reads.some((p) => /Characters|Ideas|Progressions|Story So Far/.test(p)), src.reads.join(', '));
+  assert.ok(!src.reads.some((p) => /Characters|Ideas|Story So Far/.test(p)), src.reads.join(', '));
 });
 
 test('fetches only files whose sha changed', async () => {

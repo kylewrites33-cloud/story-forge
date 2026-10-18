@@ -15,6 +15,13 @@ lore:
   - "[[Bell Law]]"
 reveal:
   - "[[Bell Law]]"
+tension: 5
+outcome: no-and
+mood: -2
+card_draft:
+  - tension
+  - outcome
+  - mood
 status: planned
 goal: Get Tobin across before the guards arrive.
 turn: The ferry rope has been cut.
