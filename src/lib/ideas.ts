@@ -90,6 +90,12 @@ export function splitList(v: string): string[] {
   return v.split(',').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 }
 
+/** Whole-number properties Kyle sets in the app (the Overview's word target and posting pace): written as numbers, not text. */
+export const NUMBER_FIELDS = ['target_words', 'cadence'];
+function fieldValue(k: string, v: string): string | number {
+  return NUMBER_FIELDS.indexOf(k) >= 0 && /^\d+$/.test(v.trim()) ? parseInt(v.trim(), 10) : v;
+}
+
 /** One line per value: a card edit never writes a line break into a property. */
 export function cleanField(v: string): string {
   return v.replace(/\s+/g, ' ').trim();
@@ -143,7 +149,7 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
   if (c.fields) Object.keys(c.fields).forEach((k) => {
     const v = c.fields![k];
     if (v === '' || (LIST_FIELDS.indexOf(k) >= 0 && !splitList(v).length)) delete out[k];
-    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : v;
+    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : fieldValue(k, v);
   });
   return out;
 }
@@ -194,7 +200,7 @@ export function applyToText(text: string, c: Change): string {
       if (LIST_FIELDS.indexOf(k) >= 0) {
         const items = splitList(v);
         out = setLines(out, k, items.length ? [k + ':'].concat(items.map((x) => '  - ' + Frontmatter.emitScalar(x))) : null);
-      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
+      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, fieldValue(k, v));
     });
   }
   return out;

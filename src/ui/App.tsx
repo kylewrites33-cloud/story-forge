@@ -48,6 +48,13 @@ import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from
 import { pageContext, type PageView } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
 import { PILES, piles } from '../lib/ideas.ts';
+import { createNote, type NewNote } from '../lib/notes.ts';
+import { createRecipe, recipeName, recipeNotes, saveRecipe, type RecipeFields } from '../lib/recipes.ts';
+import { OverviewPage } from './Overview.tsx';
+import { NotesScreen } from './NotesToTeam.tsx';
+import { SessionsScreen, SessionView } from './Sessions.tsx';
+import { RecipesScreen } from './Recipes.tsx';
+import { ForgeSpecialist } from './Forge.tsx';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -377,6 +384,20 @@ export function App() {
     await onJobRef.current({ title: defaultJobTitle('rewrite', target, n ? String(n.data.title || n.data.name || '') : ''), kind: 'rewrite', target, book: book ? book.folder : '', ask: jobAsk('rewrite', target + (n && n.data.id ? ' (' + path + ')' : ''), reason) });
   }, []);
 
+  /** Writers Room pages: a new Note to the Team, a new or changed recipe; each saves at once, then syncs. */
+  const onAddNote = useCallback(async (book: BookEntry, n: NewNote): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a note.';
+    try { await createNote(source, book.folder, n, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+  const onAddRecipe = useCallback(async (r: RecipeFields): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a recipe.';
+    try { await createRecipe(source, r, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+  const onSaveRecipe = useCallback(async (note: NoteRecord, r: RecipeFields): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to change a recipe.';
+    try { await saveRecipe(source, note, r); await runSync(); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -492,6 +513,7 @@ export function App() {
           fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
           convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
           plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
+          recipes={recipeNotes(view).map(recipeName)}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
@@ -524,11 +546,16 @@ export function App() {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'team') {
     body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.write)} />
-      : <TeamScreen index={view} schema={schema} canTalk={Boolean(source.write)} />;
+      : <TeamScreen index={view} schema={schema} canTalk={Boolean(source.write)}
+        extra={<ForgeSpecialist onJob={source.write ? onJob : undefined} book={(activeBook(view) || view.books[0] || { folder: '' }).folder} />} />;
   } else if (route.name === 'skills') {
     body = <SkillsScreen index={view} skill={route.skill} />;
   } else if (route.name === 'history') {
     body = <HistoryScreen source={source} index={view} who={route.who} />;
+  } else if (route.name === 'recipes') {
+    body = <RecipesScreen index={view} onAdd={source.write ? onAddRecipe : undefined} onSave={source.write && source.readFresh ? onSaveRecipe : undefined} />;
+  } else if (route.name === 'note' && view.notes[route.path] && view.notes[route.path].type === 'session') {
+    body = <SessionView index={view} note={view.notes[route.path]} />;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
   } else if (route.name === 'series') {
@@ -543,6 +570,9 @@ export function App() {
       if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
+      else if (boardKey === 'overview') screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;
+      else if (boardKey === 'sessions') screen = <SessionsScreen index={view} book={book} />;
       else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
@@ -579,9 +609,9 @@ export function App() {
 
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
     : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
-      || route.name === 'team' || route.name === 'skills' || route.name === 'history' ? route.name : '';
+      || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' ? route.name : '';
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
-    team: 'The team', skills: 'Skills', history: 'Session history' };
+    team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
   const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
@@ -589,7 +619,7 @@ export function App() {
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
   const sideBook = view ? navBook || activeBook(view) : null;
   const WHERE: Record<string, string> = { home: 'the Books page', series: 'the Series page', jobs: 'the Jobs page', todo: 'the To-do list',
-    team: 'the Team page', skills: 'the Skills page', history: 'Session history' };
+    team: 'the Team page', skills: 'the Skills page', history: 'Session history', recipes: 'the Recipes page' };
   const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : 'this page');
   const pageView = (): PageView => {
     const v: PageView = { name: where, book: sideBook };

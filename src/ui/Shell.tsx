@@ -20,9 +20,9 @@ import { Avatar, useTeam } from './Team.tsx';
 
 const GROUPS: [string, string[]][] = [
   ['Write', ['chapter-grid']],
-  ['Plan', ['ideas', 'story-juice', 'beat-sheet', 'conflict-matrix']],
+  ['Plan', ['ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'notes']],
   ['Codex', ['characters', 'matrix']],
-  ['Review', ['edit-queue']],
+  ['Review', ['edit-queue', 'sessions']],
   ['Publish', ['market']]
 ];
 
@@ -118,6 +118,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
               </a>
               {resume && item(href.write(resume), 'pen', 'Keep writing', false, 'rail-write')}
               {item(href.board('details', book.folder), 'image', 'Book details', board === 'details', 'rail-details')}
+              {item(href.board('overview', book.folder), 'gauge', 'Overview', board === 'overview')}
               {GROUPS.map(([name, keys]) => {
                 const here = keys.map((k) => byKey[k]).filter(Boolean);
                 if (!here.length) return null;
@@ -134,6 +135,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
             {item(href.chat(), 'chat', 'Chat', place === 'chat')}
             {item(href.jobs(), 'team', 'Jobs', place === 'jobs')}
             {item(href.todo(), 'todo', 'To-do', place === 'todo')}
+            {item(href.recipes(), 'recipe', 'Recipes', place === 'recipes')}
             {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
             <button type="button" class={'rail-item rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>
               <Icon name={sync.good ? 'check' : 'sync'} size={20} /><span class="rail-label">{sync.label}</span>

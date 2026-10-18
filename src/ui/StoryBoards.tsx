@@ -11,6 +11,9 @@ import { Icon } from './Icon.tsx';
 
 export interface BoardLink { key: string; title: string; to: string; icon: string }
 
+/** Pages of a book the app draws without a board in the schema: Overview, Notes to the Team, Sessions. */
+export const APP_BOARDS = ['overview', 'notes', 'sessions'];
+
 /** The book's boards, in the order the Story Juice chain uses them; boards the schema lacks are left out. */
 export function boardLinks(schema: Schema, folder: string): BoardLink[] {
   return [
@@ -22,8 +25,11 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', folder), icon: 'beats' },
     { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' },
     { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
-    { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || schema.boards[l.key])
+    { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' },
+    { key: 'overview', title: 'Overview', to: href.board('overview', folder), icon: 'gauge' },
+    { key: 'notes', title: 'Notes to the Team', to: href.board('notes', folder), icon: 'note' },
+    { key: 'sessions', title: 'Sessions', to: href.board('sessions', folder), icon: 'sessions' }
+  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || APP_BOARDS.indexOf(l.key) >= 0 || schema.boards[l.key])
     .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
 }
 

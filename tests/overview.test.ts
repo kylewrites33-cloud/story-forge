@@ -68,3 +68,11 @@ test('the release runway: chapters posted, chapters ready, weeks of buffer at th
   const many = withNote(plain, book.path, '---\ntype: book\ntitle: Ash Bell\nstage: draft\ncadence: 1\n---\n');
   assert.equal(runway(many, book).weeks, 1);
 });
+
+test('the word target and the posting pace are written as numbers', async () => {
+  const { applyToText, applyToData, editChange } = await import('../src/lib/ideas.ts');
+  const text = '---\ntype: book\ntitle: Ash Bell\nstage: draft\ntarget_words: 3000\n---\n';
+  assert.equal(applyToText(text, editChange({ cadence: '3', target_words: '80000' })), '---\ntype: book\ntitle: Ash Bell\nstage: draft\ntarget_words: 80000\ncadence: 3\n---\n');
+  assert.equal(applyToText(text, editChange({ stage: 'revise' })), text.replace('stage: draft', 'stage: revise'));
+  assert.deepEqual(applyToData({ cadence: 2 }, editChange({ cadence: '4' })), { cadence: 4 });
+});

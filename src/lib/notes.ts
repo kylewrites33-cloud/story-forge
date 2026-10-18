@@ -24,10 +24,10 @@ export function bookNotesToTeam(index: VaultIndex, book: BookEntry): NoteRecord[
     .sort((a, b) => Number(isOpenNote(b)) - Number(isOpenNote(a)) || str(a.data.title || basename(a.path)).localeCompare(str(b.data.title || basename(b.path))));
 }
 
-/** Who a note is for, in Kyle's words: "The whole team" or the agent's name. */
+/** Who a note is for, in Kyle's words: "the whole team" or the agent's name. */
 export function noteTo(n: NoteRecord): string {
   const to = str(n.data.to);
-  return !to || to.toLowerCase() === 'team' || to.toLowerCase() === 'whole team' ? 'The whole team' : to;
+  return !to || to.toLowerCase() === 'team' || to.toLowerCase() === 'whole team' ? 'the whole team' : to;
 }
 
 /** The session a note was answered in: the book's session note the `answered_in` link names, if the index has it. */

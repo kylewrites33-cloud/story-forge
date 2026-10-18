@@ -15,6 +15,8 @@ import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../l
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
+import { RecipePicker } from './Recipes.tsx';
+import { withRecipe } from '../lib/recipes.ts';
 import { BeatsView } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
@@ -84,7 +86,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, recipes = [] }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -124,6 +126,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   plan?: NoteRecord | null;
   /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
   beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
+  /** The vault's recipes by name, for the Team tab's "With a recipe". */
+  recipes?: string[];
 }) {
   const beatsMode = Boolean(beats);
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
@@ -842,7 +846,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'team' && (
               <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
-                bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} />
+                bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} recipes={recipes} />
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
             {tab === 'tools' && (
@@ -1226,11 +1230,14 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
 }
 
 /** Ask the team: each button writes a job note the vault's GitHub workflow runs. Kyle's words never get drafted over. */
-function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFill, onAutoFill }: {
+function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFill, onAutoFill, recipes = [] }: {
   status: string; id: string; title: string; chapter: number | null; bookFolder: string | null; onJob?: OnJob;
   link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
   autoFill: boolean; onAutoFill: (on: boolean) => void;
+  /** Recipes by name: one picked is named in the ask of every job sent from here. */
+  recipes?: string[];
 }) {
+  const [recipe, setRecipe] = useState('');
   const [asking, setAsking] = useState(false);
   const [ask, setAsk] = useState('');
   const [busy, setBusy] = useState<JobKind | ''>('');
@@ -1242,7 +1249,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
     setBusy(kind);
     setSaid(null);
     const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' ? '' : title);
-    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: kind === 'table-read' ? jobAsk(kind, target, words) : words });
+    const ask = kind === 'table-read' ? jobAsk(kind, target, words) : words;
+    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: recipe ? withRecipe(ask, recipe) : ask });
     setBusy('');
     setSaid(r);
     if (!r.error && kind === 'custom') { setAsk(''); setAsking(false); }
@@ -1255,6 +1263,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
         <input type="checkbox" checked={autoFill} onChange={(e) => onAutoFill((e.currentTarget as HTMLInputElement).checked)} />
         <span>Fill [brackets] on their own, 20 seconds after you stop typing (this device)</span>
       </label>
+      <RecipePicker names={recipes} value={recipe} onChange={setRecipe} />
       {status === 'planned'
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}

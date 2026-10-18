@@ -52,7 +52,11 @@ const PATHS: Record<string, string> = {
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
-  bracket: 'M9 4H5v16h4M15 4h4v16h-4'
+  bracket: 'M9 4H5v16h4M15 4h4v16h-4',
+  gauge: 'M4 18a8 8 0 1 1 16 0M12 18l4-6M8 18h8',
+  note: 'M5 4h14v12l-4 4H5zM15 20v-4h4M8.5 9h7M8.5 12.5h4',
+  sessions: 'M3 5h11v8H7l-4 3zM10 16h7l4 3v-8h-4',
+  recipe: 'M6 3h10a2 2 0 0 1 2 2v16H8a2 2 0 0 1-2-2zM6 17a2 2 0 0 1 2-2h10M10 7h5M10 10.5h5'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

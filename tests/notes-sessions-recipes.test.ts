@@ -15,7 +15,7 @@ test('Notes to the Team: open first, who each is for, and the session that answe
   const notes = bookNotesToTeam(index, book);
   assert.deepEqual(notes.map((n) => n.data.title), ['Check the Ferry', 'End chapters on an open question']);
   assert.equal(noteTo(notes[0]), 'Plot Specialist');
-  assert.equal(noteTo(notes[1]), 'The whole team');
+  assert.equal(noteTo(notes[1]), 'the whole team');
   assert.equal(answeredIn(index, book, notes[0]), null);
   const a = answeredIn(index, book, notes[1]);
   assert.equal(a && a.path, BOOK + '/Sessions/2026-10-17 0930 Ferry brainstorm.md');
