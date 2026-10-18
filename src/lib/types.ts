@@ -65,6 +65,8 @@ export interface VaultSource {
   readBytes?(path: string, sha: string): Promise<Blob>;
   /** Every commit that changed a file, newest first (GitHub keeps every save). */
   history?(path: string): Promise<SaveEntry[]>;
+  /** The newest saves to the whole vault (up to 100), for the team's history. */
+  recent?(): Promise<SaveEntry[]>;
   /** A file's text as it was at one commit. */
   readAt?(path: string, commit: string): Promise<string>;
   /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
@@ -143,6 +145,8 @@ export interface VaultIndex {
   tasks?: string[];
   /** Paths of every job note in the vault's Jobs folder: work Kyle asked the team for. Missing in copies saved before the Jobs screen. */
   jobs?: string[];
+  /** The AI team's files (.claude/agents, .claude/skills, .claude/agent-memory) as text by path. Missing in copies saved before the Team page. */
+  team?: Record<string, { sha: string; text: string }>;
   /** Plain sentences about notes the app could not read or place. */
   warnings: string[];
 }

@@ -40,6 +40,7 @@ import { ChapterPage } from './ChapterPage.tsx';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
+import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
 import { chatJob, conversation, isThread, nextChatThread } from '../lib/chat.ts';
 
 function makeSource(s: Settings): VaultSource {
@@ -487,6 +488,13 @@ export function App() {
       onDecide={source.write ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
   } else if (route.name === 'todo') {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
+  } else if (route.name === 'team') {
+    body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.write)} />
+      : <TeamScreen index={view} schema={schema} canTalk={Boolean(source.write)} />;
+  } else if (route.name === 'skills') {
+    body = <SkillsScreen index={view} skill={route.skill} />;
+  } else if (route.name === 'history') {
+    body = <HistoryScreen source={source} index={view} who={route.who} />;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
   } else if (route.name === 'series') {
@@ -522,6 +530,7 @@ export function App() {
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) ||
       (route.name === 'home' || route.name === 'books' || route.name === 'series' ? null : activeBook(view))
     : null;
+  const at = route.name === 'team' ? href.team(route.slug) : route.name === 'skills' ? href.skills(route.skill) : route.name === 'history' ? href.history(route.who) : '';
   const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
     : route.name === 'book' ? 'chapter-grid' : '';
 
@@ -534,14 +543,16 @@ export function App() {
   const chip = syncing ? 'Syncing…' : !online ? 'Offline' : queue.length ? 'Saving ' + queue.length + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
-    : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings' ? route.name : '';
-  const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings' };
+    : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
+      || route.name === 'team' || route.name === 'skills' || route.name === 'history' ? route.name : '';
+  const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
+    team: 'The team', skills: 'Skills', history: 'Session history' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
   const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
 
   return (
-    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} demo={source instanceof DemoSource} title={pageTitle}
+    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">

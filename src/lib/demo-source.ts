@@ -2,7 +2,11 @@
 // Choices made on the demo vault live in memory until the page reloads; nothing is sent anywhere.
 import type { FileEntry, SaveEntry, VaultSource } from './types.ts';
 
-const files = import.meta.glob('/demo-vault/**/*.{md,json}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+// The team's files sit in a hidden folder, which a ** pattern skips, so they get their own pattern.
+const files = {
+  ...import.meta.glob('/demo-vault/**/*.{md,json}', { query: '?raw', import: 'default', eager: true }),
+  ...import.meta.glob('/demo-vault/.claude/**/*.md', { query: '?raw', import: 'default', eager: true })
+} as Record<string, string>;
 
 // A short content hash stands in for git's blob sha, so the cache treats demo files like real ones.
 function hash(text: string): string {
@@ -76,6 +80,17 @@ export class DemoSource implements VaultSource {
     const list = this.log.get(path);
     if (list) return list.map((x) => x.entry).reverse();
     return files['/demo-vault/' + path] !== undefined ? [{ commit: 'demo-0', date: '2026-10-01T09:00:00Z', message: 'demo: the demo vault as it came', agent: '' }] : [];
+  }
+
+  async recent(): Promise<SaveEntry[]> {
+    const made = [...this.log.values()].flat().map((x) => x.entry);
+    const demo: SaveEntry[] = [
+      { commit: 'demo-3', date: '2026-10-02T10:20:00Z', message: 'agents: continuity notes for S-002', agent: 'Continuity Keeper' },
+      { commit: 'demo-2', date: '2026-10-02T09:40:00Z', message: 'draft: S-002 The well runs dry', agent: 'Writer' },
+      { commit: 'demo-1', date: '2026-10-01T16:05:00Z', message: 'ideas: three premises for the demo book', agent: 'Story Specialist' },
+      { commit: 'demo-0', date: '2026-10-01T09:00:00Z', message: 'demo: the demo vault as it came', agent: '' }
+    ];
+    return made.reverse().concat(demo);
   }
 
   async readAt(path: string, commit: string): Promise<string> {

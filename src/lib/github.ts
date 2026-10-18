@@ -166,6 +166,14 @@ export class GitHubSource implements VaultSource {
     return list.map((c) => saveEntry(c.sha, c.commit.message, (c.commit.author && c.commit.author.date) || (c.commit.committer && c.commit.committer.date) || ''));
   }
 
+  /** The newest commits on the branch (up to 100), for the team's history. */
+  async recent(): Promise<SaveEntry[]> {
+    const path = this.s.root ? '&path=' + encodeURIComponent(this.s.root) : '';
+    const res = await this.get(this.repoUrl('/commits?sha=' + encodeURIComponent(this.s.branch) + path + '&per_page=100'), 'the vault\'s recent saves', undefined, true);
+    const list = (await res.json()) as { sha: string; commit: { message: string; author?: { date?: string }; committer?: { date?: string } } }[];
+    return list.map((c) => saveEntry(c.sha, c.commit.message, (c.commit.author && c.commit.author.date) || (c.commit.committer && c.commit.committer.date) || ''));
+  }
+
   /** A file's text at one commit. */
   async readAt(path: string, commit: string): Promise<string> {
     const res = await this.get(this.contentsUrl(path) + '?ref=' + encodeURIComponent(commit), path);

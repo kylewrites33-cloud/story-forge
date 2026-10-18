@@ -82,6 +82,14 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
   Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
   per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.
+  The AI team (Kyle, 2026-10-18): below the sidebar's foot, at the bottom of its scroll, "The AI team" lists every agent
+  (from the vault's `.claude/agents`, grouped by each file's `team:` line) and "Skills" lists every skill in
+  `.claude/skills` with who loads it (each agent's `skills:` list; none means the coordinator runs it); both fold away,
+  remembered per device, and the icon strip shows Team, Skills and History instead. The Team page (`#/team`) is a table
+  like the first Story Forge's: Recently used, A-Z and By team; specialty, last used, ideas (proposals whose `source` is
+  the agent), kept share, lessons (MEMORY.md) and Talk (a new chat that starts with the agent's name). An agent's page
+  (`#/team/<name>`) adds its skills, lessons and what it has done. Session history (`#/history`) is every agent's
+  Journal.md entries, the jobs it ran and the vault's last 100 saves with an `Agent:` line.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -134,6 +142,8 @@ src/ui/ChapterPage.tsx   the whole chapter as one page
 src/ui/Matrix.tsx        who is in which scene
 src/ui/EditQueue.tsx     editorial notes and to-dos on one page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
+src/lib/team.ts          the AI team: agents, skills and who loads them, lessons, journals, history, numbers for the Team page
+src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/ui/                  screens (Preact)
@@ -148,6 +158,7 @@ tests/                   Node test runner tests
   `author-business/System/Tools/sf.js`, and `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
   A test fails if either copy drifts, whenever the vault is checked out beside this repository.
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
+  The one exception is the team's files in `.claude` (agents, skills, agent memory), read separately for the Team page.
 - Errors shown to Kyle are plain sentences that say what to do.
 - The iPad and desktop Chrome get the same app with the same features (Kyle, 2026-10-17). Nothing is iPad-only or
   desktop-only; test both sizes. Keyboard shortcuts are extras (Ctrl or Cmd+S saves in the writing screen), never the only way.

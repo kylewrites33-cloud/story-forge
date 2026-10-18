@@ -14,7 +14,11 @@ export type Route =
   | { name: 'jobs' }
   /** thread '' is the list of conversations, 'new' a conversation not started yet; book is the book it is for. */
   | { name: 'chat'; thread: string; book: string }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  /** The AI team (slug '' is the whole team), its skills (name '' is every skill), and what it has done (who '' is everyone). */
+  | { name: 'team'; slug: string }
+  | { name: 'skills'; skill: string }
+  | { name: 'history'; who: string };
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
@@ -29,6 +33,9 @@ export function parseHash(hash: string): Route {
   if (head === 'write' && tail) return { name: 'write', path: tail };
   if (head === 'chapter' && tail) return { name: 'chapter', path: tail };
   if (head === 'settings') return { name: 'settings' };
+  if (head === 'team') return { name: 'team', slug: tail };
+  if (head === 'skills') return { name: 'skills', skill: tail };
+  if (head === 'history') return { name: 'history', who: tail };
   if (head === 'todo') return { name: 'todo' };
   if (head === 'jobs') return { name: 'jobs' };
   if (head === 'chat') return { name: 'chat', thread: decodeURIComponent(rest[0] || ''), book: decodeURIComponent(rest.slice(1).join('/')) };
@@ -49,7 +56,10 @@ export const href = {
   todo: () => '#/todo',
   jobs: () => '#/jobs',
   chat: (thread = '', book = '') => '#/chat' + (thread ? '/' + encodeURIComponent(thread) + (book ? '/' + encodeURIComponent(book) : '') : ''),
-  settings: () => '#/settings'
+  settings: () => '#/settings',
+  team: (slug = '') => '#/team' + (slug ? '/' + encodeURIComponent(slug) : ''),
+  skills: (skill = '') => '#/skills' + (skill ? '/' + encodeURIComponent(skill) : ''),
+  history: (who = '') => '#/history' + (who ? '/' + encodeURIComponent(who) : '')
 };
 
 export function useRoute(): Route {

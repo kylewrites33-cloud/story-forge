@@ -2,15 +2,19 @@
 // and title, then its boards grouped as Write, Plan, Codex, Review and Publish) and the app's own places at the foot
 // (Chat, Jobs, To-do, sync, Settings). From 1100 px wide the sidebar shows names beside the icons; from 700 px it is a
 // narrow strip of icons with short names, and the menu button opens it in full over the page; narrower still, a slim
-// bar with the menu button sits at the top. Every size has every place.
+// bar with the menu button sits at the top. Every size has every place. Below the foot, at the bottom of the scroll,
+// the AI team and its skills are listed (each folds away, remembered on the device), with the team's history; the
+// narrow strip shows them as three icons instead.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { teamColour } from '../lib/team.ts';
 import { loadRecent } from '../lib/home.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
 import { boardLinks, type BoardLink } from './StoryBoards.tsx';
 import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
+import { Avatar, useTeam } from './Team.tsx';
 
 const GROUPS: [string, string[]][] = [
   ['Write', ['chapter-grid']],
@@ -35,8 +39,10 @@ export interface ShellProps {
   book: BookEntry | null;
   /** The board on screen, or '' when none. */
   board: string;
-  /** Which of the app's own places is on screen: home, series, chat, jobs, todo, settings, or ''. */
+  /** Which of the app's own places is on screen: home, series, chat, jobs, todo, settings, team, skills, history, or ''. */
   place: string;
+  /** The page's address (its hash), so a team member or skill on screen shows as current. */
+  at?: string;
   demo: boolean;
   sync: { label: string; title: string; good: boolean; warn: boolean; busy: boolean; onSync: () => void };
   /** The page's name for the slim top bar. */
@@ -44,8 +50,19 @@ export interface ShellProps {
   children: ComponentChildren;
 }
 
-export function Shell({ source, schema, index, book, board, place, demo, sync, title, children }: ShellProps) {
+/** A sidebar section that folds away, open or shut as last left on this device. */
+function useFold(key: string, start: boolean): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try { const v = localStorage.getItem('sf-rail-' + key); return v == null ? start : v === '1'; } catch { return start; }
+  });
+  return [open, (v: boolean) => { setOpen(v); try { localStorage.setItem('sf-rail-' + key, v ? '1' : '0'); } catch { /* this visit only */ } }];
+}
+
+export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, children }: ShellProps) {
   const [open, setOpen] = useState(false);
+  const team = useTeam(index);
+  const [teamOpen, setTeamOpen] = useFold('team', true);
+  const [skillsOpen, setSkillsOpen] = useFold('skills', true);
   useEffect(() => {
     const close = () => setOpen(false);
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -107,6 +124,35 @@ export function Shell({ source, schema, index, book, board, place, demo, sync, t
               <Icon name={sync.good ? 'check' : 'sync'} size={20} /><span class="rail-label">{sync.label}</span>
             </button>
             {item(href.settings(), 'gear', 'Settings', place === 'settings')}
+          </div>
+          <div class="rail-team">
+            <div class="rail-strip-only">
+              {item(href.team(), 'team', 'Team', place === 'team')}
+              {item(href.skills(), 'idea', 'Skills', place === 'skills')}
+              {item(href.history(), 'history', 'History', place === 'history')}
+            </div>
+            <details class="rail-section" open={teamOpen} onToggle={(e) => setTeamOpen((e.currentTarget as HTMLDetailsElement).open)}>
+              <summary class="rail-summary">The AI team <span class="rail-count">{team.members.length}</span></summary>
+              {item(href.team(), 'team', 'Whole team', at === href.team())}
+              {team.members.map((m) => (
+                <a key={m.slug} class="rail-item rail-person" href={href.team(m.slug)} aria-current={at === href.team(m.slug) ? 'page' : undefined} title={m.name + ' · ' + m.team}
+                  style={{ borderLeftColor: teamColour(m.team) }}>
+                  <Avatar name={m.name} size={24} /><span class="rail-label">{m.name}</span>
+                </a>
+              ))}
+              {item(href.history(), 'history', 'Session history', place === 'history')}
+            </details>
+            <details class="rail-section" open={skillsOpen} onToggle={(e) => setSkillsOpen((e.currentTarget as HTMLDetailsElement).open)}>
+              <summary class="rail-summary">Skills <span class="rail-count">{team.skills.length}</span></summary>
+              {item(href.skills(), 'idea', 'All skills', at === href.skills())}
+              {team.skills.map((s) => (
+                <a key={s.name} class="rail-item rail-skill" href={href.skills(s.name)} aria-current={at === href.skills(s.name) ? 'page' : undefined}
+                  title={s.label + (s.agents.length ? ' · ' + s.agents.join(', ') : ' · the coordinator')}>
+                  <span class="rail-label">{s.label}</span>
+                  <span class="rail-skill-who">{s.agents.length ? s.agents.length === 1 ? s.agents[0] : s.agents.length + ' agents' : 'Coordinator'}</span>
+                </a>
+              ))}
+            </details>
           </div>
         </nav>
       </aside>

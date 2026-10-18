@@ -7,6 +7,7 @@ import type { Choice } from '../lib/write-queue.ts';
 import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
 import { href } from './route.ts';
+import { takeChatPrefill } from './Team.tsx';
 
 /** Send Kyle's words in a conversation. Answers the thread the message went into (a new conversation gets its name here), or a plain-sentence error. */
 export type OnChat = (thread: string, words: string, book: string) => Promise<{ thread: string; book: string } | { error: string }>;
@@ -90,7 +91,7 @@ function ConversationView({ index, thread, book, onChat, onDecide, waiting, demo
 }) {
   const isNew = thread === 'new';
   const c = conversation(index, isNew ? '' : thread, book);
-  const [words, setWords] = useState('');
+  const [words, setWords] = useState(() => (isNew ? takeChatPrefill() : ''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const end = useRef<HTMLDivElement>(null);
