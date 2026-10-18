@@ -7,7 +7,8 @@ import {
   bookChapters, bookWords, continueList, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
 import { toNumber } from '../lib/links.ts';
-import type { BookEntry, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
+import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
@@ -105,7 +106,9 @@ export function Cover({ source, book, small }: { source: VaultSource; book: Book
 
 /** Book details, like Novelcrafter's novel settings (the cog by the novel's name): the cover, added or changed from the
  * device, with the book's name, series and stage. */
-export function BookDetails({ source, book, onCover }: { source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null> }) {
+export function BookDetails({ source, book, onCover, schema, index }: {
+  source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null>; schema: Schema; index: VaultIndex;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -137,7 +140,42 @@ export function BookDetails({ source, book, onCover }: { source: VaultSource; bo
           <dt>Stage</dt><dd>{book.stage}</dd>
         </dl>
       </div>
+      <ExportWord schema={schema} index={index} book={book} />
     </section>
+  );
+}
+
+/** Export to Word (Kyle, 2026-10-18): the whole book as a .docx named series_book_date, made on this device and
+ * downloaded; italics and bold come through. */
+function ExportWord({ schema, index, book }: { schema: Schema; index: VaultIndex; book: BookEntry }) {
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const run = () => {
+    try {
+      const m = manuscript(schema, index, book);
+      if (!m.scenes) { setSaid({ error: true, text: 'This book has no written scenes yet, so there is nothing to export.' }); return; }
+      const data = index.notes[book.path] ? index.notes[book.path].data : {};
+      const name = exportName(book);
+      const blob = new Blob([buildDocx(book.title, typeof data.author === 'string' ? data.author : '', m) as Uint8Array<ArrayBuffer>], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setSaid({ error: false, text: 'Made ' + name + ': ' + m.chapters.length + (m.chapters.length === 1 ? ' chapter, ' : ' chapters, ') + num(m.words) + ' words. Look for it in your downloads.' });
+    } catch (e) {
+      setSaid({ error: true, text: 'The Word file could not be made: ' + (e instanceof Error ? e.message : String(e)) });
+    }
+  };
+  return (
+    <div class="details-export">
+      <h2>Export</h2>
+      <p class="hint">The whole book in reading order as a Word file, with its italics and bold. Scenes still open in the writing screen export as last saved.</p>
+      <button type="button" onClick={run}><Icon name="download" size={18} />Export to Word</button>
+      {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
+    </div>
   );
 }
 

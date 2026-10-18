@@ -658,6 +658,9 @@ details.group[open] > summary h2::before { content: '▾ '; }
 .book-details .details-cover .button { gap: 6px; }
 .book-details .details-cover .error { margin: 0; font-size: 0.9rem; }
 .book-details .details-list { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+.book-details .details-export { margin-top: 2rem; display: grid; gap: 8px; justify-items: start; }
+.book-details .details-export h2 { margin: 0; font-size: 1.1rem; }
+.book-details .details-export button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
 .book-details dt { color: var(--muted); }
 .book-details dd { margin: 0; font-weight: 600; }
 @media (max-width: 640px) { .grid-cover .cover.small { width: 56px; } .grid-head { gap: 12px; } }
