@@ -91,7 +91,10 @@ function ConversationView({ index, thread, book, onChat, onDecide, waiting, demo
 }) {
   const isNew = thread === 'new';
   const c = conversation(index, isNew ? '' : thread, book);
-  const [words, setWords] = useState(() => (isNew ? takeChatPrefill() : ''));
+  const [words, setWords] = useState(() => takeChatPrefill(isNew ? '' : thread));
+  const box = useRef<HTMLTextAreaElement>(null);
+  // A first line filled in for Kyle (Ask the team about this scene): the cursor waits at its end.
+  useEffect(() => { const b = box.current; if (b && words) { b.focus(); b.setSelectionRange(words.length, words.length); } }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const end = useRef<HTMLDivElement>(null);
@@ -138,7 +141,7 @@ function ConversationView({ index, thread, book, onChat, onDecide, waiting, demo
       {onChat ? (
         <form class="chat-compose" onSubmit={(e) => { e.preventDefault(); send(); }}>
           <label class="sr-only" for="chat-words">Your message</label>
-          <textarea id="chat-words" rows={3} value={words} disabled={busy} placeholder={c.messages.length ? 'Reply to the team' : 'Your question'}
+          <textarea id="chat-words" ref={box} rows={3} value={words} disabled={busy} placeholder={c.messages.length ? 'Reply to the team' : 'Your question'}
             onInput={(e) => setWords((e.currentTarget as HTMLTextAreaElement).value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
           <button type="submit" class="primary" disabled={busy || !words.trim()}><Icon name="send" size={18} /> {busy ? 'Sending…' : 'Send'}</button>

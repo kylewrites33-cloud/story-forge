@@ -6,6 +6,9 @@ headline: Mara tries to get Tobin across the ferry before the guards come and fi
 act: Act One
 chapter: 1
 order: 2
+day: 3
+threads:
+  - "[[Mara and Tobin]]"
 pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"
@@ -15,6 +18,13 @@ lore:
   - "[[Bell Law]]"
 reveal:
   - "[[Bell Law]]"
+tension: 5
+outcome: no-and
+mood: -2
+card_draft:
+  - tension
+  - outcome
+  - mood
 status: planned
 goal: Get Tobin across before the guards arrive.
 turn: The ferry rope has been cut.

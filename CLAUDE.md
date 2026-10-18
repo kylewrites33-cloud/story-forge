@@ -123,6 +123,79 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  Deciding faster (Kyle, 2026-10-18, from Writers Room): after Keep, Later or Drop on any proposal board the toast offers
+  one-press reasons (Love it, Surprising, Specific, Raises the stakes; Not now, Needs work, Could combine; Cliché, Wrong
+  tone, Already have this, Too clever) written to the note's `reasons` list as a separate edit, so skipping costs nothing
+  and Undo puts the old reasons back. Ideas have 1 to 5 stars (`rating`, a number) on the card. The Ideas board adds a
+  filter by who proposed (`source`) and kind, tick boxes with Keep all / Later all / Drop all, Ask the team to combine (two
+  or more ticked, a `combine` job) and Ask for variations (one ticked, a `variations` job, three takes), both filed by the
+  team as new inbox ideas, and One at a time (a button, or F). Keys there are extras: K keep, M later, D drop, 1-5 stars,
+  U undo, X tick, arrows move. The Taste page (`#/board/taste/<book>`, sidebar Review) shows `Taste/Taste Profile.md` and
+  `Taste/Style Fingerprint.md` (read on demand, they are not indexed) and bars of keeps and drops by kind and agent, the
+  top 12 reasons and the keep rate per brainstorm `round`, for all books or this one; Update my taste writes a
+  `learn-taste` job (`src/lib/taste.ts`).
+  Seeing the book (Kyle, 2026-10-18, from Writers Room's Story Dashboard): five pages of the open book. Plan group:
+  Promises (`#/board/promises/<book>`: each promise note a lane across the scenes in reading order, a ring where it is
+  planted, a dot where reinforced, a square where paid; open ones always show, paid, subverted and dropped fold away;
+  warns about an open promise no scene pays even in the last fifth, and a promise naming a scene the book lacks; press a
+  lane for its note), Plot Grid (`plot-grid`: the series' and book's threads, or the cast by pov and cast, down the side
+  and scenes across; a shaded gap where a thread disappears, flagged past 4 scenes or 15% of the book; pressing a square
+  adds or removes the thread in the scene's `threads` through the write queue, a front-matter edit only, and a dashed
+  square, the team's guess from `card_draft`, is confirmed first) and Timeline (`timeline`: scenes against story `day`,
+  flashbacks and time jumps drawn and said in words, scenes with no day listed). Review group: Themes (`themes`: theme
+  notes by chapter, shaded by how often their `keywords` appear in the prose as whole words, a diamond where a card links
+  the theme; press a cell for the lines) and Cast web (`cast-web`: an SVG map, circles sized by scenes on stage, lines
+  from `relationships`, as wide as the words after the link or the character note's sentences about the other say it is
+  tense, else even; a small fixed force layout; press a circle for the character). Wide grids scroll in their own box
+  with sticky side labels. `promiseWarnings` and `plotGapWarnings` are WarningChecks for the Overview.
+  Check, Options and Listen in the writing screen (Kyle, 2026-10-18, from Writers Room): Check (tool row, and the Check
+  tab) runs the vault tool's own linter on the device, free and offline (`src/lib/lint.js` is sf.js's lint section,
+  copied by `npm run sync-parser`; `src/lib/lintcheck.ts` maps each flag back onto the page and takes the book's Style
+  Guide and the vault Config as sf lint does). It shows the score with sf lint's grade (under 2 Clean, under 5 Light,
+  under 10 Noticeable, else Heavy), rhythm numbers and the flags by paragraph; the flagged words are drawn over the page
+  with the CSS Custom Highlight API (never in the text or the file), and a flag pressed is shown in the page. Whole
+  chapter has the same Check for every scene, scored by words. The team's paid job stays as "the deeper check". Options
+  (the Ask the team row) asks for Expand, Describe, Tighten (20 to 40% shorter) or More like my voice on the words picked
+  or the paragraph at the cursor: an `options` job carrying the exact passage, answered as `### Option 1/2/3` in its
+  ## Result (`src/lib/options.ts`). The Options tab shows them; Use this one saves a copy of the scene, then swaps the
+  passage only if it is still there word for word (otherwise Put it at the end or Copy); nothing changes before. Listen
+  (tool row, and Whole chapter) reads the page aloud with the browser's speech, a sentence at a time with the marks taken
+  out (`src/lib/listen.ts`): Pause, Resume, Back, Next, Stop, speed and voice (kept per device), the sentence being read
+  highlighted and scrolled into view. On a narrow page the new tools show icons only and the Ask the team heading goes.
+  Running the book (Kyle, 2026-10-18, from Writers Room): Overview (`#/board/overview/<book>`, the sidebar's item under
+  Book details) shows words against `target_words`, scenes per status, what is waiting on Kyle (proposals to decide, open
+  chapter to-dos, open Notes to the Team, questions in the scene notes, finished jobs not marked seen on this device), the
+  warnings of every check (`bookWarnings`), and the Release runway: chapters posted (a scene has `published`), chapters
+  ready (all final, none posted) and weeks of buffer at `cadence` (chapters a week; red under two). Target and pace are
+  changed in place (written as numbers). A stage strip (the schema's `book_stage` list) tops the Overview and the Chapter
+  Grid; pressing a stage asks first, then changes only the book's `stage`. The guided next step (`src/lib/nextstep.ts`) is
+  one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
+  `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
+  one waits). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
+  one agent, Mark done and Reopen, and where each was answered. Sessions (`#/board/sessions/<book>`, Review): the book's
+  session notes newest first; a session note opens speaker by speaker (`> [!voice] Name` callouts or `**Name:**` lines),
+  each agent in its own `--voice-N` colour, Kyle in the accent, then the ideas it filed (its `ideas` list and ideas whose
+  `session` links it). "Ask the team about this scene" (a Chapter Grid card's ••• menu, a scene's note view) opens the
+  scene's conversation with "About S-012 Title: " filled in. Recipes (`#/recipes`, the sidebar's foot): the vault's
+  `Recipes/` notes, Add and Edit (renaming moves the file); the writing screen's Team tab has "With a recipe", which adds
+  "Use the recipe [[Name]]" to every job sent from there. The Team page has Forge a new specialist (one line, a `forge` job).
+  Pictures of the book (Kyle, 2026-10-18, from Writers Room): Tension and Pacing (`#/board/tension/<book>`, Review) draws
+  each scene's `tension` (1-10) in reading order, placed by its share of the book's words, over a reference curve (a rough
+  guide: rising, a dip near 75%, the peak near 85-90%), each point coloured by `outcome`; drag a point (finger or mouse)
+  to change it, press one for a panel with - and +, the outcome buttons and Open the scene. It warns about three scenes in
+  a row that do not rise, a peak before 70% and over 30% clean wins (`tensionWarnings`). Its Mood and shape tab draws
+  `mood` (-5..5), smoothed over three scenes and compared with the six shapes of Reagan et al., 2016 (as cited in the
+  Writers Room code; not re-checked). Character Arcs (`#/board/arcs/<book>`, Plan): a card per character with `arc_type`
+  or `arc_points` (a book delta's points win), Lie (0) to Truth (10); drag a point, press an empty column to add one,
+  press a point to nudge or remove it; wrong-way arcs warn (`arcWarnings`). Values the team guessed (scene `card_draft`,
+  character `arc_draft`) show dashed and muted; Kyle's change or Confirm takes them off. These writes are card edits
+  through the write queue (front matter only; `tension` and `mood` as numbers, `card_draft` and `arc_points` as lists).
+  The Chapter Grid has a folding beat ruler (`BeatRuler`): the fifteen Save the Cat beats by percent of words (Snyder,
+  Brody, as the vault's save-the-cat skill gives them) and whether the scenes of each save-the-cat beat note (scene
+  `beat` link or the beat's `scenes`) land early, on time or late (3 points of give). Codex cards (note view and the
+  writing screen's) show "now", the subject's latest progression up to the open scene (or where the writing is), and its
+  > [!secret] callouts with whether the team may see each yet, timed the way sf's packet times them (`codexnow.ts`).
+  The Matrix marks a red square where a character is on a written scene's card but never named in its prose.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -144,7 +217,7 @@ src/lib/frontmatter.js   the vault tool's YAML reader, copied as is (do not edit
 src/lib/schema.ts        parse System/schema.json; card fields, enums, property order
 src/lib/vault-index.ts   which files to read, parse them, build series/books/scenes; warnings
 src/lib/board.ts         Chapter Grid grouping
-src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make
+src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make; reasons, stars, idea filters
 src/lib/boards.ts        Story Juice and Market boards: which notes, grouped and ordered by the schema; the cast with book deltas
 src/lib/write-queue.ts   choices waiting to save (localStorage), sending them, showing them before they land
 src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors
@@ -187,6 +260,44 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
+src/lib/taste.ts         the Taste page's numbers: keeps and drops by kind, agent and round, top reasons
+src/ui/Taste.tsx         the Taste page: Taste Profile, Style Fingerprint and the bars
+src/lib/seeing.ts        what the seeing-the-book pages share: story scenes in order, a book's or series' notes of a type
+src/lib/promises.ts      Promises board: lanes of planted, reinforced and paid scenes; promiseWarnings
+src/lib/plotgrid.ts      Plot Grid: threads or cast by scene, gaps, the threads toggle; plotGapWarnings
+src/lib/timeline.ts      Timeline: scenes by story day, flashbacks, time jumps, scenes with no day
+src/lib/themes.ts        Themes heatmap: keyword counts per chapter, cards that link a theme, the matching lines
+src/lib/castweb.ts       Cast web: presence, relationships and how tense they are, a small fixed force layout
+src/ui/Seeing.tsx        the five pages' links (sidebar Plan and Review) and which one to show
+src/ui/SeeingParts.tsx   their shared head, scene header rows by chapter and warning list
+src/ui/Promises.tsx, PlotGrid.tsx, Timeline.tsx, Themes.tsx, CastWeb.tsx   the five pages
+src/lib/lint.js          the vault tool's linter, copied as is (do not edit; see below)
+src/lib/lintcheck.ts     Check (AI phrases): the linter on the page's Markdown, flags mapped onto the page, grades, chapter score
+src/lib/options.ts       Options for a passage: the passage, the options job, its answers, the swap
+src/lib/listen.ts        Listen: sentences to say with their place on the page, the reader over the browser's speech
+src/ui/CheckPanel.tsx    the Check tab beside the page (and Whole chapter's Check column)
+src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options tab
+src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
+src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
+src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
+src/lib/nextstep.ts      the guided next step from the book's stage and notes, and its next-step job
+src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, new ones
+src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
+src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, add, edit and rename
+src/ui/Overview.tsx      the Overview page, the stage strip and the next step button
+src/ui/NotesToTeam.tsx   the Notes to the Team screen
+src/ui/Sessions.tsx      the Sessions list and one session
+src/ui/Recipes.tsx       the Recipes page and the "With a recipe" picker
+src/ui/Forge.tsx         Forge a new specialist on the Team page
+src/lib/tension.ts       Tension and Pacing: scene positions by words, points, reference curve, warnings, card_draft, story shape
+src/lib/arcs.ts          Character Arcs: arc points, which note holds them, edits, wrong-way warnings
+src/lib/beatruler.ts     the beat ruler: Save the Cat percentages, beat notes matched, early, on time or late
+src/lib/codexnow.ts      a codex card's "now" (progressions) and secrets (sf's timing); the Matrix's red squares
+src/ui/SceneChart.tsx    a draggable line chart of one value per scene (pointer events), used by the pages below
+src/ui/TensionPage.tsx   Tension and Pacing, with the Mood and shape tab
+src/ui/ArcsPage.tsx      Character Arcs
+src/ui/BeatRuler.tsx     the folding beat ruler on the Chapter Grid
+src/ui/CodexNow.tsx      "Now" and secrets on a codex card
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
@@ -196,8 +307,9 @@ tests/                   Node test runner tests
 ## Rules the code keeps
 
 - Parse notes exactly as the `sf` tool does. `src/lib/frontmatter.js` is the FRONTMATTER section of
-  `author-business/System/Tools/sf.js`, and `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
-  A test fails if either copy drifts, whenever the vault is checked out beside this repository.
+  `author-business/System/Tools/sf.js`, `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount, and
+  `src/lib/lint.js` its lint section with U.wordCount, U.sum, U.mean, U.stdev and U.escRe. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
+  A test fails if any copy drifts, whenever the vault is checked out beside this repository.
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
   The one exception is the team's files in `.claude` (agents, skills, agent memory), read separately for the Team page.
 - Errors shown to Kyle are plain sentences that say what to do.

@@ -33,7 +33,7 @@ test('finds the series, the book and its scenes in reading order', async () => {
 
 test('reads only the notes the board needs', async () => {
   const { src } = await demoIndex();
-  assert.ok(!src.reads.some((p) => /Characters|Ideas|Progressions|Story So Far/.test(p)), src.reads.join(', '));
+  assert.ok(!src.reads.some((p) => /Characters|Ideas|Story So Far/.test(p)), src.reads.join(', '));
 });
 
 test('fetches only files whose sha changed', async () => {
@@ -50,7 +50,7 @@ test('groups the Chapter Grid by chapter, with unplaced scenes last', async () =
   const groups = chapterGroups(schema, scenes);
   assert.deepEqual(groups.map(chapterHeading), ['Chapter 1: Frost', 'Chapter 2: Thaw', 'Chapter 3: Ledger', 'Chapter 4', 'No chapter yet']);
   assert.deepEqual(groups.map((g) => g.scenes.length), [2, 2, 2, 1, 1]);
-  assert.equal(groups[0].words, 37);
+  assert.equal(groups[0].words, 61);
 });
 
 test('sorts by order, then chapter, then ID, as sf does', () => {

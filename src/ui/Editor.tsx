@@ -15,6 +15,8 @@ import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../l
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
+import { RecipePicker } from './Recipes.tsx';
+import { withRecipe } from '../lib/recipes.ts';
 import { BeatsView } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
@@ -36,11 +38,17 @@ type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record
 
 const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
+import type { CodexNow } from '../lib/codexnow.ts';
+import { CodexNowBox } from './CodexNow.tsx';
 import { findAll, markList, unstyle } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
 import { propertyOrder } from '../lib/schema.ts';
 import { render } from '../lib/markdown.ts';
 import { makeNote } from '../lib/vault-index.ts';
+import type { CheckOptions } from '../lib/lintcheck.ts';
+import { CheckPanel } from './CheckPanel.tsx';
+import { ListenBar, ListenButton, useListen } from './Listen.tsx';
+import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -65,9 +73,9 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'chat' | 'plan' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
+type Tab = 'chat' | 'plan' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
 const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
-  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']];
+  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team'], ['check', 'Check'], ['options', 'Options']];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
 function loadTab(): Tab {
@@ -84,7 +92,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, optionJobs, checkOpts, recipes = [] }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -103,6 +111,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   onChat?: OnChat;
   /** The book's characters, places, items and lore, whose names light up in the text. */
   codex?: CodexEntry[];
+  /** A codex note's state at this scene and its secrets, for the codex card. */
+  codexNow?: (note: NoteRecord) => CodexNow;
   /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
   braindump?: NoteRecord | null;
   /** This scene's notes (Kyle's outline, Team notes, questions), shown under its card, never on the page. */
@@ -124,6 +134,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   plan?: NoteRecord | null;
   /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
   beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
+  /** This scene's options jobs (Options for a passage), newest first. */
+  optionJobs?: NoteRecord[];
+  /** The book's settings for Check (its Style Guide and the vault's Config). */
+  checkOpts?: CheckOptions;
+  /** The vault's recipes by name, for the Team tab's "With a recipe". */
+  recipes?: string[];
 }) {
   const beatsMode = Boolean(beats);
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
@@ -538,6 +554,18 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // Tool buttons must not take the cursor out of the page.
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
+  // Check, Listen and Options for a passage (Writers Room, Kyle 2026-10-18).
+  const pageRoot = () => (styled ? document.querySelector<HTMLElement>('.writer-page .writer-text.styled') : null);
+  const checkOptions = useMemo<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 }, [JSON.stringify(checkOpts || null)]);
+  const listen = useListen(() => [{ text: pageText(), root: pageRoot }], () => {
+    const c = cmd();
+    const s = c ? c.selection() : null;
+    return s && s.end > s.start ? { part: 0, at: s.start } : null;
+  });
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const opt = usePassageOptions({ source, note, bookFolder, onJob, jobs: optionJobs || [], canSave, addDots,
+    selection: () => { const c = cmd(); return c ? c.selection() : null; }, pageText, body: () => draftRef.current.body, apply: applyText });
+
   const { text } = splitLead(draft.body);
   const words = bodyWords(draft.body);
   const brackets = findBrackets(text);
@@ -713,6 +741,11 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 </button>
               )}
             </div>
+            <div class="tool-group check-tools" role="group" aria-label="Check and listen">
+              <button type="button" class="tool wide" aria-pressed={right && tab === 'check'} {...keepFocus} onClick={() => (right && tab === 'check' ? toggleRight() : openTab('check'))}
+                title="Check for AI-sounding phrases: free, on this device, with the score and rhythm"><Icon name="scan" /><span class="tool-label">Check</span></button>
+              <ListenButton l={listen} keep={keepFocus} />
+            </div>
             <div class="tool-group team-tools" role="group" aria-label="Ask the team">
               <span class="tool-heading" aria-hidden="true">Ask the team</span>
               {PASSAGE_TOOLS.map((t) => (
@@ -721,6 +754,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                   <Icon name={TOOL_ICON[t.key]} /><span class="tool-label">{asked && asked.busy === t.key ? 'Sending…' : t.label}</span>
                 </button>
               ))}
+              <button type="button" class="tool wide team-tool" aria-pressed={optionsOpen} {...keepFocus} onClick={() => { setOptionsOpen(!optionsOpen); opt.setSaid(null); }}
+                title="Two or three versions of the words you picked to choose from: Expand, Describe, Tighten or More like my voice">
+                <Icon name="swap" /><span class="tool-label">Options</span>{opt.ready > 0 && <span class="count-badge">{opt.ready}</span>}
+              </button>
               <button type="button" class="tool wide team-tool" {...keepFocus} disabled={Boolean(filling && filling.busy)} onClick={() => fill()}
                 title="Fill the [brackets] on this page: [...] is a gap the team fills in place, [a question] gets an answer as a paragraph under it. Keep writing while they work.">
                 <Icon name="bracket" /><span class="tool-label">{filling && filling.busy ? 'Sending…' : 'Fill brackets'}</span>
@@ -728,7 +765,19 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               </button>
               <button type="button" class="tool wide" title="Everything you can ask the team for" {...keepFocus} onClick={() => openTab('team')}><Icon name="team" /><span class="tool-label">Team</span></button>
             </div>
+            <ListenBar l={listen} />
           </div>
+          {optionsOpen && <OptionsAsk busy={opt.busy} keep={keepFocus} onClose={() => setOptionsOpen(false)}
+            onAsk={async (m) => { if (await opt.ask(m)) setOptionsOpen(false); }} />}
+          {opt.said && !opt.busy && (
+            <p class={'tool-said ' + (opt.said.error ? 'error' : 'ok')} role="status">
+              {opt.said.text}
+              <button type="button" class="icon-button" aria-label="Close" onClick={() => opt.setSaid(null)}><Icon name="close" size={16} /></button>
+            </p>
+          )}
+          {opt.ready > 0 && !(right && tab === 'options') && (
+            <p class="tool-said ok" role="status">The team's options are ready. <button type="button" class="link" onClick={() => openTab('options')}>Show them</button></p>
+          )}
           {asked && !asked.busy && (
             <p class={'tool-said ' + (asked.error ? 'error' : 'ok')} role="status">
               {asked.text}{!asked.error && note.data.id && <> <a {...link(href.chat(String(note.data.id), bookFolder || ''))}>Open the conversation</a></>}
@@ -811,7 +860,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : 'Scene'}</strong>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
@@ -831,7 +880,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 onJob={onJob} bookFolder={bookFolder} waiting={waiting || {}} link={link} />
             )}
             {tab === 'card' && (picked
-              ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} />
+              ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} now={codexNow ? codexNow(picked.note) : null} />
               : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
             {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
@@ -842,9 +891,17 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'team' && (
               <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
-                bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} />
+                bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} recipes={recipes} />
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
+            {tab === 'check' && (
+              <CheckPanel sections={[{ key: note.path, label: title, text, root: pageRoot, select: (a, b) => { const c = cmd(); if (c) c.select(a, b); } }]}
+                opts={checkOptions} onJump={closeOver}
+                deeper={<p class="hint">For a closer read by the Line Editor (a paid team job), use the Team tab's deeper check.</p>} />
+            )}
+            {tab === 'options' && (
+              <OptionsPanel jobs={optionJobs || []} done={opt.done} onPick={opt.pick} onEnd={opt.end} onDone={opt.markDone} />
+            )}
             {tab === 'tools' && (
               <ScenePanel status={sceneStatus} next={next}
                 styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
@@ -907,8 +964,8 @@ const KIND_WORD: Record<string, string> = { character: 'character', place: 'plac
 const CODEX_QUIET = ['aliases', 'type', 'name', 'status', 'ai', 'created', 'updated', 'tags', 'extends', 'color', 'relationships', 'threads_live'];
 
 /** A character, place or item beside the page, opened by pressing its name in the text. */
-function CodexCard({ schema, entry, link, onBack }: {
-  schema: Schema; entry: CodexEntry; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void }; onBack: () => void;
+function CodexCard({ schema, entry, link, onBack, now }: {
+  schema: Schema; entry: CodexEntry; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void }; onBack: () => void; now?: CodexNow | null;
 }) {
   const d = entry.note.data;
   const keys = propertyOrder(schema, entry.note.type, d).filter((k) => CODEX_QUIET.indexOf(k) < 0 && !isEmptyValue(d[k]));
@@ -920,6 +977,7 @@ function CodexCard({ schema, entry, link, onBack }: {
       <h3 class="codex-name"><span class="name-dot" style={{ background: entry.color }} />{entry.name}</h3>
       <p class="hint">{KIND_WORD[entry.type] || entry.type}{entry.terms.length > 1 ? ' · also ' + entry.terms.filter((t) => t !== entry.name).join(', ') : ''}</p>
       {intro && <div class="prose small" dangerouslySetInnerHTML={{ __html: render(intro) }} />}
+      {now && <CodexNowBox now={now} />}
       {keys.map((k) => (
         <div class="panel-card" key={k}>
           <span class="panel-key">{fieldLabel(k)}</span>
@@ -1226,11 +1284,14 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
 }
 
 /** Ask the team: each button writes a job note the vault's GitHub workflow runs. Kyle's words never get drafted over. */
-function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFill, onAutoFill }: {
+function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFill, onAutoFill, recipes = [] }: {
   status: string; id: string; title: string; chapter: number | null; bookFolder: string | null; onJob?: OnJob;
   link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
   autoFill: boolean; onAutoFill: (on: boolean) => void;
+  /** Recipes by name: one picked is named in the ask of every job sent from here. */
+  recipes?: string[];
 }) {
+  const [recipe, setRecipe] = useState('');
   const [asking, setAsking] = useState(false);
   const [ask, setAsk] = useState('');
   const [busy, setBusy] = useState<JobKind | ''>('');
@@ -1242,7 +1303,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
     setBusy(kind);
     setSaid(null);
     const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' ? '' : title);
-    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: kind === 'table-read' ? jobAsk(kind, target, words) : words });
+    const ask = kind === 'table-read' ? jobAsk(kind, target, words) : words;
+    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: recipe ? withRecipe(ask, recipe) : ask });
     setBusy('');
     setSaid(r);
     if (!r.error && kind === 'custom') { setAsk(''); setAsking(false); }
@@ -1255,12 +1317,13 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
         <input type="checkbox" checked={autoFill} onChange={(e) => onAutoFill((e.currentTarget as HTMLInputElement).checked)} />
         <span>Fill [brackets] on their own, 20 seconds after you stop typing (this device)</span>
       </label>
+      <RecipePicker names={recipes} value={recipe} onChange={setRecipe} />
       {status === 'planned'
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('notes', chapterTarget)}>{busy === 'notes' ? 'Sending…' : 'Notes on this chapter'}</button>
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('table-read', chapterTarget, '')}>{busy === 'table-read' ? 'Sending…' : 'Table read of this chapter'}</button>
-      <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'Check for AI-sounding phrases'}</button>
+      <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'The team\'s deeper check for AI-sounding phrases'}</button>
       <button type="button" disabled={busy !== ''} onClick={() => send('learn', '')}>{busy === 'learn' ? 'Sending…' : 'Learn from my edits'}</button>
       {asking ? (
         <div class="side-add-form">

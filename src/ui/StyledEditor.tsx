@@ -100,22 +100,7 @@ export function selectionOffsets(root: HTMLElement): { start: number; end: numbe
 /** Put the cursor (or a selection) at these places in the Markdown. A place inside a mark goes to the nearest words; a
  * place just after an opening mark goes inside the styled words, so typing there takes their style. */
 export function setSelection(root: HTMLElement, start: number, end = start) {
-  // Where each piece of text starts in the Markdown: read the page once with a stand-in at the start of every piece, so
-  // the places always agree with readText.
-  const texts: Text[] = [];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) texts.push(n as Text);
-  const raw = readText(root, texts.map((t) => ({ node: t, offset: 0, mark: START })));
-  const starts: number[] = [];
-  for (let i = 0, seen = 0; i < raw.length; i++) if (raw[i] === START) { starts.push(i - seen); seen++; }
-  const find = (want: number): [Node, number] => {
-    for (let j = 0; j < texts.length; j++) {
-      if (want < starts[j]) return [texts[j], 0];
-      if (want <= starts[j] + texts[j].data.length) return [texts[j], want - starts[j]];
-    }
-    const last = texts[texts.length - 1];
-    return last ? [last, last.data.length] : [root, 0];
-  };
+  const find = locator(root);
   const sel = window.getSelection();
   if (!sel) return;
   const [sn, so] = find(start);
@@ -125,6 +110,41 @@ export function setSelection(root: HTMLElement, start: number, end = start) {
   r.setEnd(en, eo);
   sel.removeAllRanges();
   sel.addRange(r);
+}
+
+/** Ranges on the page for these places in the Markdown, for highlights drawn over the words (Check, Listen) that never
+ * change the text or the page's HTML. */
+export function rangesIn(root: HTMLElement, spans: { start: number; end: number }[]): Range[] {
+  if (!spans.length) return [];
+  const find = locator(root);
+  return spans.map((s) => {
+    const r = document.createRange();
+    const [sn, so] = find(s.start);
+    const [en, eo] = find(Math.max(s.start, s.end));
+    r.setStart(sn, so);
+    r.setEnd(en, eo);
+    return r;
+  });
+}
+
+/** A place in the Markdown as a place on the page (a text node and an offset in it). */
+function locator(root: HTMLElement): (want: number) => [Node, number] {
+  // Where each piece of text starts in the Markdown: read the page once with a stand-in at the start of every piece, so
+  // the places always agree with readText.
+  const texts: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) texts.push(n as Text);
+  const raw = readText(root, texts.map((t) => ({ node: t, offset: 0, mark: START })));
+  const starts: number[] = [];
+  for (let i = 0, seen = 0; i < raw.length; i++) if (raw[i] === START) { starts.push(i - seen); seen++; }
+  return (want: number): [Node, number] => {
+    for (let j = 0; j < texts.length; j++) {
+      if (want < starts[j]) return [texts[j], 0];
+      if (want <= starts[j] + texts[j].data.length) return [texts[j], want - starts[j]];
+    }
+    const last = texts[texts.length - 1];
+    return last ? [last, last.data.length] : [root, 0];
+  };
 }
 
 /** What the page shows, character by character, for telling whether the browser's own edit already looks right. Spaces

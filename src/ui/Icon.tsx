@@ -53,7 +53,25 @@ const PATHS: Record<string, string> = {
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
-  bracket: 'M9 4H5v16h4M15 4h4v16h-4'
+  taste: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z',
+  promise: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  threads: 'M3 6h4M10 6h11M3 12h11M17 12h4M3 18h7M13 18h8',
+  timeline: 'M3 18l5-6 4 3 4-8 5 5M3 21h18',
+  heat: 'M4 4h5v5H4zM10 4h5v5h-5zM16 4h4v5h-4zM4 10h5v5H4zM10 10h5v5h-5zM4 16h5v4H4z',
+  web: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 6.8l-5 9.5M13 6.8l5 9.5M7 18h10',
+  bracket: 'M9 4H5v16h4M15 4h4v16h-4',
+  scan: 'M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM21 21l-5.2-5.2M7.5 10.5l2 2 4-4',
+  speaker: 'M4 9h4l5-4v14l-5-4H4zM16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13',
+  swap: 'M4 8h14l-3.5-3.5M20 16H6l3.5 3.5',
+  play: 'M7 4.5l12 7.5-12 7.5z',
+  pause: 'M7 5h3v14H7zM14 5h3v14h-3z',
+  stop: 'M6.5 6.5h11v11h-11z',
+  gauge: 'M4 18a8 8 0 1 1 16 0M12 18l4-6M8 18h8',
+  note: 'M5 4h14v12l-4 4H5zM15 20v-4h4M8.5 9h7M8.5 12.5h4',
+  sessions: 'M3 5h11v8H7l-4 3zM10 16h7l4 3v-8h-4',
+  recipe: 'M6 3h10a2 2 0 0 1 2 2v16H8a2 2 0 0 1-2-2zM6 17a2 2 0 0 1 2-2h10M10 7h5M10 10.5h5',
+  tension: 'M3 18l4-5 3 2 4-7 3 3 4-6M3 21h18',
+  arc: 'M4 19c3-9 7-13 16-14M4 19h.01M20 5h.01M4 5v14'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
