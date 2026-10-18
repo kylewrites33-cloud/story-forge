@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Frontmatter } from '../src/lib/frontmatter.js';
-import { addRecent, continueList, labelHue, labelsOf, lastWorked, parseOutline, readingLine, sceneMatches, sortBooks } from '../src/lib/home.ts';
+import { addRecent, bookProgress, continueList, labelHue, labelsOf, lastWorked, parseOutline, readingLine, sceneMatches, sortBooks } from '../src/lib/home.ts';
 import { applyToData, applyToText, editChange } from '../src/lib/ideas.ts';
 import { sceneHeader } from '../src/lib/format.ts';
 import { cleanLook, DEFAULT_LOOK } from '../src/lib/page.ts';
@@ -93,4 +93,13 @@ test('a scene is headed by its one-line summary, or its title until it has one',
   assert.equal(sceneHeader({ id: 'S-001', title: 'All around him the woods', headline: '  ' }), 'All around him the woods');
   assert.equal(sceneHeader({ id: 'S-001' }), 'S-001');
   assert.equal(sceneHeader({}, 'this scene'), 'this scene');
+});
+
+test('bookProgress: the step comes from the least finished scenes', () => {
+  assert.deepEqual(bookProgress(['planned', 'drafted', 'planned', 'final']), { step: 'drafting', colour: 'drafted', done: 2, total: 4, percent: 50 });
+  assert.deepEqual(bookProgress(['drafted', 'revised', 'drafted']), { step: 'revising', colour: 'revised', done: 1, total: 3, percent: 33 });
+  assert.deepEqual(bookProgress(['revised', 'final']), { step: 'finishing', colour: 'final', done: 1, total: 2, percent: 50 });
+  assert.deepEqual(bookProgress(['final', 'final']), { step: 'done', colour: 'final', done: 2, total: 2, percent: 100 });
+  assert.equal(bookProgress(['odd', 'drafted']).step, 'drafting');
+  assert.equal(bookProgress([]).percent, 0);
 });

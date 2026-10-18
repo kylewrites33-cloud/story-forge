@@ -125,10 +125,32 @@ export function saveRates(r: ReadRates): void {
 export function readingLine(words: number, rates: ReadRates = DEFAULT_RATES): string {
   if (words <= 0) return '';
   const pages = Math.max(1, Math.round(words / rates.wordsPerPage));
+  return 'about ' + pages + (pages === 1 ? ' page' : ' pages') + ' · ' + readingTime(words, rates);
+}
+
+/** "48 minutes to read". */
+export function readingTime(words: number, rates: ReadRates = DEFAULT_RATES): string {
+  if (words <= 0) return '';
   const mins = Math.max(1, Math.round(words / rates.wordsPerMinute));
   const time = mins < 60 ? mins + (mins === 1 ? ' minute' : ' minutes')
     : Math.floor(mins / 60) + (Math.floor(mins / 60) === 1 ? ' hour' : ' hours') + (mins % 60 ? ' ' + (mins % 60) + (mins % 60 === 1 ? ' minute' : ' minutes') : '');
-  return 'about ' + pages + (pages === 1 ? ' page' : ' pages') + ' · ' + time + ' to read';
+  return time + ' to read';
+}
+
+/** How far a book is through the step it is in. The step is set by its least finished scenes: any planned means
+ * drafting (scenes drafted or further count as done), then revising, then finishing (final counts). Statuses outside
+ * the list count as planned. */
+export interface BookProgress { step: 'drafting' | 'revising' | 'finishing' | 'done'; colour: string; done: number; total: number; percent: number }
+export function bookProgress(statuses: string[], order: string[] = ['planned', 'drafted', 'revised', 'final']): BookProgress {
+  const rank = (s: string) => Math.max(0, order.indexOf(s));
+  const total = statuses.length;
+  const lowest = total ? Math.min(...statuses.map(rank)) : 0;
+  const last = order.length - 1;
+  const steps: BookProgress['step'][] = ['drafting', 'revising', 'finishing'];
+  if (total && lowest >= last) return { step: 'done', colour: order[last], done: total, total, percent: 100 };
+  const target = Math.min(lowest + 1, last);
+  const done = statuses.filter((s) => rank(s) >= target).length;
+  return { step: steps[Math.min(lowest, steps.length - 1)], colour: order[target], done, total, percent: total ? Math.round((done / total) * 100) : 0 };
 }
 
 /** Whether a scene matches the Chapter Grid filter: every word typed appears in its card or its text. */
