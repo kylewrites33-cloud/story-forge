@@ -940,3 +940,38 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .history-title { margin: 0; overflow-wrap: anywhere; }
 .history-more summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; min-height: 36px; display: inline-flex; align-items: center; }
 .history-more .prose { font-size: 0.95rem; }
+
+/* A chapter by its beats: closed rows with number, title and summary; open shows a slim title row and the prose under it. */
+.beat-tools { margin-top: 12px; }
+.beat-tools button, .beat-actions button, .writer-done button { display: inline-flex; align-items: center; gap: 6px; }
+.beat-ask { display: grid; gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.beat-ask p { margin: 0; }
+.beat-ask textarea { width: 100%; font: inherit; }
+.beat-ask .primary { justify-self: start; }
+.beat-ask .note-line { display: flex; align-items: center; gap: 8px; }
+.beats { width: 100%; max-width: var(--page-width, 44rem); margin: 16px auto 0; padding: 0 clamp(8px, 3vw, 40px) 24px; display: flex; flex-direction: column; gap: 10px; }
+.beat-scene { margin: 6px 0 0; font-size: 0.85rem; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.beat-scene a { color: var(--muted); font-weight: 600; text-decoration: none; text-align: center; }
+.beat-break { color: var(--muted); font-family: var(--serif); letter-spacing: 0.3em; font-size: 1.1rem; }
+.beat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.beat.loose { border-style: dashed; }
+.beat-row { display: grid; grid-template-columns: 52px 1fr; gap: 4px; align-items: start; padding: 6px 12px 6px 4px; }
+.beat.open .beat-row { padding-bottom: 0; }
+.beat-toggle { border: none; background: none; min-height: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.beat-toggle .icon { color: var(--muted); }
+.beat-head { min-width: 0; padding-top: 6px; display: grid; gap: 2px; }
+.beat-title, .beat-summary { width: 100%; border: none; background: transparent; color: var(--text); font: inherit; padding: 4px 6px; border-radius: 6px; min-height: 0; }
+.beat-title { font-weight: 700; font-size: 1.05rem; }
+.beat-summary { color: var(--muted); font-size: 0.95rem; line-height: 1.45; resize: none; overflow: hidden; display: block; }
+.beat-title:focus, .beat-summary:focus { outline: none; background: var(--accent-soft); }
+.beat.loose .beat-title { font-weight: 400; font-style: italic; }
+.beat-lost { margin: 0 6px 6px; font-size: 0.85rem; color: var(--muted); }
+.beat-body { padding: 0 12px 10px 60px; }
+.beat-body .writer-text { min-height: 3em; padding: 4px 0 8px; max-width: none; }
+.beat-body .writer-text:focus { box-shadow: 0 0 0 6px var(--accent-soft); background: var(--accent-soft); border-radius: 4px; }
+.beat-actions { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.beat-actions button { font-size: 0.9rem; border-color: transparent; background: var(--bg); padding: 4px 12px; }
+@media (max-width: 600px) { .beat-body { padding-left: 16px; padding-right: 16px; } }
+.chapter-beats-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; min-height: 44px; font-size: 0.9rem; font-weight: 600; vertical-align: middle; }
+.writer.paper-dark .beat, .writer.paper-cream .beat { background: transparent; }

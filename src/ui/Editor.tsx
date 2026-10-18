@@ -436,6 +436,11 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             <Icon name="page" /><span class="bar-label">Whole chapter</span>
           </button>
         )}
+        {group && group.num != null && (
+          <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
+            <Icon name="beats" /><span class="bar-label">Beats</span>
+          </button>
+        )}
         {book && (
           <button type="button" class="bar-button" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
             aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">

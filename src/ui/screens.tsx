@@ -507,6 +507,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           <h2>
             {chapterHeading(g)}
             <span class="meta"> {g.scenes.length === 1 ? '1 scene' : g.scenes.length + ' scenes'}{g.words ? ' · ' + g.words.toLocaleString('en-US') + ' words · ' + readingLine(g.words, rates).replace(/^about /, '') : ''}</span>
+            {g.num != null && g.scenes.length > 0 && <a class="chapter-beats-link" href={href.beats(g.scenes[0].path)}><Icon name="beats" size={16} />Beats</a>}
           </h2>
           <ul class={'cards' + (drag && drag.moved && drag.at && drag.at.key === g.key && drag.at.before === null ? ' drop-end' : '')}>
             {g.scenes.map((s) => (

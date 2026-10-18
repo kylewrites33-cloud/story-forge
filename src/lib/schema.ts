@@ -74,8 +74,8 @@ export function indexedTypes(schema: Schema, phase: number): string[] {
 
 /** Note types the writing screen reads beyond the boards: places, items and lore (names that light up in the text) and
  * the book's braindump (the Notes tab), each scene's notes (under its card), and the Writing Log's days (the Pomodoro
- * timer's count). */
-export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump', 'scene-notes', 'writing-day'];
+ * timer's count), and each chapter's beats. */
+export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump', 'scene-notes', 'writing-day', 'chapter-beats'];
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

@@ -37,6 +37,8 @@ import { TodoList } from './TodoList.tsx';
 import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
+import { BeatsPage } from './BeatsPage.tsx';
+import { beatsNoteFor } from '../lib/beats.ts';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
@@ -473,13 +475,28 @@ export function App() {
     }
   }
 
+  if (route.name === 'beats' && view && schema) {
+    const note = view.notes[route.path];
+    const book = note ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null;
+    const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
+    if (book && group && group.num != null) {
+      const target = 'Chapter ' + group.num;
+      const asking = jobNotes(view).find((j) => String(j.data.kind || '') === 'beats' && String(j.data.target || '') === target && String(j.data.book || '') === book.folder
+        && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null;
+      return <BeatsPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} bookFolder={book.folder}
+        beatsNote={beatsNoteFor(view.notes, book.folder, group.num)} codex={codexFor(view, book)} startAt={route.path} backTo={href.book(book.folder)}
+        onSaved={(n) => { foldNotes([n]); }} onJob={source.write ? onJob : undefined} asking={asking}
+        timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} />} />;
+    }
+  }
+
   const drafts = pendingCount(source.key);
   let body;
   if (route.name === 'settings') {
     body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
   } else if (!snap || !schema || !view) {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
-  } else if (route.name === 'write' || route.name === 'chapter') {
+  } else if (route.name === 'write' || route.name === 'chapter' || route.name === 'beats') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'jobs') {
     body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;
