@@ -41,6 +41,9 @@ import { beatsNoteFor } from '../lib/beats.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { planFor } from '../lib/plans.ts';
 import { MatrixBoard } from './Matrix.tsx';
+import { TensionBoard } from './TensionPage.tsx';
+import { ArcsBoard } from './ArcsPage.tsx';
+import { codexNow } from '../lib/codexnow.ts';
 import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
@@ -487,6 +490,7 @@ export function App() {
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
           timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} />}
+          codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
           fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
@@ -543,6 +547,8 @@ export function App() {
       if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
+      else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
+      else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
       else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
@@ -599,6 +605,8 @@ export function App() {
       if (boardKey === 'ideas') { const pl = piles(notesOf(navBook.ideas)); v.notes = PILES.flatMap((x) => pl[x.key] || []); }
       else if (boardKey === 'chapter-grid') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
       else if (boardKey === 'matrix') v.notes = castFor(view, navBook).map((c) => c.note);
+      else if (boardKey === 'tension') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
+      else if (boardKey === 'arcs') v.notes = castFor(view, navBook).map((c) => c.note);
       else if (boardKey === 'edit-queue') v.notes = bookTodos(view, navBook);
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) v.notes = boardNotes(view, navBook, boardKey as StoryBoard);
     } else if (route.name === 'note') {

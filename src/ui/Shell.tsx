@@ -25,6 +25,8 @@ const GROUPS: [string, string[]][] = [
   ['Review', ['edit-queue']],
   ['Publish', ['market']]
 ];
+// Writers Room charts: Character Arcs under Plan, Tension and Pacing under Review.
+GROUPS.forEach(([name, keys]) => { if (name === 'Plan') keys.push('arcs'); if (name === 'Review') keys.push('tension'); });
 
 /** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { codexFor, matcher, presence } from '../src/lib/codex.ts';
-import { codexNow, parseWhen, plannedNotNamed, secretStates, splitSecrets } from '../src/lib/codexnow.ts';
+import { codexNow, nowForNote, parseWhen, plannedNotNamed, secretStates, splitSecrets } from '../src/lib/codexnow.ts';
 import { DEMO, FsSource } from './helpers.ts';
 
 async function demo() {
@@ -75,4 +75,15 @@ test('a red square: a character on a drafted scene\'s card the prose never names
   // A planned scene's body is card notes, never prose: no red squares there.
   const s3 = index.notes[book.scenes[2]];
   assert.deepEqual(codex.filter((e) => plannedNotNamed(s3, e.type, presence(s3, e, m))), []);
+});
+
+test('a note view finds its book and reads a series note with its book delta', async () => {
+  const index = await demo();
+  const mara = index.notes['Series/Ember Road/Characters/Mara Quill.md'];
+  const now = nowForNote(index, mara, null)!;
+  assert.equal(now.scene, 'S-001');
+  assert.equal(now.secrets.length, 1);
+  const delta = index.notes['Series/Ember Road/Books/1 Ash Bell/Characters/Mara Quill.md'];
+  assert.equal(nowForNote(index, delta, null)!.secrets.length, 1);
+  assert.equal(nowForNote(index, index.notes[index.books[0].scenes[0]], null), null);
 });

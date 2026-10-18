@@ -148,3 +148,32 @@ export function hasProse(scene: NoteRecord): boolean {
 export function plannedNotNamed(scene: NoteRecord, type: string, p: Presence): boolean {
   return type === 'character' && (p.pov || p.card) && p.named === 0 && hasProse(scene);
 }
+
+/** Note types with a "now" on their card. */
+export const NOW_TYPES = ['character', 'place', 'item', 'lore'];
+
+/** The book a codex note is read against: its own book, else the active book when it is in the note's series, else the
+ * series' latest book. */
+export function bookForNote(index: VaultIndex, note: NoteRecord, active: BookEntry | null): BookEntry | null {
+  const own = index.books.find((b) => note.path.startsWith(b.folder + '/'));
+  if (own) return own;
+  const books = index.books.filter((b) => note.path.startsWith(b.seriesFolder + '/'));
+  if (active && books.indexOf(active) >= 0) return active;
+  return books.sort((a, b) => (b.number ?? 0) - (a.number ?? 0))[0] || null;
+}
+
+/** A codex note's "now", with its book's delta (for a series note) or its series note (for a delta) taken into account. */
+export function nowForNote(index: VaultIndex, note: NoteRecord, active: BookEntry | null, scenePath: string | null = null): CodexNow | null {
+  if (NOW_TYPES.indexOf(note.type) < 0) return null;
+  const book = bookForNote(index, note, active);
+  const name = String(note.data.name || '').trim();
+  let base = note, delta: NoteRecord | null = null;
+  if (note.data.extends && book) {
+    const target = linkName(note.data.extends);
+    const series = Object.values(index.notes).find((n) => n.type === note.type && !n.data.extends && String(n.data.name || '') === target && n.path.startsWith(book.seriesFolder + '/'));
+    if (series) { base = series; delta = note; }
+  } else if (book) {
+    delta = Object.values(index.notes).find((n) => n.type === note.type && n.path.startsWith(book.folder + '/') && linkName(n.data.extends) === name) || null;
+  }
+  return codexNow(index, book, base, scenePath, delta);
+}

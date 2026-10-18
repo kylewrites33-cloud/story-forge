@@ -36,6 +36,8 @@ type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record
 
 const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
+import type { CodexNow } from '../lib/codexnow.ts';
+import { CodexNowBox } from './CodexNow.tsx';
 import { findAll, markList, unstyle } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
 import { propertyOrder } from '../lib/schema.ts';
@@ -84,7 +86,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -103,6 +105,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   onChat?: OnChat;
   /** The book's characters, places, items and lore, whose names light up in the text. */
   codex?: CodexEntry[];
+  /** A codex note's state at this scene and its secrets, for the codex card. */
+  codexNow?: (note: NoteRecord) => CodexNow;
   /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
   braindump?: NoteRecord | null;
   /** This scene's notes (Kyle's outline, Team notes, questions), shown under its card, never on the page. */
@@ -831,7 +835,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 onJob={onJob} bookFolder={bookFolder} waiting={waiting || {}} link={link} />
             )}
             {tab === 'card' && (picked
-              ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} />
+              ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} now={codexNow ? codexNow(picked.note) : null} />
               : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
             {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
@@ -907,8 +911,8 @@ const KIND_WORD: Record<string, string> = { character: 'character', place: 'plac
 const CODEX_QUIET = ['aliases', 'type', 'name', 'status', 'ai', 'created', 'updated', 'tags', 'extends', 'color', 'relationships', 'threads_live'];
 
 /** A character, place or item beside the page, opened by pressing its name in the text. */
-function CodexCard({ schema, entry, link, onBack }: {
-  schema: Schema; entry: CodexEntry; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void }; onBack: () => void;
+function CodexCard({ schema, entry, link, onBack, now }: {
+  schema: Schema; entry: CodexEntry; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void }; onBack: () => void; now?: CodexNow | null;
 }) {
   const d = entry.note.data;
   const keys = propertyOrder(schema, entry.note.type, d).filter((k) => CODEX_QUIET.indexOf(k) < 0 && !isEmptyValue(d[k]));
@@ -920,6 +924,7 @@ function CodexCard({ schema, entry, link, onBack }: {
       <h3 class="codex-name"><span class="name-dot" style={{ background: entry.color }} />{entry.name}</h3>
       <p class="hint">{KIND_WORD[entry.type] || entry.type}{entry.terms.length > 1 ? ' · also ' + entry.terms.filter((t) => t !== entry.name).join(', ') : ''}</p>
       {intro && <div class="prose small" dangerouslySetInnerHTML={{ __html: render(intro) }} />}
+      {now && <CodexNowBox now={now} />}
       {keys.map((k) => (
         <div class="panel-card" key={k}>
           <span class="panel-key">{fieldLabel(k)}</span>

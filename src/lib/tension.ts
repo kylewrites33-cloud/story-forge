@@ -142,8 +142,8 @@ export const tensionWarnings: WarningCheck = (index, bookFolder) => {
 /** The six emotional shapes of stories (Reagan et al., 2016, "The emotional arcs of stories are dominated by six basic
  * shapes", as cited in the Writers Room code; not re-checked). Each is drawn as a curve over the book, 0 to 1. */
 export const SHAPES: { key: string; name: string; says: string; at: (x: number) => number }[] = [
-  { key: 'rags-to-riches', name: 'Rags to riches', says: 'a steady rise', at: (x) => x },
-  { key: 'riches-to-rags', name: 'Riches to rags', says: 'a steady fall', at: (x) => -x },
+  { key: 'rags-to-riches', name: 'Rags to riches', says: 'steady rise', at: (x) => x },
+  { key: 'riches-to-rags', name: 'Riches to rags', says: 'steady fall', at: (x) => -x },
   { key: 'man-in-a-hole', name: 'Man in a hole', says: 'fall, then rise', at: (x) => Math.cos(2 * Math.PI * x) },
   { key: 'icarus', name: 'Icarus', says: 'rise, then fall', at: (x) => -Math.cos(2 * Math.PI * x) },
   { key: 'cinderella', name: 'Cinderella', says: 'rise, fall, rise', at: (x) => -Math.cos(3 * Math.PI * x) },
