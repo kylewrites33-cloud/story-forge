@@ -2,7 +2,7 @@
 // edit its prose right under a slim title row. The scenes keep only the story; the beats live in the book's
 // `Chapter Beats/` note for the chapter (see lib/beats.ts). Everything Kyle types is kept on the device at once and saves
 // the same way as the writing screen: Done, two quiet minutes, putting the iPad down, or back online.
-import { Fragment, type ComponentChildren } from 'preact';
+import { Fragment } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
   BEATS_TYPE, addBeatAfter, beatDefs, beatsBody, beatsPath, beatsTitle, layoutChapter, nameLoose, parseBeats, removeBeat, sceneBody,
@@ -72,19 +72,25 @@ function Summary({ value, onInput, label }: { value: string; onInput: (v: string
   );
 }
 
-export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, codex, startAt, backTo, onSaved, onJob, asking, timer }: {
-  source: VaultSource; group: ChapterGroup; bookTitle: string; bookFolder: string;
+/** The chapter by its beats, drawn in the writing screen's page area in place of the page (the chapter list, the
+ * right-hand column and the top bar stay). `saver` is filled in with "save everything", which the writing screen calls
+ * before it leaves or switches back to the page. */
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen }: {
+  source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
   codex: CodexEntry[];
-  /** The scene the page opened from: "Page" goes back to it. */
+  /** The scene the beats opened from: its beats come into view. */
   startAt: string;
-  backTo: string;
   onSaved: (n: NoteRecord) => void;
   onJob?: OnJob;
   /** A beats job for this chapter the team has not finished, if there is one. */
   asking: NoteRecord | null;
-  timer?: ComponentChildren;
+  saver: { current: ((closing: boolean) => Promise<boolean>) | null };
+  /** The save state in Kyle's words, for the top bar's chip. */
+  onStatus: (text: string, cls: string) => void;
+  /** Open a scene in the page (its name above its beats). */
+  onOpen: (path: string) => void;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [st, setSt] = useState<State>(() => start(source, group, bookFolder, beatsNote));
@@ -226,10 +232,7 @@ export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, cod
     };
   }, [source, saveAll]);
 
-  const go = async (to: string) => {
-    if (quiet.current) clearTimeout(quiet.current);
-    if (await saveAll(true)) location.hash = to;
-  };
+  saver.current = saveAll;
 
   // Ask the team for beats.
   const [asked, setAsked] = useState<{ error: boolean; text: string } | null>(null);
@@ -249,27 +252,21 @@ export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, cod
   const hasBeats = beats.some((b) => !b.loose);
   const hasProse = beats.some((b) => b.prose.trim());
   const [askOpen, setAskOpen] = useState(!hasBeats);
-  const sceneDrafts = Object.values(st.scenes);
-  const total = sceneDrafts.reduce((n, d) => n + bodyWords(d.body), 0);
   const unsaved = unsavedAll(st);
   const chip = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved' : unsaved ? (state === 'device' || !navigator.onLine ? 'On this device' : 'Saved on device') : 'Saved';
+  useEffect(() => { onStatus(chip, chip === 'Saved' ? 'good' : state === 'error' ? 'bad' : ''); }, [chip]);
+  // The scene the beats opened from comes into view.
+  useEffect(() => {
+    const el = document.querySelector('[data-beats-scene="' + CSS.escape(startAt) + '"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  }, []);
   const cmd = () => { const c = commands.current[focused]; return c ? c.current : null; };
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault() };
   const anyOpen = beats.some((b) => open.has(b.key));
   let n = 0;
 
   return (
-    <div class={'writer beats-page paper-' + look.paper} style={lookStyle(look)}>
-      <header class="writer-bar">
-        <button type="button" class="primary" onClick={() => go(backTo)}>Done</button>
-        <button type="button" class="bar-button" onClick={() => go(href.write(startAt))} title="Back to the writing page"><Icon name="page" /><span class="bar-label">Page</span></button>
-        <span class="writer-title">{bookTitle}</span>
-        <span class="writer-words">{num(total)} words</span>
-        <span class={'save-chip ' + (chip === 'Saved' ? 'good' : state === 'error' ? 'bad' : '')} role="status">{chip === 'Saved' && <Icon name="check" size={16} />}{chip}</span>
-        {timer}
-      </header>
-      <div class="writer-cols">
-        <div class="writer-page">
+    <>
           {anyOpen && (
             <div class="writer-tools" role="toolbar" aria-label="Formatting">
               <button type="button" class="tool" aria-label="Bold" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
@@ -282,7 +279,7 @@ export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, cod
           )}
           <div class="page-head">
             <h1>{chapterHeading(group)}</h1>
-            <p class="meta">The chapter by its beats. Press a number to open or close a beat. Change any words in place; they save like the writing page.</p>
+            <p class="meta">The chapter by its beats. Press a number to open or close a beat. Change any words in place; they save like the page. Press Page at the top to go back.</p>
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
             <div class="buttons beat-tools">
               <button type="button" onClick={() => keepOpen(new Set(beats.map((b) => b.key)))}>Open all</button>
@@ -323,7 +320,7 @@ export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, cod
                   {newScene && (
                     <p class="beat-scene">
                       {i > 0 && <span class="beat-break" aria-hidden="true">~</span>}
-                      <a href={href.write(b.path)} onClick={(e) => { e.preventDefault(); go(href.write(b.path)); }}>{[b.scene, note ? sceneHeader(note.data) : ''].filter(Boolean).join(' ')}</a>
+                      <a href={href.write(b.path)} data-beats-scene={b.path} onClick={(e) => { e.preventDefault(); onOpen(b.path); }}>{[b.scene, note ? sceneHeader(note.data) : ''].filter(Boolean).join(' ')}</a>
                     </p>
                   )}
                   <section class={'beat' + (isOpen ? ' open' : '') + (b.loose ? ' loose' : '')}>
@@ -365,10 +362,8 @@ export function BeatsPage({ source, group, bookTitle, bookFolder, beatsNote, cod
           {!beats.length && <p class="empty">This chapter has no scenes yet.</p>}
           <div class="writer-done">
             <span class="meta">{n === 1 ? '1 beat' : n + ' beats'}</span>
-            <button type="button" onClick={() => go(href.write(startAt))}><Icon name="page" size={18} />Back to the page</button>
+            <button type="button" onClick={() => onOpen(startAt)}><Icon name="page" size={18} />Back to the page</button>
           </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

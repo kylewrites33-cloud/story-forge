@@ -90,8 +90,9 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   the agent), kept share, lessons (MEMORY.md) and Talk (a new chat that starts with the agent's name). An agent's page
   (`#/team/<name>`) adds its skills, lessons and what it has done. Session history (`#/history`) is every agent's
   Journal.md entries, the jobs it ran and the vault's last 100 saves with an `Agent:` line.
-  Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` shows the scene's chapter by
-  its beats, each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under
+  Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` is the writing screen with
+  its page area showing the scene's chapter by its beats (chapter list, right column and top bar stay; the top bar's Beats
+  button becomes Page to switch back, Kyle 2026-10-18), each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under
   it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
   writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
   (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
@@ -163,7 +164,7 @@ src/lib/brackets.ts      [brackets]: finding them, the fill job, its answers, pu
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
 src/lib/plans.ts         a chapter's plan note (Chapter Plans)
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
-src/ui/BeatsPage.tsx     the chapter by its beats: closed rows that open to their prose
+src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene
 src/ui/EditQueue.tsx     editorial notes and to-dos on one page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
