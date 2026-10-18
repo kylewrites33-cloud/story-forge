@@ -319,7 +319,7 @@ export function App() {
       const r = parseHash(location.hash);
       const cur = snapRef.current;
       if (r.name !== 'chat' || !r.thread || r.thread === 'new' || !cur || document.visibilityState !== 'visible') return;
-      if (conversation(cur.index, r.thread).pending) runSync();
+      if (conversation(cur.index, r.thread, r.book).pending) runSync();
     }, 15000);
     return () => {
       window.removeEventListener('online', up);

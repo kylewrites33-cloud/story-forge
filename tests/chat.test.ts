@@ -122,3 +122,18 @@ test('a chat message added in the app passes sf validate', { skip: !hasVault && 
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], { cwd: dir, encoding: 'utf8' });
   assert.match(out, /no errors, no warnings/);
 });
+
+test('a scene ID in two books makes two conversations, one per book', async () => {
+  const base = await demoIndex();
+  const other = 'Series/Ember Road/Books/2 Second Bell';
+  const index = withJobs(base, [
+    chat('J-901', 'S-012', 'done', 'About book one.', 'Reply one.'),
+    chat('J-902', 'S-012', 'requested', 'About book two.', '', { book: other })
+  ]);
+  const both = conversations(index).filter((c) => c.thread === 'S-012');
+  assert.equal(both.length, 2);
+  assert.deepEqual(conversation(index, 'S-012', BOOK).messages.map((m) => m.id), ['J-901']);
+  assert.deepEqual(conversation(index, 'S-012', other).messages.map((m) => m.id), ['J-902']);
+  assert.equal(conversation(index, 'S-012', other).pending, true);
+  assert.equal(conversation(index, 'S-012', BOOK).pending, false);
+});

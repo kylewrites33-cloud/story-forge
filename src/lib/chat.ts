@@ -111,11 +111,14 @@ export function conversations(index: VaultIndex): Conversation[] {
     if (str(n.data.kind) !== 'chat') return;
     const t = str(n.data.thread).trim();
     if (!t) return;
-    if (!by.has(t)) by.set(t, []);
-    by.get(t)!.push(n);
+    // A scene ID is only unique inside its book (Book 1 and Book 2 both have an S-012), so a scene's talk is per book.
+    const key = isSceneThread(t) ? str(n.data.book) + '\n' + t : t;
+    if (!by.has(key)) by.set(key, []);
+    by.get(key)!.push(n);
   });
   const out: Conversation[] = [];
-  by.forEach((notes, thread) => {
+  by.forEach((notes, key) => {
+    const thread = key.slice(key.indexOf('\n') + 1);
     notes.sort((a, b) => (idNumber(a.data.id) || 0) - (idNumber(b.data.id) || 0) || a.path.localeCompare(b.path));
     out.push(build(index, thread, notes, ''));
   });
@@ -143,7 +146,8 @@ function build(index: VaultIndex, thread: string, notes: NoteRecord[], book: str
 
 /** One conversation, or an empty one when nothing has been said in that thread yet (a scene's first talk). */
 export function conversation(index: VaultIndex, thread: string, book = ''): Conversation {
-  return conversations(index).find((c) => c.thread === thread) || build(index, thread, [], book);
+  const same = (c: Conversation) => c.thread === thread && (!isSceneThread(thread) || !book || c.book === book);
+  return conversations(index).find(same) || build(index, thread, [], book);
 }
 
 /** The next free general conversation: chat-001, chat-002 and so on, after the highest one any job names. */
