@@ -7,7 +7,7 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom' | 'options';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -22,7 +22,7 @@ export function jobLabel(kind: unknown): string {
   switch (String(kind || '')) {
     case 'draft': return 'Draft this scene';
     case 'notes': return 'Notes on this chapter';
-    case 'check': return 'Check for AI-sounding phrases';
+    case 'check': return 'Deeper check for AI-sounding phrases (the team)';
     case 'learn': return 'Learn from my edits';
     case 'chat': return 'A question for the team';
     case 'rewrite': return 'Rewrite this card';
@@ -34,6 +34,7 @@ export function jobLabel(kind: unknown): string {
     case 'summaries': return 'Scene summaries';
     case 'beats': return 'Beats for this chapter';
     case 'fill': return 'Fill brackets';
+    case 'options': return 'Options for a passage';
     default: return 'Ask the team';
   }
 }

@@ -111,7 +111,7 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
               <button type="button" role="menuitem" onClick={() => { setMenu(false); setAsking(true); }}>Needs work</button>
               <button type="button" role="menuitem" onClick={() => { setMenu(false); setEditing(true); }}>Edit card</button>
               {onJob && sceneId && status === 'planned' && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('draft')}>Draft this scene</button>}
-              {onJob && sceneId && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('check')}>Check for AI-sounding phrases</button>}
+              {onJob && sceneId && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('check')}>The team's deeper check for AI-sounding phrases</button>}
               <a class="button" role="menuitem" href={href.note(note.path)}>Open the note</a>
             </div>
           )}

@@ -73,7 +73,7 @@ test('a job note reads back through the vault parser with the properties the run
 test("Kyle's words for kinds, statuses, titles and cost", () => {
   assert.equal(jobLabel('draft'), 'Draft this scene');
   assert.equal(jobLabel('notes'), 'Notes on this chapter');
-  assert.equal(jobLabel('check'), 'Check for AI-sounding phrases');
+  assert.equal(jobLabel('check'), 'Deeper check for AI-sounding phrases (the team)');
   assert.equal(jobLabel('learn'), 'Learn from my edits');
   assert.equal(jobLabel('custom'), 'Ask the team');
   assert.equal(jobLabel(undefined), 'Ask the team');
