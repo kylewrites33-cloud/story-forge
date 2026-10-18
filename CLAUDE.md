@@ -24,9 +24,12 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   `regenerate`, with what to change in `decision_note`) and Edit (the card's text fields, one line each, never the title or
   ID); a scene card's Edit card also changes its status (planned, drafted, revised, final). The To-do list (Phase 4's
   Edit Queue tasks) shows every task note by status, with Start, Done, Drop and Reopen, and Add a to-do writes a new
-  `Tasks/T-NNN` note. The writing screen shows `*italics*` and `**bold**` as styled text (stars kept, faint) in an
-  editable page whose characters are exactly the Markdown; Ctrl or Cmd+B and I (and the iPad's B and I keys) add stars;
-  a per-device switch in Scene goes back to the plain text box.
+  `Tasks/T-NNN` note. The writing screen shows `*italics*`, `**bold**` and `==marks==` the way a word processor
+  does, with no stars on the page: each styled span keeps its mark in `data-m` and the page reads back to exactly the
+  Markdown (`readText`). Bold, Italic and Highlight (buttons, Ctrl or Cmd+B and I, the iPad's B and I keys) style or
+  unstyle the selection or the word at the cursor, or wait for the next letters typed; Enter inside styled words closes and
+  reopens their marks; copy gives other apps styled text and paste keeps a word processor's italics and bold
+  (`toggleStyle`, `insertText`). A per-device switch in Scene goes back to the plain text box with its stars.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; "Done with this scene?" with Next at the bottom), and the scene panel on the right (Card, Copies,

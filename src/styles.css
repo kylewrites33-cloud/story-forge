@@ -446,7 +446,6 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .md-i { font-style: italic; }
 .md-b { font-weight: 700; }
 .md-bi { font-style: italic; font-weight: 700; }
-.md-mark { color: var(--muted); opacity: 0.45; font-weight: 400; font-style: normal; }
 .md-quote { color: var(--muted); }
 .md-hl { background: var(--mark, #fff1a8); border-radius: 3px; }
 .md-find { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 2px; }

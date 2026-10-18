@@ -237,6 +237,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   }, [source, canSave, onSaved, setDraft]);
 
   const [styled, setStyled] = useState(loadStyled);
+  // Whether what is typed at the cursor will be bold, italic or highlighted: the tool row's buttons show it pressed.
+  const [typing, setTyping] = useState({ i: false, b: false, h: false });
   // Bumped when the text changes from outside the writing box (copy restored, split, join), so the styled box reloads.
   const [loaded, setLoaded] = useState(0);
   const reload = () => setLoaded((n) => n + 1);
@@ -672,11 +674,11 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="tool" aria-label="Redo" title="Redo" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
             </div>
             <div class="tool-group" role="group" aria-label="Formatting">
-              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" {...keepFocus}
+              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={styled && typing.b} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" {...keepFocus}
+              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={styled && typing.i} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" {...keepFocus}
+              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={styled && typing.h} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
               <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.plain(); }}><Icon name="clear" /><span class="tool-label">Normal</span></button>
@@ -763,7 +765,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           </div>
           {styled ? (
             <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
-              options={styleOpts} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
+              options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
           ) : <textarea
             ref={box}
             class="writer-text"
@@ -1196,7 +1198,7 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
       )}
       <label class="check">
         <input type="checkbox" checked={styled} onChange={(e) => onStyled((e.currentTarget as HTMLInputElement).checked)} />
-        Show italics and bold as styled text on this device. Turn it off to see the plain text with its stars.
+        Show italics and bold the way a word processor does on this device. Turn it off to see the plain text with its * and ** marks.
       </label>
       {busy && <p class="hint">Working…</p>}
       {error && <p class="error">{error}</p>}
