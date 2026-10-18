@@ -10,6 +10,7 @@ export type Route =
   | { name: 'note'; path: string }
   | { name: 'write'; path: string }
   | { name: 'todo' }
+  | { name: 'jobs' }
   | { name: 'settings' };
 
 export function parseHash(hash: string): Route {
@@ -25,6 +26,7 @@ export function parseHash(hash: string): Route {
   if (head === 'write' && tail) return { name: 'write', path: tail };
   if (head === 'settings') return { name: 'settings' };
   if (head === 'todo') return { name: 'todo' };
+  if (head === 'jobs') return { name: 'jobs' };
   return { name: 'home' };
 }
 
@@ -39,6 +41,7 @@ export const href = {
   note: (path: string) => '#/note/' + encodeURIComponent(path),
   write: (path: string) => '#/write/' + encodeURIComponent(path),
   todo: () => '#/todo',
+  jobs: () => '#/jobs',
   settings: () => '#/settings'
 };
 

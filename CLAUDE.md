@@ -40,6 +40,12 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   planned scenes). Chapter Grid: coloured status edge, scene `labels` and `subtitle`, a filter box, Cards or Outline,
   pages and reading time (rates in Settings). Writing screen: Focus mode, a Page tab (size, spacing, width, font,
   paper, per device) and a strip of the chapter's scenes sized by length.
+  Ask the team (jobs): a Team tab in the writing screen's scene panel (Draft this scene, planned scenes only; Notes on
+  this chapter; Check for AI-sounding phrases; Learn from my edits; Ask the team… with one line of Kyle's words) and
+  Draft / Check on a Chapter Grid card's ••• menu each write a `Jobs/J-NNN` note with status `requested` as Kyle's commit.
+  The vault's GitHub workflow runs the job and writes `started`, `finished`, `cost_usd`, `run_url`, `result` and a
+  `## Result` section back; the Jobs screen (top bar) lists jobs by status, refreshes itself every minute while open, and
+  Cancel sets a requested job to `cancelled`. A job of the same kind and target still waiting or working is never made twice.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -73,12 +79,14 @@ src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML t
 src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
+src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
+src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/ui/                  screens (Preact)

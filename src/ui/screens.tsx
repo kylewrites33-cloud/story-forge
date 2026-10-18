@@ -13,6 +13,7 @@ import { Cover } from './Home.tsx';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
+import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -43,8 +44,23 @@ function StatusPill({ value }: { value: string }) {
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 /** Accept a scene card, or say it needs work and why. The card's status (planned, drafted) does not change. */
-function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren }) {
+function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolder }: {
+  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren; onJob?: OnJob; bookFolder?: string;
+}) {
   const [asking, setAsking] = useState(false);
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  const status = String(note.data.status || '');
+  const sceneId = String(note.data.id || '');
+  const ask = async (kind: JobKind) => {
+    if (!onJob) return;
+    setMenu(false);
+    setSending(true);
+    setSaid(null);
+    const r = await onJob({ title: defaultJobTitle(kind, sceneId, String(note.data.title || '')), kind, target: sceneId, book: bookFolder || '', ask: '' });
+    setSending(false);
+    setSaid(r);
+  };
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reason, setReason] = useState('');
@@ -54,6 +70,8 @@ function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Sche
   return (
     <div class="card-actions">
       {waiting && <p class={'pill' + (waiting.error ? ' pill-error' : '')}>{waiting.error ? 'Not saved: ' + waiting.error : 'Saving'}</p>}
+      {sending && <p class="hint">Sending to the team…</p>}
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
       {!accepted && !isEmptyValue(note.data.decision_note) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
       {editing ? (
         <EditFields schema={schema} note={note} fields={editableFields(schema, note.type)} onClose={() => setEditing(false)}
@@ -81,6 +99,8 @@ function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Sche
             <div class="card-menu" role="menu">
               <button type="button" role="menuitem" onClick={() => { setMenu(false); setAsking(true); }}>Needs work</button>
               <button type="button" role="menuitem" onClick={() => { setMenu(false); setEditing(true); }}>Edit card</button>
+              {onJob && sceneId && status === 'planned' && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('draft')}>Draft this scene</button>}
+              {onJob && sceneId && <button type="button" role="menuitem" disabled={sending} onClick={() => ask('check')}>Check for AI-sounding phrases</button>}
               <a class="button" role="menuitem" href={href.note(note.path)}>Open the note</a>
             </div>
           )}
@@ -90,8 +110,8 @@ function CardActions({ schema, note, waiting, onDecide, handle }: { schema: Sche
   );
 }
 
-function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
-  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null;
+function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob, bookFolder }: {
+  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null; onJob?: OnJob; bookFolder?: string;
 }) {
   const fields = cardFields(schema, note.type);
   const title = String(note.data.title || basename(note.path));
@@ -127,7 +147,7 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
         {words && <span class="card-words">{words}</span>}
         {note.error && <span class="card-error">Frontmatter problem: {note.error}</span>}
       </a>
-      {onDecide && <CardActions schema={schema} note={note} waiting={waiting} onDecide={onDecide} handle={handle} />}
+      {onDecide && <CardActions schema={schema} note={note} waiting={waiting} onDecide={onDecide} handle={handle} onJob={onJob} bookFolder={bookFolder} />}
     </li>
   );
 }
@@ -309,9 +329,11 @@ function dropAt(x: number, y: number, dragged: string): DropAt | null {
   return null;
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover }: {
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover, onJob }: {
   schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onAddMany?: OnAddMany; onMove?: OnMove;
   source?: VaultSource; onCover?: (book: BookEntry, file: File) => Promise<string | null>;
+  /** Ask the team to draft or check a scene, from a card's ••• menu. */
+  onJob?: OnJob;
 }) {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<GridView>(loadGridView);
@@ -445,7 +467,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           <ul class={'cards' + (drag && drag.moved && drag.at && drag.at.key === g.key && drag.at.before === null ? ' drop-end' : '')}>
             {g.scenes.map((s) => (
               <SceneCard key={s.path} schema={schema} note={s} waiting={waiting && waiting[s.path]} onDecide={onDecide}
-                handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} />
+                handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} onJob={onJob} bookFolder={book.folder} />
             ))}
           </ul>
           {onAdd && !filtering && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}

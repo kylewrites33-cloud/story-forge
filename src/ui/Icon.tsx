@@ -33,7 +33,9 @@ const PATHS: Record<string, string> = {
   image: 'M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15.5 9.5h.01',
   outline: 'M4 6h.01M8 6h12M7 12h.01M11 12h9M7 18h.01M11 18h9',
   cards: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
-  demo: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5'
+  demo: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5',
+  team: 'M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M17 14.5c3 .5 5 2.5 5 5.5',
+  out: 'M14 4h6v6M20 4l-9 9M18 14v5H5V6h5'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

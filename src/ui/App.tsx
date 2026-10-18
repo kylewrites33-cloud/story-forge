@@ -9,6 +9,7 @@ import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createTask, type NewTask } from '../lib/tasks.ts';
+import { createJob, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
@@ -19,7 +20,7 @@ import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } 
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
-import { href, useRoute } from './route.ts';
+import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { Home, SeriesPage } from './Home.tsx';
 import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
@@ -27,6 +28,7 @@ import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
 import { TodoList } from './TodoList.tsx';
+import { JobsScreen } from './Jobs.tsx';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -195,6 +197,25 @@ export function App() {
     }
   }, [source, runSync]);
 
+  /** Ask the team for one piece of work: write a job note into the vault's Jobs folder, then sync so the Jobs screen shows it.
+   * A job of the same kind and target that GitHub has not finished yet is reported instead of made twice. */
+  const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
+    if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
+    const cur = snapRef.current;
+    const open = cur ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
+    if (open) {
+      const s = String(open.data.status || 'requested');
+      return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for GitHub') + '. See Jobs.' };
+    }
+    try {
+      await createJob(source, j, new Date());
+      await runSync();
+      return { error: false, text: 'Sent to the team. GitHub runs it in a few minutes; see Jobs.' };
+    } catch (e) {
+      return { error: true, text: (e as Error).message };
+    }
+  }, [source, runSync]);
+
   /** A picture from the device becomes the book's cover: shrunk here, saved as Cover.jpg in the book's folder. */
   const onCover = useCallback(async (book: BookEntry, file: File): Promise<string | null> => {
     const problem = coverProblem(file);
@@ -258,7 +279,8 @@ export function App() {
     window.addEventListener('online', up);
     window.addEventListener('offline', down);
     document.addEventListener('visibilitychange', visible);
-    const timer = setInterval(() => tick((n) => n + 1), 60000);
+    // The clock on the screen ticks every minute; on the Jobs screen the vault is read again too, so a finished job shows up.
+    const timer = setInterval(() => { tick((n) => n + 1); if (parseHash(location.hash).name === 'jobs' && document.visibilityState === 'visible') runSync(); }, 60000);
     return () => {
       window.removeEventListener('online', up);
       window.removeEventListener('offline', down);
@@ -300,6 +322,7 @@ export function App() {
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
+          onJob={book && source.write ? onJob : undefined}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
@@ -313,6 +336,8 @@ export function App() {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
   } else if (route.name === 'write') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
+  } else if (route.name === 'jobs') {
+    body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;
   } else if (route.name === 'todo') {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'note') {
@@ -331,7 +356,7 @@ export function App() {
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
           onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}
-          source={source} onCover={source.writeBytes ? onCover : undefined} />;
+          source={source} onCover={source.writeBytes ? onCover : undefined} onJob={source.write ? onJob : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = screen;
@@ -369,6 +394,7 @@ export function App() {
           </button>
           <a href={href.home()} aria-current={route.name === 'books' || route.name === 'home' || route.name === 'series' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
           <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
+          <a href={href.jobs()} aria-current={route.name === 'jobs' ? 'page' : undefined} title="Jobs"><Icon name="team" /><span class="bar-label">Jobs</span></a>
           <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
         </nav>
       </header>
