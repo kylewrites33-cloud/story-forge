@@ -2,6 +2,7 @@
 type: scene
 id: S-001
 title: The Crack
+headline: Mara climbs the bell tower at dawn, finds a crack down the whole bell, and calls for Tobin.
 subtitle: Dawn, the bell tower
 act: Act One
 chapter: 1

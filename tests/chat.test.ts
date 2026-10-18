@@ -44,7 +44,7 @@ test('the demo vault has a scene conversation and a general one, newest activity
   assert.match(general.messages[1].reply, /^Right after "The bell hung crooked/);
   assert.equal(general.messages[0].cost, 'about $0.31');
   assert.equal(general.pending, false);
-  assert.equal(scene.title, 'S-002 The Ferry');
+  assert.equal(scene.title, 'S-002 Mara tries to get Tobin across the ferry before the guards come and finds the rope cut.');
   assert.equal(scene.scene!.data.id, 'S-002');
   assert.equal(scene.book, BOOK);
   assert.equal(scene.messages[0].state, 'done');

@@ -7,7 +7,7 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'custom';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -31,6 +31,7 @@ export function jobLabel(kind: unknown): string {
     case 'import': return 'Bring in a manuscript';
     case 'chapter-check': return 'Check this chapter for to-dos';
     case 'todo-review': return 'Tick off fixed to-dos';
+    case 'summaries': return 'Scene summaries';
     default: return 'Ask the team';
   }
 }

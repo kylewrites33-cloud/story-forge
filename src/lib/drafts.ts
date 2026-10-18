@@ -19,6 +19,9 @@ export interface Draft {
   target: number | null;
   /** A status Kyle chose in the editor (planned to drafted), saved with the next save. Missing or null leaves it. */
   status?: string | null;
+  /** The scene was split or joined, so its one-line summary (`headline`) no longer fits: the next save clears it and
+   * the team writes a new one. */
+  freshHeadline?: boolean;
   /** Words when this sitting started, for "+312 this sitting". */
   startWords: number;
   updatedAt: string;
@@ -89,7 +92,7 @@ export function openDraft(note: NoteRecord, existing: Draft | undefined, now: Da
 }
 
 export function isUnsaved(d: Draft): boolean {
-  return d.body !== d.baseBody || d.target != null || d.status != null;
+  return d.body !== d.baseBody || d.target != null || d.status != null || Boolean(d.freshHeadline);
 }
 
 /** The note's text with a new body. The property block is kept byte for byte, apart from the lines named in `set`. */
@@ -100,6 +103,16 @@ export function withBody(text: string, body: string, set: Record<string, unknown
   let out = s.hasFm ? s.open + (s.yaml || '') + s.close + body : body;
   Object.keys(set).forEach((k) => { out = Frontmatter.setScalar(out, k, set[k]); });
   return out;
+}
+
+/** The note's text without one single-line property (the team writes it again). */
+export function withoutProperty(text: string, key: string): string {
+  const s = Frontmatter.split(text);
+  if (!s.hasFm || !s.yaml) return text;
+  const lines = s.yaml.split(/\r?\n/);
+  const eol = s.yaml.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
+  const kept = lines.filter((l) => !new RegExp('^' + key + '[ \\t]*:').test(l));
+  return kept.length === lines.length ? text : s.open + kept.join(eol) + s.close + s.body;
 }
 
 /** A local time to the minute, the way sf stamps snapshots: 2026-10-17T21:40. */
@@ -195,7 +208,8 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
       if (cur.data.words !== w) set.words = w;
     }
     if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;
-    const next = withBody(text, d.body, set);
+    let next = withBody(text, d.body, set);
+    if (d.freshHeadline) next = withoutProperty(next, 'headline');
     if (next === text) return { note: cur, clash };
     const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || d.path;
     try {

@@ -3,6 +3,16 @@ import { label } from '../lib/format.ts';
 import { enumValues, propDef } from '../lib/schema.ts';
 import type { NoteRecord, Schema } from '../lib/types.ts';
 
+/** The line after a field's name that says what the field is for. */
+function hint(type: string, k: string): string {
+  if (k === 'labels') return ' (separate them with commas, for example flashback, needs research)';
+  if (type !== 'scene') return '';
+  if (k === 'title') return ' (the file\'s name; the Summary below is what shows at the top of the scene)';
+  if (k === 'headline') return ' (one line saying what happens, shown at the top of the scene; leave it empty and the team writes a new one from the scene)';
+  if (k === 'summary') return ' (a few sentences for the team)';
+  return '';
+}
+
 /** A card's own words, changed in place: one box per field, saved together through the write queue. */
 export function EditFields({ schema, note, fields, onSave, onClose }: {
   schema: Schema;
@@ -27,7 +37,7 @@ export function EditFields({ schema, note, fields, onSave, onClose }: {
         const set = (v: string) => setValues({ ...values, [k]: v });
         return (
           <label key={k}>
-            {label(k)}{k === 'labels' ? ' (separate them with commas, for example flashback, needs research)' : ''}{k === 'title' && note.type === 'scene' ? ' (one line saying what happens; the team reads it as the scene\'s summary)' : ''}
+            {note.type === 'scene' && k === 'summary' ? 'Longer summary' : label(k)}{hint(note.type, k)}
             {choices.length
               ? <select value={values[k]} onChange={(e) => set((e.currentTarget as HTMLSelectElement).value)}>
                 {choices.map((c) => <option key={c} value={c}>{c}</option>)}

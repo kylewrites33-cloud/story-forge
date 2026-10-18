@@ -3,6 +3,7 @@
 // chat job by reading every earlier chat job in the same thread with a lower ID, then writing ## Result, a one-line
 // `result` and status done. So a conversation is just its jobs in ID order: Kyle's words (## Ask) and the team's reply.
 import { askBody, costLabel, jobNotes, resultBody, type NewJob } from './jobs.ts';
+import { sceneHeader } from './format.ts';
 import { idNumber } from './links.ts';
 import type { NoteRecord, VaultIndex } from './types.ts';
 
@@ -100,7 +101,7 @@ export function sceneFor(index: VaultIndex, thread: string, book: string): NoteR
 
 /** What a conversation is called: "S-012 The Ferry" for a scene, or the first words of Kyle's first message. */
 export function conversationTitle(thread: string, scene: NoteRecord | null, firstAsk: string): string {
-  if (isSceneThread(thread)) return scene && scene.data.title ? thread + ' ' + str(scene.data.title) : thread;
+  if (isSceneThread(thread)) return scene && sceneHeader(scene.data) !== thread ? thread + ' ' + sceneHeader(scene.data) : thread;
   return firstWords(firstAsk) || 'New conversation';
 }
 

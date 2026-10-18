@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { addRecent, continueList, labelHue, labelsOf, lastWorked, parseOutline, readingLine, sceneMatches, sortBooks } from '../src/lib/home.ts';
 import { applyToData, applyToText, editChange } from '../src/lib/ideas.ts';
+import { sceneHeader } from '../src/lib/format.ts';
 import { cleanLook, DEFAULT_LOOK } from '../src/lib/page.ts';
 import { coverFile } from '../src/lib/vault-index.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../src/lib/types.ts';
@@ -85,4 +86,11 @@ test('a book cover is a picture named Cover in the book folder', () => {
 test('page look: unknown values fall back to the defaults', () => {
   assert.deepEqual(cleanLook(null), DEFAULT_LOOK);
   assert.deepEqual(cleanLook({ size: 'huge', paper: 'purple', font: 'readable' }), { ...DEFAULT_LOOK, size: 'huge', font: 'readable' });
+});
+
+test('a scene is headed by its one-line summary, or its title until it has one', () => {
+  assert.equal(sceneHeader({ id: 'S-001', title: 'All around him the woods', headline: 'Grey camps in the stone circle.' }), 'Grey camps in the stone circle.');
+  assert.equal(sceneHeader({ id: 'S-001', title: 'All around him the woods', headline: '  ' }), 'All around him the woods');
+  assert.equal(sceneHeader({ id: 'S-001' }), 'S-001');
+  assert.equal(sceneHeader({}, 'this scene'), 'this scene');
 });

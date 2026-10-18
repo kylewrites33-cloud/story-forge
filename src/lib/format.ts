@@ -2,7 +2,7 @@
 import { linkName, nameList, toNumber } from './links.ts';
 import type { PropertyDef } from './types.ts';
 
-const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU', sub_subgenre: 'Niche', protagonist_type: 'Hero' };
+const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU', sub_subgenre: 'Niche', protagonist_type: 'Hero', headline: 'Summary' };
 
 export function label(key: string): string {
   if (LABELS[key]) return LABELS[key];
@@ -47,4 +47,13 @@ export function timeAgo(iso: string, now: Date = new Date()): string {
   const time = then.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return 'today at ' + time;
   return then.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' at ' + time;
+}
+
+/** What a scene is called on screen: its one-line summary (`headline`, written by the team, editable by Kyle), or its
+ * title (the file's name, often the scene's first words) until it has one. */
+export function sceneHeader(data: Record<string, unknown>, fallback = ''): string {
+  const h = typeof data.headline === 'string' ? data.headline.trim() : '';
+  if (h) return h;
+  const t = data.title == null ? '' : String(data.title).trim();
+  return t || (data.id == null ? '' : String(data.id)) || fallback;
 }

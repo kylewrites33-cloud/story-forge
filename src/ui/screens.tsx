@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { chapterGroups, chapterHeading } from '../lib/board.ts';
-import { formatValue, isEmptyValue, label } from '../lib/format.ts';
+import { formatValue, isEmptyValue, label, sceneHeader } from '../lib/format.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
 import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
@@ -129,8 +129,8 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
   schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null; onJob?: OnJob; bookFolder?: string; onRename?: OnRename;
 }) {
   const fields = cardFields(schema, note.type);
-  const title = String(note.data.title || basename(note.path));
-  const rows = fields.filter((k) => k !== 'title' && k !== 'subtitle' && k !== 'labels' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
+  const title = sceneHeader(note.data, basename(note.path));
+  const rows = fields.filter((k) => k !== 'title' && k !== 'headline' && k !== 'subtitle' && k !== 'labels' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
   const subtitle = fields.indexOf('subtitle') >= 0 && !isEmptyValue(note.data.subtitle) ? String(note.data.subtitle) : '';
   const labels = fields.indexOf('labels') >= 0 ? labelsOf(note.data.labels) : [];
   const status = String(note.data.status || '');
@@ -320,7 +320,7 @@ function OutlineView({ groups }: { groups: ReturnType<typeof chapterGroups> }) {
               return (
                 <li key={s.path} class={'status-' + st.replace(/[^a-z-]/gi, '')}>
                   <a href={href.write(s.path)}>
-                    <span class="outline-title"><span class="card-id">{String(s.data.id || '')}</span> {String(s.data.title || basename(s.path))}</span>
+                    <span class="outline-title"><span class="card-id">{String(s.data.id || '')}</span> {sceneHeader(s.data, basename(s.path))}</span>
                     {!isEmptyValue(s.data.subtitle) && <span class="card-subtitle">{String(s.data.subtitle)}</span>}
                     {line && <span class="outline-line">{line}</span>}
                   </a>
@@ -598,7 +598,7 @@ function AppearsIn({ index, note }: { index: VaultIndex; note: NoteRecord }) {
             <ul class="appears-list">
               {list.map(({ scene, presence: p, line }) => (
                 <li key={scene.path}>
-                  <a href={href.write(scene.path)}><span class="card-id">{String(scene.data.id || '')}</span> {String(scene.data.title || '')}</a>
+                  <a href={href.write(scene.path)}><span class="card-id">{String(scene.data.id || '')}</span> {sceneHeader(scene.data)}</a>
                   <span class="meta"> {[p.pov ? 'point of view' : '', p.card ? 'on the card' : '', p.named ? 'named ' + (p.named === 1 ? 'once' : p.named + ' times') : ''].filter(Boolean).join(' · ')}</span>
                   {line && <span class="appears-line">“{line}”</span>}
                 </li>
