@@ -43,7 +43,7 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   left off" from the scenes last opened on this device, cover cards or a list, search and sort) and a page per series.
   A book's cover is `Cover.jpg` in the book's folder, shrunk on the device before saving; a book without one gets a
   pattern from its title. Empty pages offer buttons (Create first scene, Start from an outline: pasted lines become
-  planned scenes). Chapter Grid: coloured status edge with a key under the filter (grey planned, orange drafted, blue revised, green final), scene `labels` and `subtitle`, a filter box, Outline (first, the default) or Cards,
+  planned scenes). Chapter Grid: coloured status edge with a key under the filter (grey planned, orange drafted, blue revised, green final; no scene ID or status word on cards and outline rows, an experiment, Kyle 2026-10-18), scene `labels` and `subtitle`, a filter box, Outline (first, the default) or Cards,
   pages and reading time (rates in Settings). Writing screen: Focus mode, a Page tab (size, spacing, width, font,
   paper, per device) and a strip of the chapter's scenes sized by length.
   Ask the team (jobs): a Team tab in the writing screen's scene panel (Draft this scene, planned scenes only; Notes on
