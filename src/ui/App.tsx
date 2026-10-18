@@ -429,7 +429,7 @@ export function App() {
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
-          onJob={book && source.write ? onJob : undefined}
+          onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );

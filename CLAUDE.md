@@ -66,6 +66,10 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   then an `import` job); Edit card changes a scene's title (the file is renamed). Rewrite can ask the team to rewrite
   now (a `rewrite` job); Table read of this chapter (`table-read`) and Ask the team for more ideas (`ideas`). These kinds
   have full steps in the job's ## Ask, so the runner's coordinator can run them without its own prompt.
+  The writing screen's toolbar (Kyle, 2026-10-18) has Undo and Redo; Bold, Italic, Highlight and Normal; Find, Split and
+  Join; and a second row, Ask the team: Rewrite, Describe, Brainstorm and Write on each send one chat message about the
+  words picked (or the paragraph, or the text before the cursor) to the scene's conversation, and the team answers there
+  without changing the scene; Team opens the Team tab. The page, not the text box, scrolls: nothing in it may shrink.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
