@@ -85,7 +85,9 @@ export interface Change {
 }
 
 /** Card fields that are lists in the note but edited as one line with commas. */
-export const LIST_FIELDS = ['labels'];
+export const LIST_FIELDS = ['labels', 'reasons'];
+/** Card fields that are whole numbers in the note, written without quotes (an idea's stars). */
+export const INT_FIELDS = ['rating'];
 export function splitList(v: string): string[] {
   return v.split(',').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
 }
@@ -143,7 +145,7 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
   if (c.fields) Object.keys(c.fields).forEach((k) => {
     const v = c.fields![k];
     if (v === '' || (LIST_FIELDS.indexOf(k) >= 0 && !splitList(v).length)) delete out[k];
-    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : v;
+    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : INT_FIELDS.indexOf(k) >= 0 && /^-?\d+$/.test(v) ? parseInt(v, 10) : v;
   });
   return out;
 }
@@ -194,7 +196,8 @@ export function applyToText(text: string, c: Change): string {
       if (LIST_FIELDS.indexOf(k) >= 0) {
         const items = splitList(v);
         out = setLines(out, k, items.length ? [k + ':'].concat(items.map((x) => '  - ' + Frontmatter.emitScalar(x))) : null);
-      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
+      } else if (v === '') out = setLines(out, k, null);
+      else out = Frontmatter.setScalar(out, k, INT_FIELDS.indexOf(k) >= 0 && /^-?\d+$/.test(v) ? parseInt(v, 10) : v);
     });
   }
   return out;
@@ -220,7 +223,86 @@ const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'd
 export function commitMessage(data: Record<string, unknown>, decision: Decision, fields?: Record<string, string>): string {
   const k = KINDS[String(data.type || 'idea')] || KINDS.idea;
   const name = [data.id, data.title].filter(Boolean).join(' ');
-  // An edit that only changes the status says so: "tasks: done T-005 ...".
-  const verb = decision === 'edit' && fields && Object.keys(fields).length === 1 && fields.status ? cleanField(fields.status) : VERBS[decision];
+  // An edit that only changes the status says so: "tasks: done T-005 ...". So do reasons and stars: "ideas: reasons I-004 ...".
+  const only = decision === 'edit' && fields && Object.keys(fields).length === 1 ? Object.keys(fields)[0] : '';
+  const verb = only === 'status' && fields!.status ? cleanField(fields!.status)
+    : only === 'reasons' ? 'reasons' : only === 'rating' ? (fields!.rating ? 'rate ' + cleanField(fields!.rating) + ' stars' : 'clear stars') : VERBS[decision];
   return k.prefix + ': ' + verb + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Story Forge app.';
+}
+
+/** One-press reasons, by the choice they go with. Their keys are the schema's `reasons` values. */
+export const REASONS: { key: string; label: string; with: 'keep' | 'later' | 'drop' }[] = [
+  { key: 'love-it', label: 'Love it', with: 'keep' },
+  { key: 'surprising', label: 'Surprising', with: 'keep' },
+  { key: 'specific', label: 'Specific', with: 'keep' },
+  { key: 'raises-stakes', label: 'Raises the stakes', with: 'keep' },
+  { key: 'not-now', label: 'Not now', with: 'later' },
+  { key: 'needs-work', label: 'Needs work', with: 'later' },
+  { key: 'could-combine', label: 'Could combine', with: 'later' },
+  { key: 'cliche', label: 'Cliché', with: 'drop' },
+  { key: 'wrong-tone', label: 'Wrong tone', with: 'drop' },
+  { key: 'already-have', label: 'Already have this', with: 'drop' },
+  { key: 'too-clever', label: 'Too clever', with: 'drop' }
+];
+
+/** The reasons offered after a choice; none for choices that are not keep, later or drop. */
+export function reasonsFor(decision: Decision): { key: string; label: string }[] {
+  return REASONS.filter((r) => r.with === decision);
+}
+
+export function reasonLabel(key: string): string {
+  const r = REASONS.find((x) => x.key === key);
+  return r ? r.label : key.replace(/-/g, ' ');
+}
+
+/** A note's reasons as a list of keys. */
+export function reasonsOf(data: Record<string, unknown>): string[] {
+  const r = data.reasons;
+  if (Array.isArray(r)) return r.map(String).filter(Boolean);
+  return typeof r === 'string' && r ? splitList(r) : [];
+}
+
+/** The reasons after Kyle presses one: on if it was off, off if it was on. Kept in the order REASONS lists them. */
+export function toggleReason(list: string[], key: string): string[] {
+  const on = list.indexOf(key) >= 0 ? list.filter((k) => k !== key) : list.concat(key);
+  const order = REASONS.map((r) => r.key);
+  return on.slice().sort((a, b) => (order.indexOf(a) < 0 ? 99 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 99 : order.indexOf(b)));
+}
+
+/** An idea's stars, 1 to 5, or 0 when it has none. */
+export function ratingOf(data: Record<string, unknown>): number {
+  const n = typeof data.rating === 'number' ? data.rating : parseInt(String(data.rating ?? ''), 10);
+  return isFinite(n) && n >= 1 && n <= 5 ? Math.round(n) : 0;
+}
+
+/** Who proposed an idea (its `source` agent), '' when it does not say. */
+export function sourceOf(data: Record<string, unknown>): string {
+  return data.source == null ? '' : String(data.source).trim();
+}
+
+export interface IdeaFilter {
+  /** An agent's name, or '' for anyone. */
+  source: string;
+  /** An idea kind, or '' for any. */
+  kind: string;
+}
+
+export function filterIdeas(notes: NoteRecord[], f: IdeaFilter): NoteRecord[] {
+  return notes.filter((n) => (!f.source || sourceOf(n.data) === f.source) && (!f.kind || String(n.data.kind || '') === f.kind));
+}
+
+/** The values a property takes on these notes, with how many notes have each, most first then A to Z. */
+export function valueCounts(notes: NoteRecord[], key: string): { value: string; count: number }[] {
+  const by: Record<string, number> = {};
+  notes.forEach((n) => {
+    const v = key === 'source' ? sourceOf(n.data) : n.data[key] == null ? '' : String(n.data[key]);
+    if (v) by[v] = (by[v] || 0) + 1;
+  });
+  return Object.keys(by).map((value) => ({ value, count: by[value] })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
+/** The job target for ticked ideas: their IDs in ID order, "I-002, I-005". */
+export function ideaTarget(notes: NoteRecord[]): string {
+  return notes.map((n) => String(n.data.id || '')).filter(Boolean)
+    .sort((a, b) => (idNumber(a) || 0) - (idNumber(b) || 0)).join(', ');
 }

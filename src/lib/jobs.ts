@@ -7,7 +7,8 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
+  | 'combine' | 'variations' | 'learn-taste';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -34,6 +35,9 @@ export function jobLabel(kind: unknown): string {
     case 'summaries': return 'Scene summaries';
     case 'beats': return 'Beats for this chapter';
     case 'fill': return 'Fill brackets';
+    case 'combine': return 'Combine these ideas';
+    case 'variations': return 'Variations on this idea';
+    case 'learn-taste': return 'Update my taste';
     default: return 'Ask the team';
   }
 }
@@ -115,6 +119,17 @@ export function jobAsk(kind: JobKind, target: string, words: string): string {
         + 'If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. '
         + 'If the chapter already has a beats note, move it to the book\'s Archive folder first with a line saying why (never delete it), then write the new one.'
         + (words.trim() ? '\n\nWhat the chapter should do, in Kyle\'s words: ' + words.trim() : '');
+    case 'combine':
+      return 'Kyle ticked ' + target + ' on the Ideas board and asked the team to combine them. Read each of those idea notes in this book\'s Ideas folder. '
+        + 'Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. '
+        + 'File each as a new inbox idea in the book\'s Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.' + his;
+    case 'variations':
+      return 'Kyle ticked ' + target + ' on the Ideas board and asked for variations. Read that idea note in this book\'s Ideas folder and write three takes on it, '
+        + 'each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. '
+        + 'File each as a new inbox idea in the book\'s Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.' + his;
+    case 'learn-taste':
+      return 'Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, '
+        + 'with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.' + his;
     default:
       return words.trim();
   }
@@ -153,6 +168,9 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
     case 'chapter-check': return 'Check ' + what + ' for to-dos';
     case 'todo-review': return 'Tick off fixed to-dos in ' + what;
     case 'beats': return 'Beats for ' + what;
+    case 'combine': return 'Combine ' + what;
+    case 'variations': return 'Variations on ' + what;
+    case 'learn-taste': return 'Update my taste';
     default: return 'Ask the team';
   }
 }
