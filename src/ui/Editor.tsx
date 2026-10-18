@@ -9,7 +9,7 @@ import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
 import { archiveForJoin, archivedWhy, joinedBody, noteJoinForTeam, removeJoined, restoreArchived, splitAt, splitOff } from '../lib/scenes.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
-import { formatValue, isEmptyValue, label as fieldLabel } from '../lib/format.ts';
+import { formatValue, isEmptyValue, label as fieldLabel, sceneHeader } from '../lib/format.ts';
 import { cardFields, propDef } from '../lib/schema.ts';
 import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
@@ -163,7 +163,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       onSaved(r.note);
       const now = draftRef.current;
       // Words typed while it was saving stay in the draft for the next save.
-      const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, pending: false, error: undefined };
+      const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, freshHeadline: undefined, pending: false, error: undefined };
       if (closing && !isUnsaved(next)) { draftRef.current = next; putDraft(source.key, d.path, null); }
       else setDraft(next);
       setState('saved');
@@ -227,7 +227,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     if (!parts.before.trim()) return 'The cursor is at the very start. Put it where the new scene should start.';
     try {
       const created = await splitOff(source, note, next, d.body, parts.after, newTitle, bookFolder, new Date());
-      setDraft({ ...draftRef.current, body: lead + parts.before });
+      setDraft({ ...draftRef.current, body: lead + parts.before, freshHeadline: true });
       reload();
       setTimeout(grow, 0);
       await save(false);
@@ -246,7 +246,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     if (!navigator.onLine) return 'Connect to the internet to join scenes.';
     try {
       const taken = await archiveForJoin(source, note, next, new Date());
-      setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body) });
+      setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body), freshHeadline: true });
       reload();
       setTimeout(grow, 0);
       if (!(await save(false)) || isUnsaved(draftRef.current)) return 'The joined words did not save, so ' + String(next.data.id || 'the next scene') + ' stays where it is. Its copy is in the Archive.';
@@ -377,8 +377,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     if (lastWords.current !== words) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
     lastWords.current = words;
   }, [words, note.path]);
-  const title = [note.data.id, note.data.title].filter(Boolean).join(' ') || note.path;
-  const sceneName = String(note.data.title || note.data.id || 'this scene');
+  const title = [note.data.id, sceneHeader(note.data)].filter(Boolean).join(' ') || note.path;
   const unsaved = isUnsaved(draft);
   const status =
     state === 'saving' ? 'Saving to the vault…'
@@ -395,10 +394,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const loud = state === 'error' || !kept.current || (unsaved && (draft.pending || !navigator.onLine));
   const sceneStatus = String(draft.status || note.data.status || '');
   const group = book ? book.groups.find((g) => g.scenes.some((n) => n.path === note.path)) || null : null;
-  const heading = group && group.num != null ? chapterHeading(group) : String(note.data.title || title);
+  const heading = group && group.num != null ? chapterHeading(group) : sceneHeader(note.data, title);
   const sub = [group && group.num != null ? title : String(note.data.id || ''), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
     .filter(Boolean).join(' · ');
-  const nextName = next ? String(next.data.title || next.data.id || 'Next scene') : '';
+  const nextName = next ? sceneHeader(next.data, 'Next scene') : '';
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
   const reading = readingLine(words, loadRates());
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
@@ -462,7 +461,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                   <p class="side-chapter">{chapterHeading(g)}</p>
                   {g.scenes.map((n) => (
                     <a key={n.path} {...link(href.write(n.path))} class="side-scene" aria-current={n.path === note.path ? 'page' : undefined}>
-                      <span>{String(n.data.title || n.data.id || n.path)}</span>
+                      <span>{sceneHeader(n.data, n.path)}</span>
                       <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
                     </a>
                   ))}
@@ -530,8 +529,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
                 {strip.map(({ note: n, words: w }) => (
                   <a key={n.path} {...link(href.write(n.path))} style={{ flexGrow: String(Math.max(w, stripMin) / stripTotal) }}
-                    aria-current={n.path === note.path ? 'page' : undefined} title={String(n.data.title || n.data.id || '') + ' · ' + num(w) + ' words'}>
-                    <span class="visually-hidden">{String(n.data.title || n.data.id || '')}, {num(w)} words</span>
+                    aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data) + ' · ' + num(w) + ' words'}>
+                    <span class="visually-hidden">{sceneHeader(n.data)}, {num(w)} words</span>
                   </a>
                 ))}
               </nav>
@@ -539,7 +538,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
             {loud && <p class={state === 'error' ? 'error' : 'note-line'}>{status}</p>}
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
-            {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, made.data.title].filter(Boolean).join(' ')}</a>.</p>}
+            {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, sceneHeader(made.data)].filter(Boolean).join(' ')}</a>.</p>}
           </div>
           {styled ? (
             <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} commands={commands}
@@ -558,7 +557,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             aria-label={'Text of ' + title}
           />}
           <div class="writer-done">
-            <span>Done with {sceneName}?</span>
+            <span>Done with this scene?</span>
             <span class="buttons">
               {sceneStatus === 'planned' && <button type="button" onClick={() => setDraft({ ...draftRef.current, status: 'drafted' })}>Mark as drafted</button>}
               {next
@@ -931,7 +930,7 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
     setError(err);
     if (!err) { setTitle(''); setSure(false); }
   };
-  const nextName = next ? [next.data.id, next.data.title].filter(Boolean).join(' ') : '';
+  const nextName = next ? [next.data.id, sceneHeader(next.data)].filter(Boolean).join(' ') : '';
   return (
     <div class="writer-panel">
       {status === 'planned' && (

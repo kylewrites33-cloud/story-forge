@@ -2,7 +2,7 @@
 // then every book as a cover card (or a list), with search and sort. A series page shows its books and its notes.
 import { useEffect, useState } from 'preact/hooks';
 import { coverUrl } from '../lib/covers.ts';
-import { timeAgo } from '../lib/format.ts';
+import { sceneHeader, timeAgo } from '../lib/format.ts';
 import {
   bookChapters, bookWords, continueList, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
@@ -249,7 +249,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
                 <li key={note.path}>
                   <a href={href.write(note.path)}>
                     <span class="book-title">{book.title}</span>
-                    <span class="meta">{[ch != null ? 'Chapter ' + ch : '', String(note.data.title || note.data.id || '')].filter(Boolean).join(' · ')}</span>
+                    <span class="meta">{[ch != null ? 'Chapter ' + ch : '', sceneHeader(note.data)].filter(Boolean).join(' · ')}</span>
                     <span class="meta">{timeAgo(at)}</span>
                     <span class="go">Keep writing <Icon name="right" size={16} /></span>
                   </a>

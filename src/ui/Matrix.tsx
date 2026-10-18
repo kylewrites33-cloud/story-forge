@@ -2,6 +2,7 @@
 // (or places, or items and lore) across, with a mark wherever they appear: point of view, on the scene's card, or only
 // named in the text. Under it, each one's first and last scene and their longest absence.
 import { useMemo, useState } from 'preact/hooks';
+import { sceneHeader } from '../lib/format.ts';
 import { chapterGroups } from '../lib/board.ts';
 import { codexFor, longestGap, matcher, presence, present, type CodexEntry, type Presence } from '../lib/codex.ts';
 import { toNumber } from '../lib/links.ts';
@@ -66,7 +67,7 @@ export function MatrixBoard({ schema, index, book }: { schema: Schema; index: Va
                     const i = scenes.indexOf(s);
                     return (
                       <tr key={s.path}>
-                        <th scope="row" class="scene-cell"><a href={href.write(s.path)}><span class="card-id">{String(s.data.id || '')}</span> {String(s.data.title || '')}</a></th>
+                        <th scope="row" class="scene-cell"><a href={href.write(s.path)}><span class="card-id">{String(s.data.id || '')}</span> {sceneHeader(s.data)}</a></th>
                         {order.map((j) => <Cell key={j} p={grid[i][j]} e={cols[j]} />)}
                       </tr>
                     );

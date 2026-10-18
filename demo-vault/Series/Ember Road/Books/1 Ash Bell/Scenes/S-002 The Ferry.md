@@ -2,6 +2,7 @@
 type: scene
 id: S-002
 title: The Ferry
+headline: Mara tries to get Tobin across the ferry before the guards come and finds the rope cut.
 act: Act One
 chapter: 1
 order: 2

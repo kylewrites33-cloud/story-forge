@@ -2,6 +2,7 @@
 // thin line with the scene's name between them. Each scene keeps its own draft on the device and saves on its own, the
 // same way as the one-scene writing screen (Done, two quiet minutes, putting the iPad down, back online).
 import type { ComponentChildren } from 'preact';
+import { sceneHeader } from '../lib/format.ts';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { trackWords } from '../lib/pomodoro.ts';
 import { bodyWords, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
@@ -169,7 +170,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
               <section key={s.note.path} class="chapter-section" data-section={s.note.path}>
                 {i > 0 && <div class="scene-break" aria-hidden="true" />}
                 <p class="section-name">
-                  <a href={href.write(s.note.path)} onClick={(e) => { e.preventDefault(); go(href.write(s.note.path)); }}>{[s.note.data.id, s.note.data.title].filter(Boolean).join(' ')}</a>
+                  <a href={href.write(s.note.path)} onClick={(e) => { e.preventDefault(); go(href.write(s.note.path)); }}>{[s.note.data.id, sceneHeader(s.note.data)].filter(Boolean).join(' ')}</a>
                   <span class="meta"> · {num(bodyWords(s.draft.body))} words{String(s.note.data.status || '') === 'planned' ? ' · planned' : ''}</span>
                 </p>
                 <div onFocusCapture={() => setFocused(s.note.path)}>

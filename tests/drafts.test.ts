@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
-  bodyWords, flushDrafts, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
+  bodyWords, flushDrafts, isUnsaved, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
   sceneWords, snapshotFolder, splitLead, withBody, type Draft
 } from '../src/lib/drafts.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
@@ -85,6 +85,18 @@ test('saving writes the body and word count as one commit with no Agent trailer'
   assert.equal(src.writes[0].message, 'scenes: edit S-002 The Ferry\n\nWritten in the Story Forge app.');
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
   assert.equal(r.note.body, '\nMara cut the rope at 6:14.\n');
+});
+
+test('after a split or join the save clears the scene\'s headline so the team writes a new one', async () => {
+  const src = new MemSource();
+  src.files.set(SCENE, TEXT.replace('title: The Ferry\n', 'title: The Ferry\nheadline: Mara cuts the rope.\n'));
+  const d = { ...draftOf(src, '\nMara cut rope.\n'), freshHeadline: true };
+  assert.equal(isUnsaved(d), true);
+  await saveDraft(src, d, new Date());
+  const saved = src.files.get(SCENE)!;
+  assert.doesNotMatch(saved, /headline/);
+  assert.match(saved, /^title: The Ferry\nstatus: drafted$/m);
+  assert.equal(withoutProperty(saved, 'headline'), saved);
 });
 
 test('when the scene changed elsewhere, Kyle\'s version wins and the other one is kept as a snapshot', async () => {

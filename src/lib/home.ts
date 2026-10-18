@@ -136,7 +136,7 @@ export function sceneMatches(note: NoteRecord, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return true;
   const d = note.data;
-  const card = [d.id, d.title, d.subtitle, d.summary, d.turn, d.hook, d.goal, d.status, linkName(d.pov), linkName(d.place)]
+  const card = [d.id, d.title, d.headline, d.subtitle, d.summary, d.turn, d.hook, d.goal, d.status, linkName(d.pov), linkName(d.place)]
     .concat(nameList(d.cast)).concat(labelsOf(d.labels)).map((v) => (v == null ? '' : String(v))).join(' ');
   const hay = (card + ' ' + note.body).toLowerCase();
   return words.every((w) => hay.indexOf(w) >= 0);
