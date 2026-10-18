@@ -577,7 +577,9 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
   const [ask, setAsk] = useState('');
   const [busy, setBusy] = useState<JobKind | ''>('');
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
-  if (!onJob) return <div class="writer-panel"><p class="hint">Asking the team needs your own vault, not the demo.</p></div>;
+  // A conversation about this scene: its thread is the scene's ID.
+  const talk = id ? <a class="button team-talk" {...link(href.chat(id, bookFolder || ''))}><Icon name="chat" size={18} /> Talk about this scene</a> : null;
+  if (!onJob) return <div class="writer-panel team-panel">{talk}<p class="hint">Asking the team needs your own vault, not the demo.</p></div>;
   const send = async (kind: JobKind, target: string, words = '') => {
     setBusy(kind);
     setSaid(null);
@@ -590,6 +592,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
   const chapterTarget = chapter != null ? 'Chapter ' + chapter : '';
   return (
     <div class="writer-panel team-panel">
+      {talk}
       {status === 'planned'
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
