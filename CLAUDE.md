@@ -30,6 +30,9 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   unstyle the selection or the word at the cursor, or wait for the next letters typed; Enter inside styled words closes and
   reopens their marks; copy gives other apps styled text and paste keeps a word processor's italics and bold
   (`toggleStyle`, `insertText`). A per-device switch in Scene goes back to the plain text box with its stars.
+  Export to Word (Kyle, 2026-10-18) on Book details: the whole book in reading order as a .docx named
+  `series_book_YYYY-MM-DD.docx`, made on the device and downloaded (`src/lib/docx.ts`, the layout of sf's Docx.build;
+  italics and bold read with styled.ts, so they come back unchanged through `sf import`).
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; "Done with this scene?" with Next at the bottom), and the scene panel on the right (Card, Copies,
@@ -237,6 +240,7 @@ src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
+src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name
 src/lib/theme.ts         colour themes per device: Match this device, five light, five dark (colours in styles.css)
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel

@@ -578,7 +578,7 @@ export function App() {
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       let screen;
-      if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
+      if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
