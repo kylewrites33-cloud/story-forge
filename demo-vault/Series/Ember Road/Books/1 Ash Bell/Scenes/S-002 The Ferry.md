@@ -6,6 +6,9 @@ headline: Mara tries to get Tobin across the ferry before the guards come and fi
 act: Act One
 chapter: 1
 order: 2
+day: 3
+threads:
+  - "[[Mara and Tobin]]"
 pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"

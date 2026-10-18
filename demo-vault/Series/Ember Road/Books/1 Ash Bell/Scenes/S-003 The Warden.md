@@ -6,6 +6,9 @@ subtitle: That night, the Warden's house
 chapter: 2
 chapter_title: Thaw
 order: 3
+day: 1
+threads:
+  - "[[The Warden's Hunt]]"
 pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"

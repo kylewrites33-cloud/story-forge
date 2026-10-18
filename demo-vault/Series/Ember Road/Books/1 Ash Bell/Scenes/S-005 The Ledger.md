@@ -5,6 +5,9 @@ title: The Ledger
 chapter: 3
 chapter_title: Ledger
 order: 5
+day: 5
+threads:
+  - "[[Who Cracked the Bell]]"
 pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"

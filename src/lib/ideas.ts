@@ -85,7 +85,7 @@ export interface Change {
 }
 
 /** Card fields that are lists in the note but edited as one line with commas. */
-export const LIST_FIELDS = ['labels', 'reasons'];
+export const LIST_FIELDS = ['labels', 'reasons', 'threads', 'card_draft'];
 /** Card fields that are whole numbers in the note, written without quotes (an idea's stars). */
 export const INT_FIELDS = ['rating'];
 export function splitList(v: string): string[] {

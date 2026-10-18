@@ -8,6 +8,10 @@ act: Act One
 chapter: 1
 chapter_title: Frost
 order: 1
+day: 3
+threads:
+  - "[[Who Cracked the Bell]]"
+  - "[[Mara and Tobin]]"
 pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"

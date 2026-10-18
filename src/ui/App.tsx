@@ -43,6 +43,7 @@ import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { planFor } from '../lib/plans.ts';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
+import { SEEING_BOARDS, SeeingBoard } from './Seeing.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
 import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from '../lib/chat.ts';
@@ -544,6 +545,7 @@ export function App() {
       if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
+      else if (SEEING_BOARDS.indexOf(boardKey) >= 0) screen = <SeeingBoard board={boardKey} schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onJob={source.write ? onJob : undefined} />;
       else if (boardKey === 'taste') screen = <TastePage source={source} index={view} book={book} onJob={source.write ? onJob : undefined} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {

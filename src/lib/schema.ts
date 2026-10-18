@@ -76,6 +76,8 @@ export function indexedTypes(schema: Schema, phase: number): string[] {
  * the book's braindump (the Notes tab), each scene's notes (under its card), and the Writing Log's days (the Pomodoro
  * timer's count), and each chapter's beats. */
 export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump', 'scene-notes', 'writing-day', 'chapter-beats', 'chapter-plan'];
+// Promises, threads and themes for the Promises board, the Plot Grid and the Themes heatmap.
+EXTRA_TYPES.push('promise', 'thread', 'theme');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {
