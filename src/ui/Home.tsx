@@ -137,13 +137,22 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
   );
 }
 
-function BookGrid({ source, index, books, list }: { source: VaultSource; index: VaultIndex; books: BookEntry[]; list: boolean }) {
-  return <ul class={list ? 'book-rows' : 'book-cards'}>{books.map((b) => <BookCard key={b.folder} source={source} index={index} book={b} list={list} />)}</ul>;
+function BookGrid({ source, index, books, list, onNew }: { source: VaultSource; index: VaultIndex; books: BookEntry[]; list: boolean; onNew?: () => void }) {
+  return (
+    <ul class={list ? 'book-rows' : 'book-cards'}>
+      {onNew && !list && (
+        <li class="book-card new-tile">
+          <button type="button" onClick={onNew}><span class="new-cover"><Icon name="plus" size={28} /><span>New book</span></span></button>
+        </li>
+      )}
+      {books.map((b) => <BookCard key={b.folder} source={source} index={index} book={b} list={list} />)}
+    </ul>
+  );
 }
 
 function Tabs({ series }: { series: boolean }) {
   return (
-    <nav class="seg" aria-label="Show">
+    <nav class="line-tabs" aria-label="Show">
       <a href={href.home()} aria-current={series ? undefined : 'page'}><Icon name="books" size={18} />Books</a>
       <a href={href.allSeries()} aria-current={series ? 'page' : undefined}><Icon name="shelf" size={18} />Series</a>
     </nav>
@@ -260,7 +269,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
       )}
       {tools}
       {!books.length && <p class="empty">No book matches "{query}".</p>}
-      <BookGrid source={source} index={index} books={books} list={view === 'list'} />
+      <BookGrid source={source} index={index} books={books} list={view === 'list'} onNew={onCreateBook && !creating ? () => { setCreating(true); window.scrollTo(0, 0); } : undefined} />
       <Warnings list={index.warnings} />
     </section>
   );

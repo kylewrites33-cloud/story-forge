@@ -27,17 +27,6 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
 }
 
-/** The book's boards as a row of links in the top bar. */
-export function BoardNav({ schema, book, current }: { schema: Schema; book: BookEntry; current: string }) {
-  return (
-    <nav class="board-nav" aria-label="Boards">
-      {boardLinks(schema, book.folder).map((l) => (
-        <a key={l.key} href={l.to} aria-current={l.key === current ? 'page' : undefined}><Icon name={l.icon} size={18} />{l.title}</a>
-      ))}
-    </nav>
-  );
-}
-
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
   'story-juice': {
     heading: 'Story Juice',

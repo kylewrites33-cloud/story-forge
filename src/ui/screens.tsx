@@ -106,7 +106,7 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
         <>
           <div class="buttons card-row">
             {handle}
-            {!accepted && <button type="button" class="primary" onClick={() => send('accept')}>Accept card</button>}
+            {!accepted && <button type="button" class="soft" onClick={() => send('accept')}><Icon name="check" size={18} />Accept</button>}
             <a class="button" href={href.write(note.path)}><Icon name="pen" size={18} />Write</a>
             <button type="button" class="icon-button" aria-label="More for this card" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon name="more" /></button>
           </div>

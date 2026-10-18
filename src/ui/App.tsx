@@ -22,7 +22,8 @@ import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
-import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
+import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
+import { Shell } from './Shell.tsx';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { Home, SeriesPage } from './Home.tsx';
@@ -506,23 +507,16 @@ export function App() {
   const syncLine = syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '. Press to sync again.' : 'Not synced yet.';
   const chip = syncing ? 'Syncing…' : !online ? 'Offline' : queue.length ? 'Saving ' + queue.length + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
+  const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
+    : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings' ? route.name : '';
+  const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings' };
+  const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
+  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
+  const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
+
   return (
-    <>
-      <header class="top">
-        <a class="brand" href="#/">Story Forge</a>
-        {navBook && schema && <BoardNav schema={schema} book={navBook} current={boardKey} />}
-        <nav class="top-right" aria-label="App">
-          {source instanceof DemoSource && <a class="demo-chip" href={href.settings()} title="This is the demo vault. Add your key in Settings to see your own books."><Icon name="demo" size={18} /><span class="bar-label">Demo</span></a>}
-          <button type="button" class={'sync-chip' + (!online || drafts ? ' warn' : '')} onClick={runSync} disabled={syncing || !online} title={syncLine + (waitingText ? ' ' + waitingText : '')}>
-            <Icon name={snap && !syncing && online && !queue.length && !drafts ? 'check' : 'sync'} size={18} /><span class="bar-label">{chip}</span>
-          </button>
-          <a href={href.home()} aria-current={route.name === 'books' || route.name === 'home' || route.name === 'series' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
-          <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
-          <a href={href.chat()} aria-current={route.name === 'chat' ? 'page' : undefined} title="Chat with the team"><Icon name="chat" /><span class="bar-label">Chat</span></a>
-          <a href={href.jobs()} aria-current={route.name === 'jobs' ? 'page' : undefined} title="Jobs"><Icon name="team" /><span class="bar-label">Jobs</span></a>
-          <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
-        </nav>
-      </header>
+    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} demo={source instanceof DemoSource} title={pageTitle}
+      sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">
           {!online && waitingText && <p class="waiting">{waitingText}</p>}
@@ -530,6 +524,6 @@ export function App() {
         </div>
       )}
       <main>{body}</main>
-    </>
+    </Shell>
   );
 }
