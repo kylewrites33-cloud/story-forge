@@ -52,6 +52,17 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   lists conversations newest first and shows one like a chat (Kyle right, the team's reply left, cost small); Kyle may send
   again before a reply comes. While an open conversation waits for a reply the app syncs every 15 seconds (only while the
   page is visible). The Jobs screen leaves chat messages out.
+  Everything else from the Sudowrite and Novelcrafter lists (Kyle, 2026-10-18, "set up everything app-wise"): in the
+  writing screen, codex names (characters, places, items, lore, with aliases and a character's first name) underlined in
+  their colour and opened as a card in the Card tab; Notes (the book's Braindump.md); Marks (`==highlight==`, with a
+  highlighter button and a list to jump through); Normal (takes bold, italic and highlight marks off); Find and replace;
+  Every save (the file's commits, with Go back to this version); the book's Archive with Restore; Whole chapter (every
+  scene of the chapter as one page, each saving on its own). Boards: Matrix (scenes down, codex across; point of view,
+  on the card, or named), Edit Queue (editorial notes and to-dos), and Appears in on character, place, item and lore notes.
+  New book and New series on the home page; Bring in a manuscript (file saved unchanged in the book's Research folder,
+  then an `import` job); Edit card changes a scene's title (the file is renamed). Rewrite can ask the team to rewrite
+  now (a `rewrite` job); Table read of this chapter (`table-read`) and Ask the team for more ideas (`ideas`). These kinds
+  have full steps in the job's ## Ask, so the runner's coordinator can run them without its own prompt.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -87,7 +98,9 @@ src/lib/market.ts        Publisher Rocket files: the ones a series has, safe nam
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
-src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
+src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore
+src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
+src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
@@ -95,6 +108,9 @@ src/lib/page.ts          the writing page's look per device (size, spacing, widt
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
+src/ui/ChapterPage.tsx   the whole chapter as one page
+src/ui/Matrix.tsx        who is in which scene
+src/ui/EditQueue.tsx     editorial notes and to-dos on one page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/ui/                  screens (Preact)
