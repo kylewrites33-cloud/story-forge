@@ -657,6 +657,29 @@ details.group[open] > summary h2::before { content: '▾ '; }
 @media (max-width: 640px) { .grid-cover .cover.small { width: 56px; } .grid-head { gap: 12px; } }
 .grid-tools { margin-top: 0.8rem; }
 .grid-tools .seg.small button { gap: 6px; }
+.book-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0.4rem 0 0.5rem; }
+.book-summary .stats { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.book-summary .stat { display: flex; flex-direction: column; min-width: 2.4rem; }
+.book-summary .stat-n { font-weight: 650; font-size: 1.1rem; color: var(--text); line-height: 1.2; }
+.book-summary .stat-l { font-size: 0.78rem; color: var(--muted); }
+.book-summary .stat-planned .stat-l::before, .book-summary .stat-drafted .stat-l::before,
+.book-summary .stat-revised .stat-l::before, .book-summary .stat-final .stat-l::before {
+  content: ''; display: inline-block; width: 4px; height: 0.8em; border-radius: 2px; margin-right: 5px; vertical-align: -0.05em; background: var(--st-planned);
+}
+.book-summary .stat-drafted .stat-l::before { background: var(--st-drafted); }
+.book-summary .stat-revised .stat-l::before { background: var(--st-revised); }
+.book-summary .stat-final .stat-l::before { background: var(--st-final); }
+.ring { position: relative; width: 64px; height: 64px; flex: none; }
+.ring svg { display: block; }
+.ring circle { fill: none; stroke-width: 6; }
+.ring .ring-back { stroke: var(--line); }
+.ring .ring-fill { stroke: var(--st-planned); stroke-linecap: round; }
+.ring-drafted .ring-fill { stroke: var(--st-drafted); }
+.ring-revised .ring-fill { stroke: var(--st-revised); }
+.ring-final .ring-fill { stroke: var(--st-final); }
+.ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.ring-text .stat-n { font-size: 0.9rem; font-weight: 650; line-height: 1.1; }
+.ring-text .stat-l { font-size: 0.6rem; color: var(--muted); }
 .status-key { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.85rem; }
 .status-key span { display: inline-flex; align-items: center; gap: 6px; }
 .status-key i { width: 4px; height: 1em; border-radius: 2px; background: var(--st-planned); }

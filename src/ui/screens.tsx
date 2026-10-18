@@ -8,7 +8,7 @@ import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schem
 import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
-import { labelHue, labelsOf, loadRates, parseOutline, readingLine, sceneMatches, type OutlineScene } from '../lib/home.ts';
+import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, sceneMatches, type OutlineScene, type ReadRates } from '../lib/home.ts';
 import { Cover } from './Home.tsx';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
@@ -303,6 +303,41 @@ function loadGridView(): GridView {
   try { return localStorage.getItem('story-forge.grid-view-2') === 'cards' ? 'cards' : 'outline'; } catch { return 'outline'; }
 }
 
+const STEP_NAME = { drafting: 'Drafting', revising: 'Revising', finishing: 'Finishing', done: 'Done' };
+
+/** The numbers at the top of the Chapter Grid, and a ring for how far the book is through the step it is in (Kyle, 2026-10-18). */
+function BookSummary({ stage, chapters, scenes, words, rates, order, counts }: {
+  stage: string; chapters: number; scenes: NoteRecord[]; words: number; rates: ReadRates; order: string[]; counts: Record<string, number>;
+}) {
+  const p = bookProgress(scenes.map((s) => String(s.data.status || 'planned')), order);
+  const r = 22, c = 2 * Math.PI * r;
+  const pages = words > 0 ? Math.max(1, Math.round(words / rates.wordsPerPage)) : 0;
+  const stat = (n: string | number, label: string, key?: string) => (
+    <div class={'stat' + (key ? ' stat-' + key : '')}><span class="stat-n">{n}</span><span class="stat-l">{label}</span></div>
+  );
+  return (
+    <div class="book-summary">
+      {scenes.length > 0 && (
+        <div class={'ring ring-' + p.colour} title={p.done + ' of ' + p.total + ' scenes'}>
+          <svg viewBox="0 0 56 56" width="64" height="64" aria-hidden="true">
+            <circle cx="28" cy="28" r={r} class="ring-back" />
+            <circle cx="28" cy="28" r={r} class="ring-fill" stroke-dasharray={c} stroke-dashoffset={c * (1 - p.percent / 100)} transform="rotate(-90 28 28)" />
+          </svg>
+          <span class="ring-text"><span class="stat-n">{p.percent}%</span><span class="stat-l">{STEP_NAME[p.step]}</span></span>
+        </div>
+      )}
+      <div class="stats">
+        {stat(stage ? stage[0].toUpperCase() + stage.slice(1) : '—', 'Stage')}
+        {stat(chapters, chapters === 1 ? 'Chapter' : 'Chapters')}
+        {stat(scenes.length, scenes.length === 1 ? 'Scene' : 'Scenes')}
+        {stat(words.toLocaleString('en-US'), 'Words')}
+        {stat('~' + pages, pages === 1 ? 'Page' : 'Pages')}
+        {order.map((k) => stat(counts[k] || 0, k[0].toUpperCase() + k.slice(1), k))}
+      </div>
+    </div>
+  );
+}
+
 /** The Outline view: chapter headings with one line per scene, nothing else. */
 function OutlineView({ groups }: { groups: ReturnType<typeof chapterGroups> }) {
   return (
@@ -451,12 +486,13 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
         <div>
           <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · {(board && board.title) || 'Chapter Grid'}</p>
           <h1>{book.title}</h1>
-          <p class="meta">
-            Stage {book.stage} · {scenes.length === 1 ? '1 scene' : scenes.length + ' scenes'} · {words.toLocaleString('en-US')} words
-            {words ? ' · ' + readingLine(words, rates) : ''}
-            {order.filter((s) => counts[s]).map((s) => ' · ' + counts[s] + ' ' + s)}
-            {onDecide && scenes.length > 0 ? ' · ' + accepted + ' of ' + scenes.length + ' cards accepted' : ''}
-          </p>
+          <BookSummary stage={book.stage} chapters={allGroups.filter((g) => g.num != null).length} scenes={scenes} words={words} rates={rates} order={order} counts={counts} />
+          {(words > 0 || (onDecide && scenes.length > 0)) && (
+            <p class="meta">
+              {words ? readingTime(words, rates) : ''}
+              {onDecide && scenes.length > 0 ? (words ? ' · ' : '') + accepted + ' of ' + scenes.length + ' cards accepted' : ''}
+            </p>
+          )}
           <IdeasLink index={index} book={book} />
         </div>
       </div>
