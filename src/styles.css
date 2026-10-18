@@ -657,6 +657,12 @@ details.group[open] > summary h2::before { content: '▾ '; }
 @media (max-width: 640px) { .grid-cover .cover.small { width: 56px; } .grid-head { gap: 12px; } }
 .grid-tools { margin-top: 0.8rem; }
 .grid-tools .seg.small button { gap: 6px; }
+.status-key { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.status-key span { display: inline-flex; align-items: center; gap: 6px; }
+.status-key i { width: 4px; height: 1em; border-radius: 2px; background: var(--st-planned); }
+.status-key .key-drafted { background: var(--st-drafted); }
+.status-key .key-revised { background: var(--st-revised); }
+.status-key .key-final { background: var(--st-final); }
 .card { border-left: 5px solid var(--st-planned); }
 .card.status-drafted { border-left-color: var(--st-drafted); }
 .card.status-revised { border-left-color: var(--st-revised); }

@@ -479,6 +479,9 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
               </button>
             ))}
           </div>
+          <p class="status-key" aria-label="What the colours mean">
+            {(['planned', 'drafted', 'revised', 'final'] as const).map((k) => <span key={k}><i class={'key-' + k} />{k[0].toUpperCase() + k.slice(1)}</span>)}
+          </p>
         </div>
       )}
       {filtering && <p class="meta">{shown.length === 1 ? '1 scene matches' : shown.length + ' scenes match'} "{query.trim()}".{shown.length ? '' : ' Try a shorter word.'}</p>}
