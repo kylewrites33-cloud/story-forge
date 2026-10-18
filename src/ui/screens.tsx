@@ -271,30 +271,9 @@ export function EmptyBox({ title, children }: { title: string; children?: Compon
   return <div class="empty-box"><h2>{title}</h2>{children}</div>;
 }
 
-/** The book's cover beside its title, with a button to add or change it from the device. */
-function CoverButton({ source, book, onCover }: { source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null> }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <div class="grid-cover">
-      <Cover source={source} book={book} small />
-      {onCover && (
-        <label class={'button' + (busy ? ' disabled' : '')}>
-          <Icon name="image" size={18} />{busy ? 'Saving…' : book.cover ? 'Change cover' : 'Add a cover'}
-          <input type="file" accept="image/*" class="visually-hidden" disabled={busy} onChange={async (e) => {
-            const input = e.currentTarget as HTMLInputElement;
-            const file = input.files && input.files[0];
-            input.value = '';
-            if (!file) return;
-            setBusy(true);
-            setError(await onCover(book, file));
-            setBusy(false);
-          }} />
-        </label>
-      )}
-      {error && <p class="error">{error}</p>}
-    </div>
-  );
+/** The book's cover beside its title. Adding or changing it lives on the Book details page (Kyle, 2026-10-18). */
+function GridCover({ source, book }: { source: VaultSource; book: BookEntry }) {
+  return <a class="grid-cover" href={href.board('details', book.folder)} title="Book details"><Cover source={source} book={book} small /></a>;
 }
 
 type GridView = 'cards' | 'outline';
@@ -400,9 +379,9 @@ function dropAt(x: number, y: number, dragged: string): DropAt | null {
   return null;
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover, onJob, onRename, onImport }: {
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onJob, onRename, onImport }: {
   schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onAddMany?: OnAddMany; onMove?: OnMove;
-  source?: VaultSource; onCover?: (book: BookEntry, file: File) => Promise<string | null>;
+  source?: VaultSource;
   /** Ask the team to draft or check a scene, from a card's ••• menu. */
   onJob?: OnJob;
   onRename?: OnRename;
@@ -482,7 +461,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
   return (
     <section>
       <div class="grid-head">
-        {source && <CoverButton source={source} book={book} onCover={onCover} />}
+        {source && <GridCover source={source} book={book} />}
         <div>
           <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · {(board && board.title) || 'Chapter Grid'}</p>
           <h1>{book.title}</h1>

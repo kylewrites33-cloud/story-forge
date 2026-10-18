@@ -27,7 +27,7 @@ import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { Shell } from './Shell.tsx';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
-import { Home, SeriesPage } from './Home.tsx';
+import { BookDetails, Home, SeriesPage } from './Home.tsx';
 import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
@@ -540,7 +540,8 @@ export function App() {
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       let screen;
-      if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
+      if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
+      else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
@@ -548,7 +549,7 @@ export function App() {
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
           onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}
-          source={source} onCover={source.writeBytes ? onCover : undefined} onJob={source.write ? onJob : undefined}
+          source={source} onJob={source.write ? onJob : undefined}
           onRename={source.remove ? onRename : undefined} onImport={source.write ? onImport : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;

@@ -103,6 +103,44 @@ export function Cover({ source, book, small }: { source: VaultSource; book: Book
   );
 }
 
+/** Book details, like Novelcrafter's novel settings (the cog by the novel's name): the cover, added or changed from the
+ * device, with the book's name, series and stage. */
+export function BookDetails({ source, book, onCover }: { source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <section class="book-details">
+      <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · <a href={href.book(book.folder)}>{book.title}</a></p>
+      <h1>Book details</h1>
+      <div class="details-body">
+        <div class="details-cover">
+          <Cover source={source} book={book} />
+          {onCover && (
+            <label class={'button' + (busy ? ' disabled' : '')}>
+              <Icon name="image" size={18} />{busy ? 'Saving…' : book.cover ? 'Change cover' : 'Add a cover'}
+              <input type="file" accept="image/*" class="visually-hidden" disabled={busy} onChange={async (e) => {
+                const input = e.currentTarget as HTMLInputElement;
+                const file = input.files && input.files[0];
+                input.value = '';
+                if (!file) return;
+                setBusy(true);
+                setError(await onCover(book, file));
+                setBusy(false);
+              }} />
+            </label>
+          )}
+          {error && <p class="error">{error}</p>}
+        </div>
+        <dl class="details-list">
+          <dt>Title</dt><dd>{book.title}</dd>
+          <dt>Series</dt><dd>{book.seriesName}{book.number != null ? ', book ' + book.number : ''}</dd>
+          <dt>Stage</dt><dd>{book.stage}</dd>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
 const STAGE_DONE = ['publish', 'done'];
 
 function stageDot(stage: string): string {

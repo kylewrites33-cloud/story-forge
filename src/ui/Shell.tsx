@@ -117,6 +117,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
                 </span>
               </a>
               {resume && item(href.write(resume), 'pen', 'Keep writing', false, 'rail-write')}
+              {item(href.board('details', book.folder), 'image', 'Book details', board === 'details', 'rail-details')}
               {GROUPS.map(([name, keys]) => {
                 const here = keys.map((k) => byKey[k]).filter(Boolean);
                 if (!here.length) return null;
