@@ -367,11 +367,33 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .side-boards a .icon { color: var(--muted); }
 .side-boards a:hover { background: var(--bg); }
 
-.writer-page { flex: 1 1 auto; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
+.writer-page { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
+/* The page scrolls, not the text box: nothing in it may shrink to fit, or the words past the fold are cut off. */
+.writer-page > * { flex-shrink: 0; }
 .writer-tools {
-  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 2px; padding: 4px 10px;
-  background: var(--surface); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  flex-wrap: wrap; row-gap: 2px;
+  background: var(--surface); border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0;
 }
+.tool-group { flex: none; display: flex; align-items: center; gap: 2px; padding-right: 4px; margin-right: 2px; border-right: 1px solid var(--line); }
+.tool-group:last-child { border-right: none; }
+.writer-tools .team-tools { flex: 1 1 100%; margin: 0 -8px; padding: 2px 8px 0; border-right: none; border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.team-tools::-webkit-scrollbar { display: none; }
+.tool-heading { flex: none; margin-right: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.writer-bar .bar-button, .writer-bar > button { white-space: nowrap; }
+@media (max-width: 899px) { .writer-bar .writer-words { display: none; } }
+.writer-tools .tool { flex: none; white-space: nowrap; border-radius: 8px; }
+.writer-tools .tool:disabled { opacity: 0.35; }
+.writer-tools .tool[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.writer-tools .team-tool { color: var(--accent); }
+.writer-tools .team-tool .icon { color: var(--accent); }
+.tool-label { font-size: 0.85rem; }
+/* Short of room, the tool names go and the icons stay (each has its name on a long press or hover). */
+@media (max-width: 1499px) { .writer.has-both .tool-group:not(.team-tools) .tool-label { display: none; } }
+@media (max-width: 600px) { .tool-group:not(.team-tools) .tool-label { display: none; } }
+.tool-said { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; padding: 6px 12px; font-size: 0.9rem; background: var(--accent-soft); color: var(--text); }
+.tool-said.error { color: var(--danger); }
+.tool-said .icon-button { margin-left: auto; min-height: 36px; border: none; background: none; }
 .writer-tools .tool { border: none; background: none; min-width: 44px; padding: 6px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 0.9rem; }
 .writer-tools .tool b, .writer-tools .tool i { font-family: Georgia, serif; font-size: 1.1rem; color: var(--text); }
 .writer-tools .tool:hover { background: var(--bg); }

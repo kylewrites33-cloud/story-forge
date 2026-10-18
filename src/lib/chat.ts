@@ -172,3 +172,47 @@ export function chatJob(thread: string, words: string, book: string): NewJob {
     thread
   };
 }
+
+/** The writing screen's team tools, like Sudowrite's: each sends one message about the words on the page to the
+ * scene's conversation. The team answers there and never changes the scene; Kyle copies what he likes. */
+export type PassageTool = 'rewrite' | 'describe' | 'brainstorm' | 'write-on';
+
+export const PASSAGE_TOOLS: { key: PassageTool; label: string; hint: string }[] = [
+  { key: 'rewrite', label: 'Rewrite', hint: 'Three other ways to write the words you picked' },
+  { key: 'describe', label: 'Describe', hint: 'Sights, sounds, smells, touch and taste for the words you picked' },
+  { key: 'brainstorm', label: 'Brainstorm', hint: 'Ideas for what could happen next, from where the cursor is' },
+  { key: 'write-on', label: 'Write on', hint: 'A suggestion for the next few paragraphs, from where the cursor is' }
+];
+
+/** The words a tool works on: the selection, or else the paragraph around the cursor (Rewrite, Describe), or the
+ * text up to the cursor (Brainstorm, Write on). Long text keeps its end, the part nearest the cursor. */
+export function passageFor(tool: PassageTool, text: string, sel: { start: number; end: number } | null): string {
+  const t = String(text || '');
+  const s = sel ? { start: Math.max(0, Math.min(sel.start, sel.end, t.length)), end: Math.min(t.length, Math.max(sel.start, sel.end)) } : null;
+  if (s && s.end > s.start) return t.slice(s.start, s.end).trim();
+  const at = s ? s.start : t.length;
+  if (tool === 'rewrite' || tool === 'describe') {
+    const a = t.lastIndexOf('\n\n', Math.max(0, at - 1));
+    const b = t.indexOf('\n\n', at);
+    const para = t.slice(a < 0 ? 0 : a + 2, b < 0 ? t.length : b).trim();
+    if (para) return para;
+  }
+  const before = t.slice(0, at).trim();
+  return before.length > 1500 ? '…' + before.slice(-1500).replace(/^\S*\s/, '') : before;
+}
+
+/** Kyle's message for a tool, in his voice, with the passage quoted. */
+export function passageMessage(tool: PassageTool, scene: string, passage: string): string {
+  const quoted = passage.trim() ? '\n\n' + passage.trim().split('\n').map((l) => '> ' + l).join('\n') : '';
+  const keep = ' Follow the book\'s Style Guide and my style. Don\'t change the scene; I\'ll copy what I like.';
+  switch (tool) {
+    case 'rewrite':
+      return 'Rewrite this passage from ' + scene + ' three different ways, each one short and labelled.' + keep + quoted;
+    case 'describe':
+      return 'Give me sensory details for this moment in ' + scene + ': what the point-of-view character sees, hears, smells, touches and tastes, two or three short lines each.' + keep + quoted;
+    case 'brainstorm':
+      return 'Brainstorm eight ideas for what could happen next in ' + scene + ', from where this passage ends. Make one of them the Contrarian\'s pick, and say which.' + keep + quoted;
+    default:
+      return 'Write a suggestion for the next 150 to 250 words of ' + scene + ', carrying on from where this passage ends.' + keep + quoted;
+  }
+}

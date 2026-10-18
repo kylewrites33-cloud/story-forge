@@ -1,6 +1,9 @@
 // Small line icons drawn inline, so the app needs no icon font or image files. They take the text colour.
 
 const PATHS: Record<string, string> = {
+  wand: 'M4 20L15 9M13 7l4 4M17 3v3M15.5 4.5h3M20 8v2M19 9h2M8 3v2M7 4h2',
+  eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  clear: 'M5 5h11M10.5 5L8 19M4 4l16 16',
   books: 'M5 4h4v16H5zM10 4h4v16h-4zM15.5 5l3.5-1 3 15-3.5 1z',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   idea: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z',

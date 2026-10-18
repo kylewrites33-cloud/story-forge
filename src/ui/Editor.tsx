@@ -19,6 +19,10 @@ import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
+import type { OnChat } from './Chat.tsx';
+
+const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
 import { findAll, markList, unstyle } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
@@ -58,7 +62,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, codex, braindump }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -73,6 +77,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
+  /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
+  onChat?: OnChat;
   /** The book's characters, places, items and lore, whose names light up in the text. */
   codex?: CodexEntry[];
   /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
@@ -97,6 +103,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const [query, setQuery] = useState('');
   const [repl, setRepl] = useState('');
   const [hit, setHit] = useState(0);
+  const [asked, setAsked] = useState<{ busy: PassageTool | ''; error: boolean; text: string } | null>(null);
   // The codex as one key, so the names are only worked out again when a name, nickname or colour changes.
   const codexKey = (codex || []).map((e) => e.name + '|' + e.terms.join(',') + '|' + e.color).join(';');
   const allNames = useMemo(() => matcher(codex || []), [codexKey]);
@@ -322,10 +329,24 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       plain: () => { const el = cur(); if (!el) return; const r = unstyle(el.value, el.selectionStart, el.selectionEnd); set(r.text, r.start, r.end); },
       select: (a, b) => { const el = cur(); if (!el) return; el.focus(); el.setSelectionRange(a, b); caret.current = a; },
       replaceRange: (a, b, t) => { const el = cur(); if (!el) return; set(el.value.slice(0, a) + t + el.value.slice(b), a + t.length, a + t.length); },
-      setAll: (t) => { const el = cur(); if (el) set(t, 0, 0); }
+      setAll: (t) => { const el = cur(); if (el) set(t, 0, 0); },
+      selection: () => { const el = cur(); return el ? { start: el.selectionStart, end: el.selectionEnd } : null; }
     };
   };
   const cmd = (): EditorCommands | null => (styled ? commands.current : plainBox());
+
+  /** Send the words on the page (the selection, the paragraph or what comes before the cursor) to the team. */
+  const askTeam = async (tool: PassageTool) => {
+    const id = String(note.data.id || '');
+    if (!onChat || !id) { setAsked({ busy: '', error: true, text: 'Asking the team needs your own vault, not the demo.' }); return; }
+    const c = cmd();
+    const passage = passageFor(tool, splitLead(draftRef.current.body).text, c ? c.selection() : null);
+    if (!passage) { setAsked({ busy: '', error: true, text: 'Write a few words first, or pick some, then ask again.' }); return; }
+    setAsked({ busy: tool, error: false, text: '' });
+    const r = await onChat(id, passageMessage(tool, [id, note.data.title].filter(Boolean).join(' '), passage), bookFolder || '');
+    if ('error' in r) setAsked({ busy: '', error: true, text: r.error });
+    else setAsked({ busy: '', error: false, text: 'Sent to the team. The answer comes in this scene\'s conversation, usually within a few minutes.' });
+  };
 
   // Tool buttons must not take the cursor out of the page.
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
@@ -365,7 +386,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const stripTotal = strip.reduce((s, x) => s + Math.max(x.words, stripMin), 0);
 
   return (
-    <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '')} style={lookStyle(look)}>
+    <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
       {focus && <button type="button" class="leave-focus" onClick={leaveFocus} aria-label="Leave focus mode" title="Leave focus mode (Esc)"><Icon name="focus" /><span class="bar-label">Leave focus</span></button>}
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
@@ -424,24 +445,43 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           </aside>
         )}
         <div class="writer-page">
-          <div class="writer-tools" role="toolbar" aria-label="Formatting">
-            <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" {...keepFocus}
-              onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-            <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" {...keepFocus}
-              onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-            <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
-              onClick={() => { const c = cmd(); if (c) c.plain(); }}><span class="bar-label always">Normal</span></button>
-            <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" {...keepFocus}
-              onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
-            {styled && <>
-              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
-            </>}
-            <button type="button" class="tool" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /></button>
-            <span class="tool-gap" />
-            <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="bar-label">Split here</span></button>
-            {next && <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="bar-label">Join next</span></button>}
+          <div class="writer-tools" role="toolbar" aria-label="Writing tools">
+            <div class="tool-group" role="group" aria-label="Undo and redo">
+              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" title="Redo" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+            </div>
+            <div class="tool-group" role="group" aria-label="Formatting">
+              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" {...keepFocus}
+                onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
+              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" {...keepFocus}
+                onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
+              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" {...keepFocus}
+                onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
+              <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
+                onClick={() => { const c = cmd(); if (c) c.plain(); }}><Icon name="clear" /><span class="tool-label">Normal</span></button>
+            </div>
+            <div class="tool-group" role="group" aria-label="Find and scenes">
+              <button type="button" class="tool wide" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /><span class="tool-label">Find</span></button>
+              <button type="button" class="tool wide" title="Split this scene at the cursor" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="tool-label">Split</span></button>
+              {next && <button type="button" class="tool wide" title="Join the next scene onto this one" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="tool-label">Join</span></button>}
+            </div>
+            <div class="tool-group team-tools" role="group" aria-label="Ask the team">
+              <span class="tool-heading" aria-hidden="true">Ask the team</span>
+              {PASSAGE_TOOLS.map((t) => (
+                <button key={t.key} type="button" class="tool wide team-tool" title={t.hint + '. The answer comes in this scene\'s conversation.'} {...keepFocus}
+                  disabled={Boolean(asked && asked.busy)} onClick={() => askTeam(t.key)}>
+                  <Icon name={TOOL_ICON[t.key]} /><span class="tool-label">{asked && asked.busy === t.key ? 'Sending…' : t.label}</span>
+                </button>
+              ))}
+              <button type="button" class="tool wide" title="Everything you can ask the team for" {...keepFocus} onClick={() => openTab('team')}><Icon name="team" /><span class="tool-label">Team</span></button>
+            </div>
           </div>
+          {asked && !asked.busy && (
+            <p class={'tool-said ' + (asked.error ? 'error' : 'ok')} role="status">
+              {asked.text}{!asked.error && note.data.id && <> <a {...link(href.chat(String(note.data.id), bookFolder || ''))}>Open the conversation</a></>}
+              <button type="button" class="icon-button" aria-label="Close" onClick={() => setAsked(null)}><Icon name="close" size={16} /></button>
+            </p>
+          )}
           {findOpen && <FindBar text={text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
             cmd={cmd} onClose={() => setFindOpen(false)} />}
           <div class="page-head">

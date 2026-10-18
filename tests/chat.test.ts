@@ -137,3 +137,16 @@ test('a scene ID in two books makes two conversations, one per book', async () =
   assert.equal(conversation(index, 'S-012', other).pending, true);
   assert.equal(conversation(index, 'S-012', BOOK).pending, false);
 });
+
+test('passage tools: the selection, else the paragraph or the text before the cursor', async () => {
+  const { passageFor, passageMessage } = await import('../src/lib/chat.ts');
+  const text = 'First para.\n\nSecond para here.\n\nThird.';
+  assert.equal(passageFor('rewrite', text, { start: 0, end: 5 }), 'First');
+  assert.equal(passageFor('rewrite', text, { start: 16, end: 16 }), 'Second para here.');
+  assert.equal(passageFor('brainstorm', text, { start: 13, end: 13 }), 'First para.');
+  assert.equal(passageFor('write-on', text, null), text);
+  const m = passageMessage('rewrite', 'S-001 The Crack', 'One.\nTwo.');
+  assert.match(m, /three different ways/);
+  assert.match(m, /Don't change the scene/);
+  assert.ok(m.endsWith('> One.\n> Two.'));
+});

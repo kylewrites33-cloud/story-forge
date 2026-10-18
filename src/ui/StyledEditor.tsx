@@ -83,6 +83,8 @@ export interface EditorCommands {
   replaceRange: (start: number, end: number, text: string) => void;
   /** Replace the whole text, as one step to undo (Replace all). */
   setAll: (text: string) => void;
+  /** Where the selection (or the cursor) is, in characters of the text, or null before Kyle has been in the page. */
+  selection: () => { start: number; end: number } | null;
 }
 
 /** Scroll the selection into the middle of the screen. */
@@ -266,6 +268,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         setSelection(el, r.start, r.end);
         lastSel.current = { start: r.start, end: r.end };
       },
+      selection: () => { const el = ref.current; return (el && document.activeElement === el && selectionOffsets(el)) || lastSel.current; },
       select: (a, b) => {
         const el = ref.current;
         if (!el) return;
