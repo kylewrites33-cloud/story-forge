@@ -8,7 +8,17 @@
       "series": "folder is relative to Series/<Series>/",
       "book": "folder is relative to Series/<Series>/Books/<N Title>/"
     },
-    "propertyTypes": ["string", "integer", "number", "boolean", "date", "datetime", "list", "link", "enum"],
+    "propertyTypes": [
+      "string",
+      "integer",
+      "number",
+      "boolean",
+      "date",
+      "datetime",
+      "list",
+      "link",
+      "enum"
+    ],
     "enum": "either the name of a status set below, or a literal list of values",
     "computed": "filled by the tool, never by hand",
     "extraProperties": "a type with extraProperties true accepts properties it does not list (System/Config.md uses this for its settings)",
@@ -17,26 +27,90 @@
     "first_seen": "where a bible note first appears on the page, as Book 1, S-005; packets for earlier scenes leave the note out",
     "later": "an inbox idea tagged later is one Kyle put aside on the Ideas board to come back to; its status stays inbox. Keep and drop on the board set status keep or discard, the decided time and any reason in decision_note; nothing is moved or deleted",
     "accepted": "Kyle accepts a scene card on the Chapter Grid; the app sets accepted to the time he tapped. Needs work removes accepted and puts his reason in decision_note. Beats and conflicts are kept or dropped on their boards the way ideas are, and market notes (market case, comps, keyword sets, titles) on the Market board",
+    "scene_title": "A scene card's title is a one-line summary of what happens in the scene (Kyle, 2026-10-17, T-009), such as \"Grey turns down the guild's offer\". Agents write titles that way and read them as the scene's summary. The file name follows the title (S-012 <title>.md); Kyle changes it from Edit card in the app, which renames the file.",
     "regenerate": "Rewrite on a board sets a proposal's status to regenerate, the decided time, and what Kyle wants changed in decision_note. The agent that owns the note rewrites it from that note and sets it back to inbox"
   },
   "statuses": {
-    "proposal": ["inbox", "keep", "regenerate", "discard", "done"],
-    "scene": ["planned", "drafted", "revised", "final"],
-    "book_stage": ["spark", "market", "premise", "bible", "outline", "draft", "revise", "polish", "publish", "done"],
-    "canon": ["draft", "canon", "cut"],
-    "series": ["active", "paused", "done"],
-    "open_done": ["open", "done"],
-    "thread": ["open", "resolved", "dropped"],
-    "promise": ["open", "paid", "subverted", "dropped"],
-    "task": ["open", "doing", "done", "dropped"],
-    "job": ["requested", "running", "done", "failed", "cancelled"]
+    "proposal": [
+      "inbox",
+      "keep",
+      "regenerate",
+      "discard",
+      "done"
+    ],
+    "scene": [
+      "planned",
+      "drafted",
+      "revised",
+      "final"
+    ],
+    "book_stage": [
+      "spark",
+      "market",
+      "premise",
+      "bible",
+      "outline",
+      "draft",
+      "revise",
+      "polish",
+      "publish",
+      "done"
+    ],
+    "canon": [
+      "draft",
+      "canon",
+      "cut"
+    ],
+    "series": [
+      "active",
+      "paused",
+      "done"
+    ],
+    "open_done": [
+      "open",
+      "done"
+    ],
+    "thread": [
+      "open",
+      "resolved",
+      "dropped"
+    ],
+    "promise": [
+      "open",
+      "paid",
+      "subverted",
+      "dropped"
+    ],
+    "task": [
+      "open",
+      "doing",
+      "done",
+      "dropped"
+    ],
+    "job": [
+      "requested",
+      "running",
+      "done",
+      "failed",
+      "cancelled"
+    ]
   },
   "common": {
     "description": "Properties every type accepts. created and updated are dates; updated is computed.",
     "properties": {
-      "created": { "type": "date" },
-      "updated": { "type": "date", "computed": true },
-      "tags": { "type": "list", "items": { "type": "string" } }
+      "created": {
+        "type": "date"
+      },
+      "updated": {
+        "type": "date",
+        "computed": true
+      },
+      "tags": {
+        "type": "list",
+        "items": {
+          "type": "string"
+        }
+      }
     }
   },
   "types": {
@@ -45,17 +119,46 @@
       "scope": "series",
       "folder": "",
       "filename": "Series",
-      "required": ["type", "name", "status"],
+      "required": [
+        "type",
+        "name",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "series" },
-        "name": { "type": "string" },
-        "long_title": { "type": "string" },
-        "genre": { "type": "string" },
-        "subgenres": { "type": "list", "items": { "type": "string" } },
-        "niche": { "type": "string" },
-        "status": { "enum": "series", "default": "active" },
-        "books": { "type": "list", "items": { "type": "integer" } },
-        "arc": { "type": "string" }
+        "type": {
+          "const": "series"
+        },
+        "name": {
+          "type": "string"
+        },
+        "long_title": {
+          "type": "string"
+        },
+        "genre": {
+          "type": "string"
+        },
+        "subgenres": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "niche": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "series",
+          "default": "active"
+        },
+        "books": {
+          "type": "list",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "arc": {
+          "type": "string"
+        }
       },
       "body": "What the series is about, the series-level story question, and notes that hold across books."
     },
@@ -64,30 +167,94 @@
       "scope": "book",
       "folder": "",
       "filename": "Book",
-      "required": ["type", "title", "series", "number", "stage"],
+      "required": [
+        "type",
+        "title",
+        "series",
+        "number",
+        "stage"
+      ],
       "properties": {
-        "type": { "const": "book" },
-        "title": { "type": "string" },
-        "long_title": { "type": "string" },
-        "series": { "type": "link", "to": "series" },
-        "number": { "type": "integer" },
-        "stage": { "enum": "book_stage", "default": "spark" },
-        "logline": { "type": "string" },
-        "dramatic_question": { "type": "string" },
-        "controlling_idea": { "type": "string" },
-        "theme_question": { "type": "string" },
-        "target_words": { "type": "integer", "default": 90000 },
-        "chapter_words": { "type": "integer", "default": 3000 },
-        "chapters_planned": { "type": "integer" },
-        "framework": { "enum": ["three-act", "save-the-cat", "story-juice", "serial-chapter-model"], "default": "story-juice" },
-        "pov": { "type": "string" },
-        "tense": { "type": "string" },
-        "release": { "type": "string" },
-        "cadence": { "type": "integer" },
-        "arc_metric": { "type": "string" },
-        "comps": { "type": "list", "items": { "type": "string" } },
-        "author": { "type": "string" },
-        "words": { "type": "integer", "computed": true }
+        "type": {
+          "const": "book"
+        },
+        "title": {
+          "type": "string"
+        },
+        "long_title": {
+          "type": "string"
+        },
+        "series": {
+          "type": "link",
+          "to": "series"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "stage": {
+          "enum": "book_stage",
+          "default": "spark"
+        },
+        "logline": {
+          "type": "string"
+        },
+        "dramatic_question": {
+          "type": "string"
+        },
+        "controlling_idea": {
+          "type": "string"
+        },
+        "theme_question": {
+          "type": "string"
+        },
+        "target_words": {
+          "type": "integer",
+          "default": 90000
+        },
+        "chapter_words": {
+          "type": "integer",
+          "default": 3000
+        },
+        "chapters_planned": {
+          "type": "integer"
+        },
+        "framework": {
+          "enum": [
+            "three-act",
+            "save-the-cat",
+            "story-juice",
+            "serial-chapter-model"
+          ],
+          "default": "story-juice"
+        },
+        "pov": {
+          "type": "string"
+        },
+        "tense": {
+          "type": "string"
+        },
+        "release": {
+          "type": "string"
+        },
+        "cadence": {
+          "type": "integer"
+        },
+        "arc_metric": {
+          "type": "string"
+        },
+        "comps": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "author": {
+          "type": "string"
+        },
+        "words": {
+          "type": "integer",
+          "computed": true
+        }
       },
       "body": "Pitch, synopsis and working notes for the book."
     },
@@ -96,19 +263,64 @@
       "scope": "book",
       "folder": "",
       "filename": "Book Spec",
-      "required": ["type", "title", "status"],
+      "required": [
+        "type",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "book-spec" },
-        "title": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "niche": { "type": "string" },
-        "promises": { "type": "list", "items": { "type": "string" } },
-        "protagonist_type": { "type": "string" },
-        "length": { "type": "integer" },
-        "framework": { "enum": ["three-act", "save-the-cat", "story-juice", "serial-chapter-model"] },
-        "tone_words": { "type": "list", "items": { "type": "string" } },
-        "comps": { "type": "list", "items": { "type": "link", "to": "comp" } },
-        "constraints": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "book-spec"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "niche": {
+          "type": "string"
+        },
+        "promises": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "protagonist_type": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "framework": {
+          "enum": [
+            "three-act",
+            "save-the-cat",
+            "story-juice",
+            "serial-chapter-model"
+          ]
+        },
+        "tone_words": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "comps": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "comp"
+          }
+        },
+        "constraints": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "Anything the one-shot run must know that the properties do not hold."
     },
@@ -117,24 +329,80 @@
       "scope": "series",
       "folder": "Market",
       "filename": "{title}",
-      "required": ["type", "title", "status", "date"],
+      "required": [
+        "type",
+        "title",
+        "status",
+        "date"
+      ],
       "properties": {
-        "type": { "const": "market-thesis" },
-        "title": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "date": { "type": "date" },
-        "genre": { "type": "string" },
-        "subgenre": { "type": "string" },
-        "sub_subgenre": { "type": "string" },
-        "protagonist_type": { "type": "string" },
-        "trope_tags": { "type": "list", "items": { "type": "string" } },
-        "search_terms": { "type": "list", "items": { "type": "string" } },
-        "confidence": { "enum": ["high", "medium", "low"] },
-        "source_files": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "market-thesis"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "date": {
+          "type": "date"
+        },
+        "genre": {
+          "type": "string"
+        },
+        "subgenre": {
+          "type": "string"
+        },
+        "sub_subgenre": {
+          "type": "string"
+        },
+        "protagonist_type": {
+          "type": "string"
+        },
+        "trope_tags": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "search_terms": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "source_files": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "board": { "default": "market", "card": ["title", "sub_subgenre", "protagonist_type", "confidence", "status"] },
+      "board": {
+        "default": "market",
+        "card": [
+          "title",
+          "sub_subgenre",
+          "protagonist_type",
+          "confidence",
+          "status"
+        ]
+      },
       "body": "The thesis paragraph, then the evidence from the exports with file names and dates."
     },
     "comp": {
@@ -142,25 +410,71 @@
       "scope": "series",
       "folder": "Market",
       "filename": "{title}",
-      "required": ["type", "title", "author", "status"],
+      "required": [
+        "type",
+        "title",
+        "author",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "comp" },
-        "title": { "type": "string" },
-        "author": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "asin": { "type": "string" },
-        "monthly_earnings": { "type": "integer" },
-        "length": { "type": "integer" },
-        "price": { "type": "number" },
-        "ku": { "type": "boolean" },
-        "cover_style": { "type": "string" },
-        "cadence": { "type": "string" },
-        "proves": { "type": "string" },
-        "source": { "type": "string" }
+        "type": {
+          "const": "comp"
+        },
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "asin": {
+          "type": "string"
+        },
+        "monthly_earnings": {
+          "type": "integer"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "price": {
+          "type": "number"
+        },
+        "ku": {
+          "type": "boolean"
+        },
+        "cover_style": {
+          "type": "string"
+        },
+        "cadence": {
+          "type": "string"
+        },
+        "proves": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
       },
-      "board": { "default": "market", "card": ["title", "author", "monthly_earnings", "ku", "proves", "status"] },
+      "board": {
+        "default": "market",
+        "card": [
+          "title",
+          "author",
+          "monthly_earnings",
+          "ku",
+          "proves",
+          "status"
+        ]
+      },
       "body": "Notes on what the comp proves and where each number came from."
     },
     "keyword-set": {
@@ -168,20 +482,63 @@
       "scope": "series",
       "folder": "Market",
       "filename": "{title}",
-      "required": ["type", "title", "status", "date"],
+      "required": [
+        "type",
+        "title",
+        "status",
+        "date"
+      ],
       "properties": {
-        "type": { "const": "keyword-set" },
-        "title": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "date": { "type": "date" },
-        "book": { "type": "link", "to": "book" },
-        "keywords": { "type": "list", "items": { "type": "string" } },
-        "categories": { "type": "list", "items": { "type": "string" } },
-        "promises": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "keyword-set"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "date": {
+          "type": "date"
+        },
+        "book": {
+          "type": "link",
+          "to": "book"
+        },
+        "keywords": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "promises": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "board": { "default": "market", "card": ["title", "keywords", "status"] },
+      "board": {
+        "default": "market",
+        "card": [
+          "title",
+          "keywords",
+          "status"
+        ]
+      },
       "body": "Where each keyword came from (the search terms and export)."
     },
     "title-candidate": {
@@ -189,20 +546,61 @@
       "scope": "series",
       "folder": "Market",
       "filename": "{title}",
-      "required": ["type", "title", "status"],
+      "required": [
+        "type",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "title-candidate" },
-        "title": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "subtitle": { "type": "string" },
-        "series_name": { "type": "string" },
-        "book": { "type": "link", "to": "book" },
-        "signals": { "type": "list", "items": { "type": "string" } },
-        "tested_against": { "type": "list", "items": { "type": "link", "to": "comp" } }
+        "type": {
+          "const": "title-candidate"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "series_name": {
+          "type": "string"
+        },
+        "book": {
+          "type": "link",
+          "to": "book"
+        },
+        "signals": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tested_against": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "comp"
+          }
+        }
       },
-      "board": { "default": "market", "card": ["title", "subtitle", "signals", "status"] },
+      "board": {
+        "default": "market",
+        "card": [
+          "title",
+          "subtitle",
+          "signals",
+          "status"
+        ]
+      },
       "body": "Why the title signals the niche, and how it reads next to each comp."
     },
     "cover-brief": {
@@ -210,20 +608,61 @@
       "scope": "book",
       "folder": "Cover",
       "filename": "Cover Brief",
-      "required": ["type", "title", "status"],
+      "required": [
+        "type",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "cover-brief" },
-        "title": { "type": "string" },
-        "status": { "enum": ["in-progress", "final"], "default": "in-progress" },
-        "artist": { "type": "string" },
-        "format": { "type": "list", "items": { "type": "string" } },
-        "trim": { "type": "string" },
-        "deadline": { "type": "date" },
-        "revision_rounds": { "type": "integer" },
-        "must_have": { "type": "list", "items": { "type": "string" } },
-        "palette": { "type": "string" },
-        "typography": { "type": "string" },
-        "deliverables": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "cover-brief"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "in-progress",
+            "final"
+          ],
+          "default": "in-progress"
+        },
+        "artist": {
+          "type": "string"
+        },
+        "format": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "trim": {
+          "type": "string"
+        },
+        "deadline": {
+          "type": "date"
+        },
+        "revision_rounds": {
+          "type": "integer"
+        },
+        "must_have": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "palette": {
+          "type": "string"
+        },
+        "typography": {
+          "type": "string"
+        },
+        "deliverables": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "The brief as sent, must-haves, must-avoids, and a dated feedback log of every round of notes."
     },
@@ -232,10 +671,17 @@
       "scope": "book",
       "folder": "Cover",
       "filename": "Comps",
-      "required": ["type", "title"],
+      "required": [
+        "type",
+        "title"
+      ],
       "properties": {
-        "type": { "const": "cover-comps" },
-        "title": { "type": "string" }
+        "type": {
+          "const": "cover-comps"
+        },
+        "title": {
+          "type": "string"
+        }
       },
       "body": "One section per comp cover, with the image embedded from Cover/Comps/."
     },
@@ -244,15 +690,38 @@
       "scope": "book",
       "folder": "Cover/Iterations",
       "filename": "{title}",
-      "required": ["type", "title", "round"],
+      "required": [
+        "type",
+        "title",
+        "round"
+      ],
       "properties": {
-        "type": { "const": "cover-iteration" },
-        "title": { "type": "string" },
-        "round": { "type": "integer" },
-        "version": { "type": "string" },
-        "received": { "type": "date" },
-        "image": { "type": "string" },
-        "verdict": { "enum": ["advance", "revise", "drop", ""] }
+        "type": {
+          "const": "cover-iteration"
+        },
+        "title": {
+          "type": "string"
+        },
+        "round": {
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        },
+        "received": {
+          "type": "date"
+        },
+        "image": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "advance",
+            "revise",
+            "drop",
+            ""
+          ]
+        }
       },
       "body": "Kyle's notes on this round."
     },
@@ -262,25 +731,92 @@
       "folder": "Ideas",
       "idPrefix": "I",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "kind", "status", "source"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "kind",
+        "status",
+        "source"
+      ],
       "properties": {
-        "type": { "const": "idea" },
-        "id": { "type": "string", "pattern": "^I-\\d{3}$" },
-        "title": { "type": "string" },
-        "kind": { "enum": ["premise", "big-issue", "opinion", "character", "plot", "scene", "world", "theme", "twist", "structure", "title", "line", "note", "other"] },
-        "status": { "enum": "proposal", "default": "inbox" },
-        "source": { "type": "string" },
-        "session": { "type": "link", "to": "session" },
-        "pitch": { "type": "string" },
-        "reasoning": { "type": "string" },
-        "risk": { "type": "string" },
-        "target": { "type": "string" },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "rating": { "type": "integer" },
-        "related": { "type": "list", "items": { "type": "link" } }
+        "type": {
+          "const": "idea"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^I-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "premise",
+            "big-issue",
+            "opinion",
+            "character",
+            "plot",
+            "scene",
+            "world",
+            "theme",
+            "twist",
+            "structure",
+            "title",
+            "line",
+            "note",
+            "other"
+          ]
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        },
+        "source": {
+          "type": "string"
+        },
+        "session": {
+          "type": "link",
+          "to": "session"
+        },
+        "pitch": {
+          "type": "string"
+        },
+        "reasoning": {
+          "type": "string"
+        },
+        "risk": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "rating": {
+          "type": "integer"
+        },
+        "related": {
+          "type": "list",
+          "items": {
+            "type": "link"
+          }
+        }
       },
-      "board": { "default": "story-juice", "card": ["title", "kind", "pitch", "source", "status"] },
+      "board": {
+        "default": "story-juice",
+        "card": [
+          "title",
+          "kind",
+          "pitch",
+          "source",
+          "status"
+        ]
+      },
       "body": "Three sections: ## The idea, ## Why it could work, ## Risks / costs."
     },
     "character": {
@@ -288,51 +824,169 @@
       "scope": "series",
       "folder": "Characters",
       "filename": "{name}",
-      "required": ["type", "name", "status"],
+      "required": [
+        "type",
+        "name",
+        "status"
+      ],
       "variants": {
         "delta": {
           "marker": "extends",
           "scope": "book",
           "folder": "Characters",
-          "required": ["type", "name", "extends"]
+          "required": [
+            "type",
+            "name",
+            "extends"
+          ]
         }
       },
       "properties": {
-        "type": { "const": "character" },
-        "name": { "type": "string" },
-        "aliases": { "type": "list", "items": { "type": "string" } },
-        "status": { "enum": "canon", "default": "draft" },
-        "ai": { "enum": ["always", "detected", "never"], "default": "detected" },
-        "role": { "enum": ["protagonist", "antagonist", "deuteragonist", "love-interest", "mentor", "ally", "foil", "minor"] },
-        "pov": { "type": "boolean" },
-        "age": { "type": "string" },
-        "voice": { "type": "string" },
-        "opinion": { "type": "string" },
-        "life_before": { "type": "string" },
-        "inciting_event": { "type": "string" },
-        "present_trouble": { "type": "string" },
-        "want": { "type": "string" },
-        "need": { "type": "string" },
-        "wound": { "type": "string" },
-        "lie": { "type": "string" },
-        "truth": { "type": "string" },
-        "fear": { "type": "string" },
-        "worldview": { "type": "string" },
-        "core_drive": { "type": "string" },
-        "core_need": { "type": "string" },
-        "arc_type": { "enum": ["positive", "flat", "negative"] },
-        "quirks": { "type": "list", "items": { "type": "string" } },
-        "default_reaction": { "type": "string" },
-        "relationships": { "type": "list", "items": { "type": "link", "to": "character" } },
-        "first_seen": { "type": "string" },
-        "extends": { "type": "link", "to": "character" },
-        "starting_state": { "type": "string" },
-        "want_this_book": { "type": "string" },
-        "arc_this_book": { "type": "string" },
-        "threads_live": { "type": "list", "items": { "type": "link", "to": "thread" } },
-        "color": { "type": "string" }
+        "type": {
+          "const": "character"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": "canon",
+          "default": "draft"
+        },
+        "ai": {
+          "enum": [
+            "always",
+            "detected",
+            "never"
+          ],
+          "default": "detected"
+        },
+        "role": {
+          "enum": [
+            "protagonist",
+            "antagonist",
+            "deuteragonist",
+            "love-interest",
+            "mentor",
+            "ally",
+            "foil",
+            "minor"
+          ]
+        },
+        "pov": {
+          "type": "boolean"
+        },
+        "age": {
+          "type": "string"
+        },
+        "voice": {
+          "type": "string"
+        },
+        "opinion": {
+          "type": "string"
+        },
+        "life_before": {
+          "type": "string"
+        },
+        "inciting_event": {
+          "type": "string"
+        },
+        "present_trouble": {
+          "type": "string"
+        },
+        "want": {
+          "type": "string"
+        },
+        "need": {
+          "type": "string"
+        },
+        "wound": {
+          "type": "string"
+        },
+        "lie": {
+          "type": "string"
+        },
+        "truth": {
+          "type": "string"
+        },
+        "fear": {
+          "type": "string"
+        },
+        "worldview": {
+          "type": "string"
+        },
+        "core_drive": {
+          "type": "string"
+        },
+        "core_need": {
+          "type": "string"
+        },
+        "arc_type": {
+          "enum": [
+            "positive",
+            "flat",
+            "negative"
+          ]
+        },
+        "quirks": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "default_reaction": {
+          "type": "string"
+        },
+        "relationships": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "character"
+          }
+        },
+        "first_seen": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "link",
+          "to": "character"
+        },
+        "starting_state": {
+          "type": "string"
+        },
+        "want_this_book": {
+          "type": "string"
+        },
+        "arc_this_book": {
+          "type": "string"
+        },
+        "threads_live": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "thread"
+          }
+        },
+        "color": {
+          "type": "string"
+        }
       },
-      "board": { "default": "characters", "card": ["name", "role", "core_drive", "core_need", "arc_type", "status"] },
+      "board": {
+        "default": "characters",
+        "card": [
+          "name",
+          "role",
+          "core_drive",
+          "core_need",
+          "arc_type",
+          "status"
+        ]
+      },
       "body": "Who they are, how they sound, relationships in detail. Secrets go in a > [!secret] callout."
     },
     "place": {
@@ -340,19 +994,66 @@
       "scope": "series",
       "folder": "Places",
       "filename": "{name}",
-      "required": ["type", "name"],
-      "variants": { "delta": { "marker": "extends", "scope": "book", "folder": "Places", "required": ["type", "name", "extends"] } },
+      "required": [
+        "type",
+        "name"
+      ],
+      "variants": {
+        "delta": {
+          "marker": "extends",
+          "scope": "book",
+          "folder": "Places",
+          "required": [
+            "type",
+            "name",
+            "extends"
+          ]
+        }
+      },
       "properties": {
-        "type": { "const": "place" },
-        "name": { "type": "string" },
-        "aliases": { "type": "list", "items": { "type": "string" } },
-        "status": { "enum": "canon", "default": "draft" },
-        "ai": { "enum": ["always", "detected", "never"], "default": "detected" },
-        "kind": { "type": "string" },
-        "summary": { "type": "string" },
-        "sensory": { "type": "list", "items": { "type": "string" } },
-        "first_seen": { "type": "string" },
-        "extends": { "type": "link", "to": "place" }
+        "type": {
+          "const": "place"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": "canon",
+          "default": "draft"
+        },
+        "ai": {
+          "enum": [
+            "always",
+            "detected",
+            "never"
+          ],
+          "default": "detected"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "sensory": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "first_seen": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "link",
+          "to": "place"
+        }
       },
       "body": "Description and history. Secrets go in a > [!secret] callout."
     },
@@ -361,21 +1062,80 @@
       "scope": "series",
       "folder": "Lore",
       "filename": "{name}",
-      "required": ["type", "name"],
-      "variants": { "delta": { "marker": "extends", "scope": "book", "folder": "Lore", "required": ["type", "name", "extends"] } },
+      "required": [
+        "type",
+        "name"
+      ],
+      "variants": {
+        "delta": {
+          "marker": "extends",
+          "scope": "book",
+          "folder": "Lore",
+          "required": [
+            "type",
+            "name",
+            "extends"
+          ]
+        }
+      },
       "properties": {
-        "type": { "const": "lore" },
-        "name": { "type": "string" },
-        "aliases": { "type": "list", "items": { "type": "string" } },
-        "status": { "enum": "canon", "default": "draft" },
-        "ai": { "enum": ["always", "detected", "never"], "default": "always" },
-        "category": { "enum": ["magic", "history", "politics", "technology", "culture", "religion", "economy", "geography", "rule", "system"] },
-        "rule": { "type": "string" },
-        "cost": { "type": "string" },
-        "limits": { "type": "string" },
-        "summary": { "type": "string" },
-        "extends": { "type": "link", "to": "lore" },
-        "first_seen": { "type": "string" }
+        "type": {
+          "const": "lore"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": "canon",
+          "default": "draft"
+        },
+        "ai": {
+          "enum": [
+            "always",
+            "detected",
+            "never"
+          ],
+          "default": "always"
+        },
+        "category": {
+          "enum": [
+            "magic",
+            "history",
+            "politics",
+            "technology",
+            "culture",
+            "religion",
+            "economy",
+            "geography",
+            "rule",
+            "system"
+          ]
+        },
+        "rule": {
+          "type": "string"
+        },
+        "cost": {
+          "type": "string"
+        },
+        "limits": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "link",
+          "to": "lore"
+        },
+        "first_seen": {
+          "type": "string"
+        }
       },
       "body": "The full rule and its consequences. Secrets go in a > [!secret] callout."
     },
@@ -384,19 +1144,71 @@
       "scope": "series",
       "folder": "Items",
       "filename": "{name}",
-      "required": ["type", "name"],
-      "variants": { "delta": { "marker": "extends", "scope": "book", "folder": "Items", "required": ["type", "name", "extends"] } },
+      "required": [
+        "type",
+        "name"
+      ],
+      "variants": {
+        "delta": {
+          "marker": "extends",
+          "scope": "book",
+          "folder": "Items",
+          "required": [
+            "type",
+            "name",
+            "extends"
+          ]
+        }
+      },
       "properties": {
-        "type": { "const": "item" },
-        "name": { "type": "string" },
-        "aliases": { "type": "list", "items": { "type": "string" } },
-        "status": { "enum": "canon", "default": "draft" },
-        "ai": { "enum": ["always", "detected", "never"], "default": "detected" },
-        "kind": { "enum": ["weapon", "tool", "artefact", "consumable", "currency", "other"] },
-        "owner": { "type": "link", "to": "character" },
-        "summary": { "type": "string" },
-        "extends": { "type": "link", "to": "item" },
-        "first_seen": { "type": "string" }
+        "type": {
+          "const": "item"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": "canon",
+          "default": "draft"
+        },
+        "ai": {
+          "enum": [
+            "always",
+            "detected",
+            "never"
+          ],
+          "default": "detected"
+        },
+        "kind": {
+          "enum": [
+            "weapon",
+            "tool",
+            "artefact",
+            "consumable",
+            "currency",
+            "other"
+          ]
+        },
+        "owner": {
+          "type": "link",
+          "to": "character"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "link",
+          "to": "item"
+        },
+        "first_seen": {
+          "type": "string"
+        }
       },
       "body": "Description, stats, history. Secrets go in a > [!secret] callout."
     },
@@ -405,20 +1217,75 @@
       "scope": "series",
       "folder": "Threads",
       "filename": "{name}",
-      "required": ["type", "name", "status"],
-      "variants": { "delta": { "marker": "extends", "scope": "book", "folder": "Threads", "required": ["type", "name", "extends"] } },
+      "required": [
+        "type",
+        "name",
+        "status"
+      ],
+      "variants": {
+        "delta": {
+          "marker": "extends",
+          "scope": "book",
+          "folder": "Threads",
+          "required": [
+            "type",
+            "name",
+            "extends"
+          ]
+        }
+      },
       "properties": {
-        "type": { "const": "thread" },
-        "name": { "type": "string" },
-        "aliases": { "type": "list", "items": { "type": "string" } },
-        "status": { "enum": "thread", "default": "open" },
-        "ai": { "enum": ["always", "detected", "never"], "default": "detected" },
-        "kind": { "enum": ["main", "subplot", "romance", "mystery", "b-story", "arc"] },
-        "question": { "type": "string" },
-        "owner": { "type": "link", "to": "character" },
-        "first_seen": { "type": "string" },
-        "extends": { "type": "link", "to": "thread" },
-        "color": { "type": "string" }
+        "type": {
+          "const": "thread"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": "thread",
+          "default": "open"
+        },
+        "ai": {
+          "enum": [
+            "always",
+            "detected",
+            "never"
+          ],
+          "default": "detected"
+        },
+        "kind": {
+          "enum": [
+            "main",
+            "subplot",
+            "romance",
+            "mystery",
+            "b-story",
+            "arc"
+          ]
+        },
+        "question": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "link",
+          "to": "character"
+        },
+        "first_seen": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "link",
+          "to": "thread"
+        },
+        "color": {
+          "type": "string"
+        }
       },
       "body": "How the thread runs across the book or series. Secrets go in a > [!secret] callout."
     },
@@ -428,15 +1295,45 @@
       "folder": "Progressions",
       "idPrefix": "G",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "subject", "at", "change", "kind"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "subject",
+        "at",
+        "change",
+        "kind"
+      ],
       "properties": {
-        "type": { "const": "progression" },
-        "id": { "type": "string", "pattern": "^G-\\d{3}$" },
-        "title": { "type": "string" },
-        "subject": { "type": "link" },
-        "at": { "type": "string", "pattern": "^S-\\d{3}$" },
-        "change": { "type": "string" },
-        "kind": { "enum": ["level", "inventory", "knowledge", "relationship", "status"] }
+        "type": {
+          "const": "progression"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^G-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "link"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^S-\\d{3}$"
+        },
+        "change": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "level",
+            "inventory",
+            "knowledge",
+            "relationship",
+            "status"
+          ]
+        }
       },
       "body": "Optional detail on the change."
     },
@@ -446,21 +1343,68 @@
       "folder": "Beats",
       "idPrefix": "B",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "framework", "position", "status"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "framework",
+        "position",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "beat" },
-        "id": { "type": "string", "pattern": "^B-\\d{3}$" },
-        "title": { "type": "string" },
-        "framework": { "enum": ["three-act", "save-the-cat", "story-juice", "serial-chapter-model"] },
-        "position": { "type": "string" },
-        "order": { "type": "number" },
-        "summary": { "type": "string" },
-        "scenes": { "type": "list", "items": { "type": "string" } },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" }
+        "type": {
+          "const": "beat"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^B-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "framework": {
+          "enum": [
+            "three-act",
+            "save-the-cat",
+            "story-juice",
+            "serial-chapter-model"
+          ]
+        },
+        "position": {
+          "type": "string"
+        },
+        "order": {
+          "type": "number"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "scenes": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        }
       },
-      "board": { "default": "beat-sheet", "card": ["title", "position", "summary", "status"] },
+      "board": {
+        "default": "beat-sheet",
+        "card": [
+          "title",
+          "position",
+          "summary",
+          "status"
+        ]
+      },
       "body": "What happens in the beat and why it sits here."
     },
     "conflict": {
@@ -469,20 +1413,69 @@
       "folder": "Conflicts",
       "idPrefix": "C",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "source", "status"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "source",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "conflict" },
-        "id": { "type": "string", "pattern": "^C-\\d{3}$" },
-        "title": { "type": "string" },
-        "source": { "enum": ["personal", "extra-personal", "psychological"] },
-        "between": { "type": "list", "items": { "type": "string" } },
-        "beats": { "type": "list", "items": { "type": "string" } },
-        "feeds": { "type": "list", "items": { "type": "string" } },
-        "decided": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "status": { "enum": "proposal", "default": "inbox" }
+        "type": {
+          "const": "conflict"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^C-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "personal",
+            "extra-personal",
+            "psychological"
+          ]
+        },
+        "between": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "beats": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "feeds": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decided": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "proposal",
+          "default": "inbox"
+        }
       },
-      "board": { "default": "conflict-matrix", "card": ["title", "source", "between", "status"] },
+      "board": {
+        "default": "conflict-matrix",
+        "card": [
+          "title",
+          "source",
+          "between",
+          "status"
+        ]
+      },
       "body": "The collision in full, beat by beat."
     },
     "scene": {
@@ -491,38 +1484,141 @@
       "folder": "Scenes",
       "idPrefix": "S",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "status", "order"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "status",
+        "order"
+      ],
       "properties": {
-        "type": { "const": "scene" },
-        "id": { "type": "string", "pattern": "^S-\\d{3}$" },
-        "title": { "type": "string" },
-        "subtitle": { "type": "string" },
-        "act": { "type": "string" },
-        "chapter": { "type": "integer" },
-        "chapter_title": { "type": "string" },
-        "order": { "type": "number" },
-        "kind": { "enum": ["story", "test"], "default": "story" },
-        "pov": { "type": "link", "to": "character" },
-        "goal": { "type": "string" },
-        "turn": { "type": "string" },
-        "value_change": { "type": "string" },
-        "hook": { "type": "string" },
-        "summary": { "type": "string" },
-        "labels": { "type": "list", "items": { "type": "string" } },
-        "cast": { "type": "list", "items": { "type": "link", "to": "character" } },
-        "place": { "type": "link", "to": "place" },
-        "lore": { "type": "list", "items": { "type": "link", "to": "lore" } },
-        "reveal": { "type": "list", "items": { "type": "link" } },
-        "beat": { "type": "link", "to": "beat" },
-        "status": { "enum": "scene", "default": "planned" },
-        "accepted": { "type": "datetime" },
-        "decision_note": { "type": "string" },
-        "target_words": { "type": "integer" },
-        "words": { "type": "integer", "computed": true },
-        "published": { "type": "date" },
-        "platform": { "enum": ["rr", "kdp", "patreon", "other"] }
+        "type": {
+          "const": "scene"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^S-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "act": {
+          "type": "string"
+        },
+        "chapter": {
+          "type": "integer"
+        },
+        "chapter_title": {
+          "type": "string"
+        },
+        "order": {
+          "type": "number"
+        },
+        "kind": {
+          "enum": [
+            "story",
+            "test"
+          ],
+          "default": "story"
+        },
+        "pov": {
+          "type": "link",
+          "to": "character"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "turn": {
+          "type": "string"
+        },
+        "value_change": {
+          "type": "string"
+        },
+        "hook": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cast": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "character"
+          }
+        },
+        "place": {
+          "type": "link",
+          "to": "place"
+        },
+        "lore": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "lore"
+          }
+        },
+        "reveal": {
+          "type": "list",
+          "items": {
+            "type": "link"
+          }
+        },
+        "beat": {
+          "type": "link",
+          "to": "beat"
+        },
+        "status": {
+          "enum": "scene",
+          "default": "planned"
+        },
+        "accepted": {
+          "type": "datetime"
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "target_words": {
+          "type": "integer"
+        },
+        "words": {
+          "type": "integer",
+          "computed": true
+        },
+        "published": {
+          "type": "date"
+        },
+        "platform": {
+          "enum": [
+            "rr",
+            "kdp",
+            "patreon",
+            "other"
+          ]
+        }
       },
-      "board": { "default": "chapter-grid", "card": ["title", "subtitle", "labels", "pov", "turn", "hook", "status", "words"] },
+      "board": {
+        "default": "chapter-grid",
+        "card": [
+          "title",
+          "subtitle",
+          "labels",
+          "pov",
+          "turn",
+          "hook",
+          "status",
+          "words"
+        ]
+      },
       "body": "The prose, or for a planned scene the card notes."
     },
     "promise": {
@@ -531,17 +1627,59 @@
       "folder": "Promises",
       "idPrefix": "P",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "status"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "promise" },
-        "id": { "type": "string", "pattern": "^P-\\d{3}$" },
-        "title": { "type": "string" },
-        "kind": { "enum": ["setup", "mystery", "foreshadow", "question", "threat", "romance", "genre"] },
-        "status": { "enum": "promise", "default": "open" },
-        "importance": { "type": "integer" },
-        "planted": { "type": "list", "items": { "type": "string" } },
-        "reinforced": { "type": "list", "items": { "type": "string" } },
-        "paid": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "promise"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^P-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "setup",
+            "mystery",
+            "foreshadow",
+            "question",
+            "threat",
+            "romance",
+            "genre"
+          ]
+        },
+        "status": {
+          "enum": "promise",
+          "default": "open"
+        },
+        "importance": {
+          "type": "integer"
+        },
+        "planted": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reinforced": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "paid": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "What was promised and how it will pay off."
     },
@@ -550,15 +1688,42 @@
       "scope": "book",
       "folder": "Themes",
       "filename": "{name}",
-      "required": ["type", "name"],
+      "required": [
+        "type",
+        "name"
+      ],
       "properties": {
-        "type": { "const": "theme" },
-        "name": { "type": "string" },
-        "kind": { "enum": ["theme", "motif", "symbol"] },
-        "statement": { "type": "string" },
-        "question": { "type": "string" },
-        "keywords": { "type": "list", "items": { "type": "string" } },
-        "stances": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "theme"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "theme",
+            "motif",
+            "symbol"
+          ]
+        },
+        "statement": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stances": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "How the theme is dramatised, never stated."
     },
@@ -567,12 +1732,29 @@
       "scope": "series",
       "folder": "Previously",
       "filename": "{title}",
-      "required": ["type", "title", "book"],
+      "required": [
+        "type",
+        "title",
+        "book"
+      ],
       "properties": {
-        "type": { "const": "previously" },
-        "title": { "type": "string" },
-        "book": { "type": "link", "to": "book" },
-        "open_threads": { "type": "list", "items": { "type": "link", "to": "thread" } }
+        "type": {
+          "const": "previously"
+        },
+        "title": {
+          "type": "string"
+        },
+        "book": {
+          "type": "link",
+          "to": "book"
+        },
+        "open_threads": {
+          "type": "list",
+          "items": {
+            "type": "link",
+            "to": "thread"
+          }
+        }
       },
       "body": "What changed in series canon, open threads at the end, and the cast state table."
     },
@@ -581,17 +1763,63 @@
       "scope": "book",
       "folder": "Sessions",
       "filename": "{title}",
-      "required": ["type", "title", "date", "protocol"],
+      "required": [
+        "type",
+        "title",
+        "date",
+        "protocol"
+      ],
       "properties": {
-        "type": { "const": "session" },
-        "title": { "type": "string" },
-        "date": { "type": "datetime" },
-        "protocol": { "enum": ["room", "pitch", "develop", "outline", "draft", "notes", "revise", "table-read", "study", "reflect", "consolidate", "market", "breakdown", "import", "conversation", "other"] },
-        "topic": { "type": "string" },
-        "agent": { "type": "string" },
-        "participants": { "type": "list", "items": { "type": "string" } },
-        "outcome": { "type": "string" },
-        "ideas": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "session"
+        },
+        "title": {
+          "type": "string"
+        },
+        "date": {
+          "type": "datetime"
+        },
+        "protocol": {
+          "enum": [
+            "room",
+            "pitch",
+            "develop",
+            "outline",
+            "draft",
+            "notes",
+            "revise",
+            "table-read",
+            "study",
+            "reflect",
+            "consolidate",
+            "market",
+            "breakdown",
+            "import",
+            "conversation",
+            "other"
+          ]
+        },
+        "topic": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "participants": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "ideas": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "One ## Round heading per round, voices as > [!voice] callouts, then ## Kyle's decisions and ## Reflection."
     },
@@ -600,13 +1828,30 @@
       "scope": "book",
       "folder": "Notes to the Team",
       "filename": "{title}",
-      "required": ["type", "title", "status"],
+      "required": [
+        "type",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "note" },
-        "title": { "type": "string" },
-        "to": { "type": "string", "default": "Team" },
-        "status": { "enum": "open_done", "default": "open" },
-        "answered_in": { "type": "link", "to": "session" }
+        "type": {
+          "const": "note"
+        },
+        "title": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string",
+          "default": "Team"
+        },
+        "status": {
+          "enum": "open_done",
+          "default": "open"
+        },
+        "answered_in": {
+          "type": "link",
+          "to": "session"
+        }
       },
       "body": "The instruction in Kyle's words."
     },
@@ -615,14 +1860,32 @@
       "scope": "book",
       "folder": "Decisions",
       "filename": "{title}",
-      "required": ["type", "title", "date", "decided_by"],
+      "required": [
+        "type",
+        "title",
+        "date",
+        "decided_by"
+      ],
       "properties": {
-        "type": { "const": "decision" },
-        "title": { "type": "string" },
-        "date": { "type": "date" },
-        "decided_by": { "type": "string" },
-        "reason": { "type": "string" },
-        "supersedes": { "type": "link", "to": "decision" }
+        "type": {
+          "const": "decision"
+        },
+        "title": {
+          "type": "string"
+        },
+        "date": {
+          "type": "date"
+        },
+        "decided_by": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "supersedes": {
+          "type": "link",
+          "to": "decision"
+        }
       },
       "body": "The decision, the options weighed, and what would change it."
     },
@@ -631,78 +1894,141 @@
       "scope": "book",
       "folder": "Research",
       "filename": "{title}",
-      "required": ["type", "title", "confidence"],
+      "required": [
+        "type",
+        "title",
+        "confidence"
+      ],
       "properties": {
-        "type": { "const": "research" },
-        "title": { "type": "string" },
-        "topic": { "type": "string" },
-        "sources": { "type": "list", "items": { "type": "string" } },
-        "confidence": { "enum": ["high", "medium", "low", "unverified"] },
-        "used_in": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "research"
+        },
+        "title": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "unverified"
+          ]
+        },
+        "used_in": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "The findings, each tied to a source in the list or marked unverified."
     },
     "task": {
       "description": "A piece of work with an owner. Book tasks live in the book; vault problems (from nightly validate) live in Tasks/.",
-      "scope": ["book", "vault"],
+      "scope": [
+        "book",
+        "vault"
+      ],
       "folder": "Tasks",
       "idPrefix": "T",
       "filename": "{id} {title}",
-      "required": ["type", "id", "title", "status"],
+      "required": [
+        "type",
+        "id",
+        "title",
+        "status"
+      ],
       "properties": {
-        "type": { "const": "task" },
-        "id": { "type": "string", "pattern": "^T-\\d{3}$" },
-        "title": { "type": "string" },
-        "owner": { "type": "string" },
-        "due": { "type": "date" },
-        "status": { "enum": "task", "default": "open" }
+        "type": {
+          "const": "task"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^T-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "due": {
+          "type": "date"
+        },
+        "status": {
+          "enum": "task",
+          "default": "open"
+        }
       },
-      "board": { "default": "edit-queue", "card": ["title", "owner", "due", "status"] },
+      "board": {
+        "default": "edit-queue",
+        "card": [
+          "title",
+          "owner",
+          "due",
+          "status"
+        ]
+      },
       "body": "What needs doing and how to tell it is done."
-    },
-    "job": {
-      "description": "A request for an agent to do one piece of work, made from the app or a thread. GitHub runs requested jobs (.github/workflows/agent-jobs.yml) and the runner updates the note as it goes. Lives in Jobs/ at the vault root.",
-      "scope": "vault",
-      "folder": "Jobs",
-      "idPrefix": "J",
-      "filename": "{id} {title}",
-      "required": ["type", "id", "title", "kind", "status"],
-      "properties": {
-        "type": { "const": "job" },
-        "id": { "type": "string", "pattern": "^J-\\d{3}$" },
-        "title": { "type": "string" },
-        "kind": { "enum": ["draft", "notes", "check", "learn", "chat", "custom"] },
-        "target": { "type": "string" },
-        "book": { "type": "string" },
-        "thread": { "type": "string" },
-        "status": { "enum": "job", "default": "requested" },
-        "requested_by": { "type": "string" },
-        "agent": { "type": "string" },
-        "started": { "type": "datetime" },
-        "finished": { "type": "datetime" },
-        "cost_usd": { "type": "number" },
-        "run_url": { "type": "string" },
-        "result": { "type": "string" }
-      },
-      "board": { "default": "jobs", "card": ["title", "kind", "target", "status", "result"] },
-      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order."
     },
     "style-guide": {
       "description": "The book's voice rules. Overrides the default prose rules.",
       "scope": "book",
       "folder": "",
       "filename": "Style Guide",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "const": "style-guide" },
-        "pov": { "type": "string" },
-        "tense": { "type": "string" },
-        "voice": { "type": "string" },
-        "comps_for_voice": { "type": "list", "items": { "type": "string" } },
-        "banned": { "type": "list", "items": { "type": "string" } },
-        "emdash_max": { "type": "integer", "default": 4 },
-        "lint_disable": { "type": "list", "items": { "type": "string" } },
-        "anchors": { "type": "list", "items": { "type": "link" } }
+        "type": {
+          "const": "style-guide"
+        },
+        "pov": {
+          "type": "string"
+        },
+        "tense": {
+          "type": "string"
+        },
+        "voice": {
+          "type": "string"
+        },
+        "comps_for_voice": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "banned": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "emdash_max": {
+          "type": "integer",
+          "default": 4
+        },
+        "lint_disable": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anchors": {
+          "type": "list",
+          "items": {
+            "type": "link"
+          }
+        }
       },
       "body": "The voice in plain words, with short approved examples."
     },
@@ -711,10 +2037,16 @@
       "scope": "book",
       "folder": "",
       "filename": "Story So Far",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "const": "story-so-far" },
-        "as_of": { "type": "string" }
+        "type": {
+          "const": "story-so-far"
+        },
+        "as_of": {
+          "type": "string"
+        }
       },
       "body": "What has happened so far, chapter by chapter."
     },
@@ -723,9 +2055,13 @@
       "scope": "book",
       "folder": "",
       "filename": "Braindump",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "const": "braindump" }
+        "type": {
+          "const": "braindump"
+        }
       },
       "body": "Free text from Kyle. Agents read it; they never edit it."
     },
@@ -735,18 +2071,49 @@
       "folder": "Library",
       "recursive": true,
       "filename": "{title}",
-      "required": ["type", "title"],
+      "required": [
+        "type",
+        "title"
+      ],
       "properties": {
-        "type": { "const": "knowledge" },
-        "title": { "type": "string" },
-        "shelf": { "type": "string" },
-        "framework": { "type": "string" },
-        "sources": { "type": "list", "items": { "type": "string" } },
-        "topic": { "type": "string" },
-        "researched": { "type": "date" },
-        "confidence": { "enum": ["high", "medium", "low", "unverified"] },
-        "author_agent": { "type": "string" },
-        "status": { "enum": "canon" }
+        "type": {
+          "const": "knowledge"
+        },
+        "title": {
+          "type": "string"
+        },
+        "shelf": {
+          "type": "string"
+        },
+        "framework": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topic": {
+          "type": "string"
+        },
+        "researched": {
+          "type": "date"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "unverified"
+          ]
+        },
+        "author_agent": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "canon"
+        }
       },
       "body": "The craft knowledge, with the framework or source named."
     },
@@ -755,13 +2122,36 @@
       "scope": "vault",
       "folder": "Library/Reader Personas",
       "filename": "{name}",
-      "required": ["type", "name"],
+      "required": [
+        "type",
+        "name"
+      ],
       "properties": {
-        "type": { "const": "persona" },
-        "name": { "type": "string" },
-        "platform": { "enum": ["ku", "royal-road", "general"] },
-        "reads_for": { "type": "list", "items": { "type": "string" } },
-        "drops_when": { "type": "list", "items": { "type": "string" } }
+        "type": {
+          "const": "persona"
+        },
+        "name": {
+          "type": "string"
+        },
+        "platform": {
+          "enum": [
+            "ku",
+            "royal-road",
+            "general"
+          ]
+        },
+        "reads_for": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drops_when": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "body": "Who this reader is, what they love, what makes them stop reading, how they report."
     },
@@ -771,23 +2161,184 @@
       "folder": null,
       "filename": null,
       "extraProperties": true,
-      "required": ["type", "title"],
+      "required": [
+        "type",
+        "title"
+      ],
       "properties": {
-        "type": { "const": "system-doc" },
-        "title": { "type": "string" }
+        "type": {
+          "const": "system-doc"
+        },
+        "title": {
+          "type": "string"
+        }
       },
       "body": "The document."
+    },
+    "job": {
+      "description": "A request for an agent to do one piece of work, made from the app or a thread. GitHub runs requested jobs (.github/workflows/agent-jobs.yml) and the runner updates the note as it goes. Lives in Jobs/ at the vault root.",
+      "scope": "vault",
+      "folder": "Jobs",
+      "idPrefix": "J",
+      "filename": "{id} {title}",
+      "required": [
+        "type",
+        "id",
+        "title",
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "type": {
+          "const": "job"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^J-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "draft",
+            "notes",
+            "check",
+            "learn",
+            "chat",
+            "rewrite",
+            "table-read",
+            "ideas",
+            "import",
+            "custom"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "book": {
+          "type": "string"
+        },
+        "thread": {
+          "type": "string"
+        },
+        "status": {
+          "enum": "job",
+          "default": "requested"
+        },
+        "requested_by": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "started": {
+          "type": "datetime"
+        },
+        "finished": {
+          "type": "datetime"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "run_url": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        }
+      },
+      "board": {
+        "default": "jobs",
+        "card": [
+          "title",
+          "kind",
+          "target",
+          "status",
+          "result"
+        ]
+      },
+      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order."
     }
   },
   "boards": {
-    "chapter-grid": { "title": "Chapter Grid", "types": ["scene"], "groupBy": "chapter", "sortBy": "order", "phase": 1 },
-    "market": { "title": "Market", "types": ["market-thesis", "comp", "keyword-set", "title-candidate"], "groupBy": "type", "phase": 2 },
-    "ideas": { "title": "Ideas", "types": ["idea"], "groupBy": "status", "phase": 2 },
-    "story-juice": { "title": "Story Juice", "types": ["idea"], "groupBy": "kind", "phase": 3 },
-    "beat-sheet": { "title": "Beat Sheet", "types": ["beat"], "groupBy": "framework", "sortBy": "order", "phase": 3 },
-    "characters": { "title": "Characters", "types": ["character"], "groupBy": "role", "phase": 3 },
-    "conflict-matrix": { "title": "Conflict Matrix", "types": ["conflict"], "groupBy": "source", "phase": 3 },
-    "edit-queue": { "title": "Edit Queue", "types": ["task", "idea"], "groupBy": "status", "phase": 4 },
-    "jobs": { "title": "Jobs", "types": ["job"], "groupBy": "status", "phase": 6 }
+    "chapter-grid": {
+      "title": "Chapter Grid",
+      "types": [
+        "scene"
+      ],
+      "groupBy": "chapter",
+      "sortBy": "order",
+      "phase": 1
+    },
+    "market": {
+      "title": "Market",
+      "types": [
+        "market-thesis",
+        "comp",
+        "keyword-set",
+        "title-candidate"
+      ],
+      "groupBy": "type",
+      "phase": 2
+    },
+    "ideas": {
+      "title": "Ideas",
+      "types": [
+        "idea"
+      ],
+      "groupBy": "status",
+      "phase": 2
+    },
+    "story-juice": {
+      "title": "Story Juice",
+      "types": [
+        "idea"
+      ],
+      "groupBy": "kind",
+      "phase": 3
+    },
+    "beat-sheet": {
+      "title": "Beat Sheet",
+      "types": [
+        "beat"
+      ],
+      "groupBy": "framework",
+      "sortBy": "order",
+      "phase": 3
+    },
+    "characters": {
+      "title": "Characters",
+      "types": [
+        "character"
+      ],
+      "groupBy": "role",
+      "phase": 3
+    },
+    "conflict-matrix": {
+      "title": "Conflict Matrix",
+      "types": [
+        "conflict"
+      ],
+      "groupBy": "source",
+      "phase": 3
+    },
+    "edit-queue": {
+      "title": "Edit Queue",
+      "types": [
+        "task",
+        "idea"
+      ],
+      "groupBy": "status",
+      "phase": 4
+    },
+    "jobs": {
+      "title": "Jobs",
+      "types": [
+        "job"
+      ],
+      "groupBy": "status",
+      "phase": 6
+    }
   }
 }

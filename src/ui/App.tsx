@@ -9,8 +9,11 @@ import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createTask, type NewTask } from '../lib/tasks.ts';
-import { createJob, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { createScene, mentionsOf, orderBetween } from '../lib/scenes.ts';
+import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
+import { createScene, mentionsOf, orderBetween, renameScene } from '../lib/scenes.ts';
+import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
+import { jobAsk } from '../lib/jobs.ts';
+import { loadDrafts } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups } from '../lib/board.ts';
@@ -19,7 +22,8 @@ import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
-import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
+import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
+import { Shell } from './Shell.tsx';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { Home, SeriesPage } from './Home.tsx';
@@ -29,6 +33,10 @@ import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
 import { TodoList } from './TodoList.tsx';
 import { JobsScreen } from './Jobs.tsx';
+import { codexFor } from '../lib/codex.ts';
+import { ChapterPage } from './ChapterPage.tsx';
+import { MatrixBoard } from './Matrix.tsx';
+import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { chatJob, conversation, isThread, nextChatThread } from '../lib/chat.ts';
 
@@ -281,6 +289,64 @@ export function App() {
     }
   }, [source, runSync]);
 
+  const onJobRef = useRef(onJob);
+  onJobRef.current = onJob;
+
+  /** A scene card's new title: the file is renamed to match, then the boards sync. */
+  const onRename = useCallback(async (note: NoteRecord, title: string): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to change a title.';
+    const d = loadDrafts(source.key)[note.path];
+    if (d && d.body !== d.baseBody) return 'This scene has writing that has not reached the vault yet. Open it and press Done first, then change the title.';
+    try {
+      await renameScene(source, note, title);
+      await runSync();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
+  /** Save a manuscript from the device in the book's Research folder, unchanged, and ask the team to bring it in as scenes. */
+  const onImport = useCallback(async (book: BookEntry, file: File): Promise<{ error: boolean; text: string }> => {
+    const problem = manuscriptProblem(file.name, file.size);
+    if (problem) return { error: true, text: problem };
+    if (!navigator.onLine || !source.write) return { error: true, text: 'Connect to the internet to bring in a manuscript.' };
+    try {
+      const { files } = await source.tree();
+      const path = manuscriptPath(book.folder, file.name, files.map((f) => f.path));
+      const why = 'manuscripts: add ' + path.slice(path.lastIndexOf('/') + 1) + '\n\nAdded in the Story Forge app to bring in as scenes.';
+      if (/\.docx$/i.test(path)) {
+        if (!source.writeBytes) return { error: true, text: 'This vault cannot take Word files from the app.' };
+        await source.writeBytes(path, await fileBase64(file), '', why);
+      } else await source.write(path, await file.text(), '', why);
+      const rel = path.slice(book.folder.length + 1);
+      const r = await onJobRef.current({ title: 'Bring in ' + file.name.replace(/\.[^.]+$/, ''), kind: 'import', target: rel, book: book.folder, ask: jobAsk('import', rel, '') });
+      return r.error ? r : { error: false, text: 'Saved ' + rel + '. The team is bringing it in as scenes; see Jobs.' };
+    } catch (e) {
+      return { error: true, text: (e as Error).message };
+    }
+  }, [source]);
+
+  const onCreateSeries = useCallback(async (name: string, genre: string): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to start a series.';
+    try { const n = await createSeries(source, name, genre, new Date()); await runSync(); location.hash = href.series(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+
+  const onCreateBook = useCallback(async (seriesFolder: string, seriesName: string, title: string, number: number): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to start a book.';
+    try { const n = await createBook(source, seriesFolder, seriesName, title, number, new Date()); await runSync(); location.hash = href.book(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+
+  /** Rewrite now: after the Rewrite choice reaches the vault, ask the team to do the rewrite. */
+  const onRewrite = useCallback(async (path: string, reason: string) => {
+    await runFlushRef.current();
+    const cur = snapRef.current;
+    const n = cur && cur.index.notes[path];
+    const book = cur ? cur.index.books.find((b) => path.startsWith(b.folder + '/') || path.startsWith(b.seriesFolder + '/')) : null;
+    const target = n && n.data.id ? String(n.data.id) : path;
+    await onJobRef.current({ title: defaultJobTitle('rewrite', target, n ? String(n.data.title || n.data.name || '') : ''), kind: 'rewrite', target, book: book ? book.folder : '', ask: jobAsk('rewrite', target + (n && n.data.id ? ' (' + path + ')' : ''), reason) });
+  }, []);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -361,11 +427,22 @@ export function App() {
       return (
         <Editor key={route.path} source={source} schema={schema} note={note} next={next}
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
-          book={book ? { title: book.title, folder: book.folder, groups } : null}
+          book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
           onJob={book && source.write ? onJob : undefined}
+          codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
+    }
+  }
+
+  if (route.name === 'chapter' && view && schema) {
+    const note = view.notes[route.path];
+    const book = note ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null;
+    const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
+    if (book && group) {
+      return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
+        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} />;
     }
   }
 
@@ -375,7 +452,7 @@ export function App() {
     body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
   } else if (!snap || !schema || !view) {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
-  } else if (route.name === 'write') {
+  } else if (route.name === 'write' || route.name === 'chapter') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'jobs') {
     body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;
@@ -387,26 +464,30 @@ export function App() {
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
   } else if (route.name === 'series') {
-    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} /> : <Home source={source} index={view} series />;
+    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} onCreateBook={source.write ? onCreateBook : undefined} />
+      : <Home source={source} index={view} series onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
   } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board') {
     const book = view.books.find((b) => b.folder === route.folder);
     const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas' : 'chapter-grid';
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       let screen;
-      if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
+      if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
+      else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
+      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} />;
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
           onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}
-          source={source} onCover={source.writeBytes ? onCover : undefined} onJob={source.write ? onJob : undefined} />;
+          source={source} onCover={source.writeBytes ? onCover : undefined} onJob={source.write ? onJob : undefined}
+          onRename={source.remove ? onRename : undefined} onImport={source.write ? onImport : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = screen;
     }
   } else {
-    body = <Home source={source} index={view} series={false} />;
+    body = <Home source={source} index={view} series={false} onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
   }
 
   // The top bar shows the boards of the book on screen, or else of the active book.
@@ -426,23 +507,16 @@ export function App() {
   const syncLine = syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '. Press to sync again.' : 'Not synced yet.';
   const chip = syncing ? 'Syncing…' : !online ? 'Offline' : queue.length ? 'Saving ' + queue.length + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
+  const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
+    : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings' ? route.name : '';
+  const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings' };
+  const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
+  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
+  const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
+
   return (
-    <>
-      <header class="top">
-        <a class="brand" href="#/">Story Forge</a>
-        {navBook && schema && <BoardNav schema={schema} book={navBook} current={boardKey} />}
-        <nav class="top-right" aria-label="App">
-          {source instanceof DemoSource && <a class="demo-chip" href={href.settings()} title="This is the demo vault. Add your key in Settings to see your own books."><Icon name="demo" size={18} /><span class="bar-label">Demo</span></a>}
-          <button type="button" class={'sync-chip' + (!online || drafts ? ' warn' : '')} onClick={runSync} disabled={syncing || !online} title={syncLine + (waitingText ? ' ' + waitingText : '')}>
-            <Icon name={snap && !syncing && online && !queue.length && !drafts ? 'check' : 'sync'} size={18} /><span class="bar-label">{chip}</span>
-          </button>
-          <a href={href.home()} aria-current={route.name === 'books' || route.name === 'home' || route.name === 'series' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
-          <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
-          <a href={href.chat()} aria-current={route.name === 'chat' ? 'page' : undefined} title="Chat with the team"><Icon name="chat" /><span class="bar-label">Chat</span></a>
-          <a href={href.jobs()} aria-current={route.name === 'jobs' ? 'page' : undefined} title="Jobs"><Icon name="team" /><span class="bar-label">Jobs</span></a>
-          <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
-        </nav>
-      </header>
+    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} demo={source instanceof DemoSource} title={pageTitle}
+      sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">
           {!online && waitingText && <p class="waiting">{waitingText}</p>}
@@ -450,6 +524,6 @@ export function App() {
         </div>
       )}
       <main>{body}</main>
-    </>
+    </Shell>
   );
 }

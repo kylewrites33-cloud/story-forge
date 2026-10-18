@@ -63,8 +63,23 @@ export interface VaultSource {
   writeBytes?(path: string, base64: string, sha: string, message: string): Promise<string>;
   /** A picture's bytes by blob sha. */
   readBytes?(path: string, sha: string): Promise<Blob>;
+  /** Every commit that changed a file, newest first (GitHub keeps every save). */
+  history?(path: string): Promise<SaveEntry[]>;
+  /** A file's text as it was at one commit. */
+  readAt?(path: string, commit: string): Promise<string>;
   /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
   remove?(path: string, sha: string, message: string): Promise<void>;
+}
+
+/** One save of a file, from the vault's history. */
+export interface SaveEntry {
+  commit: string;
+  /** ISO time of the save. */
+  date: string;
+  /** The commit message's first line. */
+  message: string;
+  /** Who saved it: the agent named in the commit's Agent: line, or '' for Kyle. */
+  agent: string;
 }
 
 export interface NoteRecord {
@@ -86,6 +101,8 @@ export interface SeriesEntry {
   market?: string[];
   /** File names in the series' Market/Rocket Exports folder. Missing in copies saved before the Market board. */
   rocket?: string[];
+  /** Paths of the series' places, items and lore. Missing in copies saved before names lit up in the writing screen. */
+  codex?: string[];
   /** The series note's genre line and status, for the Series view. */
   genre?: string;
   status?: string;
@@ -107,6 +124,12 @@ export interface BookEntry {
   beats?: string[];
   conflicts?: string[];
   characters?: string[];
+  /** Paths of the book's own places, items and lore (book deltas). */
+  codex?: string[];
+  /** The book's Braindump note, if it has one. */
+  braindump?: string | null;
+  /** Scene notes in the book's Archive folder. */
+  archive?: FileEntry[];
   /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
   cover?: FileEntry | null;
 }

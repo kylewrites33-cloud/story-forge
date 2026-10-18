@@ -7,7 +7,7 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'custom';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -25,6 +25,10 @@ export function jobLabel(kind: unknown): string {
     case 'check': return 'Check for AI-sounding phrases';
     case 'learn': return 'Learn from my edits';
     case 'chat': return 'A question for the team';
+    case 'rewrite': return 'Rewrite this card';
+    case 'table-read': return 'Table read';
+    case 'ideas': return 'More ideas';
+    case 'import': return 'Bring in a manuscript';
     default: return 'Ask the team';
   }
 }
@@ -80,6 +84,24 @@ export interface NewJob {
   thread?: string;
 }
 
+/** The ## Ask for the kinds the runner has no fixed steps for: exactly what to do, then Kyle's own words.
+ * The runner gives any such job to the coordinator, who follows this. */
+export function jobAsk(kind: JobKind, target: string, words: string): string {
+  const his = words.trim() ? '\n\nKyle\'s words: ' + words.trim() : '';
+  switch (kind) {
+    case 'rewrite':
+      return 'Kyle pressed Rewrite on ' + target + ' in the app. Rewrite that note now, as the agent that owns its type would, following the schema\'s `regenerate` convention: read what to change in its `decision_note`, rewrite the note\'s words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.' + his;
+    case 'table-read':
+      return 'Run a blind table read of ' + target + ' following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.' + his;
+    case 'ideas':
+      return 'Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book\'s Ideas folder.' + (words.trim() ? ' What they should be about, in his words: ' + words.trim() : ' Pick what the book needs most now, from its stage and its open questions.');
+    case 'import':
+      return 'Kyle added a manuscript from the app: `' + target + '` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book\'s last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.' + his;
+    default:
+      return words.trim();
+  }
+}
+
 function ymd(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
@@ -105,6 +127,10 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
     case 'notes': return 'Notes on ' + what;
     case 'check': return 'Check ' + what + ' for AI-sounding phrases';
     case 'learn': return "Learn from Kyle's edits";
+    case 'rewrite': return 'Rewrite ' + what;
+    case 'table-read': return 'Table read of ' + what;
+    case 'ideas': return 'More ideas' + (what ? ' for ' + what : '');
+    case 'import': return 'Bring in ' + what;
     default: return 'Ask the team';
   }
 }

@@ -1,24 +1,29 @@
 // Full-screen writing: one scene's prose in a plain text box. Each change is kept on this device straight away; it goes
 // to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
   type Draft, type SnapshotEntry
 } from '../lib/drafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
-import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
+import { archiveForJoin, archivedWhy, joinedBody, noteJoinForTeam, removeJoined, restoreArchived, splitAt, splitOff } from '../lib/scenes.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label as fieldLabel } from '../lib/format.ts';
 import { cardFields, propDef } from '../lib/schema.ts';
-import type { NoteRecord, Schema, VaultSource } from '../lib/types.ts';
+import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
-import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
+import { findAll, markList, unstyle } from '../lib/styled.ts';
+import { withBody } from '../lib/drafts.ts';
+import { propertyOrder } from '../lib/schema.ts';
+import { render } from '../lib/markdown.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -43,9 +48,9 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'card' | 'copies' | 'target' | 'tools' | 'page' | 'team';
+type Tab = 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
 
-export interface EditorBook { title: string; folder: string; groups: ChapterGroup[] }
+export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
@@ -53,7 +58,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, codex, braindump }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -68,6 +73,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
+  /** The book's characters, places, items and lore, whose names light up in the text. */
+  codex?: CodexEntry[];
+  /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
+  braindump?: NoteRecord | null;
 }) {
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
@@ -83,6 +92,17 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const commands = useRef<EditorCommands | null>(null);
   const caret = useRef<number | null>(null);
   const [made, setMade] = useState<NoteRecord | null>(null);
+  const [picked, setPicked] = useState<CodexEntry | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [repl, setRepl] = useState('');
+  const [hit, setHit] = useState(0);
+  // The codex as one key, so the names are only worked out again when a name, nickname or colour changes.
+  const codexKey = (codex || []).map((e) => e.name + '|' + e.terms.join(',') + '|' + e.color).join(';');
+  const allNames = useMemo(() => matcher(codex || []), [codexKey]);
+  const names = look.names === 'on' && (codex || []).length ? allNames : null;
+  const findQ = findOpen ? query : '';
+  const styleOpts = useMemo(() => ({ names, find: findQ }), [names, findQ]);
   const box = useRef<HTMLTextAreaElement>(null);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -228,6 +248,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         if (quiet.current) clearTimeout(quiet.current);
         save(false);
       }
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFindOpen(true);
+      }
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
@@ -280,6 +304,29 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     el.focus();
     el.setSelectionRange(a + stars.length, b + stars.length);
   };
+  /** The same commands for the plain text box, so the tool row and Find work in either view. */
+  const plainBox = (): EditorCommands => {
+    const set = (v: string, a: number, b: number) => {
+      const el = box.current;
+      if (!el) return;
+      el.value = v;
+      changed(v);
+      el.focus();
+      el.setSelectionRange(a, b);
+      caret.current = a;
+    };
+    const cur = () => box.current;
+    return {
+      bold: () => wrapPlain('**'), italic: () => wrapPlain('*'), undo: () => {}, redo: () => {},
+      highlight: () => wrapPlain('=='),
+      plain: () => { const el = cur(); if (!el) return; const r = unstyle(el.value, el.selectionStart, el.selectionEnd); set(r.text, r.start, r.end); },
+      select: (a, b) => { const el = cur(); if (!el) return; el.focus(); el.setSelectionRange(a, b); caret.current = a; },
+      replaceRange: (a, b, t) => { const el = cur(); if (!el) return; set(el.value.slice(0, a) + t + el.value.slice(b), a + t.length, a + t.length); },
+      setAll: (t) => { const el = cur(); if (el) set(t, 0, 0); }
+    };
+  };
+  const cmd = (): EditorCommands | null => (styled ? commands.current : plainBox());
+
   // Tool buttons must not take the cursor out of the page.
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
@@ -332,6 +379,11 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           {num(words)}{target ? ' / ' + num(target) : ''} words{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) : ''}
         </span>
         <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>
+        {group && group.scenes.length > 1 && (
+          <button type="button" class="bar-button" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
+            <Icon name="page" /><span class="bar-label">Whole chapter</span>
+          </button>
+        )}
         <button type="button" class="bar-button" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
         </button>
@@ -363,6 +415,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 return onAdd(group ? group.num : null, group ? group.title : '', t);
               }} chapter={group && group.num != null ? group.num : null} />}
             </nav>
+            {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
             <nav class="side-boards" aria-label="Boards">
               {boardLinks(schema, book.folder).map((l) => (
                 <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
@@ -373,17 +426,24 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         <div class="writer-page">
           <div class="writer-tools" role="toolbar" aria-label="Formatting">
             <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" {...keepFocus}
-              onClick={() => (styled ? commands.current && commands.current.bold() : wrapPlain('**'))}><b>B</b></button>
+              onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
             <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" {...keepFocus}
-              onClick={() => (styled ? commands.current && commands.current.italic() : wrapPlain('*'))}><i>I</i></button>
+              onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
+            <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
+              onClick={() => { const c = cmd(); if (c) c.plain(); }}><span class="bar-label always">Normal</span></button>
+            <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" {...keepFocus}
+              onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
             {styled && <>
               <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
               <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
             </>}
+            <button type="button" class="tool" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /></button>
             <span class="tool-gap" />
             <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="bar-label">Split here</span></button>
             {next && <button type="button" class="tool wide" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="bar-label">Join next</span></button>}
           </div>
+          {findOpen && <FindBar text={text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
+            cmd={cmd} onClose={() => setFindOpen(false)} />}
           <div class="page-head">
             <h1>{heading}</h1>
             {subtitle && <p class="page-subtitle">{subtitle}</p>}
@@ -405,7 +465,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, made.data.title].filter(Boolean).join(' ')}</a>.</p>}
           </div>
           {styled ? (
-            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} commands={commands} />
+            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} commands={commands}
+              options={styleOpts} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
           ) : <textarea
             ref={box}
             class="writer-text"
@@ -436,11 +497,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
-              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
+              {([['card', 'Card'], ['notes', 'Notes'], ['marks', 'Marks'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
-            {tab === 'card' && <CardPanel schema={schema} note={note} status={sceneStatus} link={link} />}
+            {tab === 'card' && (picked
+              ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} />
+              : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} />)}
+            {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
+            {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
             {tab === 'copies' && (
               <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
@@ -466,8 +531,9 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
 }
 
 /** The scene's card beside the page: its turn, hook and the rest, read only. */
-function CardPanel({ schema, note, status, link }: {
+function CardPanel({ schema, note, status, link, named, onPick }: {
   schema: Schema; note: NoteRecord; status: string; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+  named: { entry: CodexEntry; count: number }[]; onPick: (e: CodexEntry) => void;
 }) {
   const rows = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'words' && k !== 'status' && !isEmptyValue(note.data[k]));
   return (
@@ -481,6 +547,261 @@ function CardPanel({ schema, note, status, link }: {
       )) : <p class="hint">This scene's card is empty.</p>}
       {!isEmptyValue(note.data.decision_note) && isEmptyValue(note.data.accepted) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
       <a class="button" {...link(href.note(note.path))}>Open the whole note</a>
+      {named.length > 0 && (
+        <div>
+          <span class="panel-key">Named in this scene</span>
+          <ul class="named-list">
+            {named.map(({ entry, count }) => (
+              <li key={entry.name}>
+                <button type="button" class="link" onClick={() => onPick(entry)}>
+                  <span class="name-dot" style={{ background: entry.color }} />{entry.name}
+                </button>
+                <span class="meta"> {KIND_WORD[entry.type] || entry.type} · {count === 1 ? 'once' : count + ' times'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const KIND_WORD: Record<string, string> = { character: 'character', place: 'place', item: 'item', lore: 'lore' };
+/** What a codex card leaves out: bookkeeping, and things the heading already says. */
+const CODEX_QUIET = ['aliases', 'type', 'name', 'status', 'ai', 'created', 'updated', 'tags', 'extends', 'color', 'relationships', 'threads_live'];
+
+/** A character, place or item beside the page, opened by pressing its name in the text. */
+function CodexCard({ schema, entry, link, onBack }: {
+  schema: Schema; entry: CodexEntry; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void }; onBack: () => void;
+}) {
+  const d = entry.note.data;
+  const keys = propertyOrder(schema, entry.note.type, d).filter((k) => CODEX_QUIET.indexOf(k) < 0 && !isEmptyValue(d[k]));
+  // The note's first paragraph, without the secret callouts that come after it.
+  const intro = entry.note.body.split(/\n\s*\n/).map((p) => p.trim()).find((p) => p && !p.startsWith('>') && !p.startsWith('#')) || '';
+  return (
+    <div class="writer-panel">
+      <button type="button" class="link" onClick={onBack}><Icon name="left" size={16} />Back to the scene card</button>
+      <h3 class="codex-name"><span class="name-dot" style={{ background: entry.color }} />{entry.name}</h3>
+      <p class="hint">{KIND_WORD[entry.type] || entry.type}{entry.terms.length > 1 ? ' · also ' + entry.terms.filter((t) => t !== entry.name).join(', ') : ''}</p>
+      {intro && <div class="prose small" dangerouslySetInnerHTML={{ __html: render(intro) }} />}
+      {keys.map((k) => (
+        <div class="panel-card" key={k}>
+          <span class="panel-key">{fieldLabel(k)}</span>
+          {formatValue(k, d[k], propDef(schema, entry.note.type, k))}
+        </div>
+      ))}
+      <a class="button" {...link(href.note(entry.note.path))}>Open the whole note</a>
+    </div>
+  );
+}
+
+/** Find and replace in this scene. Matches are marked on the page; the arrows step through them. */
+function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd, onClose }: {
+  text: string; query: string; setQuery: (q: string) => void; repl: string; setRepl: (r: string) => void;
+  hit: number; setHit: (n: number) => void; cmd: () => EditorCommands | null; onClose: () => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (input.current) { input.current.focus(); input.current.select(); } }, []);
+  const found = findAll(text, query);
+  const at = found.length ? Math.min(hit, found.length - 1) : -1;
+  const go = (n: number) => {
+    if (!found.length) return;
+    const i = (n + found.length) % found.length;
+    setHit(i);
+    const c = cmd();
+    if (c) c.select(found[i], found[i] + query.length);
+  };
+  const one = () => {
+    const c = cmd();
+    if (!c || at < 0) return;
+    c.replaceRange(found[at], found[at] + query.length, repl);
+  };
+  const all = () => {
+    const c = cmd();
+    if (!c || !found.length) return;
+    let out = '', from = 0;
+    found.forEach((i) => { out += text.slice(from, i) + repl; from = i + query.length; });
+    c.setAll(out + text.slice(from));
+  };
+  return (
+    <div class="find-bar" role="search">
+      <div class="find-row">
+      <label class="search">
+        <Icon name="search" size={18} />
+        <span class="visually-hidden">Find</span>
+        <input ref={input} type="search" value={query} placeholder="Find in this scene"
+          onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(at + (e.shiftKey ? -1 : 1)); } if (e.key === 'Escape') onClose(); }} />
+      </label>
+      <span class="meta find-count">{query ? (found.length ? (at + 1) + ' of ' + found.length : 'None') : ''}</span>
+      <button type="button" class="icon-button" aria-label="Previous" disabled={!found.length} onClick={() => go(at - 1)}><Icon name="up" /></button>
+      <button type="button" class="icon-button" aria-label="Next" disabled={!found.length} onClick={() => go(at + 1)}><Icon name="down" /></button>
+      <button type="button" class="icon-button" aria-label="Close Find" onClick={onClose}><Icon name="close" /></button>
+      </div>
+      <div class="find-row">
+      <label class="search">
+        <span class="visually-hidden">Replace with</span>
+        <input type="text" value={repl} placeholder="Replace with" onInput={(e) => setRepl((e.currentTarget as HTMLInputElement).value)} />
+      </label>
+      <button type="button" disabled={at < 0} onClick={one}>Replace</button>
+      <button type="button" disabled={!found.length} onClick={all}>Replace all</button>
+      </div>
+    </div>
+  );
+}
+
+/** Highlighter marks in this scene, to jump to. */
+function MarksPanel({ text, onGo }: { text: string; onGo: (start: number, end: number) => void }) {
+  const list = markList(text);
+  return (
+    <div class="writer-panel">
+      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Normal takes the mark off. In the file a mark is ==like this==, which Obsidian shows as a highlight too.</p>
+      {list.length ? (
+        <ul class="mark-list">
+          {list.map((m) => (
+            <li key={m.at}><button type="button" class="link" onClick={() => onGo(m.at, m.at + m.text.length + 4)}><mark>{m.text.length > 80 ? m.text.slice(0, 77) + '…' : m.text}</mark></button></li>
+          ))}
+        </ul>
+      ) : <p class="hint">No marks in this scene.</p>}
+    </div>
+  );
+}
+
+/** The book's Braindump beside the page: loose notes, research and reminders, saved to Braindump.md in the book's folder. */
+function NotesPanel({ source, bookFolder, note, canSave, onChanged }: {
+  source: VaultSource; bookFolder: string | null; note: NoteRecord | null; canSave: boolean; onChanged: () => Promise<void>;
+}) {
+  const [text, setText] = useState(note ? note.body.replace(/^\n/, '') : '');
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const changedText = text !== (note ? note.body.replace(/^\n/, '') : '');
+  if (!bookFolder) return <div class="writer-panel"><p class="hint">Notes belong to a book; this scene is not in one.</p></div>;
+  const save = async () => {
+    if (!source.write || !source.readFresh) return;
+    if (!navigator.onLine) { setSaid({ error: true, text: 'Connect to the internet to save your notes.' }); return; }
+    setBusy(true);
+    setSaid(null);
+    try {
+      const path = note ? note.path : bookFolder + '/Braindump.md';
+      let sha = '', base = Frontmatter.join({ type: 'braindump' }, '\n');
+      try { const f = await source.readFresh(path); sha = f.sha; base = f.text; } catch (e) { if ((e as { status?: number }).status !== 404 && !/has no/.test((e as Error).message)) throw e; }
+      const next = withBody(base, '\n' + text.replace(/^\n+/, '').replace(/\s*$/, '\n'));
+      await source.write(path, next, sha, 'braindump: notes from the writing screen\n\nWritten in the Story Forge app.');
+      await onChanged();
+      setSaid({ error: false, text: 'Saved in the book\'s Braindump note.' });
+    } catch (e) {
+      setSaid({ error: true, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div class="writer-panel">
+      <label class="reason">
+        Notes for this book: research, reminders, loose ideas. They stay beside the page while you write.
+        <textarea class="notes-box" rows={14} value={text} onInput={(e) => setText((e.currentTarget as HTMLTextAreaElement).value)} placeholder="Anything you want to keep in view" />
+      </label>
+      {canSave && <div class="buttons"><button type="button" class="primary" disabled={busy || !changedText} onClick={save}>{busy ? 'Saving…' : 'Save notes'}</button></div>}
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+      <p class="hint">Saved in the book's Braindump note, which the team reads too.</p>
+    </div>
+  );
+}
+
+const when = (iso: string) => {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+/** Every save of this scene from the vault's history, newest first, with Go back to this version. */
+function HistoryList({ source, note, body, canSave, keep, onUse }: {
+  source: VaultSource; note: NoteRecord; body: string; canSave: boolean;
+  keep: (text: string, name: string) => Promise<boolean>; onUse: (body: string) => void;
+}) {
+  const [list, setList] = useState<SaveEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<{ entry: SaveEntry; body: string } | null>(null);
+  const [showing, setShowing] = useState(false);
+  if (!source.history || !source.readAt) return null;
+  const load = async () => {
+    setShowing(true);
+    if (!navigator.onLine) { setError('Connect to the internet to see the history.'); return; }
+    try { setList(await source.history!(note.path)); setError(null); } catch (e) { setError((e as Error).message); }
+  };
+  const view = async (entry: SaveEntry) => {
+    try { setOpen({ entry, body: Frontmatter.parse(await source.readAt!(note.path, entry.commit)).body }); } catch (e) { setError((e as Error).message); }
+  };
+  const now = bodyWords(body);
+  if (!showing) return <div><span class="panel-key">Every save</span><p class="hint">The vault keeps every save of this scene, yours and the team's.</p><button type="button" onClick={load}><Icon name="history" size={18} />Show every save</button></div>;
+  return (
+    <div>
+      <span class="panel-key">Every save</span>
+      {error && <p class="error">{error}</p>}
+      {open ? (
+        <div class="copy-view">
+          <p><strong>{when(open.entry.date)}</strong> · {open.entry.agent ? 'by the ' + open.entry.agent : 'by you'} · {num(bodyWords(open.body))} words ({bodyWords(open.body) - now >= 0 ? '+' : ''}{num(bodyWords(open.body) - now)} against now)</p>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={!canSave} onClick={async () => { if (await keep(body, 'before going back to ' + open.entry.date.slice(0, 10))) { onUse(open.body); setOpen(null); } }}>Go back to this version</button>
+            <button type="button" onClick={() => setOpen(null)}>Close</button>
+          </div>
+          <pre class="copy-text">{splitLead(open.body).text}</pre>
+        </div>
+      ) : list && (list.length ? (
+        <ul class="copy-list history">
+          {list.map((e) => (
+            <li key={e.commit}>
+              <button type="button" class="link" onClick={() => view(e)}>{when(e.date)}</button>
+              <span class="meta"> {e.agent ? e.agent : 'You'} · {e.message.replace(/^[a-z-]+: /, '')}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p class="hint">No saves found.</p>)}
+    </div>
+  );
+}
+
+/** Joined or removed scenes in the book's Archive folder, with Restore. */
+function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
+  source: VaultSource; files: FileEntry[]; bookFolder: string; canSave: boolean; onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [sure, setSure] = useState<{ file: FileEntry; why: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = (f: FileEntry) => f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.md$/, '');
+  const ask = async (f: FileEntry) => {
+    setError(null);
+    try { setSure({ file: f, why: archivedWhy(await source.read(f.path, f.sha)) }); } catch (e) { setError((e as Error).message); }
+  };
+  const restore = async () => {
+    if (!sure) return;
+    if (!navigator.onLine) { setError('Connect to the internet to restore a scene.'); return; }
+    setBusy(true);
+    try { await restoreArchived(source, sure.file, bookFolder); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <div class="side-archive">
+      <button type="button" class="side-add" aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="archive" size={18} />Archive ({files.length})</button>
+      {open && (
+        <ul class="archive-list">
+          {files.map((f) => (
+            <li key={f.path}>
+              <span>{name(f)}</span>
+              {canSave && <button type="button" class="link" onClick={() => ask(f)}>Restore</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {sure && (
+        <div class="side-add-form">
+          <p class="hint">{sure.why ? sure.why + ' ' : ''}Restore puts {name(sure.file)} back in its old place.{/^Joined/.test(sure.why) ? ' Its words are still in the scene it joined too, so take them out there if you only want them once.' : ''}</p>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={busy} onClick={restore}>{busy ? 'Restoring…' : 'Restore'}</button>
+            <button type="button" onClick={() => setSure(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {error && <p class="error">{error}</p>}
     </div>
   );
 }
@@ -583,8 +904,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
   const send = async (kind: JobKind, target: string, words = '') => {
     setBusy(kind);
     setSaid(null);
-    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' ? '' : title);
-    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: words });
+    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' ? '' : title);
+    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: kind === 'table-read' ? jobAsk(kind, target, words) : words });
     setBusy('');
     setSaid(r);
     if (!r.error && kind === 'custom') { setAsk(''); setAsking(false); }
@@ -597,6 +918,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('notes', chapterTarget)}>{busy === 'notes' ? 'Sending…' : 'Notes on this chapter'}</button>
+      <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('table-read', chapterTarget, '')}>{busy === 'table-read' ? 'Sending…' : 'Table read of this chapter'}</button>
       <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'Check for AI-sounding phrases'}</button>
       <button type="button" disabled={busy !== ''} onClick={() => send('learn', '')}>{busy === 'learn' ? 'Sending…' : 'Learn from my edits'}</button>
       {asking ? (
@@ -612,7 +934,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
         </div>
       ) : <button type="button" disabled={busy !== ''} onClick={() => { setAsking(true); setSaid(null); }}>Ask the team…</button>}
       {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
-      <p class="hint">Each press writes a job into the vault. GitHub runs it in a few minutes and the answer lands on the <a {...link(href.jobs())}>Jobs</a> screen.</p>
+      <p class="hint">Each press writes a job into the vault. The team picks it up and the answer lands on the <a {...link(href.jobs())}>Jobs</a> screen. A table read is three test readers who only see this chapter's pages.</p>
     </div>
   );
 }
@@ -735,6 +1057,7 @@ function CopiesPanel({ source, note, body, canSave, onUse }: {
           </ul>
         ) : <p class="hint">No copies of this scene yet.</p>
       )}
+      {!open && <HistoryList source={source} note={note} body={body} canSave={canSave} keep={keep} onUse={onUse} />}
     </div>
   );
 }

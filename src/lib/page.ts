@@ -7,9 +7,11 @@ export interface PageLook {
   width: 'narrow' | 'normal' | 'wide';
   font: 'serif' | 'sans' | 'readable';
   paper: 'white' | 'cream' | 'dark';
+  /** Character, place and item names underlined in their colour. */
+  names: 'on' | 'off';
 }
 
-export const DEFAULT_LOOK: PageLook = { size: 'medium', spacing: 'normal', width: 'normal', font: 'serif', paper: 'white' };
+export const DEFAULT_LOOK: PageLook = { size: 'medium', spacing: 'normal', width: 'normal', font: 'serif', paper: 'white', names: 'on' };
 
 /** The choices for each setting, in the order the Page panel shows them, with the words on their buttons. */
 export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [string, string][] }[] = [
@@ -17,7 +19,8 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'spacing', label: 'Line spacing', options: [['tight', 'Tight'], ['normal', 'Normal'], ['loose', 'Loose']] },
   { key: 'width', label: 'Page width', options: [['narrow', 'Narrow'], ['normal', 'Normal'], ['wide', 'Wide']] },
   { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)']] },
-  { key: 'paper', label: 'Paper', options: [['white', 'White'], ['cream', 'Cream'], ['dark', 'Dark']] }
+  { key: 'paper', label: 'Paper', options: [['white', 'White'], ['cream', 'Cream'], ['dark', 'Dark']] },
+  { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] }
 ];
 
 const KEY = 'story-forge.page-look';

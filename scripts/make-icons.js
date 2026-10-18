@@ -6,9 +6,9 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
-const ACCENT = [0xb4, 0x40, 0x0c];
-const CARD = [0xfb, 0xf3, 0xea];
-const DONE = [0xf2, 0xb4, 0x8a];
+const ACCENT = [0x63, 0x44, 0xd4];
+const CARD = [0xf4, 0xf1, 0xfe];
+const DONE = [0xb9, 0xa8, 0xf5];
 
 const CRC = new Int32Array(256).map((_, n) => {
   let c = n;

@@ -20,20 +20,11 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'characters', title: 'Characters', to: href.board('characters', folder), icon: 'people' },
     { key: 'conflict-matrix', title: 'Conflict Matrix', to: href.board('conflict-matrix', folder), icon: 'conflict' },
     { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', folder), icon: 'beats' },
-    { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || schema.boards[l.key])
+    { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' },
+    { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
+    { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' }
+  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || schema.boards[l.key])
     .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
-}
-
-/** The book's boards as a row of links in the top bar. */
-export function BoardNav({ schema, book, current }: { schema: Schema; book: BookEntry; current: string }) {
-  return (
-    <nav class="board-nav" aria-label="Boards">
-      {boardLinks(schema, book.folder).map((l) => (
-        <a key={l.key} href={l.to} aria-current={l.key === current ? 'page' : undefined}><Icon name={l.icon} size={18} />{l.title}</a>
-      ))}
-    </nav>
-  );
 }
 
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {

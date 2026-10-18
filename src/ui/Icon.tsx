@@ -37,7 +37,17 @@ const PATHS: Record<string, string> = {
   team: 'M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M17 14.5c3 .5 5 2.5 5 5.5',
   chat: 'M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5',
   send: 'M4 12l16-8-6 16-3-7z',
-  out: 'M14 4h6v6M20 4l-9 9M18 14v5H5V6h5'
+  out: 'M14 4h6v6M20 4l-9 9M18 14v5H5V6h5',
+  marker: 'M15 4l5 5-8.5 8.5H6.5v-5zM4 20h9',
+  up: 'M6 15l6-6 6 6',
+  down: 'M6 9l6 6 6-6',
+  history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2',
+  archive: 'M3 5h18v4H3zM5 9v10h14V9M10 13h4',
+  matrix: 'M4 4h16v16H4zM4 10h16M4 15h16M10 4v16M15 4v16',
+  queue: 'M4 6h16M4 12h10M4 18h7M17 15l3 3-3 3',
+  page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
+  upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
+  home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

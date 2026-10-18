@@ -17,7 +17,7 @@ const MOVES: Record<string, { to: string; text: string; primary?: boolean }[]> =
   dropped: [{ to: 'open', text: 'Reopen' }]
 };
 
-function TaskCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: NoteRecord; waiting?: Choice; onDecide: OnDecide }) {
+export function TaskCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: NoteRecord; waiting?: Choice; onDecide: OnDecide }) {
   const [open, setOpen] = useState(false);
   const d = note.data;
   const status = String(d.status || 'open');

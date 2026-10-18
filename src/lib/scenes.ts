@@ -4,6 +4,7 @@
 // IDs never change and are never reused; the `order` property places a scene in reading order.
 import { Frontmatter } from './frontmatter.js';
 import { saveSnapshot } from './drafts.ts';
+import { applyToText, editChange } from './ideas.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultSource } from './types.ts';
 
@@ -175,4 +176,64 @@ export async function noteJoinForTeam(source: VaultSource, bookFolder: string, f
     if ((e as { conflict?: boolean }).conflict) return null;
     throw e;
   }
+}
+
+/** An archived scene's text with the "Archived" callout taken out again. */
+export function unarchivedText(text: string): string {
+  const s = Frontmatter.split(text);
+  const strip = (b: string) => b.replace(/^(\r?\n)?> \[!note\] Archived\r?\n(?:>.*\r?\n)*/, '');
+  return s.hasFm ? s.open + (s.yaml || '') + s.close + strip(s.body) : strip(text);
+}
+
+/** What the Archived callout says about where the scene went ("Joined onto the end of S-004 Ice on the Ford ..."). */
+export function archivedWhy(text: string): string {
+  const m = /> \[!note\] Archived\r?\n> (.*)/.exec(text);
+  return m ? m[1].trim() : '';
+}
+
+/** Put an archived scene back in the book's Scenes folder, then take it out of the Archive. Its ID and order are as they
+ * were, so it comes back where it stood. */
+export async function restoreArchived(source: VaultSource, entry: FileEntry, bookFolder: string): Promise<NoteRecord> {
+  if (!source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
+  const text = await source.read(entry.path, entry.sha);
+  const name = entry.path.slice(entry.path.lastIndexOf('/') + 1);
+  const dest = bookFolder + '/Scenes/' + name;
+  const back = unarchivedText(text);
+  let sha: string;
+  try {
+    sha = await source.write(dest, back, '', 'scenes: restore ' + name.replace(/\.md$/, '') + '\n\nRestored from the book\'s Archive in the Story Forge app.');
+  } catch (e) {
+    if ((e as { conflict?: boolean }).conflict) throw new Error('A scene called ' + name.replace(/\.md$/, '') + ' is already in Scenes, so this one stays in the Archive.');
+    throw e;
+  }
+  await source.remove(entry.path, entry.sha, 'scenes: ' + name.replace(/\.md$/, '') + ' back from the Archive\n\nIt is in Scenes again.');
+  return makeNote(dest, sha, back);
+}
+
+/** A scene's file name follows its title ("S-012 Grey lies to Rue.md"). A new title writes the note under the new name
+ * (title line changed, nothing else) and then removes the old file, so the body is never lost. */
+export async function renameScene(source: VaultSource, note: NoteRecord, title: string): Promise<NoteRecord> {
+  if (!source.readFresh || !source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
+  const clean = safeTitle(title);
+  if (!clean) throw new Error('Give the scene a title first.');
+  const fresh = await source.readFresh(note.path);
+  const cur = makeNote(note.path, fresh.sha, fresh.text);
+  const id = String(cur.data.id || '');
+  const dir = note.path.slice(0, note.path.lastIndexOf('/'));
+  const dest = dir + '/' + (id ? id + ' ' : '') + clean + '.md';
+  const text = applyToText(fresh.text, editChange({ title: clean }));
+  const why = 'Renamed in the Story Forge app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
+  if (dest === note.path) {
+    const sha = await source.write(note.path, text, fresh.sha, 'scenes: retitle ' + id + '\n\n' + why);
+    return makeNote(note.path, sha, text);
+  }
+  let sha: string;
+  try {
+    sha = await source.write(dest, text, '', 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why);
+  } catch (e) {
+    if ((e as { conflict?: boolean }).conflict) throw new Error('A scene called ' + clean + ' is already there. Choose another title.');
+    throw e;
+  }
+  await source.remove(note.path, fresh.sha, 'scenes: rename ' + id + ' (old file name)\n\n' + why);
+  return makeNote(dest, sha, text);
 }

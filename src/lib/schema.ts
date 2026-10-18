@@ -72,6 +72,17 @@ export function indexedTypes(schema: Schema, phase: number): string[] {
   return out;
 }
 
+/** Note types the writing screen reads beyond the boards: places, items and lore (names that light up in the text) and
+ * the book's braindump (the Notes tab). */
+export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump'];
+
+/** Everything the app indexes: the boards' types and the writing screen's extra ones. */
+export function appTypes(schema: Schema, phase: number): string[] {
+  const out = indexedTypes(schema, phase);
+  EXTRA_TYPES.forEach((t) => { if (schema.types[t] && out.indexOf(t) < 0) out.push(t); });
+  return out;
+}
+
 /** Card text Kyle can change on a board: the card's one-line text properties and its blurb (pitch, summary, what a comp
  * proves). Never the title or ID (the file is named after them), nor who made it; a scene card also offers its status. */
 export function editableFields(schema: Schema, type: string): string[] {

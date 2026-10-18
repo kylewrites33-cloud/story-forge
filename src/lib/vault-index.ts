@@ -3,7 +3,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { basename, dirname, idNumber, toNumber } from './links.ts';
 import { rocketFiles } from './market.ts';
-import { CONFIG_PATH, indexedTypes } from './schema.ts';
+import { CONFIG_PATH, appTypes } from './schema.ts';
 import type { BookEntry, FileEntry, NoteRecord, Schema, SeriesEntry, TypeDef, VaultIndex } from './types.ts';
 
 // The same folders sf skips (SKIP_ANYWHERE and SKIP_PATHS in sf.js), plus hidden folders.
@@ -16,6 +16,9 @@ export function skipped(path: string): boolean {
   parts.pop();
   return parts.some((p) => p.charAt(0) === '.' || SKIP_ANYWHERE.has(p));
 }
+
+/** Places, items and lore: the codex beside characters, whose names light up in the writing screen. */
+export const CODEX_TYPES = ['place', 'item', 'lore'];
 
 /** The note types the Market board shows, in the order it shows them. */
 export const MARKET_TYPES = ['market-thesis', 'comp', 'keyword-set', 'title-candidate'];
@@ -54,7 +57,7 @@ export interface BuildOptions {
 
 /** The files the index needs, given the whole tree. */
 export function selectFiles(schema: Schema, files: FileEntry[], phase = 1): FileEntry[] {
-  const patterns = indexedTypes(schema, phase).map((t) => pathPattern(schema.types[t]));
+  const patterns = appTypes(schema, phase).map((t) => pathPattern(schema.types[t]));
   return files.filter((f) => f.path === CONFIG_PATH || (!skipped(f.path) && patterns.some((re) => re.test(f.path))));
 }
 
@@ -89,8 +92,14 @@ export async function buildIndex(opts: BuildOptions): Promise<VaultIndex> {
   });
   const index = assemble(schema, records, opts.phase ?? 1);
   index.series.forEach((s) => { s.rocket = rocketFiles(opts.files, s.folder); });
-  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); });
+  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); b.archive = archiveFiles(opts.files, b.folder); });
   return index;
+}
+
+/** Scene notes in the book's Archive folder (joined or removed scenes), for the scene archive with Restore. */
+export function archiveFiles(files: FileEntry[], bookFolder: string): FileEntry[] {
+  const dir = bookFolder + '/Archive/';
+  return files.filter((f) => f.path.startsWith(dir) && f.path.indexOf('/', dir.length) < 0 && /^S-\d+.*\.md$/.test(f.path.slice(dir.length)));
 }
 
 /** A book's cover: Cover.jpg, Cover.jpeg, Cover.png or Cover.webp right in the book's folder. */
@@ -128,7 +137,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   records.forEach((n) => { notes[n.path] = n; });
 
   const config = notes[CONFIG_PATH] ? notes[CONFIG_PATH].data : {};
-  const types = indexedTypes(schema, phase);
+  const types = appTypes(schema, phase);
   const patterns: Record<string, RegExp> = {};
   types.forEach((t) => { patterns[t] = pathPattern(schema.types[t]); });
 
@@ -137,6 +146,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
   const byBook: Record<string, NoteRecord[]> = {};
   const seriesChars: NoteRecord[] = [];
   const seriesMarket: NoteRecord[] = [];
+  const seriesCodex: NoteRecord[] = [];
 
   const tasks: string[] = [];
   const jobs: string[] = [];
@@ -157,7 +167,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
     if (n.type === 'job') jobs.push(n.path);
     if (n.type === 'series') {
       series.push({
-        path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [],
+        path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [], codex: [],
         genre: [n.data.genre, n.data.subgenres].map((v) => (Array.isArray(v) ? v.join(', ') : v == null ? '' : String(v))).filter(Boolean).join(' · '),
         status: n.data.status == null ? '' : String(n.data.status)
       });
@@ -177,6 +187,7 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
       if (m) (byBook[m[1]] = byBook[m[1]] || []).push(n);
       else if (n.type === 'character') seriesChars.push(n);
       else if (MARKET_TYPES.indexOf(n.type) >= 0) seriesMarket.push(n);
+      else if (CODEX_TYPES.indexOf(n.type) >= 0) seriesCodex.push(n);
     }
   });
 
@@ -188,7 +199,11 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
     const s = series.find((x) => n.path.startsWith(x.folder + '/'));
     if (s) s.market!.push(n.path);
   });
-  series.forEach((s) => { s.characters!.sort(); s.market!.sort(); });
+  seriesCodex.forEach((n) => {
+    const s = series.find((x) => n.path.startsWith(x.folder + '/'));
+    if (s) s.codex!.push(n.path);
+  });
+  series.forEach((s) => { s.characters!.sort(); s.market!.sort(); s.codex!.sort(); });
 
   books.forEach((b) => {
     const list = (byBook[b.folder] || []).filter((n) => n.type === 'scene').sort(compareScenes);
@@ -198,6 +213,9 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
     b.beats = of('beat');
     b.conflicts = of('conflict');
     b.characters = of('character');
+    b.codex = (byBook[b.folder] || []).filter((n) => CODEX_TYPES.indexOf(n.type) >= 0).map((n) => n.path).sort();
+    const dump = (byBook[b.folder] || []).find((n) => n.type === 'braindump');
+    b.braindump = dump ? dump.path : null;
     delete byBook[b.folder];
   });
   Object.keys(byBook).forEach((folder) => warnings.push(folder + ' has notes but no Book.md, so the app cannot show them.'));
