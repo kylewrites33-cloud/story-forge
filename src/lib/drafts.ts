@@ -237,6 +237,7 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
 
 function verbFor(type: string, adding: boolean): string {
   if (type === 'chapter-beats') return adding ? 'beats: add ' : 'beats: edit ';
+  if (type === 'chapter-plan') return adding ? 'plans: add ' : 'plans: edit ';
   return adding ? 'scenes: add ' : 'scenes: edit ';
 }
 

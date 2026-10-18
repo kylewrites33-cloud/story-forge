@@ -5,7 +5,18 @@
 import { mentions, type Matcher } from './codex.ts';
 
 /** What else the page marks, beyond emphasis: codex names (underlined in their colour) and the words Find is looking for. */
-export interface StyleOptions { names?: Matcher | null; find?: string }
+export interface StyleOptions {
+  names?: Matcher | null;
+  find?: string;
+  /** Show [brackets] (asks for the team) as marked words; those in `asking` (by their words) as being worked on. */
+  asks?: boolean;
+  asking?: Set<string>;
+  /** Lines the team or another place added, shown with a dot beside them. */
+  added?: Set<string>;
+}
+
+// [words] that are not [[links]], [!callouts], [^footnotes] or [text](links): the same rule as brackets.ts.
+const ASK = /\[(?![[!^])([^[\]\n]{0,400})\](?![([:\]])/g;
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -58,9 +69,18 @@ export function findAll(text: string, q: string): number[] {
 
 /** Plain text with names and Find matches wrapped; every character kept. */
 function leaf(s: string, o: StyleOptions): string {
-  if (!s || (!o.names && !o.find)) return esc(s);
+  if (!s || (!o.names && !o.find && !o.asks)) return esc(s);
   const spans: { from: number; to: number; open: string }[] = [];
-  if (o.find) findAll(s, o.find).forEach((i) => spans.push({ from: i, to: i + o.find!.length, open: '<span class="md-find">' }));
+  if (o.asks) {
+    ASK.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = ASK.exec(s))) {
+      if (m.index > 0 && s[m.index - 1] === '[') continue;
+      const busy = o.asking && o.asking.has(m[0].trim().toLowerCase());
+      spans.push({ from: m.index, to: m.index + m[0].length, open: '<span class="md-ask' + (busy ? ' asking' : '') + '">' });
+    }
+  }
+  if (o.find) findAll(s, o.find).forEach((i) => { if (!spans.some((x) => x.from < i + o.find!.length && x.to > i)) spans.push({ from: i, to: i + o.find!.length, open: '<span class="md-find">' }); });
   if (o.names) {
     mentions(s, o.names).forEach((m) => {
       if (spans.some((x) => x.from < m.to && x.to > m.from)) return;
@@ -160,7 +180,10 @@ export function markList(text: string): { at: number; text: string }[] {
 
 /** The whole text as HTML for the editor. Lines that start with ">" (callouts such as Team notes) are muted. */
 export function styledHtml(text: string, o: StyleOptions = {}): string {
-  return text.split('\n').map((line) => (/^\s*>/.test(line) ? '<span class="md-quote">' + lineHtml(line, o) + '</span>' : lineHtml(line, o))).join('\n');
+  return text.split('\n').map((line) => {
+    const html = /^\s*>/.test(line) ? '<span class="md-quote">' + lineHtml(line, o) + '</span>' : lineHtml(line, o);
+    return o.added && line.trim() && o.added.has(line) ? '<span class="md-added">' + html + '</span>' : html;
+  }).join('\n');
 }
 
 /** The text an HTML string from styledHtml holds, for tests: tags removed, entities read back. */

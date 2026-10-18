@@ -2181,6 +2181,31 @@
       },
       "body": "One `## ` heading per beat, in reading order: the beat's title. Under it, the one-line summary, then `Starts: S-NNN · <first words>`: the scene the beat sits in and the first ten words of the paragraph it starts at, copied exactly without * or = marks. A beat with no prose yet has `Starts: S-NNN` and no words. Never put beats in the scene files. See `.claude/skills/chapter-beats/SKILL.md`."
     },
+    "chapter-plan": {
+      "description": "Kyle's plan for a chapter, as many paragraphs as he likes, kept beside the prose so the scenes hold only the story. The writing screen shows it in the right-hand column (the Plan tab) and Kyle writes it there.",
+      "scope": "book",
+      "folder": "Chapter Plans",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "chapter"
+      ],
+      "properties": {
+        "type": {
+          "const": "chapter-plan"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Chapter N plan\"."
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "The chapter this plan is for."
+        }
+      },
+      "body": "Kyle's words, free text. Agents read it whenever they work on the chapter (sf packet includes it) and never edit it."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",
@@ -2329,7 +2354,9 @@
             "custom",
             "chapter-check",
             "todo-review",
-            "summaries"
+            "summaries",
+            "beats",
+            "fill"
           ]
         },
         "target": {
@@ -2377,7 +2404,7 @@
           "result"
         ]
       },
-      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order."
+      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order. For kind fill, the ask lists the [brackets] Kyle left in a scene (### B1, B2 ...) and the ## Result answers each under the same heading; the app puts the answers into the page and the agent never edits the scene."
     }
   },
   "boards": {
