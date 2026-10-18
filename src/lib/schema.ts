@@ -81,6 +81,8 @@ export function editableFields(schema: Schema, type: string): string[] {
   const skip = ['title', 'id', 'type', 'source', 'status'];
   const keys = cardFields(schema, type).concat(['pitch', 'summary', 'proves']).filter((k, i, a) => a.indexOf(k) === i);
   const out = keys.filter((k) => skip.indexOf(k) < 0 && props[k] && props[k].type === 'string' && !props[k].computed);
+  // Labels are a list, edited as one line with commas.
+  if (type === 'scene' && props.labels) out.push('labels');
   if (type === 'scene' && props.status) out.push('status');
   return out;
 }

@@ -84,6 +84,12 @@ export interface Change {
   fields?: Record<string, string>;
 }
 
+/** Card fields that are lists in the note but edited as one line with commas. */
+export const LIST_FIELDS = ['labels'];
+export function splitList(v: string): string[] {
+  return v.split(',').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
 /** One line per value: a card edit never writes a line break into a property. */
 export function cleanField(v: string): string {
   return v.replace(/\s+/g, ' ').trim();
@@ -134,7 +140,11 @@ export function applyToData(data: Record<string, unknown>, c: Change): Record<st
     out.chapter = c.chapter;
     if (c.chapterTitle) out.chapter_title = c.chapterTitle; else delete out.chapter_title;
   }
-  if (c.fields) Object.keys(c.fields).forEach((k) => { if (c.fields![k] === '') delete out[k]; else out[k] = c.fields![k]; });
+  if (c.fields) Object.keys(c.fields).forEach((k) => {
+    const v = c.fields![k];
+    if (v === '' || (LIST_FIELDS.indexOf(k) >= 0 && !splitList(v).length)) delete out[k];
+    else out[k] = LIST_FIELDS.indexOf(k) >= 0 ? splitList(v) : v;
+  });
   return out;
 }
 
@@ -181,7 +191,10 @@ export function applyToText(text: string, c: Change): string {
   if (c.fields) {
     Object.keys(c.fields).forEach((k) => {
       const v = c.fields![k];
-      out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
+      if (LIST_FIELDS.indexOf(k) >= 0) {
+        const items = splitList(v);
+        out = setLines(out, k, items.length ? [k + ':'].concat(items.map((x) => '  - ' + Frontmatter.emitScalar(x))) : null);
+      } else out = v === '' ? setLines(out, k, null) : Frontmatter.setScalar(out, k, v);
     });
   }
   return out;

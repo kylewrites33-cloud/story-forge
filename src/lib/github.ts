@@ -115,12 +115,27 @@ export class GitHubSource implements VaultSource {
   /** Replace one file as one commit on the branch, or add a new one when `sha` is empty.
    * The commit is made with Kyle's token, so it counts as his. */
   async write(path: string, text: string, sha: string, message: string): Promise<string> {
+    return this.put(path, toBase64(text), sha, message);
+  }
+
+  /** A picture (a book cover) as base64, saved the same way as a note. */
+  async writeBytes(path: string, base64: string, sha: string, message: string): Promise<string> {
+    return this.put(path, base64, sha, message);
+  }
+
+  /** A picture's bytes, by its blob sha. */
+  async readBytes(path: string, sha: string): Promise<Blob> {
+    const res = await this.get(this.repoUrl('/git/blobs/' + sha), path, 'application/vnd.github.raw+json');
+    return res.blob();
+  }
+
+  private async put(path: string, content: string, sha: string, message: string): Promise<string> {
     let res: Response;
     try {
       res = await this.fetch(this.contentsUrl(path), {
         method: 'PUT',
         headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(sha ? { message, content: toBase64(text), sha, branch: this.s.branch } : { message, content: toBase64(text), branch: this.s.branch })
+        body: JSON.stringify(sha ? { message, content, sha, branch: this.s.branch } : { message, content, branch: this.s.branch })
       });
     } catch {
       throw new GitHubError('Cannot reach GitHub. Your choice is saved on this device and goes up when the connection is back.', 0);

@@ -89,7 +89,18 @@ export async function buildIndex(opts: BuildOptions): Promise<VaultIndex> {
   });
   const index = assemble(schema, records, opts.phase ?? 1);
   index.series.forEach((s) => { s.rocket = rocketFiles(opts.files, s.folder); });
+  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); });
   return index;
+}
+
+/** A book's cover: Cover.jpg, Cover.jpeg, Cover.png or Cover.webp right in the book's folder. */
+export const COVER_NAMES = ['Cover.jpg', 'Cover.jpeg', 'Cover.png', 'Cover.webp'];
+export function coverFile(files: FileEntry[], bookFolder: string): FileEntry | null {
+  for (const name of COVER_NAMES) {
+    const f = files.find((x) => x.path === bookFolder + '/' + name);
+    if (f) return f;
+  }
+  return null;
 }
 
 /** Sort scenes the way sf does: by order, then chapter, then ID number. */
@@ -143,7 +154,11 @@ export function assemble(schema: Schema, records: NoteRecord[], phase = 1): Vaul
     }
     if (n.type === 'task') tasks.push(n.path);
     if (n.type === 'series') {
-      series.push({ path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [] });
+      series.push({
+        path: n.path, folder: dirname(n.path), name: String(n.data.name || basename(dirname(n.path))), characters: [], market: [],
+        genre: [n.data.genre, n.data.subgenres].map((v) => (Array.isArray(v) ? v.join(', ') : v == null ? '' : String(v))).filter(Boolean).join(' · '),
+        status: n.data.status == null ? '' : String(n.data.status)
+      });
     } else if (n.type === 'book') {
       const folder = dirname(n.path);
       const seriesFolder = folder.replace(/\/Books\/[^/]+$/, '');

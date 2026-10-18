@@ -33,6 +33,13 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   Target, Split and join). The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. One top bar holds the book's boards, a sync button, Books, To-do and Settings. A Chapter Grid
   card opens the writing screen; Needs work, Edit card and the note sit behind its "•••" button.
+  Novelcrafter-style additions (Kyle, 2026-10-18): the app opens on a home page (Books or Series, "Continue where you
+  left off" from the scenes last opened on this device, cover cards or a list, search and sort) and a page per series.
+  A book's cover is `Cover.jpg` in the book's folder, shrunk on the device before saving; a book without one gets a
+  pattern from its title. Empty pages offer buttons (Create first scene, Start from an outline: pasted lines become
+  planned scenes). Chapter Grid: coloured status edge, scene `labels` and `subtitle`, a filter box, Cards or Outline,
+  pages and reading time (rates in Settings). Writing screen: Focus mode, a Page tab (size, spacing, width, font,
+  paper, per device) and a strip of the chapter's scenes sized by length.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -68,6 +75,10 @@ src/lib/market.ts        Publisher Rocket files: the ones a series has, safe nam
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
+src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
+src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
+src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
+src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/ui/                  screens (Preact)

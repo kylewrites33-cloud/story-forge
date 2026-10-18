@@ -11,7 +11,7 @@ export function EditFields({ schema, note, fields, onSave, onClose }: {
   onSave: (changed: Record<string, string>) => void;
   onClose: () => void;
 }) {
-  const start = (k: string) => (note.data[k] == null ? '' : String(note.data[k]));
+  const start = (k: string) => (note.data[k] == null ? '' : Array.isArray(note.data[k]) ? (note.data[k] as unknown[]).join(', ') : String(note.data[k]));
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((k) => [k, start(k)])));
   const save = () => {
     const changed: Record<string, string> = {};
@@ -27,7 +27,7 @@ export function EditFields({ schema, note, fields, onSave, onClose }: {
         const set = (v: string) => setValues({ ...values, [k]: v });
         return (
           <label key={k}>
-            {label(k)}
+            {label(k)}{k === 'labels' ? ' (separate them with commas, for example flashback, needs research)' : ''}
             {choices.length
               ? <select value={values[k]} onChange={(e) => set((e.currentTarget as HTMLSelectElement).value)}>
                 {choices.map((c) => <option key={c} value={c}>{c}</option>)}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 export type Route =
   | { name: 'home' }
   | { name: 'books' }
+  | { name: 'series'; folder: string }
   | { name: 'book'; folder: string }
   | { name: 'ideas'; folder: string }
   | { name: 'board'; board: string; folder: string }
@@ -16,6 +17,7 @@ export function parseHash(hash: string): Route {
   const [head, ...rest] = h.split('/');
   const tail = decodeURIComponent(rest.join('/'));
   if (head === 'books') return { name: 'books' };
+  if (head === 'series') return { name: 'series', folder: tail };
   if (head === 'book' && tail) return { name: 'book', folder: tail };
   if (head === 'ideas' && tail) return { name: 'ideas', folder: tail };
   if (head === 'board' && rest.length > 1) return { name: 'board', board: rest[0], folder: decodeURIComponent(rest.slice(1).join('/')) };
@@ -28,6 +30,9 @@ export function parseHash(hash: string): Route {
 
 export const href = {
   books: () => '#/books',
+  home: () => '#/',
+  allSeries: () => '#/series',
+  series: (folder: string) => '#/series/' + encodeURIComponent(folder),
   book: (folder: string) => '#/book/' + encodeURIComponent(folder),
   ideas: (folder: string) => '#/ideas/' + encodeURIComponent(folder),
   board: (board: string, folder: string) => '#/board/' + board + '/' + encodeURIComponent(folder),

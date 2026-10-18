@@ -59,6 +59,10 @@ export interface VaultSource {
   /** Replace a file whose current blob sha is `sha`, or add a new file when `sha` is '', as one commit. Returns the new blob sha.
    * Throws an error with `conflict: true` when the file changed since `sha`. */
   write?(path: string, text: string, sha: string, message: string): Promise<string>;
+  /** Save a picture given as base64, as write does for text. Returns the new blob sha. */
+  writeBytes?(path: string, base64: string, sha: string, message: string): Promise<string>;
+  /** A picture's bytes by blob sha. */
+  readBytes?(path: string, sha: string): Promise<Blob>;
   /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
   remove?(path: string, sha: string, message: string): Promise<void>;
 }
@@ -82,6 +86,9 @@ export interface SeriesEntry {
   market?: string[];
   /** File names in the series' Market/Rocket Exports folder. Missing in copies saved before the Market board. */
   rocket?: string[];
+  /** The series note's genre line and status, for the Series view. */
+  genre?: string;
+  status?: string;
 }
 
 export interface BookEntry {
@@ -100,6 +107,8 @@ export interface BookEntry {
   beats?: string[];
   conflicts?: string[];
   characters?: string[];
+  /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
+  cover?: FileEntry | null;
 }
 
 export interface VaultIndex {
