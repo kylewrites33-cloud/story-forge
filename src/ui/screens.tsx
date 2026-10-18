@@ -38,10 +38,6 @@ export function IdeasLink({ index, book }: { index: VaultIndex; book: BookEntry 
   );
 }
 
-function StatusPill({ value }: { value: string }) {
-  return <span class={'pill pill-' + value.replace(/[^a-z-]/gi, '')}>{value}</span>;
-}
-
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 /** A scene card's new title: the file is renamed to match. Returns a plain sentence when it did not work. */
 export type OnRename = (note: NoteRecord, title: string) => Promise<string | null>;
@@ -140,10 +136,10 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
     <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
       <a class={'card status-' + (status || 'none').replace(/[^a-z-]/gi, '')} href={onDecide ? href.write(note.path) : href.note(note.path)}>
         <span class="card-top">
-          <span class="card-id">{String(note.data.id || '')}{note.data.kind === 'test' ? ' · test drive' : ''}</span>
+          {/* No scene ID or status word on the grid; the coloured edge shows the status (Kyle, 2026-10-18, an experiment). */}
+          <span class="card-id">{note.data.kind === 'test' ? 'Test drive' : ''}</span>
           <span class="pills">
             {accepted && <span class="pill pill-accepted">Accepted</span>}
-            {fields.indexOf('status') >= 0 && status && <StatusPill value={status} />}
           </span>
         </span>
         <span class="card-title">{title}</span>
@@ -321,13 +317,12 @@ function OutlineView({ groups }: { groups: ReturnType<typeof chapterGroups> }) {
               return (
                 <li key={s.path} class={'status-' + st.replace(/[^a-z-]/gi, '')}>
                   <a href={href.write(s.path)}>
-                    <span class="outline-title"><span class="card-id">{String(s.data.id || '')}</span> {sceneHeader(s.data, basename(s.path))}</span>
+                    <span class="outline-title">{sceneHeader(s.data, basename(s.path))}</span>
                     {!isEmptyValue(s.data.subtitle) && <span class="card-subtitle">{String(s.data.subtitle)}</span>}
                     {line && <span class="outline-line">{line}</span>}
                   </a>
                   <span class="labels">
                     {labelsOf(s.data.labels).map((l) => <Label key={l} name={l} />)}
-                    <StatusPill value={st} />
                   </span>
                 </li>
               );
