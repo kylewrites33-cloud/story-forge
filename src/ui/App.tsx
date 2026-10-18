@@ -29,6 +29,7 @@ import { Shell } from './Shell.tsx';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, Home, SeriesPage } from './Home.tsx';
+import { makeBackupFolder } from '../lib/docx.ts';
 import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
@@ -373,12 +374,12 @@ export function App() {
 
   const onCreateSeries = useCallback(async (name: string, genre: string): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to start a series.';
-    try { const n = await createSeries(source, name, genre, new Date()); await runSync(); location.hash = href.series(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+    try { const n = await createSeries(source, name, genre, new Date()); await makeBackupFolder(source, String(n.data.name || name)); await runSync(); location.hash = href.series(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
   }, [source, runSync]);
 
   const onCreateBook = useCallback(async (seriesFolder: string, seriesName: string, title: string, number: number): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to start a book.';
-    try { const n = await createBook(source, seriesFolder, seriesName, title, number, new Date()); await runSync(); location.hash = href.book(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+    try { const n = await createBook(source, seriesFolder, seriesName, title, number, new Date()); await makeBackupFolder(source, seriesName, String(n.data.title || title)); await runSync(); location.hash = href.book(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
   }, [source, runSync]);
 
   /** Rewrite now: after the Rewrite choice reaches the vault, ask the team to do the rewrite. */
