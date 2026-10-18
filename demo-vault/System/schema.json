@@ -28,7 +28,8 @@
     "open_done": ["open", "done"],
     "thread": ["open", "resolved", "dropped"],
     "promise": ["open", "paid", "subverted", "dropped"],
-    "task": ["open", "doing", "done", "dropped"]
+    "task": ["open", "doing", "done", "dropped"],
+    "job": ["requested", "running", "done", "failed", "cancelled"]
   },
   "common": {
     "description": "Properties every type accepts. created and updated are dates; updated is computed.",
@@ -659,6 +660,33 @@
       "board": { "default": "edit-queue", "card": ["title", "owner", "due", "status"] },
       "body": "What needs doing and how to tell it is done."
     },
+    "job": {
+      "description": "A request for an agent to do one piece of work, made from the app or a thread. GitHub runs requested jobs (.github/workflows/agent-jobs.yml) and the runner updates the note as it goes. Lives in Jobs/ at the vault root.",
+      "scope": "vault",
+      "folder": "Jobs",
+      "idPrefix": "J",
+      "filename": "{id} {title}",
+      "required": ["type", "id", "title", "kind", "status"],
+      "properties": {
+        "type": { "const": "job" },
+        "id": { "type": "string", "pattern": "^J-\\d{3}$" },
+        "title": { "type": "string" },
+        "kind": { "enum": ["draft", "notes", "check", "learn", "chat", "custom"] },
+        "target": { "type": "string" },
+        "book": { "type": "string" },
+        "thread": { "type": "string" },
+        "status": { "enum": "job", "default": "requested" },
+        "requested_by": { "type": "string" },
+        "agent": { "type": "string" },
+        "started": { "type": "datetime" },
+        "finished": { "type": "datetime" },
+        "cost_usd": { "type": "number" },
+        "run_url": { "type": "string" },
+        "result": { "type": "string" }
+      },
+      "board": { "default": "jobs", "card": ["title", "kind", "target", "status", "result"] },
+      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order."
+    },
     "style-guide": {
       "description": "The book's voice rules. Overrides the default prose rules.",
       "scope": "book",
@@ -759,6 +787,7 @@
     "beat-sheet": { "title": "Beat Sheet", "types": ["beat"], "groupBy": "framework", "sortBy": "order", "phase": 3 },
     "characters": { "title": "Characters", "types": ["character"], "groupBy": "role", "phase": 3 },
     "conflict-matrix": { "title": "Conflict Matrix", "types": ["conflict"], "groupBy": "source", "phase": 3 },
-    "edit-queue": { "title": "Edit Queue", "types": ["task", "idea"], "groupBy": "status", "phase": 4 }
+    "edit-queue": { "title": "Edit Queue", "types": ["task", "idea"], "groupBy": "status", "phase": 4 },
+    "jobs": { "title": "Jobs", "types": ["job"], "groupBy": "status", "phase": 6 }
   }
 }

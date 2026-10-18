@@ -21,7 +21,7 @@ async function phase3() {
 }
 
 test('the app indexes the Story Juice boards', () => {
-  assert.equal(PHASE, 4);
+  assert.equal(PHASE, 6);
 });
 
 test('a character pattern covers series notes and book deltas', () => {
