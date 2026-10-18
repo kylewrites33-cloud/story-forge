@@ -7,7 +7,8 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
+  | 'next-step' | 'forge';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -34,6 +35,8 @@ export function jobLabel(kind: unknown): string {
     case 'summaries': return 'Scene summaries';
     case 'beats': return 'Beats for this chapter';
     case 'fill': return 'Fill brackets';
+    case 'next-step': return 'The next step';
+    case 'forge': return 'Forge a new specialist';
     default: return 'Ask the team';
   }
 }
@@ -115,6 +118,12 @@ export function jobAsk(kind: JobKind, target: string, words: string): string {
         + 'If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. '
         + 'If the chapter already has a beats note, move it to the book\'s Archive folder first with a line saying why (never delete it), then write the new one.'
         + (words.trim() ? '\n\nWhat the chapter should do, in Kyle\'s words: ' + words.trim() : '');
+    case 'forge':
+      return 'Kyle wants a new specialist on the team: ' + (words.trim() || target) + '. Forge it the way Writers Room\'s /forge did. '
+        + 'First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). '
+        + 'Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), '
+        + 'with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. '
+        + 'Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.';
     default:
       return words.trim();
   }
@@ -153,6 +162,7 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
     case 'chapter-check': return 'Check ' + what + ' for to-dos';
     case 'todo-review': return 'Tick off fixed to-dos in ' + what;
     case 'beats': return 'Beats for ' + what;
+    case 'forge': return 'Forge a new specialist: ' + what;
     default: return 'Ask the team';
   }
 }
