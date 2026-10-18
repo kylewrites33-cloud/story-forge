@@ -302,8 +302,9 @@ function CoverButton({ source, book, onCover }: { source: VaultSource; book: Boo
 }
 
 type GridView = 'cards' | 'outline';
+// Outline first and by default (Kyle, 2026-10-18); a new key so every device starts on Outline once.
 function loadGridView(): GridView {
-  try { return localStorage.getItem('story-forge.grid-view') === 'outline' ? 'outline' : 'cards'; } catch { return 'cards'; }
+  try { return localStorage.getItem('story-forge.grid-view-2') === 'cards' ? 'cards' : 'outline'; } catch { return 'outline'; }
 }
 
 /** The Outline view: chapter headings with one line per scene, nothing else. */
@@ -472,8 +473,8 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
             <input type="search" value={query} placeholder="Filter: a name, a word, a label…" onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)} />
           </label>
           <div class="seg small" role="group" aria-label="View as">
-            {(['cards', 'outline'] as GridView[]).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); try { localStorage.setItem('story-forge.grid-view', v); } catch { /* lasts until reload */ } }}>
+            {(['outline', 'cards'] as GridView[]).map((v) => (
+              <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); try { localStorage.setItem('story-forge.grid-view-2', v); } catch { /* lasts until reload */ } }}>
                 <Icon name={v} size={18} />{v === 'cards' ? 'Cards' : 'Outline'}
               </button>
             ))}
