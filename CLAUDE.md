@@ -120,6 +120,20 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  Check, Options and Listen in the writing screen (Kyle, 2026-10-18, from Writers Room): Check (tool row, and the Check
+  tab) runs the vault tool's own linter on the device, free and offline (`src/lib/lint.js` is sf.js's lint section,
+  copied by `npm run sync-parser`; `src/lib/lintcheck.ts` maps each flag back onto the page and takes the book's Style
+  Guide and the vault Config as sf lint does). It shows the score with sf lint's grade (under 2 Clean, under 5 Light,
+  under 10 Noticeable, else Heavy), rhythm numbers and the flags by paragraph; the flagged words are drawn over the page
+  with the CSS Custom Highlight API (never in the text or the file), and a flag pressed is shown in the page. Whole
+  chapter has the same Check for every scene, scored by words. The team's paid job stays as "the deeper check". Options
+  (the Ask the team row) asks for Expand, Describe, Tighten (20 to 40% shorter) or More like my voice on the words picked
+  or the paragraph at the cursor: an `options` job carrying the exact passage, answered as `### Option 1/2/3` in its
+  ## Result (`src/lib/options.ts`). The Options tab shows them; Use this one saves a copy of the scene, then swaps the
+  passage only if it is still there word for word (otherwise Put it at the end or Copy); nothing changes before. Listen
+  (tool row, and Whole chapter) reads the page aloud with the browser's speech, a sentence at a time with the marks taken
+  out (`src/lib/listen.ts`): Pause, Resume, Back, Next, Stop, speed and voice (kept per device), the sentence being read
+  highlighted and scrolled into view. On a narrow page the new tools show icons only and the Ask the team heading goes.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -183,6 +197,14 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
+src/lib/lint.js          the vault tool's linter, copied as is (do not edit; see below)
+src/lib/lintcheck.ts     Check (AI phrases): the linter on the page's Markdown, flags mapped onto the page, grades, chapter score
+src/lib/options.ts       Options for a passage: the passage, the options job, its answers, the swap
+src/lib/listen.ts        Listen: sentences to say with their place on the page, the reader over the browser's speech
+src/ui/CheckPanel.tsx    the Check tab beside the page (and Whole chapter's Check column)
+src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options tab
+src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
+src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
@@ -192,8 +214,9 @@ tests/                   Node test runner tests
 ## Rules the code keeps
 
 - Parse notes exactly as the `sf` tool does. `src/lib/frontmatter.js` is the FRONTMATTER section of
-  `author-business/System/Tools/sf.js`, and `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
-  A test fails if either copy drifts, whenever the vault is checked out beside this repository.
+  `author-business/System/Tools/sf.js`, `src/lib/prose.js` its prose section with U.escapeHtml and U.wordCount, and
+  `src/lib/lint.js` its lint section with U.wordCount, U.sum, U.mean, U.stdev and U.escRe. When sf.js changes, run `npm run sync-parser` (expects `../author-business`).
+  A test fails if any copy drifts, whenever the vault is checked out beside this repository.
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
   The one exception is the team's files in `.claude` (agents, skills, agent memory), read separately for the Team page.
 - Errors shown to Kyle are plain sentences that say what to do.

@@ -852,7 +852,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : 'Scene'}</strong>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">

@@ -118,6 +118,7 @@ export function OptionsPanel({ jobs, done, onPick, onEnd, onDone }: {
   if (!open.length) {
     return (
       <div class="writer-panel options-panel">
+        {said && said.r.ok && <p class="ok" role="status">{said.r.text}</p>}
         <p class="hint">Pick some words (or put the cursor in a paragraph) and press Options in the tool row. The team writes two or three versions; they show here, and your page changes only when you pick one. A copy of the scene is saved first.</p>
       </div>
     );
