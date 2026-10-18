@@ -120,6 +120,17 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  Deciding faster (Kyle, 2026-10-18, from Writers Room): after Keep, Later or Drop on any proposal board the toast offers
+  one-press reasons (Love it, Surprising, Specific, Raises the stakes; Not now, Needs work, Could combine; Cliché, Wrong
+  tone, Already have this, Too clever) written to the note's `reasons` list as a separate edit, so skipping costs nothing
+  and Undo puts the old reasons back. Ideas have 1 to 5 stars (`rating`, a number) on the card. The Ideas board adds a
+  filter by who proposed (`source`) and kind, tick boxes with Keep all / Later all / Drop all, Ask the team to combine (two
+  or more ticked, a `combine` job) and Ask for variations (one ticked, a `variations` job, three takes), both filed by the
+  team as new inbox ideas, and One at a time (a button, or F). Keys there are extras: K keep, M later, D drop, 1-5 stars,
+  U undo, X tick, arrows move. The Taste page (`#/board/taste/<book>`, sidebar Review) shows `Taste/Taste Profile.md` and
+  `Taste/Style Fingerprint.md` (read on demand, they are not indexed) and bars of keeps and drops by kind and agent, the
+  top 12 reasons and the keep rate per brainstorm `round`, for all books or this one; Update my taste writes a
+  `learn-taste` job (`src/lib/taste.ts`).
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -141,7 +152,7 @@ src/lib/frontmatter.js   the vault tool's YAML reader, copied as is (do not edit
 src/lib/schema.ts        parse System/schema.json; card fields, enums, property order
 src/lib/vault-index.ts   which files to read, parse them, build series/books/scenes; warnings
 src/lib/board.ts         Chapter Grid grouping
-src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make
+src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make; reasons, stars, idea filters
 src/lib/boards.ts        Story Juice and Market boards: which notes, grouped and ordered by the schema; the cast with book deltas
 src/lib/write-queue.ts   choices waiting to save (localStorage), sending them, showing them before they land
 src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors
@@ -183,6 +194,8 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
+src/lib/taste.ts         the Taste page's numbers: keeps and drops by kind, agent and round, top reasons
+src/ui/Taste.tsx         the Taste page: Taste Profile, Style Fingerprint and the bars
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
