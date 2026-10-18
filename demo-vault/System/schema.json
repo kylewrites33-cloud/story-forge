@@ -1933,7 +1933,7 @@
       "body": "The findings, each tied to a source in the list or marked unverified."
     },
     "task": {
-      "description": "A piece of work with an owner. Book tasks live in the book; vault problems (from nightly validate) live in Tasks/.",
+      "description": "A piece of work with an owner. Studio and system to-dos live in the vault's Tasks/ (the nightly validate files its problems there). A book's to-dos live in that book's Tasks/ and are about its pages: `chapter` (and `scene`) say where, and `generated: true` marks one the team found in a check rather than one Kyle wrote. The writing screen shows a chapter's to-dos beside the page.",
       "scope": [
         "book",
         "vault"
@@ -1967,6 +1967,27 @@
         "status": {
           "enum": "task",
           "default": "open"
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "Book to-dos: the chapter it is about."
+        },
+        "scene": {
+          "type": "string",
+          "pattern": "^S-\\d{3}$",
+          "description": "Book to-dos: the scene it is about, when it is about one."
+        },
+        "generated": {
+          "type": "boolean",
+          "description": "True when the team wrote it after a check; Kyle's own to-dos leave it out."
+        },
+        "found_by": {
+          "type": "string",
+          "description": "For a generated to-do: the check that found it (continuity, plot, character, line, genre)."
+        },
+        "done_note": {
+          "type": "string",
+          "description": "When the team marks a to-do done: one line on what in the text fixed it, so Kyle can reopen it if he disagrees."
         }
       },
       "board": {
@@ -1979,6 +2000,42 @@
         ]
       },
       "body": "What needs doing and how to tell it is done."
+    },
+    "writing-day": {
+      "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them. Lives in Writing Log/ at the vault root, one note per day.",
+      "scope": "vault",
+      "folder": "Writing Log",
+      "filename": "{date}",
+      "required": [
+        "type",
+        "date",
+        "pomodoros",
+        "words"
+      ],
+      "properties": {
+        "type": {
+          "const": "writing-day"
+        },
+        "date": {
+          "type": "date"
+        },
+        "pomodoros": {
+          "type": "integer",
+          "description": "Work Pomodoros finished that day."
+        },
+        "minutes": {
+          "type": "integer",
+          "description": "Minutes of finished work Pomodoros."
+        },
+        "words": {
+          "type": "integer",
+          "description": "Words written during them, after deletions (can be below zero on a cutting day)."
+        },
+        "updated": {
+          "type": "datetime"
+        }
+      },
+      "body": "## Pomodoros: one line per finished Pomodoro, `- HH:MM, N minutes, W words (S-012, S-013)`, oldest first. The app appends lines and never rewrites earlier ones."
     },
     "style-guide": {
       "description": "The book's voice rules. Overrides the default prose rules.",
@@ -2210,7 +2267,9 @@
             "table-read",
             "ideas",
             "import",
-            "custom"
+            "custom",
+            "chapter-check",
+            "todo-review"
           ]
         },
         "target": {

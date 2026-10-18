@@ -18,8 +18,10 @@ test('the to-do list holds the vault tasks, open first, done folded after', asyn
   const src = new FsSource(DEMO);
   const { files } = await src.tree();
   const index = await buildIndex({ schema: parseSchema(demoSchemaText()), files, read: (p, sha) => src.read(p, sha), phase: PHASE });
-  const notes = taskNotes(index);
+  // The studio's own list; the demo book's to-dos (its own Tasks folder) are counted in todos.test.ts.
+  const notes = taskNotes(index).filter((n) => n.path.startsWith('Tasks/'));
   assert.deepEqual(notes.map((n) => n.data.id), ['T-001', 'T-002']);
+  assert.equal(taskNotes(index).length, 5);
   const groups = taskGroups(notes);
   assert.deepEqual(groups.map((g) => g.key + ':' + g.notes.map((n) => n.data.id).join(',')), ['doing:', 'open:T-001', 'done:T-002', 'dropped:']);
   assert.equal(nextTaskId(files), 'T-003');

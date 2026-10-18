@@ -5,6 +5,7 @@ import { render } from '../lib/markdown.ts';
 import { dueLabel, taskBook, taskGroups, taskNotes, type NewTask } from '../lib/tasks.ts';
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
+import { isBookTodo, todoPlace } from '../lib/todos.ts';
 import { href } from './route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
@@ -23,6 +24,10 @@ export function TaskCard({ index, note, waiting, onDecide }: { index: VaultIndex
   const status = String(d.status || 'open');
   const due = status === 'done' || status === 'dropped' ? null : dueLabel(d.due, new Date());
   const book = taskBook(index, note.path);
+  const place = todoPlace(note);
+  // A book's to-do about one scene opens that scene's page.
+  const owner = index.books.find((b) => note.path.startsWith(b.folder + '/'));
+  const scenePath = owner && d.scene ? owner.scenes.find((p) => index.notes[p] && String(index.notes[p].data.id || '') === String(d.scene)) : undefined;
   return (
     <li class="idea task">
       <span class="card-top">
@@ -30,6 +35,14 @@ export function TaskCard({ index, note, waiting, onDecide }: { index: VaultIndex
         {waiting && <span class={'pill' + (waiting.error ? ' pill-error' : '')}>{waiting.error ? 'Not saved' : 'Saving'}</span>}
       </span>
       <span class="card-title">{String(d.title || basename(note.path))}</span>
+      {(place || d.generated === true) && (
+        <span class="todo-meta">
+          {d.generated === true && <span class="pill pill-plain gen">Generated{d.found_by ? ' · ' + String(d.found_by) : ''}</span>}
+          {place && <span>{place}</span>}
+          {scenePath && <a href={href.write(scenePath)}>Open the page</a>}
+        </span>
+      )}
+      {(status === 'done') && d.done_note ? <p class="todo-note">{String(d.done_note)}</p> : null}
       {due && <p class={'due' + (due.late ? ' late' : '')}>{due.text}</p>}
       {waiting && waiting.error && <p class="error">{waiting.error}</p>}
       <button type="button" class="link" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Read more'}</button>
@@ -92,7 +105,11 @@ export function TodoList({ index, waiting, onDecide, onAdd }: {
   const all = taskNotes(index);
   const owners = ['Kyle', 'Claude'].filter((o) => all.some((n) => String(n.data.owner || '') === o));
   const [who, setWho] = useState('');
-  const shown = who ? all.filter((n) => String(n.data.owner || '') === who) : all;
+  const [kind, setKind] = useState('');
+  const hasBook = all.some((n) => isBookTodo(index, n));
+  const hasStudio = all.some((n) => !isBookTodo(index, n));
+  const shown = all.filter((n) => (!who || String(n.data.owner || '') === who)
+    && (!kind || (kind === 'book') === isBookTodo(index, n)));
   const groups = taskGroups(shown);
   const openCount = all.filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length;
   return (
@@ -109,6 +126,14 @@ export function TodoList({ index, waiting, onDecide, onAdd }: {
           ))}
         </div>
       )}
+      {hasBook && hasStudio && (
+        <div class="tabs" role="tablist" aria-label="Which list">
+          {[{ key: '', label: 'Both lists' }, { key: 'book', label: 'Book to-dos' }, { key: 'studio', label: 'Story Forge to-dos' }].map((t) => (
+            <button key={t.key} type="button" role="tab" aria-selected={kind === t.key} onClick={() => setKind(t.key)}>{t.label}</button>
+          ))}
+        </div>
+      )}
+      {hasBook && <p class="hint">Book to-dos are fixes to the pages, one list per chapter beside the writing page. Story Forge to-dos are jobs about the app and the setup.</p>}
       {!all.length && <p class="empty">No to-dos yet. They live in the vault's Tasks folder.</p>}
       {groups.map((g) => {
         if (!g.notes.length) return null;

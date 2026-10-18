@@ -1,7 +1,9 @@
 // A whole chapter as one page: every scene of the chapter one after another, each with its own writing box, and a
 // thin line with the scene's name between them. Each scene keeps its own draft on the device and saves on its own, the
 // same way as the one-scene writing screen (Done, two quiet minutes, putting the iPad down, back online).
+import type { ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { trackWords } from '../lib/pomodoro.ts';
 import { bodyWords, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import type { StyleOptions } from '../lib/styled.ts';
@@ -20,12 +22,14 @@ interface Section {
   draft: Draft;
 }
 
-export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, onSaved }: {
+export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, onSaved, timer }: {
   source: VaultSource; group: ChapterGroup; bookTitle: string; codex: CodexEntry[];
   /** The scene the page opened from: it scrolls into view. */
   startAt: string;
   backTo: string;
   onSaved: (n: NoteRecord) => void;
+  /** The Pomodoro timer, in the top bar. */
+  timer?: ComponentChildren;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [sections, setSections] = useState<Section[]>(() => {
@@ -94,7 +98,9 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   const changed = (path: string, text: string) => {
     const s = ref.current.find((x) => x.note.path === path);
     if (!s) return;
-    setDraft(path, { ...s.draft, body: splitLead(s.draft.body).lead + text, updatedAt: new Date().toISOString() });
+    const body = splitLead(s.draft.body).lead + text;
+    trackWords(path, String(s.note.data.id || ''), bodyWords(s.draft.body), bodyWords(body));
+    setDraft(path, { ...s.draft, body, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
     quiet.current = setTimeout(() => { saveAll(false); }, QUIET_SAVE_MS);
@@ -140,6 +146,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
         <span class="writer-title">{bookTitle}</span>
         <span class="writer-words">{num(words)} words{words - started ? ' · ' + (words - started > 0 ? '+' : '') + num(words - started) : ''}</span>
         <span class={'save-chip ' + (chip === 'Saved' ? 'good' : state === 'error' ? 'bad' : '')} role="status">{chip === 'Saved' && <Icon name="check" size={16} />}{chip}</span>
+        {timer}
       </header>
       <div class="writer-cols">
         <div class="writer-page">

@@ -7,7 +7,7 @@ import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'custom';
+export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'custom';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -29,6 +29,8 @@ export function jobLabel(kind: unknown): string {
     case 'table-read': return 'Table read';
     case 'ideas': return 'More ideas';
     case 'import': return 'Bring in a manuscript';
+    case 'chapter-check': return 'Check this chapter for to-dos';
+    case 'todo-review': return 'Tick off fixed to-dos';
     default: return 'Ask the team';
   }
 }
@@ -97,6 +99,10 @@ export function jobAsk(kind: JobKind, target: string, words: string): string {
       return 'Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book\'s Ideas folder.' + (words.trim() ? ' What they should be about, in his words: ' + words.trim() : ' Pick what the book needs most now, from its stage and its open questions.');
     case 'import':
       return 'Kyle added a manuscript from the app: `' + target + '` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book\'s last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.' + his;
+    case 'chapter-check':
+      return 'Check ' + target + ' of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter\'s to-dos (a task note in the book\'s Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.' + his;
+    case 'todo-review':
+      return 'Review the open to-dos of ' + target + ' of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.' + his;
     default:
       return words.trim();
   }
@@ -131,6 +137,8 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
     case 'table-read': return 'Table read of ' + what;
     case 'ideas': return 'More ideas' + (what ? ' for ' + what : '');
     case 'import': return 'Bring in ' + what;
+    case 'chapter-check': return 'Check ' + what + ' for to-dos';
+    case 'todo-review': return 'Tick off fixed to-dos in ' + what;
     default: return 'Ask the team';
   }
 }

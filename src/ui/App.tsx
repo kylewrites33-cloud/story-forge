@@ -9,6 +9,7 @@ import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createTask, type NewTask } from '../lib/tasks.ts';
+import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { createScene, mentionsOf, orderBetween, renameScene } from '../lib/scenes.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
@@ -31,6 +32,7 @@ import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
+import { PomodoroTimer } from './Pomodoro.tsx';
 import { TodoList } from './TodoList.tsx';
 import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
@@ -201,6 +203,26 @@ export function App() {
     try {
       await createTask(source, t, new Date());
       await runSync();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
+  /** Add a to-do beside the page: a task note in the book's own Tasks folder, then sync so the panel shows it. */
+  const onAddTodo = useCallback(async (bookFolder: string, t: NewTodo): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a to-do.';
+    try {
+      const made = await createTodo(source, bookFolder, t, new Date());
+      const now = snapRef.current;
+      if (now && now.key === source.key) {
+        const tasks = (now.index.tasks || []).filter((p) => p !== made.path).concat(made.path).sort();
+        const next = { ...now, index: { ...now.index, notes: { ...now.index.notes, [made.path]: made }, tasks } };
+        snapRef.current = next;
+        setSnap(next);
+        await writeSnapshot(next);
+      }
+      runSync();
       return null;
     } catch (e) {
       return (e as Error).message;
@@ -430,6 +452,9 @@ export function App() {
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
+          todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
+          onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
+          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} />}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
@@ -442,7 +467,7 @@ export function App() {
     const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
     if (book && group) {
       return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
-        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} />;
+        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} />} />;
     }
   }
 
@@ -524,6 +549,7 @@ export function App() {
         </div>
       )}
       <main>{body}</main>
+      <PomodoroTimer source={source} index={view} variant="float" onLogged={foldNotes} />
     </Shell>
   );
 }
