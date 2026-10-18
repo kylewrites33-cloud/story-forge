@@ -176,6 +176,23 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   scene's conversation with "About S-012 Title: " filled in. Recipes (`#/recipes`, the sidebar's foot): the vault's
   `Recipes/` notes, Add and Edit (renaming moves the file); the writing screen's Team tab has "With a recipe", which adds
   "Use the recipe [[Name]]" to every job sent from there. The Team page has Forge a new specialist (one line, a `forge` job).
+  Pictures of the book (Kyle, 2026-10-18, from Writers Room): Tension and Pacing (`#/board/tension/<book>`, Review) draws
+  each scene's `tension` (1-10) in reading order, placed by its share of the book's words, over a reference curve (a rough
+  guide: rising, a dip near 75%, the peak near 85-90%), each point coloured by `outcome`; drag a point (finger or mouse)
+  to change it, press one for a panel with - and +, the outcome buttons and Open the scene. It warns about three scenes in
+  a row that do not rise, a peak before 70% and over 30% clean wins (`tensionWarnings`). Its Mood and shape tab draws
+  `mood` (-5..5), smoothed over three scenes and compared with the six shapes of Reagan et al., 2016 (as cited in the
+  Writers Room code; not re-checked). Character Arcs (`#/board/arcs/<book>`, Plan): a card per character with `arc_type`
+  or `arc_points` (a book delta's points win), Lie (0) to Truth (10); drag a point, press an empty column to add one,
+  press a point to nudge or remove it; wrong-way arcs warn (`arcWarnings`). Values the team guessed (scene `card_draft`,
+  character `arc_draft`) show dashed and muted; Kyle's change or Confirm takes them off. These writes are card edits
+  through the write queue (front matter only; `tension` and `mood` as numbers, `card_draft` and `arc_points` as lists).
+  The Chapter Grid has a folding beat ruler (`BeatRuler`): the fifteen Save the Cat beats by percent of words (Snyder,
+  Brody, as the vault's save-the-cat skill gives them) and whether the scenes of each save-the-cat beat note (scene
+  `beat` link or the beat's `scenes`) land early, on time or late (3 points of give). Codex cards (note view and the
+  writing screen's) show "now", the subject's latest progression up to the open scene (or where the writing is), and its
+  > [!secret] callouts with whether the team may see each yet, timed the way sf's packet times them (`codexnow.ts`).
+  The Matrix marks a red square where a character is on a written scene's card but never named in its prose.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -268,6 +285,15 @@ src/ui/NotesToTeam.tsx   the Notes to the Team screen
 src/ui/Sessions.tsx      the Sessions list and one session
 src/ui/Recipes.tsx       the Recipes page and the "With a recipe" picker
 src/ui/Forge.tsx         Forge a new specialist on the Team page
+src/lib/tension.ts       Tension and Pacing: scene positions by words, points, reference curve, warnings, card_draft, story shape
+src/lib/arcs.ts          Character Arcs: arc points, which note holds them, edits, wrong-way warnings
+src/lib/beatruler.ts     the beat ruler: Save the Cat percentages, beat notes matched, early, on time or late
+src/lib/codexnow.ts      a codex card's "now" (progressions) and secrets (sf's timing); the Matrix's red squares
+src/ui/SceneChart.tsx    a draggable line chart of one value per scene (pointer events), used by the pages below
+src/ui/TensionPage.tsx   Tension and Pacing, with the Mood and shape tab
+src/ui/ArcsPage.tsx      Character Arcs
+src/ui/BeatRuler.tsx     the folding beat ruler on the Chapter Grid
+src/ui/CodexNow.tsx      "Now" and secrets on a codex card
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview

@@ -16,7 +16,11 @@ pov: "[[Mara Quill]]"
 cast:
   - "[[Mara Quill]]"
   - "[[Tobin Quill]]"
+  - "[[The Warden]]"
 place: "[[Cinder Ford]]"
+tension: 3
+outcome: no
+mood: 1
 turn: The crack runs the full height of the bell.
 hook: She calls for Tobin, who is supposed to be asleep.
 status: final

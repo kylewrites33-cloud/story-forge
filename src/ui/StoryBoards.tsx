@@ -30,8 +30,10 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'taste', title: 'Taste', to: href.board('taste', folder), icon: 'taste' },
     { key: 'overview', title: 'Overview', to: href.board('overview', folder), icon: 'gauge' },
     { key: 'notes', title: 'Notes to the Team', to: href.board('notes', folder), icon: 'note' },
-    { key: 'sessions', title: 'Sessions', to: href.board('sessions', folder), icon: 'sessions' }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || l.key === 'taste' || APP_BOARDS.indexOf(l.key) >= 0 || schema.boards[l.key])
+    { key: 'sessions', title: 'Sessions', to: href.board('sessions', folder), icon: 'sessions' },
+    { key: 'tension', title: 'Tension and Pacing', to: href.board('tension', folder), icon: 'tension' },
+    { key: 'arcs', title: 'Character Arcs', to: href.board('arcs', folder), icon: 'arc' }
+  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || l.key === 'taste' || l.key === 'tension' || l.key === 'arcs' || APP_BOARDS.indexOf(l.key) >= 0 || schema.boards[l.key])
     .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }))
     .concat(seeingLinks(folder));
 }

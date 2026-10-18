@@ -17,6 +17,10 @@ import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { appearances, codexFor, matcher } from '../lib/codex.ts';
 import { StageStrip } from './Overview.tsx';
 import { askAboutScene } from './Team.tsx';
+import { nowForNote } from '../lib/codexnow.ts';
+import { activeBook } from '../lib/vault-index.ts';
+import { BeatRuler } from './BeatRuler.tsx';
+import { CodexNowBox } from './CodexNow.tsx';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -479,6 +483,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           <IdeasLink index={index} book={book} />
         </div>
       </div>
+      <BeatRuler index={index} book={book} />
       {scenes.length > 0 && (
         <div class="grid-tools">
           <label class="search">
@@ -592,6 +597,7 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
           </tbody>
         </table>
       )}
+      {(() => { const now = nowForNote(index, note, activeBook(index)); return now && <CodexNowBox now={now} />; })()}
       {['character', 'place', 'item', 'lore'].indexOf(note.type) >= 0 && <AppearsIn index={index} note={note} />}
       <div class="prose" dangerouslySetInnerHTML={{ __html: render(note.body) }} />
     </article>

@@ -85,7 +85,7 @@ export interface Change {
 }
 
 /** Card fields that are lists in the note but edited as one line with commas. */
-export const LIST_FIELDS = ['labels', 'reasons', 'threads', 'card_draft'];
+export const LIST_FIELDS = ['labels', 'reasons', 'threads', 'card_draft', 'arc_points'];
 /** Card fields that are whole numbers in the note, written without quotes (an idea's stars). */
 export const INT_FIELDS = ['rating'];
 export function splitList(v: string): string[] {
@@ -93,7 +93,7 @@ export function splitList(v: string): string[] {
 }
 
 /** Whole-number properties Kyle sets in the app (the Overview's word target and posting pace): written as numbers, not text. */
-export const NUMBER_FIELDS = ['target_words', 'cadence'];
+export const NUMBER_FIELDS = ['target_words', 'cadence', 'tension', 'mood'];
 function fieldValue(k: string, v: string): string | number {
   return (NUMBER_FIELDS.indexOf(k) >= 0 || INT_FIELDS.indexOf(k) >= 0) && /^-?\d+$/.test(v.trim()) ? parseInt(v.trim(), 10) : v;
 }
@@ -221,7 +221,8 @@ const KINDS: Record<string, { prefix: string; noun: string; board: string }> = {
   task: { prefix: 'tasks', noun: 'a to-do', board: 'To-do list' },
   job: { prefix: 'jobs', noun: 'a job', board: 'Jobs screen' },
   book: { prefix: 'books', noun: 'the book', board: 'Overview' },
-  note: { prefix: 'notes', noun: 'a Note to the Team', board: 'Notes to the Team screen' }
+  note: { prefix: 'notes', noun: 'a Note to the Team', board: 'Notes to the Team screen' },
+  character: { prefix: 'characters', noun: 'a character', board: 'Character Arcs' }
 };
 
 const VERBS: Record<Decision, string> = { keep: 'keep', later: 'later', drop: 'drop', inbox: 'back to inbox', regenerate: 'rewrite', edit: 'edit', accept: 'accept card', rework: 'card needs work', move: 'move' };

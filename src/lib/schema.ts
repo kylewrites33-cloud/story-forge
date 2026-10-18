@@ -80,6 +80,8 @@ export const EXTRA_TYPES = ['place', 'item', 'lore', 'braindump', 'scene-notes',
 EXTRA_TYPES.push('promise', 'thread', 'theme');
 /** Notes to the Team, sessions and recipes (the Overview, Notes to the Team, Sessions and Recipes pages). */
 EXTRA_TYPES.push('note', 'session', 'recipe');
+// Progressions: where a codex note stands now, on its card (codexnow.ts).
+EXTRA_TYPES.push('progression');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

@@ -28,6 +28,8 @@ const GROUPS: [string, string[]][] = [
 // The "seeing the book" pages: Promises, Plot Grid and Timeline plan the book; Themes and Cast web review it.
 GROUPS[1][1].push('promises', 'plot-grid', 'timeline');
 GROUPS[3][1].push('themes', 'cast-web');
+// Writers Room charts: Character Arcs under Plan, Tension and Pacing under Review.
+GROUPS.forEach(([name, keys]) => { if (name === 'Plan') keys.push('arcs'); if (name === 'Review') keys.push('tension'); });
 
 /** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {

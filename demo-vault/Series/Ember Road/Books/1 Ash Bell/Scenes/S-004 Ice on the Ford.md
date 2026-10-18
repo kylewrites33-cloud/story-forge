@@ -13,6 +13,12 @@ cast:
   - "[[Tobin Quill]]"
   - "[[Mara Quill]]"
 place: "[[Cinder Ford]]"
+beat: "[[B-004 Midpoint]]"
+tension: 7
+outcome: yes
+mood: -1
+card_draft:
+  - tension
 status: final
 goal: Walk the bell across the frozen ford before the Warden's riders reach the bank.
 turn: The ice holds Tobin and cracks under the bell.
