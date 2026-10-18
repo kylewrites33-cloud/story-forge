@@ -32,7 +32,8 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   (`toggleStyle`, `insertText`). A per-device switch in Scene goes back to the plain text box with its stars.
   Export to Word (Kyle, 2026-10-18) on Book details: the whole book in reading order as a .docx named
   `series_book_YYYY-MM-DD.docx`, made on the device and downloaded (`src/lib/docx.ts`, the layout of sf's Docx.build;
-  italics and bold read with styled.ts, so they come back unchanged through `sf import`).
+  italics and bold read with styled.ts, so they come back unchanged through `sf import`). Each export also saves a copy in the vault's
+  `Book Backups/<series>/<book>/` (same day replaces that day's file); New series and New book make their backup folders.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; "Done with this scene?" with Next at the bottom), and the scene panel on the right (Card, Copies,
