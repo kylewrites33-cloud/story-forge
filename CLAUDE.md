@@ -114,6 +114,12 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   chapter list is closed. While a scene is open the app reads the vault every 30 seconds (15 while the team is answering)
   and merges a newer version line by line into the page (`src/lib/live.ts`): Kyle's lines win a clash, the other version is
   saved as a copy. The vault's `put-in-page` skill tells any Claude session how to push words there.
+  Team chat beside every page (Kyle, 2026-10-18): outside the writing screens, every page but Chat and Settings has the
+  team chat on the right (`TeamSide` in `src/ui/Chat.tsx`, placed by `Shell`): beside the page from 1200 px, over it
+  narrower; a round Chat button at the bottom right opens it, its arrow hides it (per device), and the Pomodoro moves
+  left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
+  `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
+  "this one" means; the vault's runner passes it on.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -167,6 +173,7 @@ src/ui/ChapterPage.tsx   the whole chapter as one page
 src/lib/brackets.ts      [brackets]: finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
 src/lib/plans.ts         a chapter's plan note (Chapter Plans)
+src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene

@@ -22,7 +22,7 @@ import { Icon } from './Icon.tsx';
 import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
-import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
+import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { Shell } from './Shell.tsx';
 import { href, parseHash, useRoute } from './route.ts';
@@ -44,7 +44,10 @@ import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
-import { chatJob, conversation, isThread, nextChatThread } from '../lib/chat.ts';
+import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from '../lib/chat.ts';
+import { pageContext, type PageView } from '../lib/context.ts';
+import { TeamSide } from './Chat.tsx';
+import { PILES, piles } from '../lib/ideas.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -255,7 +258,7 @@ export function App() {
 
   /** Send a message in a conversation with the team: one chat job note, shown at once, then a sync in the background.
    * A conversation not started yet ('new') gets the next free chat-NNN. A message may follow one still waiting for a reply. */
-  const onChat = useCallback(async (thread: string, words: string, book: string): Promise<{ thread: string; book: string } | { error: string }> => {
+  const onChat = useCallback(async (thread: string, words: string, book: string, page = ''): Promise<{ thread: string; book: string } | { error: string }> => {
     if (!navigator.onLine) return { error: 'Connect to the internet to send a message.' };
     const cur = snapRef.current;
     if (!cur) return { error: 'Press Sync first.' };
@@ -264,7 +267,7 @@ export function App() {
     if (!isThread(t)) return { error: 'That conversation has no name the team knows. Start a new conversation instead.' };
     const folder = book || (activeBook(shown) || shown.books[0] || { folder: '' }).folder;
     try {
-      const made = await createJob(source, chatJob(t, words, folder), new Date());
+      const made = await createJob(source, chatJob(t, words, folder, page), new Date());
       const now = snapRef.current;
       if (now && now.key === source.key) {
         const jobs = (now.index.jobs || []).filter((p) => p !== made.path).concat(made.path).sort();
@@ -417,7 +420,14 @@ export function App() {
       const cur = snapRef.current;
       if (!cur || document.visibilityState !== 'visible' || !navigator.onLine) return;
       if (r.name === 'chat' && r.thread && r.thread !== 'new') { if (conversation(cur.index, r.thread, r.book).pending) runSync(); return; }
-      if (r.name !== 'write') return;
+      if (r.name !== 'write') {
+        // The team column beside a board or page, open and waiting on a reply.
+        if (document.querySelector('.team-side')) {
+          const sides = loadSideThreads(source.key);
+          if (Object.keys(sides).some((b) => conversation(cur.index, sides[b], b).pending)) runSync();
+        }
+        return;
+      }
       const note = cur.index.notes[r.path];
       const book = note ? cur.index.books.find((b) => r.path.startsWith(b.folder + '/')) : null;
       const id = note ? String(note.data.id || '') : '';
@@ -431,7 +441,7 @@ export function App() {
       clearInterval(timer);
       clearInterval(quick);
     };
-  }, [runSync]);
+  }, [runSync, source]);
 
   const schema = useMemo<Schema | null>(() => {
     if (!snap) return null;
@@ -575,8 +585,42 @@ export function App() {
   const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
 
+  // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
+  const sideBook = view ? navBook || activeBook(view) : null;
+  const WHERE: Record<string, string> = { home: 'the Books page', series: 'the Series page', jobs: 'the Jobs page', todo: 'the To-do list',
+    team: 'the Team page', skills: 'the Skills page', history: 'Session history' };
+  const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : 'this page');
+  const pageView = (): PageView => {
+    const v: PageView = { name: where, book: sideBook };
+    if (!view) return v;
+    const notesOf = (paths?: string[]) => (paths || []).map((p) => view.notes[p]).filter(Boolean);
+    if (navBook && boardKey) {
+      if (boardKey === 'ideas') { const pl = piles(notesOf(navBook.ideas)); v.notes = PILES.flatMap((x) => pl[x.key] || []); }
+      else if (boardKey === 'chapter-grid') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
+      else if (boardKey === 'matrix') v.notes = castFor(view, navBook).map((c) => c.note);
+      else if (boardKey === 'edit-queue') v.notes = bookTodos(view, navBook);
+      else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) v.notes = boardNotes(view, navBook, boardKey as StoryBoard);
+    } else if (route.name === 'note') {
+      const n = view.notes[route.path];
+      if (n) {
+        v.notes = [n];
+        const body = n.body.replace(/\s+/g, ' ').trim();
+        if (body) v.lines = ['The note begins: ' + (body.length > 500 ? body.slice(0, 500) + '…' : body)];
+      }
+    } else if (route.name === 'team' && route.slug) v.lines = ['Looking at the team member: ' + route.slug];
+    else if (route.name === 'skills' && route.skill) v.lines = ['Looking at the skill: ' + route.skill];
+    else if (route.name === 'series' && route.folder) v.lines = ['Looking at the series: `' + route.folder + '`'];
+    return v;
+  };
+  const showSide = Boolean(view) && place !== 'chat' && place !== 'settings';
+  const side = showSide && view ? (close: () => void) => {
+    return <TeamSide index={view} sourceKey={source.key} book={sideBook ? sideBook.folder : ''} page={pageContext(pageView())}
+      where={where}
+      onChat={source.write ? onChat : undefined} onClose={close} />;
+  } : null;
+
   return (
-    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle}
+    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">

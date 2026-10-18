@@ -87,6 +87,8 @@ export interface NewJob {
   ask: string;
   /** For kind chat: the conversation, a scene ID or chat-NNN (see chat.ts). */
   thread?: string;
+  /** Where in the app Kyle was and what was on the screen, for the team to guess what he means (## Page). */
+  page?: string;
 }
 
 /** The ## Ask for the kinds the runner has no fixed steps for: exactly what to do, then Kyle's own words.
@@ -132,7 +134,8 @@ export function jobText(id: string, j: NewJob, now: Date): string {
   data.requested_by = 'Kyle';
   data.created = ymd(now);
   const ask = j.ask.trim() || 'Kyle asked for this from the Story Forge app.';
-  return Frontmatter.join(data, '## Ask\n' + ask + '\n');
+  const page = (j.page || '').trim();
+  return Frontmatter.join(data, '## Ask\n' + ask + '\n' + (page ? '\n## Page\n' + page + '\n' : ''));
 }
 
 /** The title a job gets when Kyle gives no words: "Draft S-045 Grey at the barn", "Notes on Chapter 30", "Learn from Kyle's edits". */
