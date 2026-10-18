@@ -14,6 +14,9 @@ import { matcher, type CodexEntry } from '../lib/codex.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import type { CheckOptions } from '../lib/lintcheck.ts';
+import { CheckPanel } from './CheckPanel.tsx';
+import { ListenBar, ListenButton, useListen } from './Listen.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
@@ -23,7 +26,7 @@ interface Section {
   draft: Draft;
 }
 
-export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, onSaved, timer }: {
+export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, onSaved, timer, checkOpts }: {
   source: VaultSource; group: ChapterGroup; bookTitle: string; codex: CodexEntry[];
   /** The scene the page opened from: it scrolls into view. */
   startAt: string;
@@ -31,6 +34,8 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   onSaved: (n: NoteRecord) => void;
   /** The Pomodoro timer, in the top bar. */
   timer?: ComponentChildren;
+  /** The book's settings for Check (its Style Guide and the vault's Config). */
+  checkOpts?: CheckOptions;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [sections, setSections] = useState<Section[]>(() => {
@@ -138,9 +143,19 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   const chip = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved' : unsaved ? (state === 'device' || !navigator.onLine ? 'On this device' : 'Saved on device') : 'Saved';
   const cmd = () => { const c = commands.current[focused]; return c ? c.current : null; };
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault() };
+  // Check and Listen over every scene of the chapter.
+  const [checking, setChecking] = useState(false);
+  const rootOf = (path: string) => () => document.querySelector<HTMLElement>('[data-section="' + CSS.escape(path) + '"] .writer-text.styled');
+  const listen = useListen(() => ref.current.map((s) => ({ text: splitLead(s.draft.body).text, root: rootOf(s.note.path) })), () => {
+    const i = ref.current.findIndex((s) => s.note.path === focused);
+    const c = cmd();
+    const sel = c ? c.selection() : null;
+    return i >= 0 && sel && sel.end > sel.start ? { part: i, at: sel.start } : null;
+  });
+  const [checkOptions] = useState<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 });
 
   return (
-    <div class={'writer chapter-page paper-' + look.paper} style={lookStyle(look)}>
+    <div class={'writer chapter-page paper-' + look.paper + (checking ? ' right-open' : '')} style={lookStyle(look)}>
       <header class="writer-bar">
         <button type="button" class="primary" onClick={() => go(backTo)}>Done</button>
         <button type="button" class="bar-button" onClick={() => go(href.write(focused))} title="Back to one scene at a time"><Icon name="page" /><span class="bar-label">One scene</span></button>
@@ -159,6 +174,11 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
             <button type="button" class="tool" aria-label="Highlight" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
             <button type="button" class="tool" aria-label="Undo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.undo(); }}><Icon name="undo" /></button>
             <button type="button" class="tool" aria-label="Redo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.redo(); }}><Icon name="redo" /></button>
+            <span class="tool-gap" />
+            <button type="button" class="tool wide" aria-pressed={checking} {...keepFocus} onClick={() => setChecking(!checking)}
+              title="Check the whole chapter for AI-sounding phrases: free, on this device"><Icon name="scan" /><span class="tool-label">Check</span></button>
+            <ListenButton l={listen} keep={keepFocus} />
+            <ListenBar l={listen} />
           </div>
           <div class="page-head">
             <h1>{chapterHeading(group)}</h1>
@@ -182,6 +202,20 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
             );
           })}
         </div>
+        {checking && (
+          <aside class="writer-right" aria-label="Check">
+            <div class="side-head">
+              <strong>Check the chapter</strong>
+              <button type="button" class="icon-button" onClick={() => setChecking(false)} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
+            </div>
+            <CheckPanel opts={checkOptions} onJump={() => { if (!matchMedia('(min-width: 900px)').matches) setChecking(false); }}
+              sections={sections.map((s) => ({
+                key: s.note.path, label: [s.note.data.id, sceneHeader(s.note.data)].filter(Boolean).join(' '), text: splitLead(s.draft.body).text,
+                root: rootOf(s.note.path), select: (a, b) => { const c = commands.current[s.note.path]; if (c && c.current) c.current.select(a, b); }
+              }))} />
+          </aside>
+        )}
+        {checking && <div class="scrim" onClick={() => setChecking(false)} aria-hidden="true" />}
       </div>
     </div>
   );

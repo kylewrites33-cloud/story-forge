@@ -21,11 +21,11 @@ test('the demo vault has jobs and the index lists them', async () => {
   const { files } = await src.tree();
   const index = await buildIndex({ schema: parseSchema(demoSchemaText()), files, read: (p, sha) => src.read(p, sha), phase: PHASE });
   const notes = jobNotes(index);
-  assert.deepEqual(notes.map((n) => n.data.id), ['J-001', 'J-002', 'J-003', 'J-004', 'J-005']);
-  assert.equal(nextJobId(files), 'J-006');
+  assert.deepEqual(notes.map((n) => n.data.id), ['J-001', 'J-002', 'J-003', 'J-004', 'J-005', 'J-021']);
+  assert.equal(nextJobId(files), 'J-022');
   assert.equal(nextJobId(files.filter((f) => !f.path.startsWith('Jobs/'))), 'J-001');
   const groups = jobGroups(notes);
-  assert.deepEqual(groups.map((g) => g.key + ':' + g.notes.map((n) => n.data.id).join(',')), ['running:', 'requested:J-002', 'done:J-005,J-004,J-003,J-001', 'failed:', 'cancelled:']);
+  assert.deepEqual(groups.map((g) => g.key + ':' + g.notes.map((n) => n.data.id).join(',')), ['running:', 'requested:J-002', 'done:J-021,J-005,J-004,J-003,J-001', 'failed:', 'cancelled:']);
   assert.match(resultBody(notes[0].body), /^Three phrases in S-001/);
   assert.equal(askBody(notes[1].body), 'Keep it under 1,800 words and end on the bell.');
 });
@@ -73,7 +73,7 @@ test('a job note reads back through the vault parser with the properties the run
 test("Kyle's words for kinds, statuses, titles and cost", () => {
   assert.equal(jobLabel('draft'), 'Draft this scene');
   assert.equal(jobLabel('notes'), 'Notes on this chapter');
-  assert.equal(jobLabel('check'), 'Check for AI-sounding phrases');
+  assert.equal(jobLabel('check'), 'Deeper check for AI-sounding phrases (the team)');
   assert.equal(jobLabel('learn'), 'Learn from my edits');
   assert.equal(jobLabel('custom'), 'Ask the team');
   assert.equal(jobLabel(undefined), 'Ask the team');

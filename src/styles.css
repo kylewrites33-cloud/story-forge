@@ -1296,3 +1296,47 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .cw-name { fill: var(--text); font-size: 14px; font-weight: 600; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .cw-count { fill: var(--muted); font-size: 12px; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .cw-said { color: var(--muted); }
+/* Check, Listen and Options for a passage in the writing screen (Writers Room, Kyle 2026-10-18). The tool row measures
+   its own width, so the names of the new tools and the Ask the team heading go when the page beside the panels is narrow. */
+.writer-tools { container-type: inline-size; }
+@container (max-width: 860px) {
+  .writer-tools .check-tools .tool-label, .writer-tools .tool-heading { display: none; }
+}
+/* Flags and the sentence being read, drawn over the words; never in the text. */
+::highlight(sf-check) { background-color: color-mix(in srgb, var(--danger) 14%, transparent); text-decoration: underline wavy var(--danger); }
+::highlight(sf-check-now) { background-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+::highlight(sf-listen) { background-color: color-mix(in srgb, var(--accent) 24%, transparent); }
+.check-score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; color: var(--text); }
+.check-number { font-size: 2.2rem; font-weight: 700; line-height: 1.1; }
+.check-grade { padding: 2px 10px; border-radius: 999px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.grade-clean .check-grade { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.grade-noticeable .check-grade { background: color-mix(in srgb, var(--st-drafted) 18%, transparent); color: var(--text); }
+.grade-heavy .check-grade { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.check-words { flex-basis: 100%; font-size: 0.85rem; color: var(--muted); }
+.check-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin: 0; }
+.check-stats div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.check-stats dt { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.check-stats dd { margin: 0; color: var(--text); font-weight: 600; }
+.check-scene { margin: 6px 0 0; font-weight: 600; color: var(--text); }
+.check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.check-item { display: grid; gap: 2px; width: 100%; min-height: 44px; padding: 8px 10px; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.9rem; }
+.check-item[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.check-where { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+.sev-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--muted); }
+.sev-3 .sev-dot { background: var(--danger); }
+.sev-2 .sev-dot { background: var(--st-drafted); }
+.check-text { font-family: var(--serif); font-weight: 600; overflow-wrap: anywhere; }
+.check-msg { font-size: 0.82rem; color: var(--muted); }
+.writer-tools .listen-bar { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0 -8px; padding: 2px 8px 0; border-top: 1px solid var(--line); }
+.writer-tools .listen-said { flex: 1 1 100%; margin: 0 -8px; }
+.listen-where { margin: 0 6px; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.listen-pick select { min-height: 40px; max-width: 160px; font-size: 0.85rem; }
+.listen-pick.voice select { max-width: min(260px, 60vw); }
+.options-ask .buttons { gap: 6px; }
+.options-ask .buttons button { min-height: 40px; }
+.options-job { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.options-passage { margin: 0; padding: 6px 10px; border-left: 3px solid var(--line); color: var(--muted); font-family: var(--serif); white-space: pre-wrap; }
+.option-card { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.option-text { color: var(--text); font-family: var(--serif); font-size: 1rem; line-height: 1.5; white-space: pre-wrap; }
+.option-card .buttons, .option-lost .buttons { gap: 6px; }
+.option-lost { display: grid; gap: 6px; }

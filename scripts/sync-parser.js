@@ -1,5 +1,6 @@
-// Copies the FRONTMATTER section of the vault's sf.js into src/lib/frontmatter.js, and its prose section (with the two
-// helpers it needs) into src/lib/prose.js, so the app counts words and reads prose the way sf does.
+// Copies the FRONTMATTER section of the vault's sf.js into src/lib/frontmatter.js, its prose section (with the two
+// helpers it needs) into src/lib/prose.js, and its lint section (with the five helpers it needs) into src/lib/lint.js,
+// so the app counts words, reads prose and finds AI-sounding phrases the way sf does.
 // Usage: node scripts/sync-parser.js [path to author-business]   (default ../author-business)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +11,7 @@ const vault = path.resolve(process.argv[2] || path.join(here, '..', '..', 'autho
 const sfPath = path.join(vault, 'System', 'Tools', 'sf.js');
 const out = path.join(here, '..', 'src', 'lib', 'frontmatter.js');
 const proseOut = path.join(here, '..', 'src', 'lib', 'prose.js');
+const lintOut = path.join(here, '..', 'src', 'lib', 'lint.js');
 
 export const HEADER = `// @ts-nocheck
 /* The frontmatter parser, copied as is from author-business System/Tools/sf.js (the FRONTMATTER section), so the app
@@ -56,6 +58,28 @@ export function renderProse(sfText) {
     prose.join('\n') + '\n\nexport const wordCount = U.wordCount;\n';
 }
 
+export const LINT_HEADER = `// @ts-nocheck
+/* The prose linter, copied as is from author-business System/Tools/sf.js (the lint section, with U.wordCount, U.sum,
+ * U.mean, U.stdev and U.escRe; Prose comes from prose.js), so the writing screen's Check finds the same AI-sounding
+ * phrases and gives the same score as \`sf lint\`. Do not edit it here: change sf.js, then copy again with
+ * \`npm run sync-parser\`. tests/lintcheck.test.ts checks the copy when the vault is checked out beside this repository. */
+`;
+
+export function renderLint(sfText) {
+  const lines = sfText.split('\n');
+  const one = (start, what) => {
+    const l = lines.find((x) => x.startsWith(start));
+    if (!l) throw new Error('sf.js has no ' + what + '.');
+    return l;
+  };
+  const wc = linesBetween(lines, '  function wordCount(text) {', '  }', 'U.wordCount');
+  const sd = linesBetween(lines, '  function stdev(arr) {', '  }', 'U.stdev');
+  const helpers = [wc.join('\n'), one('  const sum = ', 'U.sum'), one('  const mean = ', 'U.mean'), sd.join('\n'), one('  const escRe = ', 'U.escRe')];
+  const lint = linesBetween(lines, 'const Lint = (() => {', '})();', 'lint section');
+  return LINT_HEADER + "import { Prose } from './prose.js';\n\nconst U = (() => {\n" + helpers.join('\n') +
+    '\n  return { wordCount, sum, mean, stdev, escRe };\n})();\n\nexport ' + lint.join('\n') + '\n';
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (!fs.existsSync(sfPath)) {
     console.error('Cannot find ' + sfPath + '. Give the path to author-business.');
@@ -64,5 +88,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const sf = fs.readFileSync(sfPath, 'utf8');
   fs.writeFileSync(out, render(sf));
   fs.writeFileSync(proseOut, renderProse(sf));
-  console.log('Copied the frontmatter parser and the prose helpers from ' + sfPath);
+  fs.writeFileSync(lintOut, renderLint(sf));
+  console.log('Copied the frontmatter parser, the prose helpers and the linter from ' + sfPath);
 }

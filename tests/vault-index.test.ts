@@ -50,7 +50,7 @@ test('groups the Chapter Grid by chapter, with unplaced scenes last', async () =
   const groups = chapterGroups(schema, scenes);
   assert.deepEqual(groups.map(chapterHeading), ['Chapter 1: Frost', 'Chapter 2: Thaw', 'Chapter 3: Ledger', 'Chapter 4', 'No chapter yet']);
   assert.deepEqual(groups.map((g) => g.scenes.length), [2, 2, 2, 1, 1]);
-  assert.equal(groups[0].words, 37);
+  assert.equal(groups[0].words, 61);
 });
 
 test('sorts by order, then chapter, then ID, as sf does', () => {

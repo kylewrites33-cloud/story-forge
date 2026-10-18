@@ -8,7 +8,7 @@ import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
-  | 'combine' | 'variations' | 'learn-taste';
+  | 'combine' | 'variations' | 'learn-taste' | 'options';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -23,7 +23,7 @@ export function jobLabel(kind: unknown): string {
   switch (String(kind || '')) {
     case 'draft': return 'Draft this scene';
     case 'notes': return 'Notes on this chapter';
-    case 'check': return 'Check for AI-sounding phrases';
+    case 'check': return 'Deeper check for AI-sounding phrases (the team)';
     case 'learn': return 'Learn from my edits';
     case 'chat': return 'A question for the team';
     case 'rewrite': return 'Rewrite this card';
@@ -38,6 +38,7 @@ export function jobLabel(kind: unknown): string {
     case 'combine': return 'Combine these ideas';
     case 'variations': return 'Variations on this idea';
     case 'learn-taste': return 'Update my taste';
+    case 'options': return 'Options for a passage';
     default: return 'Ask the team';
   }
 }

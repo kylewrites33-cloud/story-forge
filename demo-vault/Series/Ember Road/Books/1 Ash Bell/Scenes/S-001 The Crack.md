@@ -20,11 +20,13 @@ place: "[[Cinder Ford]]"
 turn: The crack runs the full height of the bell.
 hook: She calls for Tobin, who is supposed to be asleep.
 status: drafted
-words: 37
+words: 61
 ---
 
 Mara climbed the tower at 5:40 with a tin lantern. The bell hung crooked on its beam.
 
 She ran a thumb along the crack. It was cold enough to sting.
+
+She let out a breath she didn't know she was holding. The silence was palpable, a testament to every winter the bell had survived.
 
 "Tobin," she said. "Get up here."
