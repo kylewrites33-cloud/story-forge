@@ -70,6 +70,15 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   Join; and a second row, Ask the team: Rewrite, Describe, Brainstorm and Write on each send one chat message about the
   words picked (or the paragraph, or the text before the cursor) to the scene's conversation, and the team answers there
   without changing the scene; Team opens the Team tab. The page, not the text box, scrolls: nothing in it may shrink.
+  Chapter to-dos (Kyle, 2026-10-18): the writing screen's To-dos button (with the open count) opens the To-dos tab, the
+  chapter's to-dos beside the page. They are `task` notes in the book's own `Tasks/` folder with `chapter` (and `scene`);
+  Kyle adds one in a line and ticks it off; the team's carry `generated: true` and `found_by` and show a Generated label.
+  Ask the team to check this chapter (`chapter-check`) and to tick off fixed ones (`todo-review`, which sets `done_note`).
+  The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs. Kyle's "~" notes in scenes stay as they are.
+  The Pomodoro timer (Kyle, 2026-10-18): 25 or 50 minutes of writing, 5 or 10 of break, kept on the device. It floats at the
+  bottom right outside the writing screens and sits in their top bar (beside Leave focus in Focus mode), so it never
+  covers the page or the toolbar. Each finished Pomodoro adds a line to the vault's `Writing Log/YYYY-MM-DD.md`
+  (`writing-day`: pomodoros, minutes, words) with the words written in it; offline ones wait on the device.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -103,6 +112,8 @@ src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML t
 src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
+src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, new ones in the book's Tasks folder
+src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, the Writing Log notes
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore
@@ -115,6 +126,7 @@ src/lib/page.ts          the writing page's look per device (size, spacing, widt
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
+src/ui/Pomodoro.tsx      the timer's button and panel: floating, in the writing screen's top bar, or beside Leave focus
 src/ui/ChapterPage.tsx   the whole chapter as one page
 src/ui/Matrix.tsx        who is in which scene
 src/ui/EditQueue.tsx     editorial notes and to-dos on one page

@@ -1,6 +1,7 @@
 // Small line icons drawn inline, so the app needs no icon font or image files. They take the text colour.
 
 const PATHS: Record<string, string> = {
+  timer: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2.5M10 2h4M12 2v3',
   wand: 'M4 20L15 9M13 7l4 4M17 3v3M15.5 4.5h3M20 8v2M19 9h2M8 3v2M7 4h2',
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   clear: 'M5 5h11M10.5 5L8 19M4 4l16 16',

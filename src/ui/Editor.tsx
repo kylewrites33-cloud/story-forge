@@ -21,6 +21,13 @@ import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../l
 import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import type { OnChat } from './Chat.tsx';
+import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
+import { trackWords } from '../lib/pomodoro.ts';
+import type { ComponentChildren } from 'preact';
+import type { Decision } from '../lib/ideas.ts';
+import type { Choice } from '../lib/write-queue.ts';
+
+type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
@@ -52,7 +59,7 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
+type Tab = 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 
@@ -62,7 +69,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, todos, onTodo, onAddTodo, waiting, timer }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -83,6 +90,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   codex?: CodexEntry[];
   /** The book's Braindump note, for the Notes tab (null: the book has none yet). */
   braindump?: NoteRecord | null;
+  /** The book's to-dos (its Tasks folder); the To-dos tab shows this chapter's. */
+  todos?: NoteRecord[];
+  /** Tick or untick a to-do (a status edit through the write queue). */
+  onTodo?: OnTodo;
+  onAddTodo?: (t: NewTodo) => Promise<string | null>;
+  /** Choices waiting to save, by path, for the to-dos' Saving badge. */
+  waiting?: Record<string, Choice>;
+  /** The Pomodoro timer, drawn in the top bar (or beside Leave focus in Focus mode) so it never covers the page. */
+  timer?: (variant: 'bar' | 'focus') => ComponentChildren;
 }) {
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
@@ -355,6 +371,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const words = bodyWords(draft.body);
   const target = draft.target != null ? draft.target : toNumber(note.data.target_words);
   const sitting = words - draft.startWords;
+  // The Pomodoro timer counts the words written while it runs.
+  const lastWords = useRef(words);
+  useEffect(() => {
+    if (lastWords.current !== words) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
+    lastWords.current = words;
+  }, [words, note.path]);
   const title = [note.data.id, note.data.title].filter(Boolean).join(' ') || note.path;
   const sceneName = String(note.data.title || note.data.id || 'this scene');
   const unsaved = isUnsaved(draft);
@@ -384,10 +406,18 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // A scene with few or no words still gets a block wide enough to see and press.
   const stripMin = Math.max(1, strip.reduce((m, x) => Math.max(m, x.words), 0) * 0.12);
   const stripTotal = strip.reduce((s, x) => s + Math.max(x.words, stripMin), 0);
+  const chapterNum = group && group.num != null ? group.num : null;
+  const chapterList = chapterTodos(todos || [], chapterNum);
+  const openTodos = chapterList.filter(isOpen).length;
 
   return (
     <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
-      {focus && <button type="button" class="leave-focus" onClick={leaveFocus} aria-label="Leave focus mode" title="Leave focus mode (Esc)"><Icon name="focus" /><span class="bar-label">Leave focus</span></button>}
+      {focus && (
+        <div class="focus-corner">
+          {timer && timer('focus')}
+          <button type="button" class="leave-focus" onClick={leaveFocus} aria-label="Leave focus mode" title="Leave focus mode (Esc)"><Icon name="focus" /><span class="bar-label">Leave focus</span></button>
+        </div>
+      )}
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
         {book && (
@@ -401,11 +431,18 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         </span>
         <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>
         {group && group.scenes.length > 1 && (
-          <button type="button" class="bar-button" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
+          <button type="button" class="bar-button compact" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
             <Icon name="page" /><span class="bar-label">Whole chapter</span>
           </button>
         )}
-        <button type="button" class="bar-button" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
+        {book && (
+          <button type="button" class="bar-button" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
+            aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
+            <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
+          </button>
+        )}
+        {timer && timer('bar')}
+        <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
         </button>
         <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label="Scene panel">
@@ -537,10 +574,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
-              {([['card', 'Card'], ['notes', 'Notes'], ['marks', 'Marks'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
+              {([['todos', 'To-dos'], ['card', 'Card'], ['notes', 'Notes'], ['marks', 'Marks'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
+            {tab === 'todos' && (
+              <TodosPanel todos={chapterList} chapter={chapterNum} sceneId={String(note.data.id || '')} onTodo={onTodo} onAdd={onAddTodo}
+                onJob={onJob} bookFolder={bookFolder} waiting={waiting || {}} link={link} />
+            )}
             {tab === 'card' && (picked
               ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} />
               : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} />)}
@@ -1098,6 +1139,91 @@ function CopiesPanel({ source, note, body, canSave, onUse }: {
         ) : <p class="hint">No copies of this scene yet.</p>
       )}
       {!open && <HistoryList source={source} note={note} body={body} canSave={canSave} keep={keep} onUse={onUse} />}
+    </div>
+  );
+}
+
+/** The chapter's to-dos beside the page: Kyle's and the team's, ticked off here or by the team. */
+function TodosPanel({ todos, chapter, sceneId, onTodo, onAdd, onJob, bookFolder, waiting, link }: {
+  todos: NoteRecord[]; chapter: number | null; sceneId: string; onTodo?: OnTodo; onAdd?: (t: NewTodo) => Promise<string | null>;
+  onJob?: OnJob; bookFolder: string | null; waiting: Record<string, Choice>;
+  link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+}) {
+  const [text, setText] = useState('');
+  const [aboutScene, setAboutScene] = useState(true);
+  const [busy, setBusy] = useState('');
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [showDone, setShowDone] = useState(false);
+  const open = todos.filter(isOpen);
+  const closed = todos.filter((n) => !isOpen(n));
+  const where = chapter != null ? 'Chapter ' + chapter : '';
+  const add = async () => {
+    if (!onAdd || !text.trim()) return;
+    setBusy('add');
+    setSaid(null);
+    const err = await onAdd({ title: text.trim(), chapter, scene: aboutScene ? sceneId : '' });
+    setBusy('');
+    if (err) setSaid({ error: true, text: err }); else setText('');
+  };
+  const ask = async (kind: JobKind) => {
+    if (!onJob || !where) return;
+    setBusy(kind);
+    setSaid(null);
+    const r = await onJob({ title: defaultJobTitle(kind, where), kind, target: where, book: bookFolder || '', ask: jobAsk(kind, where, '') });
+    setBusy('');
+    setSaid(r);
+  };
+  const row = (n: NoteRecord) => {
+    const done = !isOpen(n);
+    const w = waiting[n.path];
+    return (
+      <li key={n.path} class={'todo-row' + (done ? ' done' : '')}>
+        <button type="button" class="todo-check" role="checkbox" aria-checked={done} disabled={!onTodo || Boolean(n.error)}
+          aria-label={(done ? 'Not done: ' : 'Done: ') + String(n.data.title || '')}
+          onClick={() => onTodo && onTodo(n.path, 'edit', '', { status: done ? 'open' : 'done' })}>
+          {done && <Icon name="check" size={18} />}
+        </button>
+        <span class="todo-text">
+          <a {...link(href.note(n.path))} class="todo-title">{String(n.data.title || n.data.id || '')}</a>
+          <span class="todo-meta">
+            {n.data.generated === true && <span class="pill pill-plain gen">Generated{n.data.found_by ? ' · ' + String(n.data.found_by) : ''}</span>}
+            {n.data.scene ? <span>{String(n.data.scene)}</span> : null}
+            {w && <span class={w.error ? 'error' : ''}>{w.error ? 'Not saved' : 'Saving…'}</span>}
+          </span>
+          {done && n.data.done_note ? <span class="todo-note">{String(n.data.done_note)}</span> : null}
+        </span>
+      </li>
+    );
+  };
+  return (
+    <div class="writer-panel todos-panel">
+      <p class="hint">{where ? where + ': ' : ''}{open.length === 1 ? '1 to-do open' : open.length + ' to-dos open'}. Tick one off when it is fixed.</p>
+      {open.length > 0 ? <ul class="todo-list">{open.map(row)}</ul> : <p class="hint">Nothing to fix in this chapter yet.</p>}
+      {onAdd && (
+        <div class="todo-add">
+          <label class="reason">
+            <span class="visually-hidden">A new to-do for this chapter</span>
+            <input type="text" value={text} placeholder="Add a to-do for this chapter" onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+          </label>
+          <label class="todo-scene"><input type="checkbox" checked={aboutScene} onChange={(e) => setAboutScene((e.currentTarget as HTMLInputElement).checked)} /> About this scene{sceneId ? ' (' + sceneId + ')' : ''}</label>
+          <button type="button" class="primary" disabled={busy !== '' || !text.trim()} onClick={add}>{busy === 'add' ? 'Adding…' : 'Add'}</button>
+        </div>
+      )}
+      {onJob && where && (
+        <div class="todo-team">
+          <button type="button" disabled={busy !== ''} onClick={() => ask('chapter-check')}>{busy === 'chapter-check' ? 'Sending…' : 'Ask the team to check this chapter'}</button>
+          {open.length > 0 && <button type="button" disabled={busy !== ''} onClick={() => ask('todo-review')}>{busy === 'todo-review' ? 'Sending…' : 'Ask the team to tick off fixed ones'}</button>}
+          <p class="hint">The check reads this chapter for continuity, plot and character problems and adds them here, labelled Generated. Nothing in the scenes changes.</p>
+        </div>
+      )}
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+      {closed.length > 0 && (
+        <>
+          <button type="button" class="link" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>{showDone ? 'Hide' : 'Show'} done ({closed.length})</button>
+          {showDone && <ul class="todo-list">{closed.map(row)}</ul>}
+        </>
+      )}
     </div>
   );
 }

@@ -662,8 +662,11 @@ details.group[open] > summary h2::before { content: '▾ '; }
 .writer.focus .writer-bar, .writer.focus .writer-tools, .writer.focus .writer-done { display: none; }
 .writer.focus .writer-cols { padding-top: max(12px, env(safe-area-inset-top)); }
 .writer.focus .writer-page { box-shadow: none; }
-.leave-focus {
+.focus-corner {
   position: fixed; z-index: 6; top: max(10px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right));
+  display: flex; align-items: center; gap: 8px;
+}
+.leave-focus {
   display: inline-flex; align-items: center; gap: 6px; opacity: 0.45; background: var(--surface); color: var(--muted);
 }
 .leave-focus:hover, .leave-focus:focus-visible { opacity: 1; }
@@ -772,3 +775,72 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .create-form select { width: 100%; background-color: var(--bg); }
 .new-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .new-tile { align-content: start; }
+
+/* A chapter's to-dos beside the page. */
+.count-badge {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  background: var(--accent); color: var(--on-accent); font-size: 0.75rem; font-weight: 700; line-height: 1;
+}
+.todo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.todo-row { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; border-radius: 10px; }
+.todo-check {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -6px -4px -6px -6px; padding: 0;
+  border: none; background: none; color: var(--on-accent); min-height: 0;
+}
+.todo-check::before {
+  content: ""; grid-area: 1 / 1; width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--muted); background: var(--surface);
+}
+.todo-check svg { grid-area: 1 / 1; position: relative; }
+.todo-check[aria-checked="true"]::before { background: var(--accent); border-color: var(--accent); }
+.todo-text { min-width: 0; display: grid; gap: 3px; padding-top: 4px; }
+.todo-title { color: var(--text); text-decoration: none; font-size: 0.95rem; line-height: 1.35; overflow-wrap: anywhere; }
+.todo-title:hover { text-decoration: underline; }
+.todo-row.done .todo-title { color: var(--muted); text-decoration: line-through; }
+.todo-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+.todo-meta .error { color: var(--danger); }
+.pill.gen { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-size: 0.72rem; }
+.todo-note { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+.todo-add { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.todo-add .reason input { width: 100%; }
+.todo-scene { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text); }
+.todo-scene input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+.todo-team { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.todo-team button { text-align: left; }
+
+/* The Pomodoro timer: floating at the bottom right outside the writing screen, in its top bar inside it. */
+.pomodoro { position: relative; flex: none; }
+.pomodoro-float {
+  position: fixed; z-index: 5; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+}
+.pomodoro-float .pomodoro-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; min-width: 48px; padding: 0 14px; justify-content: center;
+  border-radius: 24px; border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lift);
+}
+.pomodoro-chip { font-variant-numeric: tabular-nums; }
+.pomodoro.is-work .pomodoro-chip { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.pomodoro.is-break .pomodoro-chip { color: var(--ok); border-color: var(--ok); }
+.pomodoro.is-paused .pomodoro-chip { background: var(--accent-soft); color: var(--accent); }
+.pomodoro-time { font-weight: 600; }
+.pomodoro-panel {
+  position: absolute; z-index: 8; right: 0; width: min(300px, calc(100vw - 32px)); display: grid; gap: 10px; padding: 14px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lift);
+  font-size: 0.95rem; text-align: left; white-space: normal;
+}
+.pomodoro-float .pomodoro-panel { bottom: calc(100% + 10px); }
+.pomodoro-bar .pomodoro-panel, .pomodoro-focus .pomodoro-panel { top: calc(100% + 8px); }
+.pomodoro-panel p { margin: 0; }
+.pomodoro-now { font-weight: 600; }
+.pomodoro-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pomodoro-lengths { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 10px; color: var(--muted); }
+.pomodoro-panel .segmented { display: flex; gap: 4px; }
+.pomodoro-panel .segmented button { flex: 1; }
+.pomodoro-panel .segmented button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pomodoro-focus .pomodoro-chip { opacity: 0.6; background: var(--surface); }
+.pomodoro-focus .pomodoro-chip:hover, .pomodoro-focus .pomodoro-chip:focus-visible, .pomodoro-focus.is-work .pomodoro-chip { opacity: 1; }
+/* The floating timer never sits on the last lines of a page: the page can scroll them clear of it. */
+.shell-main main { padding-bottom: 6rem; }
+/* A phone has no room for every top-bar button on one line: the bar takes two. */
+@media (max-width: 600px) { .writer-bar { flex-wrap: wrap; row-gap: 6px; } }
+/* Buttons in the writing screen's top bar keep their size; the book's title gives way first, then two short names. */
+.writer-bar > .bar-button, .writer-bar > .pomodoro, .writer-bar > .save-chip { flex-shrink: 0; }
+@media (max-width: 1099px) { .writer-bar .bar-button.compact .bar-label { display: none; } }
