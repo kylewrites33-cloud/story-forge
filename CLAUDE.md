@@ -90,6 +90,15 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   the agent), kept share, lessons (MEMORY.md) and Talk (a new chat that starts with the agent's name). An agent's page
   (`#/team/<name>`) adds its skills, lessons and what it has done. Session history (`#/history`) is every agent's
   Journal.md entries, the jobs it ran and the vault's last 100 saves with an `Agent:` line.
+  Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` shows the scene's chapter by
+  its beats, each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under
+  it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
+  writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
+  (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
+  `src/lib/beats.ts`). Prose before a scene's first beat shows without a heading. Add a beat after, Take off this heading.
+  Ask the team writes a `beats` job (the Story Specialist finds the beats in the prose, plans them from Kyle's words, or
+  redoes them, archiving the old note). Reached from the writing screen's and whole chapter's Beats button and each
+  chapter heading on the Chapter Grid.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -139,6 +148,8 @@ src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with res
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
 src/ui/Pomodoro.tsx      the timer's button and panel: floating, in the writing screen's top bar, or beside Leave focus
 src/ui/ChapterPage.tsx   the whole chapter as one page
+src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
+src/ui/BeatsPage.tsx     the chapter by its beats: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene
 src/ui/EditQueue.tsx     editorial notes and to-dos on one page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)

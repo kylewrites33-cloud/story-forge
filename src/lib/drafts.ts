@@ -29,6 +29,8 @@ export interface Draft {
   pending: boolean;
   /** The last plain-sentence failure, if saving failed for a reason other than being offline. */
   error?: string;
+  /** For a note the vault does not have yet (a chapter's first beats): its property block, so the first save adds it. */
+  create?: string;
 }
 
 const KEY = 'story-forge.drafts.';
@@ -194,6 +196,17 @@ export interface SaveResult {
 export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promise<SaveResult> {
   if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
   let clash: string | null = null;
+  if (d.create && !d.baseSha) {
+    const text = d.create + d.body;
+    const data = makeNote(d.path, '', text).data;
+    try {
+      const sha = await source.write(d.path, text, '', verbFor(String(data.type || ''), true) + (data.title || d.path) + '\n\nWritten in the Story Forge app.');
+      return { note: makeNote(d.path, sha, text), clash };
+    } catch (e) {
+      // Made somewhere else a moment ago: save over it the usual way, keeping the other version as a copy.
+      if (!(e as { conflict?: boolean }).conflict) throw e;
+    }
+  }
   for (let attempt = 0; ; attempt++) {
     const { text, sha } = await source.readFresh(d.path);
     const cur = makeNote(d.path, sha, text);
@@ -213,13 +226,18 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
     if (next === text) return { note: cur, clash };
     const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || d.path;
     try {
-      const newSha = await source.write(d.path, next, sha, 'scenes: edit ' + name + '\n\nWritten in the Story Forge app.');
+      const newSha = await source.write(d.path, next, sha, verbFor(cur.type, false) + name + '\n\nWritten in the Story Forge app.');
       return { note: makeNote(d.path, newSha, next), clash };
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
       throw e;
     }
   }
+}
+
+function verbFor(type: string, adding: boolean): string {
+  if (type === 'chapter-beats') return adding ? 'beats: add ' : 'beats: edit ';
+  return adding ? 'scenes: add ' : 'scenes: edit ';
 }
 
 export interface DraftFlush {

@@ -2156,6 +2156,31 @@
       },
       "body": "Callouts as they stood in the scene: Kyle's outline, Team notes (bible proposals and continuity questions), Open for Kyle questions and Source lines. Agents add new team notes here, not in the prose."
     },
+    "chapter-beats": {
+      "description": "A chapter's beats: the moves of the chapter, each a short title and a one-line summary, kept beside the prose so the scenes hold only the story. The app shows the chapter by its beats, each opening to its prose, and Kyle edits beats and prose there.",
+      "scope": "book",
+      "folder": "Chapter Beats",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "chapter"
+      ],
+      "properties": {
+        "type": {
+          "const": "chapter-beats"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Chapter N beats\"."
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "The chapter these beats belong to."
+        }
+      },
+      "body": "One `## ` heading per beat, in reading order: the beat's title. Under it, the one-line summary, then `Starts: S-NNN · <first words>`: the scene the beat sits in and the first ten words of the paragraph it starts at, copied exactly without * or = marks. A beat with no prose yet has `Starts: S-NNN` and no words. Never put beats in the scene files. See `.claude/skills/chapter-beats/SKILL.md`."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

@@ -10,6 +10,8 @@ export type Route =
   | { name: 'note'; path: string }
   | { name: 'write'; path: string }
   | { name: 'chapter'; path: string }
+  /** The chapter of this scene, by its beats. */
+  | { name: 'beats'; path: string }
   | { name: 'todo' }
   | { name: 'jobs' }
   /** thread '' is the list of conversations, 'new' a conversation not started yet; book is the book it is for. */
@@ -32,6 +34,7 @@ export function parseHash(hash: string): Route {
   if (head === 'note' && tail) return { name: 'note', path: tail };
   if (head === 'write' && tail) return { name: 'write', path: tail };
   if (head === 'chapter' && tail) return { name: 'chapter', path: tail };
+  if (head === 'beats' && tail) return { name: 'beats', path: tail };
   if (head === 'settings') return { name: 'settings' };
   if (head === 'team') return { name: 'team', slug: tail };
   if (head === 'skills') return { name: 'skills', skill: tail };
@@ -53,6 +56,7 @@ export const href = {
   note: (path: string) => '#/note/' + encodeURIComponent(path),
   write: (path: string) => '#/write/' + encodeURIComponent(path),
   chapter: (path: string) => '#/chapter/' + encodeURIComponent(path),
+  beats: (path: string) => '#/beats/' + encodeURIComponent(path),
   todo: () => '#/todo',
   jobs: () => '#/jobs',
   chat: (thread = '', book = '') => '#/chat' + (thread ? '/' + encodeURIComponent(thread) + (book ? '/' + encodeURIComponent(book) : '') : ''),

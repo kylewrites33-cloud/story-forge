@@ -144,6 +144,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
       <header class="writer-bar">
         <button type="button" class="primary" onClick={() => go(backTo)}>Done</button>
         <button type="button" class="bar-button" onClick={() => go(href.write(focused))} title="Back to one scene at a time"><Icon name="page" /><span class="bar-label">One scene</span></button>
+        {group.num != null && <button type="button" class="bar-button" onClick={() => go(href.beats(focused))} title="This chapter by its beats"><Icon name="beats" /><span class="bar-label">Beats</span></button>}
         <span class="writer-title">{bookTitle}</span>
         <span class="writer-words">{num(words)} words{words - started ? ' · ' + (words - started > 0 ? '+' : '') + num(words - started) : ''}</span>
         <span class={'save-chip ' + (chip === 'Saved' ? 'good' : state === 'error' ? 'bad' : '')} role="status">{chip === 'Saved' && <Icon name="check" size={16} />}{chip}</span>
