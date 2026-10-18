@@ -22,7 +22,7 @@ test('indexes series, books and the types on phase 1 boards', () => {
 
 test('orders a note\'s properties as the schema lists them, extras last', () => {
   const s = parseSchema(demoSchemaText());
-  assert.deepEqual(propertyOrder(s, 'scene', { status: 'planned', mood: 'grim', title: 'A', id: 'S-001', type: 'scene' }), ['type', 'id', 'title', 'status', 'mood']);
+  assert.deepEqual(propertyOrder(s, 'scene', { status: 'planned', flavour: 'grim', title: 'A', id: 'S-001', type: 'scene' }), ['type', 'id', 'title', 'status', 'flavour']);
 });
 
 test('says plainly what is wrong with a bad schema', () => {
