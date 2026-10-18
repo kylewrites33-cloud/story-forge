@@ -19,7 +19,7 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'spacing', label: 'Line spacing', options: [['tight', 'Tight'], ['normal', 'Normal'], ['loose', 'Loose']] },
   { key: 'width', label: 'Page width', options: [['narrow', 'Narrow'], ['normal', 'Normal'], ['wide', 'Wide']] },
   { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)']] },
-  { key: 'paper', label: 'Paper', options: [['white', 'White'], ['cream', 'Cream'], ['dark', 'Dark']] },
+  { key: 'paper', label: 'Paper', options: [['white', 'Theme colour'], ['cream', 'Cream'], ['dark', 'Dark']] },
   { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] }
 ];
 

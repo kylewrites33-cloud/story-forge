@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { GitHubSource } from '../lib/github.ts';
 import { normalise, type Settings } from '../lib/settings.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
+import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
 
@@ -35,6 +36,8 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
   return (
     <section>
       <h1>Settings</h1>
+      <Colours />
+      <h2>Vault</h2>
       <form class="settings" onSubmit={save}>
         <label>
           Token
@@ -104,6 +107,36 @@ function ReadingRates() {
         </p>
         <p class="hint">{ok ? 'A 90,000-word book is ' + readingLine(90000, { wordsPerPage: p, wordsPerMinute: s }) + '.' : 'Use numbers between 50 and 1,000.'}{rates.wordsPerPage !== p || rates.wordsPerMinute !== s ? ' Press Save to use these.' : ''}</p>
       </div>
+    </>
+  );
+}
+
+/** The app's colours on this device: Match this device, five light themes, five dark ones. Each card shows its own colours. */
+function Colours() {
+  const [choice, setChoice] = useState(loadTheme);
+  const pick = (id: string) => { saveTheme(id); setChoice(id); };
+  const card = (t: Theme) => (
+    <button type="button" key={t.id} class="theme-card" data-theme={t.id} aria-pressed={choice === t.id} onClick={() => pick(t.id)}>
+      <span class="theme-preview" aria-hidden="true">
+        <span class="tp-rail"><i /><i /><i class="on" /><i /></span>
+        <span class="tp-page"><b /><i /><i /><i class="short" /><em /></span>
+      </span>
+      <span class="theme-name">{choice === t.id ? '✓ ' : ''}{t.name}</span>
+      <span class="theme-line">{t.line}</span>
+    </button>
+  );
+  return (
+    <>
+      <h2>Colours</h2>
+      <p class="hint">Changes the whole app on this device: sidebar, boards, the writing page and the panels beside it. Each device keeps its own choice.</p>
+      <p class="buttons">
+        <button type="button" class={choice === AUTO ? 'primary' : ''} aria-pressed={choice === AUTO} onClick={() => pick(AUTO)}>{choice === AUTO ? '✓ ' : ''}Match this device</button>
+      </p>
+      <p class="hint">Match this device uses Violet when the device is light and Violet Night when it is dark.</p>
+      <h3 class="theme-group">Light</h3>
+      <div class="theme-grid">{THEMES.filter((t) => t.mode === 'light').map(card)}</div>
+      <h3 class="theme-group">Dark</h3>
+      <div class="theme-grid">{THEMES.filter((t) => t.mode === 'dark').map(card)}</div>
     </>
   );
 }
