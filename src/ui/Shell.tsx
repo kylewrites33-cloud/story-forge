@@ -25,6 +25,9 @@ const GROUPS: [string, string[]][] = [
   ['Review', ['edit-queue']],
   ['Publish', ['market']]
 ];
+// The "seeing the book" pages: Promises, Plot Grid and Timeline plan the book; Themes and Cast web review it.
+GROUPS[1][1].push('promises', 'plot-grid', 'timeline');
+GROUPS[3][1].push('themes', 'cast-web');
 
 /** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {

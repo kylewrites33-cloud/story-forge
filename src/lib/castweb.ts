@@ -111,8 +111,10 @@ export function layout(count: number, edges: { a: number; b: number }[], width: 
   }
   // Fit the picture into the box, leaving room for each circle and its name.
   const pad = 16;
-  const minX = Math.min(...pos.map((p, i) => p.x - radii[i])), maxX = Math.max(...pos.map((p, i) => p.x + radii[i]));
-  const minY = Math.min(...pos.map((p, i) => p.y - radii[i])), maxY = Math.max(...pos.map((p, i) => p.y + radii[i] + 22));
+  // A name is wider than its circle: keep 64 px either side, and two lines (name, scenes) under it.
+  const half = radii.map((r) => Math.max(r, 64));
+  const minX = Math.min(...pos.map((p, i) => p.x - half[i])), maxX = Math.max(...pos.map((p, i) => p.x + half[i]));
+  const minY = Math.min(...pos.map((p, i) => p.y - radii[i])), maxY = Math.max(...pos.map((p, i) => p.y + radii[i] + 40));
   const s = Math.min((width - 2 * pad) / Math.max(1, maxX - minX), (height - 2 * pad) / Math.max(1, maxY - minY));
   const ox = pad + ((width - 2 * pad) - (maxX - minX) * s) / 2, oy = pad + ((height - 2 * pad) - (maxY - minY) * s) / 2;
   return pos.map((p) => ({ x: ox + (p.x - minX) * s, y: oy + (p.y - minY) * s }));

@@ -120,6 +120,20 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  Seeing the book (Kyle, 2026-10-18, from Writers Room's Story Dashboard): five pages of the open book. Plan group:
+  Promises (`#/board/promises/<book>`: each promise note a lane across the scenes in reading order, a ring where it is
+  planted, a dot where reinforced, a square where paid; open ones always show, paid, subverted and dropped fold away;
+  warns about an open promise no scene pays even in the last fifth, and a promise naming a scene the book lacks; press a
+  lane for its note), Plot Grid (`plot-grid`: the series' and book's threads, or the cast by pov and cast, down the side
+  and scenes across; a shaded gap where a thread disappears, flagged past 4 scenes or 15% of the book; pressing a square
+  adds or removes the thread in the scene's `threads` through the write queue, a front-matter edit only, and a dashed
+  square, the team's guess from `card_draft`, is confirmed first) and Timeline (`timeline`: scenes against story `day`,
+  flashbacks and time jumps drawn and said in words, scenes with no day listed). Review group: Themes (`themes`: theme
+  notes by chapter, shaded by how often their `keywords` appear in the prose as whole words, a diamond where a card links
+  the theme; press a cell for the lines) and Cast web (`cast-web`: an SVG map, circles sized by scenes on stage, lines
+  from `relationships`, as wide as the words after the link or the character note's sentences about the other say it is
+  tense, else even; a small fixed force layout; press a circle for the character). Wide grids scroll in their own box
+  with sticky side labels. `promiseWarnings` and `plotGapWarnings` are WarningChecks for the Overview.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -183,6 +197,15 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
+src/lib/seeing.ts        what the seeing-the-book pages share: story scenes in order, a book's or series' notes of a type
+src/lib/promises.ts      Promises board: lanes of planted, reinforced and paid scenes; promiseWarnings
+src/lib/plotgrid.ts      Plot Grid: threads or cast by scene, gaps, the threads toggle; plotGapWarnings
+src/lib/timeline.ts      Timeline: scenes by story day, flashbacks, time jumps, scenes with no day
+src/lib/themes.ts        Themes heatmap: keyword counts per chapter, cards that link a theme, the matching lines
+src/lib/castweb.ts       Cast web: presence, relationships and how tense they are, a small fixed force layout
+src/ui/Seeing.tsx        the five pages' links (sidebar Plan and Review) and which one to show
+src/ui/SeeingParts.tsx   their shared head, scene header rows by chapter and warning list
+src/ui/Promises.tsx, PlotGrid.tsx, Timeline.tsx, Themes.tsx, CastWeb.tsx   the five pages
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview

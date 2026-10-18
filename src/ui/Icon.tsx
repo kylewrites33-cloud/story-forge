@@ -52,6 +52,11 @@ const PATHS: Record<string, string> = {
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
+  promise: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  threads: 'M3 6h4M10 6h11M3 12h11M17 12h4M3 18h7M13 18h8',
+  timeline: 'M3 18l5-6 4 3 4-8 5 5M3 21h18',
+  heat: 'M4 4h5v5H4zM10 4h5v5h-5zM16 4h4v5h-4zM4 10h5v5H4zM10 10h5v5h-5zM4 16h5v4H4z',
+  web: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 6.8l-5 9.5M13 6.8l5 9.5M7 18h10',
   bracket: 'M9 4H5v16h4M15 4h4v16h-4'
 };
 

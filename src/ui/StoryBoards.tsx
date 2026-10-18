@@ -8,6 +8,7 @@ import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
 import { href } from './route.ts';
 import { EmptyBox } from './screens.tsx';
 import { Icon } from './Icon.tsx';
+import { seeingLinks } from './Seeing.tsx';
 
 export interface BoardLink { key: string; title: string; to: string; icon: string }
 
@@ -24,7 +25,8 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
     { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' }
   ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || schema.boards[l.key])
-    .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
+    .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }))
+    .concat(seeingLinks(folder));
 }
 
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
