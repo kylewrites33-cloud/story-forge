@@ -46,6 +46,12 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   The vault's GitHub workflow runs the job and writes `started`, `finished`, `cost_usd`, `run_url`, `result` and a
   `## Result` section back; the Jobs screen (top bar) lists jobs by status, refreshes itself every minute while open, and
   Cancel sets a requested job to `cancelled`. A job of the same kind and target still waiting or working is never made twice.
+  Chat with the team (top bar Chat, `#/chat` and `#/chat/<thread>`): each message Kyle sends is a job of kind `chat`
+  whose `thread` is a scene ID (a conversation about that scene, opened from the Team tab's "Talk about this scene") or
+  `chat-NNN` (New conversation); the runner answers each in ID order from the earlier messages in its thread. The screen
+  lists conversations newest first and shows one like a chat (Kyle right, the team's reply left, cost small); Kyle may send
+  again before a reply comes. While an open conversation waits for a reply the app syncs every 15 seconds (only while the
+  page is visible). The Jobs screen leaves chat messages out.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -80,6 +86,7 @@ src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved 
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
+src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing
 src/lib/markdown.ts      small, escaping Markdown reader for the note view
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
@@ -87,6 +94,7 @@ src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, k
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
+src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/ui/                  screens (Preact)

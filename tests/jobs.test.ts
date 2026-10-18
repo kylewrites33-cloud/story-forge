@@ -21,11 +21,11 @@ test('the demo vault has jobs and the index lists them', async () => {
   const { files } = await src.tree();
   const index = await buildIndex({ schema: parseSchema(demoSchemaText()), files, read: (p, sha) => src.read(p, sha), phase: PHASE });
   const notes = jobNotes(index);
-  assert.deepEqual(notes.map((n) => n.data.id), ['J-001', 'J-002']);
-  assert.equal(nextJobId(files), 'J-003');
+  assert.deepEqual(notes.map((n) => n.data.id), ['J-001', 'J-002', 'J-003', 'J-004', 'J-005']);
+  assert.equal(nextJobId(files), 'J-006');
   assert.equal(nextJobId(files.filter((f) => !f.path.startsWith('Jobs/'))), 'J-001');
   const groups = jobGroups(notes);
-  assert.deepEqual(groups.map((g) => g.key + ':' + g.notes.map((n) => n.data.id).join(',')), ['running:', 'requested:J-002', 'done:J-001', 'failed:', 'cancelled:']);
+  assert.deepEqual(groups.map((g) => g.key + ':' + g.notes.map((n) => n.data.id).join(',')), ['running:', 'requested:J-002', 'done:J-005,J-004,J-003,J-001', 'failed:', 'cancelled:']);
   assert.match(resultBody(notes[0].body), /^Three phrases in S-001/);
   assert.equal(askBody(notes[1].body), 'Keep it under 1,800 words and end on the bell.');
 });
@@ -109,8 +109,8 @@ test('Cancel changes one status line and says so in the commit', () => {
 test('a job added in the app passes sf validate', { skip: !hasVault && 'the vault is not beside this repository' }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-job-'));
   fs.cpSync(DEMO, dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'Jobs', 'J-003 Notes on Chapter 1.md'),
-    jobText('J-003', { title: 'Notes on Chapter 1', kind: 'notes', target: 'Chapter 1', book: 'Series/Ember Road/Books/1 Ash Bell', ask: 'Is the opening too slow?' }, new Date('2026-10-18T12:00:00')));
+  fs.writeFileSync(path.join(dir, 'Jobs', 'J-006 Notes on Chapter 1.md'),
+    jobText('J-006', { title: 'Notes on Chapter 1', kind: 'notes', target: 'Chapter 1', book: 'Series/Ember Road/Books/1 Ash Bell', ask: 'Is the opening too slow?' }, new Date('2026-10-18T12:00:00')));
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], { cwd: dir, encoding: 'utf8' });
   assert.match(out, /no errors, no warnings/);
 });
