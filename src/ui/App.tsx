@@ -11,7 +11,7 @@ import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { createScene, mentionsOf, orderBetween, renameScene } from '../lib/scenes.ts';
+import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts } from '../lib/drafts.ts';
@@ -456,6 +456,7 @@ export function App() {
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
           timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} />}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
+          sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }

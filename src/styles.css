@@ -459,6 +459,9 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .find-count { min-width: 4.5em; }
 .named-list, .mark-list { list-style: none; margin: 4px 0 0; padding: 0; }
 .named-list li, .mark-list li { min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.scene-notes { margin: 4px 0 8px; }
+.scene-notes .callout { margin: 8px 0; }
+.scene-notes > a.link { display: inline-flex; align-items: center; min-height: 44px; }
 .mark-list mark { background: var(--mark, #fff1a8); color: inherit; border-radius: 3px; padding: 0 2px; }
 .name-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 .codex-name { margin: 8px 0 0; font-size: 1.2rem; }

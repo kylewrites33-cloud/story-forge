@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { saveDraft, openDraft } from '../src/lib/drafts.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import {
-  archiveForJoin, archivePath, createScene, joinedBody, mentionsOf, nextSceneId, noteJoinForTeam, orderBetween, removeJoined, splitAt, splitOff
+  archiveForJoin, archivePath, createScene, joinedBody, mentionsOf, nextSceneId, noteJoinForTeam, orderBetween, removeJoined, sceneNotesFor, splitAt, splitOff
 } from '../src/lib/scenes.ts';
 import type { FileEntry, NoteRecord } from '../src/lib/types.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
@@ -131,4 +131,15 @@ test('add, split and join scenes in the demo vault; it still passes sf validate'
   assert.ok(src.messages.every((m) => !/Agent:/.test(m)));
 
   assert.match(validate(src.root), /no errors/);
+});
+
+test('a scene\'s notes are found by its ID in its own book, and only there', () => {
+  const n = (p: string, data: Record<string, unknown>): NoteRecord => ({ path: p, sha: '', type: String(data.type), data, body: '> [!plan] Team notes', error: null });
+  const notes: Record<string, NoteRecord> = {};
+  [n(BOOK + '/Scene Notes/S-001 The Crack.md', { type: 'scene-notes', scene: 'S-001' }),
+    n('Series/Ember Road/Books/2 Other/Scene Notes/S-002 X.md', { type: 'scene-notes', scene: 'S-002' }),
+    n(BOOK + '/Scenes/S-002 The Ferry.md', { type: 'scene', id: 'S-002' })].forEach((x) => { notes[x.path] = x; });
+  assert.equal(sceneNotesFor(notes, BOOK, 's-001')!.path, BOOK + '/Scene Notes/S-001 The Crack.md');
+  assert.equal(sceneNotesFor(notes, BOOK, 'S-002'), null);
+  assert.equal(sceneNotesFor(notes, BOOK, ''), null);
 });

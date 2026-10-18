@@ -237,3 +237,12 @@ export async function renameScene(source: VaultSource, note: NoteRecord, title: 
   await source.remove(note.path, fresh.sha, 'scenes: rename ' + id + ' (old file name)\n\n' + why);
   return makeNote(dest, sha, text);
 }
+
+/** A scene's planning notes (Kyle's outline, Team notes, Open for Kyle questions), kept beside the prose in the book's
+ * Scene Notes folder as a `scene-notes` note, so the page shows only the story. */
+export function sceneNotesFor(notes: Record<string, NoteRecord>, bookFolder: string, sceneId: string): NoteRecord | null {
+  const want = String(sceneId || '').toUpperCase();
+  if (!want) return null;
+  return Object.values(notes).find((n) => n.type === 'scene-notes' && n.path.startsWith(bookFolder + '/')
+    && String(n.data.scene || '').toUpperCase() === want) || null;
+}
