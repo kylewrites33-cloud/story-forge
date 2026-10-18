@@ -18,9 +18,13 @@ import { boardLinks } from './StoryBoards.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
-import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { askBody, defaultJobTitle, jobAsk, resultBody, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
-import type { OnChat } from './Chat.tsx';
+import { SceneChat, type OnChat } from './Chat.tsx';
+import type { Conversation } from '../lib/chat.ts';
+import { askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
+import { lineAt, loadDots, mapFor, merge3, saveDots } from '../lib/live.ts';
+import { planHead, planPath } from '../lib/plans.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { ComponentChildren } from 'preact';
@@ -35,6 +39,7 @@ import { findAll, markList, unstyle } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
 import { propertyOrder } from '../lib/schema.ts';
 import { render } from '../lib/markdown.ts';
+import { makeNote } from '../lib/vault-index.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -59,7 +64,16 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
+type Tab = 'chat' | 'plan' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
+const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']];
+// The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
+const TAB_KEY = 'story-forge.panel-tab';
+function loadTab(): Tab {
+  try { const t = localStorage.getItem(TAB_KEY) as Tab | null; return t && TABS.some(([k]) => k === t) ? t : 'chat'; } catch { return 'chat'; }
+}
+// How often an open scene is read again, so words pushed from elsewhere show up without reloading.
+export const LIVE_MS = 30 * 1000;
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 
@@ -69,7 +83,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer }: {
+export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -101,6 +115,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   waiting?: Record<string, Choice>;
   /** The Pomodoro timer, drawn in the top bar (or beside Leave focus in Focus mode) so it never covers the page. */
   timer?: (variant: 'bar' | 'focus') => ComponentChildren;
+  /** The team's fill jobs for this scene: the [brackets] they are answering, and their answers. */
+  fillJobs?: NoteRecord[];
+  /** This scene's conversation with the team, for the Chat tab. */
+  convo?: Conversation | null;
+  /** The chapter's plan (Chapter Plans), for the Plan tab; null when the chapter has none yet. */
+  plan?: NoteRecord | null;
 }) {
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
@@ -108,9 +128,13 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const draftRef = useRef(draft);
   const [state, setState] = useState<Saving>('idle');
   const [message, setMessage] = useState<string | null>(null);
-  const [left, setLeft] = useState(() => wide(WIDE_LEFT) && loadSide('chapters', true));
-  const [right, setRight] = useState(() => wide(WIDE_RIGHT) && loadSide('scene-panel', true));
-  const [tab, setTab] = useState<Tab>('card');
+  // Between 900 and 1200 px the chapter list and the right-hand column share the room beside the page: the right one
+  // (the team's chat) wins when both were open.
+  const left0 = () => wide(WIDE_LEFT) && loadSide('chapters', true) && (wide(WIDE_RIGHT) || !loadSide('scene-panel', true));
+  const [left, setLeft] = useState(left0);
+  const [right, setRight] = useState(() => (wide(WIDE_RIGHT) || (wide(WIDE_LEFT) && !left0())) && loadSide('scene-panel', true));
+  const [tab, setTabState] = useState<Tab>(loadTab);
+  const setTab = (t: Tab) => { setTabState(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* lasts until reload */ } };
   const [look, setLook] = useState<PageLook>(loadLook);
   const [focus, setFocus] = useState(false);
   const commands = useRef<EditorCommands | null>(null);
@@ -122,18 +146,43 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const [repl, setRepl] = useState('');
   const [hit, setHit] = useState(0);
   const [asked, setAsked] = useState<{ busy: PassageTool | ''; error: boolean; text: string } | null>(null);
+  // [Brackets]: what Fill brackets said, answers that found no place, and the per-device switch to send them unasked.
+  const [filling, setFilling] = useState<{ busy: boolean; error: boolean; text: string } | null>(null);
+  const [unplaced, setUnplaced] = useState<{ key: string; marker: string; answer: string }[]>([]);
+  const [autoFill, setAutoFill] = useState(loadAutoFill);
+  // Lines added by the team or from elsewhere, with a dot beside them until Kyle clicks into them (this device only).
+  const [dots, setDotsState] = useState<string[]>(() => loadDots(source.key, note.path));
+  const setDots = (f: (d: string[]) => string[]) => setDotsState((prev) => { const d = f(prev); if (d !== prev) saveDots(source.key, note.path, d); return d; });
+  const addDots = (lines: string[]) => { if (lines.length) setDots((prev) => prev.concat(lines.filter((l, i) => prev.indexOf(l) < 0 && lines.indexOf(l) === i))); };
+  /** Kyle clicked or typed in a line: its dot goes. */
+  const clearDot = (at: number) => {
+    const line = lineAt(splitLead(draftRef.current.body).text, at);
+    setDots((prev) => (prev.indexOf(line) >= 0 ? prev.filter((l) => l !== line) : prev));
+  };
+  const dotSet = useMemo(() => new Set(dots), [dots]);
+  const fills = fillJobs || [];
+  const fillKey = fills.map((j) => j.path + '@' + j.sha).join(';');
+  const asking = useMemo(() => askingKeys(fills), [fillKey]);
+  const askingMarkers = useMemo(() => {
+    const out = new Set<string>();
+    fills.filter(isOpenJob).forEach((j) => askItems(askBody(j.body)).forEach((it) => out.add(it.marker.trim().toLowerCase())));
+    return out;
+  }, [fillKey]);
   // The codex as one key, so the names are only worked out again when a name, nickname or colour changes.
   const codexKey = (codex || []).map((e) => e.name + '|' + e.terms.join(',') + '|' + e.color).join(';');
   const allNames = useMemo(() => matcher(codex || []), [codexKey]);
   const names = look.names === 'on' && (codex || []).length ? allNames : null;
   const findQ = findOpen ? query : '';
-  const styleOpts = useMemo(() => ({ names, find: findQ }), [names, findQ]);
+  const styleOpts = useMemo(() => ({ names, find: findQ, asks: true, asking: askingMarkers, added: dotSet }), [names, findQ, askingMarkers, dotSet]);
   const box = useRef<HTMLTextAreaElement>(null);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
   const kept = useRef(true);
 
+  // Every version of the scene this page has started from, so an older copy that a slow read brings back is never merged.
+  const seen = useRef<Set<string>>(new Set([draft.baseSha]));
   const setDraft = useCallback((d: Draft) => {
+    seen.current.add(d.baseSha);
     draftRef.current = d;
     setDraftState(d);
     kept.current = putDraft(source.key, d.path, d);
@@ -215,7 +264,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     };
   }, [source, save, setDraft]);
 
-  const mark = () => { const el = box.current; if (el) caret.current = el.selectionStart; };
+  const mark = () => { const el = box.current; if (el) { caret.current = el.selectionStart; clearDot(el.selectionStart); } };
 
   /** Split at the cursor: the words after it become a new scene right after this one. */
   const split = async (newTitle: string): Promise<string | null> => {
@@ -312,11 +361,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const done = () => go(backTo);
   const link = (to: string) => ({ href: to, onClick: (e: MouseEvent) => { e.preventDefault(); go(to); } });
 
-  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); };
-  const toggleRight = () => { const v = !right; setRight(v); if (wide(WIDE_RIGHT)) saveSide('scene-panel', v); };
-  const openTab = (t: Tab) => { setTab(t); if (!right) setRight(true); };
+  // Between 900 and 1200 px only one side fits beside the page, so opening one closes the other.
+  const shared = () => wide(WIDE_LEFT) && !wide(WIDE_RIGHT);
+  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); if (v && right && shared()) setRight(false); };
+  const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide('scene-panel', v); if (v && left && shared()) setLeft(false); };
+  const toggleRight = () => showRight(!right);
+  const openTab = (t: Tab) => { setTab(t); if (!right) showRight(true); };
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
-  const closeOver = () => { if (!wide(WIDE_LEFT)) setLeft(false); if (!wide(WIDE_RIGHT)) setRight(false); };
+  const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
 
   /** Bold or italic in the plain text box: put stars around the selection. */
   const wrapPlain = (stars: string) => {
@@ -348,10 +400,116 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       select: (a, b) => { const el = cur(); if (!el) return; el.focus(); el.setSelectionRange(a, b); caret.current = a; },
       replaceRange: (a, b, t) => { const el = cur(); if (!el) return; set(el.value.slice(0, a) + t + el.value.slice(b), a + t.length, a + t.length); },
       setAll: (t) => { const el = cur(); if (el) set(t, 0, 0); },
-      selection: () => { const el = cur(); return el ? { start: el.selectionStart, end: el.selectionEnd } : null; }
+      selection: () => { const el = cur(); return el ? { start: el.selectionStart, end: el.selectionEnd } : null; },
+      apply: (t, map) => {
+        const el = cur();
+        if (!el) { changed(t); return; }
+        const inside = document.activeElement === el;
+        const a = map(el.selectionStart), b = map(el.selectionEnd);
+        el.value = t;
+        changed(t);
+        if (inside) el.setSelectionRange(a, b);
+      }
     };
   };
   const cmd = (): EditorCommands | null => (styled ? commands.current : plainBox());
+  /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
+  const applyText = (next: string, map: (n: number) => number) => {
+    const c = cmd();
+    if (c) c.apply(next, map);
+    else { changed(next); reload(); }
+  };
+  const pageText = () => splitLead(draftRef.current.body).text;
+
+  // ---- [Brackets] ----
+  // Brackets sent a moment ago, before the job shows up in the next read of the vault (key: when it was sent).
+  const sent = useRef<Map<string, number>>(new Map());
+  const notAsked = (b: Bracket) => {
+    const k = bracketKey(b);
+    const t = sent.current.get(k);
+    return !asking.has(k) && !(t && Date.now() - t < 10 * 60 * 1000);
+  };
+  const fill = async (auto = false) => {
+    const id = String(note.data.id || '');
+    if (!onJob || !id || !bookFolder) { if (!auto) setFilling({ busy: false, error: true, text: 'Filling brackets needs your own vault, not the demo.' }); return; }
+    const words = pageText();
+    const list = findBrackets(words).filter(notAsked);
+    if (!list.length) {
+      if (!auto) setFilling({ busy: false, error: false, text: findBrackets(words).length ? 'The team already has every bracket on this page.' : 'Put [brackets] in your text first: [...] for a gap the team fills in, or [a question] for an answer under that paragraph.' });
+      return;
+    }
+    setFilling({ busy: true, error: false, text: '' });
+    const r = await onJob(fillJob(id, [id, note.data.title].filter(Boolean).join(' '), bookFolder, list, words));
+    if (!r.error) list.forEach((b) => sent.current.set(bracketKey(b), Date.now()));
+    setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 bracket' : list.length + ' brackets') + '. Keep writing: the words appear in place, with a dot beside them.' });
+  };
+
+  // The team's answers: put each one into the page once, where its bracket is now.
+  const filled = useRef<Set<string>>(loadFilled(source.key));
+  useEffect(() => {
+    const start = pageText();
+    let cur = start;
+    const maps: ((n: number) => number)[] = [];
+    const added: string[] = [];
+    const lost: { key: string; marker: string; answer: string }[] = [];
+    let any = false;
+    fills.forEach((j) => {
+      if (String(j.data.status || '') !== 'done') return;
+      const answers = fillAnswers(resultBody(j.body));
+      // An answer from long ago that is no longer needed here was used on another device: say nothing about it.
+      const old = Date.now() - Date.parse(String(j.data.finished || j.data.created || '')) > 3 * 60 * 60 * 1000;
+      askItems(askBody(j.body)).forEach((it) => {
+        const key = String(j.data.id || j.path) + ':' + it.name;
+        const answer = answers[it.name];
+        if (!answer || filled.current.has(key)) return;
+        filled.current.add(key);
+        any = true;
+        const r = placeAnswer(cur, it, answer);
+        if (!r) { if (!old && cur.indexOf(answer.trim().slice(0, 40)) < 0) lost.push({ key, marker: it.marker, answer }); return; }
+        cur = r.text;
+        maps.push(r.map);
+        // What to look for afterwards: a later answer on the same line changes that line again.
+        answer.split('\n').map((l) => l.trim()).filter(Boolean).forEach((l) => added.push(l.slice(0, 60)));
+      });
+    });
+    if (!any) return;
+    saveFilled(source.key, filled.current);
+    if (cur !== start) {
+      applyText(cur, (n) => maps.reduce((x, f) => f(x), n));
+      addDots(cur.split('\n').filter((l) => l.trim() && added.some((a) => l.indexOf(a) >= 0)));
+    }
+    if (lost.length) setUnplaced((u) => u.concat(lost));
+  }, [fillKey]);
+
+  // ---- Words from elsewhere ----
+  // The scene changed in the vault while it is open here (a Claude session pushed a paragraph, another device saved):
+  // read it fresh from the vault, then merge it into the page line by line. Kyle's lines win where both changed; the
+  // other version is then kept as a copy.
+  const merging = useRef(false);
+  useEffect(() => {
+    const d0 = draftRef.current;
+    if (saving.current || merging.current || !source.readFresh || !navigator.onLine) return;
+    if (note.sha === d0.baseSha || note.body === d0.baseBody || seen.current.has(note.sha)) return;
+    merging.current = true;
+    source.readFresh(note.path).then(({ text: raw, sha }) => {
+      const fresh = makeNote(note.path, sha, raw);
+      // The version the read brought is settled either way: never fetch for it again.
+      seen.current.add(note.sha);
+      const d = draftRef.current;
+      if (fresh.error || saving.current || sha === d.baseSha || fresh.body === d.baseBody || seen.current.has(sha)) return;
+      if (fresh.body === d.body) { setDraft({ ...d, baseSha: sha, baseBody: fresh.body }); return; }
+      const r = merge3(d.baseBody, d.body, fresh.body);
+      const before = pageText();
+      setDraft({ ...d, baseSha: sha, baseBody: fresh.body });
+      const after = splitLead(r.text).text;
+      if (after !== before) applyText(after, mapFor(before, after));
+      addDots(r.added);
+      if (r.clash) {
+        setMessage('This scene also changed somewhere else, on lines you are writing. Your lines are kept; the other version is saved as a copy (Copies tab).');
+        saveSnapshot(source, fresh, fresh.body, 'changed elsewhere', new Date()).catch(() => { /* the message already said so */ });
+      }
+    }).catch(() => { /* the next read tries again */ }).finally(() => { merging.current = false; });
+  }, [note.sha, state]);
 
   /** Send the words on the page (the selection, the paragraph or what comes before the cursor) to the team. */
   const askTeam = async (tool: PassageTool) => {
@@ -371,6 +529,21 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
 
   const { text } = splitLead(draft.body);
   const words = bodyWords(draft.body);
+  const brackets = findBrackets(text);
+  const newBrackets = brackets.filter(notAsked).length;
+  const askedBrackets = brackets.length - newBrackets;
+  // Fill brackets on their own: 20 quiet seconds after the last change, any closed bracket the cursor is not in goes.
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!autoFill || !newBrackets) return;
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(() => {
+      const at = caret.current;
+      if (findBrackets(pageText()).some((b) => at != null && at > b.at && at < b.end)) return;
+      fill(true);
+    }, 20000);
+    return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+  }, [text, autoFill, newBrackets]);
   const target = draft.target != null ? draft.target : toNumber(note.data.target_words);
   const sitting = words - draft.startWords;
   // The Pomodoro timer counts the words written while it runs.
@@ -442,7 +615,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           </button>
         )}
         {book && (
-          <button type="button" class="bar-button" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
+          <button type="button" class="bar-button compact" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
             aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
             <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
           </button>
@@ -451,8 +624,13 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
         </button>
-        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label="Scene panel">
-          <Icon name="panel" /><span class="bar-label">Scene</span>
+        <button type="button" class="bar-button compact" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
+          aria-label="Chat with the team" title="Chat with the team beside the page">
+          <Icon name="chat" /><span class="bar-label">Chat</span>{convo && convo.pending && <span class="job-dot" aria-hidden="true" />}
+        </button>
+        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
+          title={right ? 'Hide the right-hand column' : 'Show the right-hand column: chat, plan, card and more'}>
+          <Icon name="panel" />
         </button>
       </header>
       <div class="writer-cols">
@@ -523,6 +701,11 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                   <Icon name={TOOL_ICON[t.key]} /><span class="tool-label">{asked && asked.busy === t.key ? 'Sending…' : t.label}</span>
                 </button>
               ))}
+              <button type="button" class="tool wide team-tool" {...keepFocus} disabled={Boolean(filling && filling.busy)} onClick={() => fill()}
+                title="Fill the [brackets] on this page: [...] is a gap the team fills in place, [a question] gets an answer as a paragraph under it. Keep writing while they work.">
+                <Icon name="bracket" /><span class="tool-label">{filling && filling.busy ? 'Sending…' : 'Fill brackets'}</span>
+                {newBrackets > 0 && <span class="count-badge">{newBrackets}</span>}
+              </button>
               <button type="button" class="tool wide" title="Everything you can ask the team for" {...keepFocus} onClick={() => openTab('team')}><Icon name="team" /><span class="tool-label">Team</span></button>
             </div>
           </div>
@@ -532,6 +715,30 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="icon-button" aria-label="Close" onClick={() => setAsked(null)}><Icon name="close" size={16} /></button>
             </p>
           )}
+          {filling && !filling.busy && (
+            <p class={'tool-said ' + (filling.error ? 'error' : 'ok')} role="status">
+              {filling.text}
+              <button type="button" class="icon-button" aria-label="Close" onClick={() => setFilling(null)}><Icon name="close" size={16} /></button>
+            </p>
+          )}
+          {!filling && askedBrackets > 0 && <p class="tool-said ok" role="status"><span class="job-dot" aria-hidden="true" /> The team is filling {askedBrackets === 1 ? '1 bracket' : askedBrackets + ' brackets'} on this page.</p>}
+          {unplaced.map((u) => (
+            <div class="tool-said unplaced" key={u.key} role="status">
+              <span>The team answered <b>{u.marker.length > 50 ? u.marker.slice(0, 47) + '…]' : u.marker}</b>, but that bracket is no longer on the page:</span>
+              <blockquote>{u.answer.length > 300 ? u.answer.slice(0, 297) + '…' : u.answer}</blockquote>
+              <span class="buttons">
+                <button type="button" onClick={() => {
+                  const before = pageText();
+                  const add = u.answer.trim();
+                  const after = before.replace(/\s*$/, '') + '\n\n' + add;
+                  applyText(after, (n) => n);
+                  addDots(add.split('\n').filter((l) => l.trim()));
+                  setUnplaced((list) => list.filter((x) => x.key !== u.key));
+                }}>Put it at the end</button>
+                <button type="button" onClick={() => setUnplaced((list) => list.filter((x) => x.key !== u.key))}>Leave it out</button>
+              </span>
+            </div>
+          ))}
           {findOpen && <FindBar text={text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
             cmd={cmd} onClose={() => setFindOpen(false)} />}
           <div class="page-head">
@@ -555,7 +762,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, sceneHeader(made.data)].filter(Boolean).join(' ')}</a>.</p>}
           </div>
           {styled ? (
-            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; }} label={'Text of ' + title} commands={commands}
+            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
           ) : <textarea
             ref={box}
@@ -583,14 +790,21 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>Scene</strong>
-              <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : 'Scene'}</strong>
+              <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
-              {([['todos', 'To-dos'], ['card', 'Card'], ['notes', 'Notes'], ['marks', 'Marks'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team']] as [Tab, string][]).map(([k, l]) => (
+              {TABS.map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
+            {tab === 'chat' && (
+              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined}
+                fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />
+            )}
+            {tab === 'plan' && (
+              <PlanPanel key={(bookFolder || '') + '#' + chapterNum} source={source} bookFolder={bookFolder} chapter={chapterNum} plan={plan || null} canSave={canSave} />
+            )}
             {tab === 'todos' && (
               <TodosPanel todos={chapterList} chapter={chapterNum} sceneId={String(note.data.id || '')} onTodo={onTodo} onAdd={onAddTodo}
                 onJob={onJob} bookFolder={bookFolder} waiting={waiting || {}} link={link} />
@@ -607,7 +821,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'team' && (
               <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
-                bookFolder={bookFolder} onJob={onJob} link={link} />
+                bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} />
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
             {tab === 'tools' && (
@@ -991,9 +1205,10 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
 }
 
 /** Ask the team: each button writes a job note the vault's GitHub workflow runs. Kyle's words never get drafted over. */
-function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
+function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFill, onAutoFill }: {
   status: string; id: string; title: string; chapter: number | null; bookFolder: string | null; onJob?: OnJob;
   link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+  autoFill: boolean; onAutoFill: (on: boolean) => void;
 }) {
   const [asking, setAsking] = useState(false);
   const [ask, setAsk] = useState('');
@@ -1015,6 +1230,10 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
   return (
     <div class="writer-panel team-panel">
       {talk}
+      <label class="check-row">
+        <input type="checkbox" checked={autoFill} onChange={(e) => onAutoFill((e.currentTarget as HTMLInputElement).checked)} />
+        <span>Fill [brackets] on their own, 20 seconds after you stop typing (this device)</span>
+      </label>
       {status === 'planned'
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
@@ -1244,6 +1463,80 @@ function TodosPanel({ todos, chapter, sceneId, onTodo, onAdd, onJob, bookFolder,
           {showDone && <ul class="todo-list">{closed.map(row)}</ul>}
         </>
       )}
+    </div>
+  );
+}
+
+/** The chapter's plan beside the page: Kyle's own paragraphs about what the chapter should do, saved in the book's
+ * Chapter Plans folder, never in the prose. Kept on the device as he types and saved a few seconds after he stops. */
+function PlanPanel({ source, bookFolder, chapter, plan, canSave }: {
+  source: VaultSource; bookFolder: string | null; chapter: number | null; plan: NoteRecord | null; canSave: boolean;
+}) {
+  const fresh = (): Draft | null => {
+    if (!bookFolder || chapter == null) return null;
+    const now = new Date();
+    const path = plan ? plan.path : planPath(bookFolder, chapter);
+    const kept = loadDrafts(source.key)[path];
+    if (plan) return openDraft(plan, kept, now);
+    return kept && kept.create && isUnsaved(kept) ? kept
+      : { path, baseSha: '', baseBody: '', body: '', target: null, startWords: 0, updatedAt: now.toISOString(), pending: false, create: planHead(chapter) };
+  };
+  const [d, setD] = useState<Draft | null>(fresh);
+  const ref = useRef(d);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [error, setError] = useState('');
+  const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const put = (n: Draft) => { ref.current = n; setD(n); putDraft(source.key, n.path, isUnsaved(n) || n.pending ? n : null); };
+  const save = async () => {
+    const cur = ref.current;
+    if (!cur || !isUnsaved(cur) || !canSave) return;
+    if (!navigator.onLine) { put({ ...cur, pending: true }); return; }
+    setState('saving');
+    try {
+      const r = await saveDraft(source, cur, new Date());
+      const now = ref.current || cur;
+      put({ ...now, baseSha: r.note.sha, baseBody: cur.body, pending: false, error: undefined, create: undefined });
+      setState('saved');
+      setError('');
+    } catch (e) {
+      if ((e as { status?: number }).status === 0) { put({ ...(ref.current || cur), pending: true }); setState('idle'); return; }
+      setState('error');
+      setError((e as Error).message);
+    }
+  };
+  // The plan changed somewhere else (another device, Obsidian) and nothing is waiting here: show the new one.
+  useEffect(() => {
+    const cur = ref.current;
+    if (plan && cur && !isUnsaved(cur) && plan.sha !== cur.baseSha) put(openDraft(plan, undefined, new Date()));
+  }, [plan && plan.sha]);
+  // Leaving the tab or the page: save what is waiting (it stays on the device until it reaches the vault).
+  useEffect(() => () => {
+    if (quiet.current) clearTimeout(quiet.current);
+    const cur = ref.current;
+    if (cur && isUnsaved(cur)) { putDraft(source.key, cur.path, { ...cur, pending: true }); save(); }
+  }, []);
+  const fit = () => { const el = box.current; if (el) { el.style.height = 'auto'; el.style.height = Math.max(240, el.scrollHeight) + 'px'; } };
+  useEffect(fit, [d && d.body]);
+  if (!d) return <div class="writer-panel"><p class="hint">A plan belongs to a chapter. Give this scene a chapter on the Chapter Grid first.</p></div>;
+  const { lead, text } = splitLead(d.body);
+  const onInput = (v: string) => {
+    put({ ...(ref.current || d), body: (lead || '\n') + v, updatedAt: new Date().toISOString() });
+    setState('idle');
+    if (quiet.current) clearTimeout(quiet.current);
+    quiet.current = setTimeout(() => { save(); }, 3000);
+  };
+  const said = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved: ' + error + ' It is safe on this device.'
+    : isUnsaved(d) ? (d.pending || !navigator.onLine ? 'Kept on this device; it saves when you are back online.' : 'Kept on this device.')
+      : state === 'saved' ? 'Saved in the book\'s Chapter Plans folder.' : '';
+  return (
+    <div class="writer-panel plan-panel">
+      <p class="hint">Your plan for chapter {chapter}, as long as you like. It stays out of the story; the team reads it whenever they work on this chapter.</p>
+      <textarea ref={box} class="plan-text" value={text} placeholder={'What this chapter has to do, who wants what, how it ends…'}
+        aria-label={'Plan for chapter ' + chapter} spellcheck autocapitalize="sentences"
+        onInput={(e) => { onInput((e.currentTarget as HTMLTextAreaElement).value); fit(); }} onBlur={() => { if (quiet.current) clearTimeout(quiet.current); save(); }} />
+      {said && <p class={state === 'error' ? 'error' : 'hint'} role="status">{said}</p>}
+      {!canSave && <p class="hint">The demo vault keeps your plan until the page reloads.</p>}
     </div>
   );
 }

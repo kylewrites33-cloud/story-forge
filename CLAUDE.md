@@ -99,6 +99,17 @@ repository's CLAUDE.md for the studio's rules and Kyle's hard constraints. This 
   Ask the team writes a `beats` job (the Story Specialist finds the beats in the prose, plans them from Kyle's words, or
   redoes them, archiving the old note). Reached from the writing screen's and whole chapter's Beats button and each
   chapter heading on the Chapter Grid.
+  Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
+  for the team (`src/lib/brackets.ts`; never `[[links]]`, `[!callouts]`, `[^notes]` or `[text](links)`). Fill brackets in
+  the toolbar (or, per device, on their own after 20 quiet seconds) writes a `fill` job listing them; the Writer answers in
+  the job note only, and the page puts each answer in once: a gap in place, an ask as a paragraph under its paragraph with
+  the bracket taken out. An answer whose bracket is gone offers Put it at the end. Added lines get a dot drawn by CSS
+  (never in the file), kept per device, gone when Kyle clicks or types in that line. The right-hand column opens on Chat
+  (the scene's conversation) or Plan (the chapter's `chapter-plan` note in the book's `Chapter Plans/`, never the prose),
+  remembers its tab, hides with its arrow or the top bar's panel button, and sits beside the page from 900 px while the
+  chapter list is closed. While a scene is open the app reads the vault every 30 seconds (15 while the team is answering)
+  and merges a newer version line by line into the page (`src/lib/live.ts`): Kyle's lines win a clash, the other version is
+  saved as a copy. The vault's `put-in-page` skill tells any Claude session how to push words there.
 - A scene save replaces the body and the computed `words` line (and `target_words` if Kyle set one) and nothing else.
   If the scene changed elsewhere since Kyle opened it, the other version is saved first as a snapshot and Kyle's wins.
 - Writes change only the lines they touch, re-read the note first, and commit with Kyle's token and no `Agent:` trailer:
@@ -148,6 +159,9 @@ src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with res
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
 src/ui/Pomodoro.tsx      the timer's button and panel: floating, in the writing screen's top bar, or beside Leave focus
 src/ui/ChapterPage.tsx   the whole chapter as one page
+src/lib/brackets.ts      [brackets]: finding them, the fill job, its answers, putting each answer into the page
+src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
+src/lib/plans.ts         a chapter's plan note (Chapter Plans)
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     the chapter by its beats: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene

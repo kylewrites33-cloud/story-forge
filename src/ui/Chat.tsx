@@ -161,3 +161,55 @@ export function ChatScreen({ index, thread, book, onChat, onDecide, waiting, dem
   }
   return <ConversationView key={thread} index={index} thread={thread} book={book} onChat={onChat} onDecide={onDecide} waiting={waiting} demo={demo} />;
 }
+
+/** A scene's conversation in the writing screen's right-hand column: the same messages as the Chat screen, narrower,
+ * with the newest at the bottom and the box to write in under them. */
+export function SceneChat({ convo, thread, book, onChat, fullHref }: {
+  convo: Conversation | null; thread: string; book: string; onChat?: OnChat;
+  /** The Chat screen's page for this conversation, opened with the page saved first. */
+  fullHref: { href: string; onClick: (e: MouseEvent) => void };
+}) {
+  const [words, setWords] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const end = useRef<HTMLDivElement>(null);
+  const messages = convo ? convo.messages : [];
+  const count = messages.length + messages.filter((m) => m.reply).length;
+  useEffect(() => { if (end.current && count) end.current.scrollIntoView({ block: 'nearest' }); }, [count]);
+  const send = async () => {
+    const w = words.trim();
+    if (!w || !onChat || busy) return;
+    setBusy(true);
+    setError('');
+    const r = await onChat(thread, w, book);
+    setBusy(false);
+    if ('error' in r) { setError(r.error); return; }
+    setWords('');
+  };
+  const firstPending = messages.findIndex((m) => m.state === 'waiting' || m.state === 'working');
+  return (
+    <div class="writer-panel side-chat">
+      <div class="chat-log" aria-live="polite">
+        {!messages.length && <p class="hint">Ask the team about this scene while you write: what she would wear, how a squash vine looks after a storm, what to cut. The answer comes here.</p>}
+        {messages.map((m, i) => (
+          <div class="chat-pair" key={m.path}>
+            <div class="chat-msg kyle"><div class="prose" dangerouslySetInnerHTML={{ __html: render(m.ask) }} /></div>
+            <Reply m={m} first={i === firstPending} />
+          </div>
+        ))}
+        <div ref={end} />
+      </div>
+      {onChat ? (
+        <form class="chat-compose side" onSubmit={(e) => { e.preventDefault(); send(); }}>
+          <label class="sr-only" for="side-chat-words">Your message</label>
+          <textarea id="side-chat-words" rows={3} value={words} disabled={busy} placeholder={messages.length ? 'Reply to the team' : 'Ask the team'}
+            onInput={(e) => setWords((e.currentTarget as HTMLTextAreaElement).value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
+          <button type="submit" class="primary" disabled={busy || !words.trim()} aria-label="Send"><Icon name="send" size={18} /><span class="bar-label">{busy ? 'Sending…' : 'Send'}</span></button>
+        </form>
+      ) : <p class="hint">Chatting with the team needs your own vault.</p>}
+      {error && <p class="error">{error}</p>}
+      {messages.length > 0 && <a class="link" {...fullHref}>Open this conversation full size</a>}
+    </div>
+  );
+}

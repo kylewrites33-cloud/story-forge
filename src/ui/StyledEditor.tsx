@@ -85,6 +85,9 @@ export interface EditorCommands {
   setAll: (text: string) => void;
   /** Where the selection (or the cursor) is, in characters of the text, or null before Kyle has been in the page. */
   selection: () => { start: number; end: number } | null;
+  /** Words that came from somewhere else (the team, another device): the new text, and how Kyle's cursor moves with it.
+   * The cursor stays in his sentence and the page keeps focus; it is one step to undo. */
+  apply: (text: string, map: (n: number) => number) => void;
 }
 
 /** Scroll the selection into the middle of the screen. */
@@ -135,7 +138,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   // outside (a copy restored, a split or a join) remounts the editor with a new key instead.
   useEffect(() => { paint(value, null); }, []);
   // New names or a new search: repaint, keeping the selection where it was.
-  const names = options && options.names, find = options && options.find;
+  const names = options && options.names, find = options && options.find, added = options && options.added, asking = options && options.asking;
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
@@ -144,7 +147,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
     const s = document.activeElement === el ? selectionOffsets(el) : null;
     paint(shown.current, null);
     if (s) setSelection(el, s.start, s.end);
-  }, [names, find]);
+  }, [names, find, added, asking]);
 
   const remember = (text: string, caret: number) => {
     const now = Date.now();
@@ -286,6 +289,22 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         undo.current[undo.current.length - 1].at = 0;
         commit(text.slice(0, a) + t + text.slice(b), a + t.length);
         lastSel.current = { start: a + t.length, end: a + t.length };
+      },
+      apply: (t, map) => {
+        const el = ref.current;
+        const text = shown.current ?? '';
+        if (!el || t === text) return;
+        const inside = document.activeElement === el;
+        const s = (inside && selectionOffsets(el)) || lastSel.current;
+        remember(text, s ? s.start : 0);
+        undo.current[undo.current.length - 1].at = 0;
+        paint(t, null);
+        if (s) {
+          const a = map(s.start), b = map(s.end);
+          lastSel.current = { start: a, end: b };
+          if (inside) setSelection(el, a, b);
+        }
+        onChange(t);
       },
       setAll: (t) => {
         const text = shown.current ?? '';

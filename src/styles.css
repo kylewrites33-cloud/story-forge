@@ -349,7 +349,7 @@ label.button:focus-within { outline: 2px solid var(--accent); outline-offset: 2p
 .writer-side, .writer-right, .writer-page { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
 .writer-side, .writer-right { flex: none; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; -webkit-overflow-scrolling: touch; }
 .writer-side { width: 260px; }
-.writer-right { width: 300px; }
+.writer-right { width: 360px; }
 .side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 6px 6px; }
 .side-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-chapter { margin: 10px 8px 2px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
@@ -428,8 +428,9 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
   .writer-side { position: absolute; z-index: 3; top: 0; bottom: 12px; left: 12px; width: min(300px, 85vw); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
   .left-open .scrim { display: block; }
 }
-/* Too narrow for the scene panel as well: it slides over the page from the right. */
-@media (max-width: 1199px) {
+/* Too narrow for the right-hand column beside the page (an iPad held upright): it slides over the page from the right.
+   Between 900 and 1200 px it sits beside the page while the chapter list is closed (opening one closes the other). */
+@media (max-width: 899px) {
   .writer-right { position: absolute; z-index: 3; top: 0; bottom: 12px; right: 12px; width: min(340px, 90vw); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
   .right-open .scrim { display: block; }
 }
@@ -449,6 +450,15 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .md-quote { color: var(--muted); }
 .md-hl { background: var(--mark, #fff1a8); border-radius: 3px; }
 .md-find { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 2px; }
+.md-ask { background: var(--accent-soft); color: var(--accent); border-radius: 4px; box-shadow: 0 0 0 1px var(--accent-soft); }
+.md-ask.asking { animation: ask-pulse 1.6s ease-in-out infinite; }
+@keyframes ask-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .md-ask.asking { animation: none; font-style: italic; } }
+/* Words the team (or a session elsewhere) put in: a dot in the margin, drawn by the app and never part of the text. */
+.md-added::before {
+  content: '\25CF'; position: absolute; margin-left: -1.15em; margin-top: 0.12em; color: var(--accent); font-size: 0.75em;
+  font-style: normal; font-weight: 400; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
 .md-name { text-decoration: underline; text-decoration-color: var(--name); text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer; }
 .paper-dark .md-hl, .md-hl { color: inherit; }
 @media (prefers-color-scheme: dark) { :root { --mark: #6b5a12; } }
@@ -848,7 +858,7 @@ a.button.team-talk { gap: 6px; width: 100%; }
 @media (max-width: 600px) { .writer-bar { flex-wrap: wrap; row-gap: 6px; } }
 /* Buttons in the writing screen's top bar keep their size; the book's title gives way first, then two short names. */
 .writer-bar > .bar-button, .writer-bar > .pomodoro, .writer-bar > .save-chip { flex-shrink: 0; }
-@media (max-width: 1099px) { .writer-bar .bar-button.compact .bar-label { display: none; } }
+@media (max-width: 1299px) { .writer-bar .bar-button.compact .bar-label { display: none; } }
 
 /* The AI team, its skills and its history: the foot of the sidebar, the Team table, an agent's page, Skills, History */
 .rail-team { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 1px; }
@@ -975,3 +985,24 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 @media (max-width: 600px) { .beat-body { padding-left: 16px; padding-right: 16px; } }
 .chapter-beats-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; min-height: 44px; font-size: 0.9rem; font-weight: 600; vertical-align: middle; }
 .writer.paper-dark .beat, .writer.paper-cream .beat { background: transparent; }
+
+/* The right-hand column's Chat and Plan tabs. */
+.side-chat { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; }
+.side-chat .chat-log { margin: 0; gap: 10px; }
+.side-chat .chat-msg { max-width: 94%; padding: 8px 11px; }
+.side-chat .chat-msg .prose { font-size: 0.95rem; line-height: 1.5; color: var(--text); }
+.side-chat .chat-meta { font-size: 0.75rem; }
+.chat-compose.side { flex-direction: column; align-items: stretch; padding: 8px 0 2px; background: var(--surface); }
+.chat-compose.side button { align-self: flex-end; }
+.chat-compose.side textarea { font-size: 1rem; }
+.chat-compose.side .bar-label { font-size: 0.9rem; }
+.plan-panel .plan-text {
+  width: 100%; min-height: 240px; resize: none; overflow: hidden; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 1rem; line-height: 1.55;
+}
+.check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text); font-size: 0.9rem; cursor: pointer; }
+.check-row input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
+.tool-said.unplaced { display: grid; gap: 6px; }
+.tool-said.unplaced blockquote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--surface); white-space: pre-wrap; }
+.tool-said .job-dot { display: inline-block; }
+.writer-tools .tool .count-badge { margin-left: 2px; }

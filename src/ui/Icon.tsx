@@ -51,7 +51,8 @@ const PATHS: Record<string, string> = {
   queue: 'M4 6h16M4 12h10M4 18h7M17 15l3 3-3 3',
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
-  home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5'
+  home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
+  bracket: 'M9 4H5v16h4M15 4h4v16h-4'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

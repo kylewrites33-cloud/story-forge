@@ -39,6 +39,8 @@ import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { BeatsPage } from './BeatsPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
+import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
+import { planFor } from '../lib/plans.ts';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
 import { ChatScreen } from './Chat.tsx';
@@ -237,7 +239,8 @@ export function App() {
   const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
     const cur = snapRef.current;
-    const open = cur ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
+    // Fill brackets may run again while one is waiting: the page only sends brackets the team does not have yet.
+    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
       return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for GitHub') + '. See Jobs.' };
@@ -406,11 +409,21 @@ export function App() {
       if ((name === 'jobs' || name === 'chat') && document.visibilityState === 'visible') runSync();
     }, 60000);
     // An open conversation waiting on a reply is read again every 15 seconds, about as often as the runner looks for work.
+    // So is an open scene while the team is answering its chat or its brackets; any open scene is read every 30 seconds,
+    // so words pushed from elsewhere come into the page without reloading.
+    let beat = 0;
     const quick = setInterval(() => {
+      beat++;
       const r = parseHash(location.hash);
       const cur = snapRef.current;
-      if (r.name !== 'chat' || !r.thread || r.thread === 'new' || !cur || document.visibilityState !== 'visible') return;
-      if (conversation(cur.index, r.thread, r.book).pending) runSync();
+      if (!cur || document.visibilityState !== 'visible' || !navigator.onLine) return;
+      if (r.name === 'chat' && r.thread && r.thread !== 'new') { if (conversation(cur.index, r.thread, r.book).pending) runSync(); return; }
+      if (r.name !== 'write') return;
+      const note = cur.index.notes[r.path];
+      const book = note ? cur.index.books.find((b) => r.path.startsWith(b.folder + '/')) : null;
+      const id = note ? String(note.data.id || '') : '';
+      const busy = book && id ? fillJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || conversation(cur.index, id, book.folder).pending : false;
+      if (busy || beat % 2 === 0) runSync();
     }, 15000);
     return () => {
       window.removeEventListener('online', up);
@@ -460,6 +473,9 @@ export function App() {
           timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} />}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
+          fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
+          convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
+          plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
