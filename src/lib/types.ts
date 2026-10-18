@@ -63,8 +63,23 @@ export interface VaultSource {
   writeBytes?(path: string, base64: string, sha: string, message: string): Promise<string>;
   /** A picture's bytes by blob sha. */
   readBytes?(path: string, sha: string): Promise<Blob>;
+  /** Every commit that changed a file, newest first (GitHub keeps every save). */
+  history?(path: string): Promise<SaveEntry[]>;
+  /** A file's text as it was at one commit. */
+  readAt?(path: string, commit: string): Promise<string>;
   /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
   remove?(path: string, sha: string, message: string): Promise<void>;
+}
+
+/** One save of a file, from the vault's history. */
+export interface SaveEntry {
+  commit: string;
+  /** ISO time of the save. */
+  date: string;
+  /** The commit message's first line. */
+  message: string;
+  /** Who saved it: the agent named in the commit's Agent: line, or '' for Kyle. */
+  agent: string;
 }
 
 export interface NoteRecord {

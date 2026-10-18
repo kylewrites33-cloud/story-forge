@@ -27,7 +27,7 @@ export function EditFields({ schema, note, fields, onSave, onClose }: {
         const set = (v: string) => setValues({ ...values, [k]: v });
         return (
           <label key={k}>
-            {label(k)}{k === 'labels' ? ' (separate them with commas, for example flashback, needs research)' : ''}
+            {label(k)}{k === 'labels' ? ' (separate them with commas, for example flashback, needs research)' : ''}{k === 'title' && note.type === 'scene' ? ' (one line saying what happens; the team reads it as the scene\'s summary)' : ''}
             {choices.length
               ? <select value={values[k]} onChange={(e) => set((e.currentTarget as HTMLSelectElement).value)}>
                 {choices.map((c) => <option key={c} value={c}>{c}</option>)}

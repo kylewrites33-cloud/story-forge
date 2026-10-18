@@ -14,6 +14,7 @@ import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { appearances, codexFor, matcher } from '../lib/codex.ts';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -42,11 +43,15 @@ function StatusPill({ value }: { value: string }) {
 }
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
+/** A scene card's new title: the file is renamed to match. Returns a plain sentence when it did not work. */
+export type OnRename = (note: NoteRecord, title: string) => Promise<string | null>;
 
 /** Accept a scene card, or say it needs work and why. The card's status (planned, drafted) does not change. */
-function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolder }: {
-  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren; onJob?: OnJob; bookFolder?: string;
+function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolder, onRename }: {
+  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide: OnDecide; handle?: ComponentChildren; onJob?: OnJob; bookFolder?: string; onRename?: OnRename;
 }) {
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [sending, setSending] = useState(false);
@@ -71,11 +76,21 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
     <div class="card-actions">
       {waiting && <p class={'pill' + (waiting.error ? ' pill-error' : '')}>{waiting.error ? 'Not saved: ' + waiting.error : 'Saving'}</p>}
       {sending && <p class="hint">Sending to the team…</p>}
+      {renaming && <p class="hint">Changing the title…</p>}
+      {renameError && <p class="error">{renameError}</p>}
       {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
       {!accepted && !isEmptyValue(note.data.decision_note) && <p class="reason-shown">Needs work: {String(note.data.decision_note)}</p>}
       {editing ? (
-        <EditFields schema={schema} note={note} fields={editableFields(schema, note.type)} onClose={() => setEditing(false)}
-          onSave={(f) => onDecide(note.path, 'edit', '', f)} />
+        <EditFields schema={schema} note={note} fields={(onRename ? ['title'] : []).concat(editableFields(schema, note.type))} onClose={() => setEditing(false)}
+          onSave={async (f) => {
+            const { title: newTitle, ...rest } = f;
+            if (Object.keys(rest).length) onDecide(note.path, 'edit', '', rest);
+            if (newTitle != null && onRename) {
+              setRenaming(true);
+              setRenameError(await onRename(note, newTitle));
+              setRenaming(false);
+            }
+          }} />
       ) : asking ? (
         <>
           <label class="reason">
@@ -110,8 +125,8 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
   );
 }
 
-function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob, bookFolder }: {
-  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null; onJob?: OnJob; bookFolder?: string;
+function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob, bookFolder, onRename }: {
+  schema: Schema; note: NoteRecord; waiting?: Choice; onDecide?: OnDecide; handle?: ComponentChildren; cls?: string; shift?: number[] | null; onJob?: OnJob; bookFolder?: string; onRename?: OnRename;
 }) {
   const fields = cardFields(schema, note.type);
   const title = String(note.data.title || basename(note.path));
@@ -147,7 +162,7 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
         {words && <span class="card-words">{words}</span>}
         {note.error && <span class="card-error">Frontmatter problem: {note.error}</span>}
       </a>
-      {onDecide && <CardActions schema={schema} note={note} waiting={waiting} onDecide={onDecide} handle={handle} onJob={onJob} bookFolder={bookFolder} />}
+      {onDecide && <CardActions schema={schema} note={note} waiting={waiting} onDecide={onDecide} handle={handle} onJob={onJob} bookFolder={bookFolder} onRename={onRename} />}
     </li>
   );
 }
@@ -227,6 +242,31 @@ function OutlineForm({ book, firstChapter, onAddMany, onCancel }: { book: BookEn
       </div>
       {error && <p class="error">{error}</p>}
     </div>
+  );
+}
+
+/** Bring in a manuscript: pick a Word or text file on this device; it is saved in the book's Research folder as it is,
+ * and the team splits it into scenes (a job). */
+function ImportButton({ book, onImport }: { book: BookEntry; onImport: (book: BookEntry, file: File) => Promise<{ error: boolean; text: string }> }) {
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  return (
+    <>
+      <label class={'button' + (busy ? ' disabled' : '')}>
+        <Icon name="upload" size={18} />{busy ? 'Sending…' : 'Bring in a manuscript'}
+        <input type="file" accept=".docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" class="visually-hidden" disabled={busy}
+          onChange={async (e) => {
+            const input = e.currentTarget as HTMLInputElement;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            setBusy(true);
+            setSaid(await onImport(book, file));
+            setBusy(false);
+          }} />
+      </label>
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+    </>
   );
 }
 
@@ -329,11 +369,14 @@ function dropAt(x: number, y: number, dragged: string): DropAt | null {
   return null;
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover, onJob }: {
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover, onJob, onRename, onImport }: {
   schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onAddMany?: OnAddMany; onMove?: OnMove;
   source?: VaultSource; onCover?: (book: BookEntry, file: File) => Promise<string | null>;
   /** Ask the team to draft or check a scene, from a card's ••• menu. */
   onJob?: OnJob;
+  onRename?: OnRename;
+  /** Bring in a manuscript: the file goes to the book's Research folder and the team splits it into scenes. */
+  onImport?: (book: BookEntry, file: File) => Promise<{ error: boolean; text: string }>;
 }) {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<GridView>(loadGridView);
@@ -447,11 +490,12 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
       {!scenes.length && (
         <EmptyBox title="Nothing here yet">
           <p>Start the book with its first scene, or paste an outline and get every scene at once.{onAdd ? '' : ' Add your key in Settings to add scenes from here.'}
-            {' '}To bring in a manuscript you already wrote, send the file to the team in the project chat.</p>
+            {' '}{onImport ? 'Or bring in a manuscript you already wrote, as a Word or text file.' : ''}</p>
           {onAdd && !starting && (
             <div class="buttons">
               <button type="button" class="primary" onClick={() => setStarting('scene')}><Icon name="plus" size={18} />Create first scene</button>
               {onAddMany && <button type="button" onClick={() => setStarting('outline')}><Icon name="outline" size={18} />Start from an outline</button>}
+              {onImport && <ImportButton book={book} onImport={onImport} />}
             </div>
           )}
           {onAdd && starting === 'scene' && <AddScene book={book} chapter={1} chapterTitle="" label="Start chapter 1" onAdd={onAdd} startOpen onCancel={() => setStarting('')} />}
@@ -467,7 +511,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           <ul class={'cards' + (drag && drag.moved && drag.at && drag.at.key === g.key && drag.at.before === null ? ' drop-end' : '')}>
             {g.scenes.map((s) => (
               <SceneCard key={s.path} schema={schema} note={s} waiting={waiting && waiting[s.path]} onDecide={onDecide}
-                handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} onJob={onJob} bookFolder={book.folder} />
+                handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} onJob={onJob} bookFolder={book.folder} onRename={onRename} />
             ))}
           </ul>
           {onAdd && !filtering && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}
@@ -480,7 +524,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
             <AddScene book={book} chapter={last + 1} chapterTitle="" label={'Start chapter ' + (last + 1)} onAdd={onAdd} />
             {onAddMany && (starting === 'outline'
               ? <OutlineForm book={book} firstChapter={last + 1} onAddMany={onAddMany} onCancel={() => setStarting('')} />
-              : <div class="buttons add-scene"><button type="button" onClick={() => setStarting('outline')}>Add scenes from an outline</button></div>)}
+              : <div class="buttons add-scene"><button type="button" onClick={() => setStarting('outline')}>Add scenes from an outline</button>{onImport && <ImportButton book={book} onImport={onImport} />}</div>)}
           </>
         );
       })()}
@@ -526,7 +570,43 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
           </tbody>
         </table>
       )}
+      {['character', 'place', 'item', 'lore'].indexOf(note.type) >= 0 && <AppearsIn index={index} note={note} />}
       <div class="prose" dangerouslySetInnerHTML={{ __html: render(note.body) }} />
     </article>
+  );
+}
+
+/** Every scene a character (or place, item, lore) appears in, book by book, with the line that first names them. */
+function AppearsIn({ index, note }: { index: VaultIndex; note: NoteRecord }) {
+  const books = index.books.filter((b) => note.path.startsWith(b.seriesFolder + '/'));
+  const found = books.map((b) => {
+    const codex = codexFor(index, b);
+    const e = codex.find((x) => x.note.path === note.path) || codex.find((x) => x.name === String(note.data.name || ''));
+    if (!e) return null;
+    const scenes = b.scenes.map((p) => index.notes[p]).filter((n) => n && n.data.kind !== 'test');
+    return { book: b, list: appearances(scenes, e, matcher(codex)) };
+  }).filter((x): x is NonNullable<typeof x> => Boolean(x && x.list.length));
+  if (!found.length) return <p class="meta">Not seen in any scene yet.</p>;
+  return (
+    <section class="appears">
+      <h2>Appears in</h2>
+      {found.map(({ book, list }) => {
+        const first = list[0].scene, last = list[list.length - 1].scene;
+        return (
+          <details key={book.folder} open={found.length === 1}>
+            <summary>{book.title}: {list.length === 1 ? '1 scene' : list.length + ' scenes'} · first {String(first.data.id || '')}, last {String(last.data.id || '')}</summary>
+            <ul class="appears-list">
+              {list.map(({ scene, presence: p, line }) => (
+                <li key={scene.path}>
+                  <a href={href.write(scene.path)}><span class="card-id">{String(scene.data.id || '')}</span> {String(scene.data.title || '')}</a>
+                  <span class="meta"> {[p.pov ? 'point of view' : '', p.card ? 'on the card' : '', p.named ? 'named ' + (p.named === 1 ? 'once' : p.named + ' times') : ''].filter(Boolean).join(' · ')}</span>
+                  {line && <span class="appears-line">“{line}”</span>}
+                </li>
+              ))}
+            </ul>
+          </details>
+        );
+      })}
+    </section>
   );
 }

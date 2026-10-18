@@ -12,6 +12,70 @@ import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { IdeasLink, Warnings } from './screens.tsx';
+import { nextBookNumber } from '../lib/books.ts';
+import { safeTitle } from '../lib/scenes.ts';
+
+type OnCreateBook = (seriesFolder: string, seriesName: string, title: string, number: number) => Promise<string | null>;
+type OnCreateSeries = (name: string, genre: string) => Promise<string | null>;
+
+/** Start a book: in a series the vault has, or in a new series made first. Or start only a series. */
+export function CreateForm({ index, onCreateBook, onCreateSeries, seriesFolder, onClose }: {
+  index: VaultIndex; onCreateBook?: OnCreateBook; onCreateSeries?: OnCreateSeries; seriesFolder?: string; onClose: () => void;
+}) {
+  const NEW = '__new__';
+  const [series, setSeries] = useState(seriesFolder || (index.series[0] ? index.series[0].folder : NEW));
+  const [name, setName] = useState('');
+  const [genre, setGenre] = useState('');
+  const [title, setTitle] = useState('');
+  const books = index.books.filter((b) => b.seriesFolder === series);
+  const [number, setNumber] = useState(String(nextBookNumber(books.map((b) => b.number))));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pickSeries = (f: string) => { setSeries(f); setNumber(String(nextBookNumber(index.books.filter((b) => b.seriesFolder === f).map((b) => b.number)))); };
+  const go = async (bookToo: boolean) => {
+    setBusy(true);
+    setError(null);
+    let folder = series, sname = (index.series.find((x) => x.folder === series) || { name: '' }).name;
+    if (series === NEW) {
+      if (!onCreateSeries) return;
+      // Make the series first; its page opens, then the book is added to it.
+      const err = await onCreateSeries(name, genre);
+      if (err) { setError(err); setBusy(false); return; }
+      folder = 'Series/' + safeTitle(name);
+      sname = safeTitle(name);
+      if (!bookToo) { setBusy(false); onClose(); return; }
+    }
+    const err = onCreateBook ? await onCreateBook(folder, sname, title, parseInt(number, 10)) : null;
+    setBusy(false);
+    if (err) setError(err); else onClose();
+  };
+  return (
+    <div class="create-form">
+      <h2>Start something new</h2>
+      <label class="reason">
+        Series
+        <select value={series} onChange={(e) => pickSeries((e.currentTarget as HTMLSelectElement).value)}>
+          {index.series.map((x) => <option key={x.folder} value={x.folder}>{x.name}</option>)}
+          <option value={NEW}>A new series…</option>
+        </select>
+      </label>
+      {series === NEW && (
+        <>
+          <label class="reason">Name of the new series<input type="text" value={name} onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)} placeholder="For example Ember Road" /></label>
+          <label class="reason">Genre (you can leave it empty)<input type="text" value={genre} onInput={(e) => setGenre((e.currentTarget as HTMLInputElement).value)} placeholder="For example Cozy LitRPG" /></label>
+        </>
+      )}
+      <label class="reason">Title of the book<input type="text" value={title} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} placeholder="A working title is fine" /></label>
+      <label class="reason">Book number in the series<input type="text" inputMode="numeric" value={number} onInput={(e) => setNumber((e.currentTarget as HTMLInputElement).value)} /></label>
+      <div class="buttons">
+        <button type="button" class="primary" disabled={busy || !title.trim() || (series === NEW && !name.trim()) || !(parseInt(number, 10) > 0)} onClick={() => go(true)}>{busy ? 'Starting…' : 'Create book'}</button>
+        {series === NEW && <button type="button" disabled={busy || !name.trim()} onClick={() => go(false)}>Create only the series</button>}
+        <button type="button" onClick={onClose}>Cancel</button>
+      </div>
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
 
 const num = (n: number) => n.toLocaleString('en-US');
 
@@ -90,7 +154,11 @@ const SORTS: readonly BookSort[] = ['recent', 'name', 'series'];
 const VIEWS = ['covers', 'list'] as const;
 
 /** The home page: Books (with Continue where you left off) or Series. */
-export function Home({ source, index, series }: { source: VaultSource; index: VaultIndex; series: boolean }) {
+export function Home({ source, index, series, onCreateBook, onCreateSeries }: { source: VaultSource; index: VaultIndex; series: boolean; onCreateBook?: OnCreateBook; onCreateSeries?: OnCreateSeries }) {
+  const [creating, setCreating] = useState(false);
+  const create = onCreateBook && (creating
+    ? <CreateForm index={index} onCreateBook={onCreateBook} onCreateSeries={onCreateSeries} onClose={() => setCreating(false)} />
+    : <button type="button" class="primary new-button" onClick={() => setCreating(true)}><Icon name="plus" size={18} />{series ? 'New series or book' : 'New book'}</button>);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<BookSort>(() => loadPref('home-sort', SORTS, 'recent'));
   const [view, setView] = useState<'covers' | 'list'>(() => loadPref('home-view', VIEWS, 'covers'));
@@ -104,7 +172,8 @@ export function Home({ source, index, series }: { source: VaultSource; index: Va
         <h1 class="home-title">Your Books</h1>
         <div class="empty-box">
           <h2>Nothing here yet</h2>
-          <p>A book appears here once the vault has its Book.md. Ask the team in the project chat to start a book, or to bring in a manuscript.</p>
+          <p>Start your first book here. To bring in a manuscript you already wrote, start the book, then use Bring in a manuscript on its page.</p>
+          {create}
         </div>
       </section>
     );
@@ -139,8 +208,9 @@ export function Home({ source, index, series }: { source: VaultSource; index: Va
     const list = index.series.filter((s) => !q || s.name.toLowerCase().indexOf(q) >= 0 || index.books.some((b) => b.seriesFolder === s.folder && b.title.toLowerCase().indexOf(q) >= 0));
     return (
       <section class="home">
-        <h1 class="home-title">Your Series</h1>
-        <p class="home-sub">Every series and the books in it.</p>
+        <div class="home-head"><div><h1 class="home-title">Your Series</h1>
+        <p class="home-sub">Every series and the books in it.</p></div>{!creating && create}</div>
+        {creating && create}
         <Tabs series />
         {tools}
         {!list.length && <p class="empty">No series matches "{query}".</p>}
@@ -156,8 +226,9 @@ export function Home({ source, index, series }: { source: VaultSource; index: Va
   const books = sortBooks(index.books.slice(), query, sort, worked);
   return (
     <section class="home">
-      <h1 class="home-title">Your Books</h1>
-      <p class="home-sub">Which one do you want to work on today?</p>
+      <div class="home-head"><div><h1 class="home-title">Your Books</h1>
+      <p class="home-sub">Which one do you want to work on today?</p></div>{!creating && create}</div>
+      {creating && create}
       <Tabs series={false} />
       {(go.length > 0 || active) && (
         <>
@@ -220,7 +291,8 @@ function SeriesCard({ source, index, series, list }: { source: VaultSource; inde
 }
 
 /** One series: its books, and the series notes the boards show. */
-export function SeriesPage({ source, index, folder }: { source: VaultSource; index: VaultIndex; folder: string }) {
+export function SeriesPage({ source, index, folder, onCreateBook }: { source: VaultSource; index: VaultIndex; folder: string; onCreateBook?: OnCreateBook }) {
+  const [creating, setCreating] = useState(false);
   const s = index.series.find((x) => x.folder === folder);
   if (!s) return <p class="empty">That series is not in the vault. <a href={href.allSeries()}>See every series</a>.</p>;
   const books = seriesBooks(index, s);
@@ -233,8 +305,11 @@ export function SeriesPage({ source, index, folder }: { source: VaultSource; ind
       <h1>{s.name}</h1>
       <p class="meta">{[s.genre, books.length === 1 ? '1 book' : books.length + ' books', words ? num(words) + ' words' : '', readingLine(words, loadRates())].filter(Boolean).join(' · ')}</p>
       <h2>Books</h2>
+      {onCreateBook && (creating
+        ? <CreateForm index={index} onCreateBook={onCreateBook} seriesFolder={folder} onClose={() => setCreating(false)} />
+        : <div class="buttons"><button type="button" onClick={() => setCreating(true)}><Icon name="plus" size={18} />New book in {s.name}</button></div>)}
       {books.length ? <BookGrid source={source} index={index} books={books} list={false} />
-        : <div class="empty-box"><h2>Nothing here yet</h2><p>This series has no books. Ask the team in the project chat to start one.</p></div>}
+        : <div class="empty-box"><h2>Nothing here yet</h2><p>This series has no books yet.</p></div>}
       {base && (
         <>
           <h2>Shared by every book</h2>

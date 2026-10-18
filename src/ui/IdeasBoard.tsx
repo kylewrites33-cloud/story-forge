@@ -10,7 +10,9 @@ import { EditFields } from './EditFields.tsx';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
+import { Icon } from './Icon.tsx';
 import { EmptyBox } from './screens.tsx';
+import { defaultJobTitle, jobAsk, type OnJob } from '../lib/jobs.ts';
 
 export interface IdeasProps {
   schema: Schema;
@@ -19,6 +21,10 @@ export interface IdeasProps {
   /** Choices not yet on GitHub, by note path. */
   waiting: Record<string, Choice>;
   onDecide: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
+  /** Ask the team to do a rewrite now, after Rewrite is saved. */
+  onRewrite?: (path: string, reason: string) => void;
+  /** Ask the team for work from this board (More ideas). */
+  onJob?: OnJob;
 }
 
 /** The choice that puts an idea back in the pile it came from. */
@@ -44,7 +50,7 @@ function actions(pile: Pile): { decision: Decision; text: string; primary?: bool
 }
 
 /** A card for any note Kyle keeps, puts aside or drops: an idea, a beat or a conflict. */
-export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting?: Choice; onDecide: IdeasProps['onDecide'] }) {
+export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pile; waiting?: Choice; onDecide: IdeasProps['onDecide']; onRewrite?: IdeasProps['onRewrite'] }) {
   const { schema, note, pile, waiting } = props;
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -57,12 +63,14 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
   // The line that says what the card is for: an idea's pitch, a beat's summary, what a comp proves.
   const blurb = [d.pitch, d.summary, d.proves].find((v) => !isEmptyValue(v));
   const [rewriting, setRewriting] = useState(false);
+  const [now, setNow] = useState(true);
   const [editing, setEditing] = useState(false);
   const editable = editableFields(schema, note.type);
   const decide = (decision: Decision) => {
     // Rewrite needs to say what should change, so the first press opens the box and the second sends it.
     if (decision === 'regenerate' && !rewriting) { setRewriting(true); setAsking(true); return; }
     props.onDecide(note.path, decision, reason);
+    if (decision === 'regenerate' && now && props.onRewrite) props.onRewrite(note.path, reason);
     setReason('');
     setAsking(false);
     setRewriting(false);
@@ -112,6 +120,12 @@ export function ProposalCard(props: { schema: Schema; note: NoteRecord; pile: Pi
       ) : (
         !note.error && <button type="button" class="link" onClick={() => setAsking(true)}>Add a reason</button>
       )}
+      {rewriting && props.onRewrite && (
+        <label class="check">
+          <input type="checkbox" checked={now} onChange={(e) => setNow((e.currentTarget as HTMLInputElement).checked)} />
+          Ask the team to rewrite it now. The new version comes back to To decide.
+        </label>
+      )}
       {!note.error && (
         <div class="buttons">
           {rewriting
@@ -145,7 +159,8 @@ export function IdeasBoard(props: IdeasProps) {
   return (
     <ProposalBoard {...props} boardKey="ideas" heading="Ideas" notes={notes}
       intro={'The team\'s proposals for ' + props.book.title + '. Keep tells the team to use it. Later puts it aside to come back to. Rewrite sends it back to the team with what to change. Drop turns it down, and the note stays in the vault.'}
-      emptyText="This book has no ideas yet. They appear here when an agent files one in the book's Ideas folder." />
+      emptyText="This book has no ideas yet. They appear here when an agent files one in the book's Ideas folder."
+      extra={props.onJob ? <MoreIdeas book={props.book} onJob={props.onJob} /> : undefined} />
   );
 }
 
@@ -173,7 +188,7 @@ export function ProposalBoard(props: ProposalBoardProps) {
     props.onDecide(last.path, BACK[last.from as Exclude<Pile, 'other'>], '');
     setLast(null);
   };
-  const card = (n: NoteRecord) => <ProposalCard key={n.path} schema={schema} note={n} pile={pile} waiting={props.waiting[n.path]} onDecide={onDecide} />;
+  const card = (n: NoteRecord) => <ProposalCard key={n.path} schema={schema} note={n} pile={pile} waiting={props.waiting[n.path]} onDecide={onDecide} onRewrite={props.onRewrite} />;
 
   return (
     <section>
@@ -206,5 +221,37 @@ export function ProposalBoard(props: ProposalBoardProps) {
         ))
         : <ul class="cards ideas">{list.map(card)}</ul>}
     </section>
+  );
+}
+
+/** Ask the team for more ideas, with a line saying what about. */
+function MoreIdeas({ book, onJob }: { book: BookEntry; onJob: OnJob }) {
+  const [open, setOpen] = useState(false);
+  const [words, setWords] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const send = async () => {
+    setBusy(true);
+    const r = await onJob({ title: defaultJobTitle('ideas', '', words.trim().slice(0, 50)), kind: 'ideas', target: '', book: book.folder, ask: jobAsk('ideas', '', words) });
+    setBusy(false);
+    setSaid(r);
+    if (!r.error) { setOpen(false); setWords(''); }
+  };
+  return (
+    <div class="more-ideas">
+      {open ? (
+        <div class="side-add-form">
+          <label class="reason">
+            What should the ideas be about? Leave it empty and the team picks what the book needs most.
+            <input type="text" value={words} onInput={(e) => setWords((e.currentTarget as HTMLInputElement).value)} placeholder="For example a twist for chapter 12" />
+          </label>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={busy} onClick={send}>{busy ? 'Sending…' : 'Ask for ideas'}</button>
+            <button type="button" onClick={() => setOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : <div class="buttons"><button type="button" onClick={() => { setOpen(true); setSaid(null); }}><Icon name="idea" size={18} />Ask the team for more ideas</button></div>}
+      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+    </div>
   );
 }

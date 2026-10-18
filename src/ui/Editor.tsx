@@ -7,18 +7,18 @@ import {
 } from '../lib/drafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
-import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
+import { archiveForJoin, archivedWhy, joinedBody, noteJoinForTeam, removeJoined, restoreArchived, splitAt, splitOff } from '../lib/scenes.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label as fieldLabel } from '../lib/format.ts';
 import { cardFields, propDef } from '../lib/schema.ts';
-import type { NoteRecord, Schema, VaultSource } from '../lib/types.ts';
+import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
-import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
+import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
 import { findAll, markList, unstyle } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
@@ -50,7 +50,7 @@ function saveSide(key: string, open: boolean) {
 }
 type Tab = 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team';
 
-export interface EditorBook { title: string; folder: string; groups: ChapterGroup[] }
+export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
@@ -415,6 +415,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                 return onAdd(group ? group.num : null, group ? group.title : '', t);
               }} chapter={group && group.num != null ? group.num : null} />}
             </nav>
+            {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
             <nav class="side-boards" aria-label="Boards">
               {boardLinks(schema, book.folder).map((l) => (
                 <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
@@ -707,6 +708,104 @@ function NotesPanel({ source, bookFolder, note, canSave, onChanged }: {
   );
 }
 
+const when = (iso: string) => {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+/** Every save of this scene from the vault's history, newest first, with Go back to this version. */
+function HistoryList({ source, note, body, canSave, keep, onUse }: {
+  source: VaultSource; note: NoteRecord; body: string; canSave: boolean;
+  keep: (text: string, name: string) => Promise<boolean>; onUse: (body: string) => void;
+}) {
+  const [list, setList] = useState<SaveEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<{ entry: SaveEntry; body: string } | null>(null);
+  const [showing, setShowing] = useState(false);
+  if (!source.history || !source.readAt) return null;
+  const load = async () => {
+    setShowing(true);
+    if (!navigator.onLine) { setError('Connect to the internet to see the history.'); return; }
+    try { setList(await source.history!(note.path)); setError(null); } catch (e) { setError((e as Error).message); }
+  };
+  const view = async (entry: SaveEntry) => {
+    try { setOpen({ entry, body: Frontmatter.parse(await source.readAt!(note.path, entry.commit)).body }); } catch (e) { setError((e as Error).message); }
+  };
+  const now = bodyWords(body);
+  if (!showing) return <div><span class="panel-key">Every save</span><p class="hint">The vault keeps every save of this scene, yours and the team's.</p><button type="button" onClick={load}><Icon name="history" size={18} />Show every save</button></div>;
+  return (
+    <div>
+      <span class="panel-key">Every save</span>
+      {error && <p class="error">{error}</p>}
+      {open ? (
+        <div class="copy-view">
+          <p><strong>{when(open.entry.date)}</strong> · {open.entry.agent ? 'by the ' + open.entry.agent : 'by you'} · {num(bodyWords(open.body))} words ({bodyWords(open.body) - now >= 0 ? '+' : ''}{num(bodyWords(open.body) - now)} against now)</p>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={!canSave} onClick={async () => { if (await keep(body, 'before going back to ' + open.entry.date.slice(0, 10))) { onUse(open.body); setOpen(null); } }}>Go back to this version</button>
+            <button type="button" onClick={() => setOpen(null)}>Close</button>
+          </div>
+          <pre class="copy-text">{splitLead(open.body).text}</pre>
+        </div>
+      ) : list && (list.length ? (
+        <ul class="copy-list history">
+          {list.map((e) => (
+            <li key={e.commit}>
+              <button type="button" class="link" onClick={() => view(e)}>{when(e.date)}</button>
+              <span class="meta"> {e.agent ? e.agent : 'You'} · {e.message.replace(/^[a-z-]+: /, '')}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p class="hint">No saves found.</p>)}
+    </div>
+  );
+}
+
+/** Joined or removed scenes in the book's Archive folder, with Restore. */
+function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
+  source: VaultSource; files: FileEntry[]; bookFolder: string; canSave: boolean; onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [sure, setSure] = useState<{ file: FileEntry; why: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = (f: FileEntry) => f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.md$/, '');
+  const ask = async (f: FileEntry) => {
+    setError(null);
+    try { setSure({ file: f, why: archivedWhy(await source.read(f.path, f.sha)) }); } catch (e) { setError((e as Error).message); }
+  };
+  const restore = async () => {
+    if (!sure) return;
+    if (!navigator.onLine) { setError('Connect to the internet to restore a scene.'); return; }
+    setBusy(true);
+    try { await restoreArchived(source, sure.file, bookFolder); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <div class="side-archive">
+      <button type="button" class="side-add" aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="archive" size={18} />Archive ({files.length})</button>
+      {open && (
+        <ul class="archive-list">
+          {files.map((f) => (
+            <li key={f.path}>
+              <span>{name(f)}</span>
+              {canSave && <button type="button" class="link" onClick={() => ask(f)}>Restore</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {sure && (
+        <div class="side-add-form">
+          <p class="hint">{sure.why ? sure.why + ' ' : ''}Restore puts {name(sure.file)} back in its old place.{/^Joined/.test(sure.why) ? ' Its words are still in the scene it joined too, so take them out there if you only want them once.' : ''}</p>
+          <div class="buttons">
+            <button type="button" class="primary" disabled={busy} onClick={restore}>{busy ? 'Restoring…' : 'Restore'}</button>
+            <button type="button" onClick={() => setSure(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
 /** Add a scene from the chapter list: a title, then it opens for writing. */
 function AddInList({ onAdd, chapter }: { onAdd: (title: string) => Promise<string | null>; chapter: number | null }) {
   const [open, setOpen] = useState(false);
@@ -803,8 +902,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
   const send = async (kind: JobKind, target: string, words = '') => {
     setBusy(kind);
     setSaid(null);
-    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' ? '' : title);
-    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: words });
+    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' ? '' : title);
+    const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: kind === 'table-read' ? jobAsk(kind, target, words) : words });
     setBusy('');
     setSaid(r);
     if (!r.error && kind === 'custom') { setAsk(''); setAsking(false); }
@@ -816,6 +915,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
         ? <button type="button" class="primary" disabled={busy !== '' || !id} onClick={() => send('draft', id)}>{busy === 'draft' ? 'Sending…' : 'Draft this scene'}</button>
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('notes', chapterTarget)}>{busy === 'notes' ? 'Sending…' : 'Notes on this chapter'}</button>
+      <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('table-read', chapterTarget, '')}>{busy === 'table-read' ? 'Sending…' : 'Table read of this chapter'}</button>
       <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'Check for AI-sounding phrases'}</button>
       <button type="button" disabled={busy !== ''} onClick={() => send('learn', '')}>{busy === 'learn' ? 'Sending…' : 'Learn from my edits'}</button>
       {asking ? (
@@ -831,7 +931,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link }: {
         </div>
       ) : <button type="button" disabled={busy !== ''} onClick={() => { setAsking(true); setSaid(null); }}>Ask the team…</button>}
       {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
-      <p class="hint">Each press writes a job into the vault. GitHub runs it in a few minutes and the answer lands on the <a {...link(href.jobs())}>Jobs</a> screen.</p>
+      <p class="hint">Each press writes a job into the vault. The team picks it up and the answer lands on the <a {...link(href.jobs())}>Jobs</a> screen. A table read is three test readers who only see this chapter's pages.</p>
     </div>
   );
 }
@@ -954,6 +1054,7 @@ function CopiesPanel({ source, note, body, canSave, onUse }: {
           </ul>
         ) : <p class="hint">No copies of this scene yet.</p>
       )}
+      {!open && <HistoryList source={source} note={note} body={body} canSave={canSave} keep={keep} onUse={onUse} />}
     </div>
   );
 }

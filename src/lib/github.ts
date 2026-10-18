@@ -1,5 +1,5 @@
 // Reads the vault through the GitHub REST API: one call for the whole file tree, then one call per changed file.
-import type { FileEntry, VaultSource } from './types.ts';
+import type { FileEntry, SaveEntry, VaultSource } from './types.ts';
 import type { Settings } from './settings.ts';
 
 const API = 'https://api.github.com';
@@ -45,6 +45,12 @@ export function fromBase64(b64: string): string {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(bytes);
+}
+
+/** A commit as a save: its first line, and the agent from its Agent: line (none means Kyle made it). */
+export function saveEntry(commit: string, message: string, date: string): SaveEntry {
+  const m = /^Agent:\s*(.+)$/m.exec(message);
+  return { commit, date, message: message.split('\n')[0].trim(), agent: m ? m[1].trim() : '' };
 }
 
 export class GitHubSource implements VaultSource {
@@ -150,6 +156,22 @@ export class GitHubSource implements VaultSource {
     const body = (await res.json()) as { content?: { sha?: string } };
     if (!body.content || !body.content.sha) throw new GitHubError('GitHub saved ' + path + ' but did not say how. Press Sync to check.', 500);
     return body.content.sha;
+  }
+
+  /** Every commit on the branch that changed this file, newest first (up to 100). */
+  async history(path: string): Promise<SaveEntry[]> {
+    const full = (this.s.root ? this.s.root + '/' : '') + path;
+    const res = await this.get(this.repoUrl('/commits?sha=' + encodeURIComponent(this.s.branch) + '&path=' + encodeURIComponent(full) + '&per_page=100'), 'the history of ' + path, undefined, true);
+    const list = (await res.json()) as { sha: string; commit: { message: string; author?: { date?: string }; committer?: { date?: string } } }[];
+    return list.map((c) => saveEntry(c.sha, c.commit.message, (c.commit.author && c.commit.author.date) || (c.commit.committer && c.commit.committer.date) || ''));
+  }
+
+  /** A file's text at one commit. */
+  async readAt(path: string, commit: string): Promise<string> {
+    const res = await this.get(this.contentsUrl(path) + '?ref=' + encodeURIComponent(commit), path);
+    const body = (await res.json()) as { content?: string; encoding?: string };
+    if (body.encoding !== 'base64' || typeof body.content !== 'string') throw new GitHubError(path + ' is too large for the app to show.', 413);
+    return fromBase64(body.content);
   }
 
   /** Remove one file as one commit on the branch. A stale sha is a conflict, as for write. */

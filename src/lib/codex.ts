@@ -137,3 +137,19 @@ export function lineAround(text: string, from: number, to: number): string {
   if (b < text.length && /[.!?]/.test(text[b])) b++;
   return text.slice(a, b).replace(/\s+/g, ' ').trim();
 }
+
+/** The longest run of chapters (with scenes) an entry is missing from, between its first and last appearance. */
+export function longestGap(chapters: (number | null)[], seen: boolean[]): { from: number; to: number; length: number } | null {
+  const nums = [...new Set(chapters.filter((c): c is number => c != null))].sort((a, b) => a - b);
+  const inCh = new Set<number>();
+  chapters.forEach((c, i) => { if (c != null && seen[i]) inCh.add(c); });
+  const list = nums.filter((c) => c >= Math.min(...inCh) && c <= Math.max(...inCh));
+  let best: { from: number; to: number; length: number } | null = null, run: number[] = [];
+  list.forEach((c) => {
+    if (inCh.has(c)) {
+      if (run.length && (!best || run.length > best.length)) best = { from: run[0], to: run[run.length - 1], length: run.length };
+      run = [];
+    } else run.push(c);
+  });
+  return best;
+}

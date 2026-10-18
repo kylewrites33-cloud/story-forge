@@ -1,6 +1,6 @@
 // The demo vault bundled into the app, so the Pages preview shows a board before any token is entered.
 // Choices made on the demo vault live in memory until the page reloads; nothing is sent anywhere.
-import type { FileEntry, VaultSource } from './types.ts';
+import type { FileEntry, SaveEntry, VaultSource } from './types.ts';
 
 const files = import.meta.glob('/demo-vault/**/*.{md,json}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
@@ -18,6 +18,8 @@ export class DemoSource implements VaultSource {
   private removed = new Set<string>();
   /** Pictures added on the demo vault (a cover), as base64, until the page reloads. */
   private pictures = new Map<string, string>();
+  /** Every save made on the demo vault this visit, so History has something to show. */
+  private log = new Map<string, { entry: SaveEntry; text: string }[]>();
 
   private text(path: string): string {
     if (this.removed.has(path)) throw new Error('The demo vault has no ' + path + '.');
@@ -42,9 +44,13 @@ export class DemoSource implements VaultSource {
     return { text, sha: hash(text) };
   }
 
-  async write(path: string, text: string, sha: string): Promise<string> {
+  async write(path: string, text: string, sha: string, message = ''): Promise<string> {
     const now = !this.removed.has(path) && (this.changed.has(path) || files['/demo-vault/' + path] !== undefined) ? hash(this.text(path)) : '';
     if (now !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
+    const list = this.log.get(path) || [];
+    if (!list.length && now) list.push({ entry: { commit: 'demo-0', date: '2026-10-01T09:00:00Z', message: 'demo: the demo vault as it came', agent: '' }, text: this.text(path) });
+    list.push({ entry: { commit: 'demo-' + list.length, date: new Date().toISOString(), message: message.split('\n')[0], agent: '' }, text });
+    this.log.set(path, list);
     this.changed.set(path, text);
     this.removed.delete(path);
     return hash(text);
@@ -64,6 +70,19 @@ export class DemoSource implements VaultSource {
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return new Blob([bytes], { type: path.endsWith('.png') ? 'image/png' : 'image/jpeg' });
+  }
+
+  async history(path: string): Promise<SaveEntry[]> {
+    const list = this.log.get(path);
+    if (list) return list.map((x) => x.entry).reverse();
+    return files['/demo-vault/' + path] !== undefined ? [{ commit: 'demo-0', date: '2026-10-01T09:00:00Z', message: 'demo: the demo vault as it came', agent: '' }] : [];
+  }
+
+  async readAt(path: string, commit: string): Promise<string> {
+    const hit = (this.log.get(path) || []).find((x) => x.entry.commit === commit);
+    if (hit) return hit.text;
+    if (commit === 'demo-0' && files['/demo-vault/' + path] !== undefined) return files['/demo-vault/' + path];
+    throw new Error('The demo vault has no such save.');
   }
 
   async remove(path: string, sha: string): Promise<void> {
