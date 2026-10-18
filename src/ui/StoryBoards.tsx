@@ -22,8 +22,9 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', folder), icon: 'beats' },
     { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' },
     { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
-    { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || schema.boards[l.key])
+    { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' },
+    { key: 'taste', title: 'Taste', to: href.board('taste', folder), icon: 'taste' }
+  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || l.key === 'taste' || schema.boards[l.key])
     .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }));
 }
 

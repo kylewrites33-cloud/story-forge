@@ -22,6 +22,7 @@ import { Icon } from './Icon.tsx';
 import { flushDrafts, pendingCount } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
+import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { Shell } from './Shell.tsx';
@@ -543,7 +544,8 @@ export function App() {
       if (boardKey === 'details') screen = <BookDetails source={source} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
-      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} />;
+      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onJob={source.write ? onJob : undefined} />;
+      else if (boardKey === 'taste') screen = <TastePage source={source} index={view} book={book} onJob={source.write ? onJob : undefined} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
       } else if (boardKey === 'chapter-grid') {
