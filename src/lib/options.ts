@@ -73,7 +73,7 @@ export function optionsAsk(mode: OptionMode, scene: string, p: Passage): string 
 }
 
 export function optionsJob(mode: OptionMode, sceneId: string, sceneLabel: string, bookFolder: string, p: Passage): NewJob {
-  return { title: modeLabel(mode) + ' a passage in ' + sceneId, kind: 'options', target: sceneId, book: bookFolder, ask: optionsAsk(mode, sceneLabel, p) };
+  return { title: 'Options for ' + sceneId + ': ' + modeLabel(mode), kind: 'options', target: sceneId, book: bookFolder, ask: optionsAsk(mode, sceneLabel, p) };
 }
 
 /** What an options job asked for: its mode, the exact passage and the words before it. Null for a job that is not one. */

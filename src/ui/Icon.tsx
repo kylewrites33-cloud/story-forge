@@ -52,7 +52,13 @@ const PATHS: Record<string, string> = {
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
-  bracket: 'M9 4H5v16h4M15 4h4v16h-4'
+  bracket: 'M9 4H5v16h4M15 4h4v16h-4',
+  scan: 'M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM21 21l-5.2-5.2M7.5 10.5l2 2 4-4',
+  speaker: 'M4 9h4l5-4v14l-5-4H4zM16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13',
+  swap: 'M4 8h14l-3.5-3.5M20 16H6l3.5 3.5',
+  play: 'M7 4.5l12 7.5-12 7.5z',
+  pause: 'M7 5h3v14H7zM14 5h3v14h-3z',
+  stop: 'M6.5 6.5h11v11h-11z'
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

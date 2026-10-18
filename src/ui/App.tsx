@@ -39,6 +39,8 @@ import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
+import { optionJobsFor } from '../lib/options.ts';
+import { checkOptions } from '../lib/lintcheck.ts';
 import { planFor } from '../lib/plans.ts';
 import { MatrixBoard } from './Matrix.tsx';
 import { EditQueue } from './EditQueue.tsx';
@@ -431,7 +433,7 @@ export function App() {
       const note = cur.index.notes[r.path];
       const book = note ? cur.index.books.find((b) => r.path.startsWith(b.folder + '/')) : null;
       const id = note ? String(note.data.id || '') : '';
-      const busy = book && id ? fillJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || conversation(cur.index, id, book.folder).pending : false;
+      const busy = book && id ? fillJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || optionJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || conversation(cur.index, id, book.folder).pending : false;
       if (busy || beat % 2 === 0) runSync();
     }, 15000);
     return () => {
@@ -490,6 +492,8 @@ export function App() {
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
           fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
+          optionJobs={book && note.data.id ? optionJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
+          checkOpts={book ? checkOptionsFor(view, book.folder) : undefined}
           convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
           plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
@@ -503,6 +507,7 @@ export function App() {
     const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
     if (book && group) {
       return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
+        checkOpts={checkOptionsFor(view, book.folder)}
         backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} />} />;
     }
   }
@@ -633,4 +638,11 @@ export function App() {
       <PomodoroTimer source={source} index={view} variant="float" onLogged={foldNotes} />
     </Shell>
   );
+}
+
+/** What Check (AI phrases) takes from the vault: the book's Style Guide and the vault's Config, as sf lint does. */
+function checkOptionsFor(view: VaultIndex, bookFolder: string) {
+  const guide = view.notes[bookFolder + '/Style Guide.md'];
+  const config = view.notes['System/Config.md'];
+  return checkOptions(guide ? guide.data : null, config ? config.data : null);
 }

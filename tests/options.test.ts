@@ -25,7 +25,7 @@ test('an options job carries the mode, the exact passage and full steps, and rea
   const j = optionsJob('tighten', 'S-001', 'S-001 The Crack', BOOK, p);
   assert.equal(j.kind, 'options');
   assert.equal(j.target, 'S-001');
-  assert.equal(j.title, 'Tighten a passage in S-001');
+  assert.equal(j.title, 'Options for S-001: Tighten');
   assert.match(j.ask, /### Option 1/);
   assert.match(j.ask, /20 to 40 percent/);
   assert.match(j.ask, /Never change the scene/);
