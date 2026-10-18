@@ -59,7 +59,7 @@ test('messages keep ID order, show waiting, working and failed, and a new one ma
     chat('J-012', 'S-004', 'requested', 'And the second question?'),
     chat('J-010', 'S-004', 'done', 'Is the ice scene too long?', 'A little. Cut the second paragraph.', { finished: '2026-10-18T09:30', cost_usd: 0.002 }),
     chat('J-011', 'S-004', 'running', 'Which paragraph?'),
-    chat('J-013', 'chat-007', 'failed', 'Why did this stop?', '', { result: 'The run hit its spend cap.' })
+    chat('J-013', 'chat-007', 'failed', 'Why did this stop?', '', { result: 'The run hit its spend cap.', created: '2026-10-17' })
   ]);
   const c = conversation(index, 'S-004');
   assert.deepEqual(c.messages.map((m) => m.id + ':' + m.state), ['J-010:done', 'J-011:working', 'J-012:waiting']);
@@ -71,8 +71,11 @@ test('messages keep ID order, show waiting, working and failed, and a new one ma
   assert.equal(failed.messages[0].state, 'failed');
   assert.equal(failed.messages[0].result, 'The run hit its spend cap.');
   assert.equal(failed.pending, false);
-  // The newest activity comes first: S-004 finished a reply at 09:30 today.
-  assert.equal(conversations(index)[0].thread, 'S-004');
+  // Newest day first, then the newest message: S-004 (J-012) and chat-001 (J-005) today, then chat-007 (J-013) and S-002 (J-003) yesterday.
+  assert.deepEqual(conversations(index).map((x) => x.thread), ['S-004', 'chat-001', 'chat-007', 'S-002']);
+  // A question sent today goes above a conversation whose reply came this morning.
+  const later = withJobs(index, [chat('J-020', 'chat-008', 'requested', 'New question')]);
+  assert.equal(conversations(later)[0].thread, 'chat-008');
   assert.equal(nextChatThread(index), 'chat-008');
   // A scene with nothing said yet is an empty conversation, titled by the scene.
   const empty = conversation(index, 'S-006', BOOK);
@@ -91,6 +94,7 @@ test('titles, thread names and the first words of a message', () => {
   assert.equal(firstWords('  Is the   *ferryman* too nice?  '), 'Is the ferryman too nice?');
   assert.equal(firstWords('Should Mara find out about the rope in chapter two, or wait until the ledger?'), 'Should Mara find out about the rope in chapter…');
   assert.equal(firstWords(''), '');
+  assert.equal(firstWords('**Tobin cut it.**\n\n- The tolls\n2. The marks'), 'Tobin cut it. The tolls The marks');
 });
 
 test('a message becomes a chat job with its thread, and goes in as Kyle\'s commit', async () => {

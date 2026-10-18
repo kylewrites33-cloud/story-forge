@@ -64,7 +64,7 @@ const str = (v: unknown) => (v == null ? '' : String(v));
 
 /** The first words of Kyle's message, cut at a word, for a title. */
 export function firstWords(text: string, max = 48): string {
-  const s = String(text || '').replace(/[*_`#>[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const s = String(text || '').replace(/(^|\n)[ \t]*(?:[-+*]|\d+[.)])[ \t]+/g, '$1').replace(/[*_`#>[\]]/g, '').replace(/\s+/g, ' ').trim();
   if (s.length <= max) return s;
   const cut = s.slice(0, max - 1).replace(/\s+\S*$/, '').replace(/[\s,.;:!?-]+$/, '');
   return (cut || s.slice(0, max - 1)) + '…';
@@ -104,7 +104,7 @@ export function conversationTitle(thread: string, scene: NoteRecord | null, firs
   return firstWords(firstAsk) || 'New conversation';
 }
 
-/** Every chat job in the vault, by thread, each in ID order; newest activity first. */
+/** Every chat job in the vault, by thread, each in ID order; newest activity first (see the sort below). */
 export function conversations(index: VaultIndex): Conversation[] {
   const by = new Map<string, NoteRecord[]>();
   jobNotes(index).forEach((n) => {
@@ -119,8 +119,10 @@ export function conversations(index: VaultIndex): Conversation[] {
     notes.sort((a, b) => (idNumber(a.data.id) || 0) - (idNumber(b.data.id) || 0) || a.path.localeCompare(b.path));
     out.push(build(index, thread, notes, ''));
   });
+  // Newest day first, then, inside a day, the conversation with the newest message. (A message only has the day it was
+  // sent, while a reply has its time, so times alone would put a question sent this afternoon below a reply from 9:00.)
   const last = (c: Conversation) => (c.messages.length ? idNumber(c.messages[c.messages.length - 1].id) || 0 : 0);
-  return out.sort((a, b) => b.activity.localeCompare(a.activity) || last(b) - last(a));
+  return out.sort((a, b) => b.activity.slice(0, 10).localeCompare(a.activity.slice(0, 10)) || last(b) - last(a) || b.activity.localeCompare(a.activity));
 }
 
 function build(index: VaultIndex, thread: string, notes: NoteRecord[], book: string): Conversation {

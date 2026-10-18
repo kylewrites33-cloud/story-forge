@@ -9,7 +9,7 @@ import { when } from './Jobs.tsx';
 import { href } from './route.ts';
 
 /** Send Kyle's words in a conversation. Answers the thread the message went into (a new conversation gets its name here), or a plain-sentence error. */
-export type OnChat = (thread: string, words: string, book: string) => Promise<{ thread: string } | { error: string }>;
+export type OnChat = (thread: string, words: string, book: string) => Promise<{ thread: string; book: string } | { error: string }>;
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 /** The last thing said in a conversation, for its row in the list. */
@@ -106,7 +106,7 @@ function ConversationView({ index, thread, book, onChat, onDecide, waiting, demo
     setBusy(false);
     if ('error' in r) { setError(r.error); return; }
     setWords('');
-    if (r.thread !== thread) location.replace(href.chat(r.thread, c.book || book));
+    if (r.thread !== thread) location.replace(href.chat(r.thread, r.book));
   };
   const firstPending = c.messages.findIndex((m) => m.state === 'waiting' || m.state === 'working');
   const title = isNew ? 'New conversation' : c.title;

@@ -220,7 +220,7 @@ export function App() {
 
   /** Send a message in a conversation with the team: one chat job note, shown at once, then a sync in the background.
    * A conversation not started yet ('new') gets the next free chat-NNN. A message may follow one still waiting for a reply. */
-  const onChat = useCallback(async (thread: string, words: string, book: string): Promise<{ thread: string } | { error: string }> => {
+  const onChat = useCallback(async (thread: string, words: string, book: string): Promise<{ thread: string; book: string } | { error: string }> => {
     if (!navigator.onLine) return { error: 'Connect to the internet to send a message.' };
     const cur = snapRef.current;
     if (!cur) return { error: 'Press Sync first.' };
@@ -239,7 +239,7 @@ export function App() {
         await writeSnapshot(next);
       }
       runSync();
-      return { thread: t };
+      return { thread: t, book: folder };
     } catch (e) {
       return { error: (e as Error).message };
     }
