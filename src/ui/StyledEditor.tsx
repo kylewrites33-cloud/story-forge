@@ -3,7 +3,7 @@
 // gains anything the writer did not type. New lines, pasting, bold and italic shortcuts and undo are handled here, so
 // the browser never adds its own formatting.
 import { useEffect, useRef } from 'preact/hooks';
-import { styledHtml } from '../lib/styled.ts';
+import { styledHtml, unstyle, type StyleOptions } from '../lib/styled.ts';
 
 /** The plain text of the page: text nodes as they are, a line break element as "\n" (except the last one, which only
  * keeps an empty last line visible), and a block the browser added as a new line. */
@@ -72,9 +72,29 @@ export function setSelection(root: HTMLElement, start: number, end = start) {
 interface Step { text: string; caret: number; at: number }
 
 /** What the tool row above the page can ask the writing box to do. */
-export interface EditorCommands { bold: () => void; italic: () => void; undo: () => void; redo: () => void }
+export interface EditorCommands {
+  bold: () => void; italic: () => void; undo: () => void; redo: () => void;
+  /** Normal: take bold, italic and highlighter marks off the selection. */
+  plain: () => void;
+  highlight: () => void;
+  /** Select these characters and bring them into view (Find, a mark in the list). */
+  select: (start: number, end: number) => void;
+  /** Replace these characters, as one step to undo. */
+  replaceRange: (start: number, end: number, text: string) => void;
+  /** Replace the whole text, as one step to undo (Replace all). */
+  setAll: (text: string) => void;
+}
 
-export function StyledEditor({ value, onChange, onCaret, label, commands }: {
+/** Scroll the selection into the middle of the screen. */
+export function showSelection() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const n = sel.getRangeAt(0).startContainer;
+  const el = (n.nodeType === 3 ? n.parentElement : n) as HTMLElement | null;
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+}
+
+export function StyledEditor({ value, onChange, onCaret, label, commands, options, onName }: {
   /** The text to start with. Later changes to it are ignored; give the editor a new key to load other text. */
   value: string;
   onChange: (text: string) => void;
@@ -83,6 +103,10 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
   label: string;
   /** Filled in with the tool row's commands. */
   commands?: { current: EditorCommands | null };
+  /** Names to underline and words to find. A change repaints the page and keeps the cursor. */
+  options?: StyleOptions;
+  /** A codex name in the text was pressed: its index in options.names.entries. */
+  onName?: (entry: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // The last selection in the page. A button press can move focus away first, so bold and italic fall back to it.
@@ -93,10 +117,12 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
   const undo = useRef<Step[]>([]);
   const redo = useRef<Step[]>([]);
 
+  const opts = useRef<StyleOptions>(options || {});
+  opts.current = options || {};
   const paint = (text: string, caret: number | null) => {
     const el = ref.current;
     if (!el) return;
-    const h = styledHtml(text) + '<br>';
+    const h = styledHtml(text, opts.current) + '<br>';
     if (el.innerHTML !== h) el.innerHTML = h;
     html.current = h;
     shown.current = text;
@@ -106,6 +132,17 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
   // Drawn once. Typing never comes back through `value` (a render can arrive after newer keystrokes); a change from
   // outside (a copy restored, a split or a join) remounts the editor with a new key instead.
   useEffect(() => { paint(value, null); }, []);
+  // New names or a new search: repaint, keeping the selection where it was.
+  const names = options && options.names, find = options && options.find;
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const el = ref.current;
+    if (!el || shown.current == null) return;
+    const s = document.activeElement === el ? selectionOffsets(el) : null;
+    paint(shown.current, null);
+    if (s) setSelection(el, s.start, s.end);
+  }, [names, find]);
 
   const remember = (text: string, caret: number) => {
     const now = Date.now();
@@ -176,7 +213,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
     const s = selectionOffsets(el);
     const caret = s ? s.start : text.length;
     lastSel.current = s;
-    const h = styledHtml(text) + '<br>';
+    const h = styledHtml(text, opts.current) + '<br>';
     shown.current = text;
     if (el.innerHTML !== h) { el.innerHTML = h; setSelection(el, caret); }
     html.current = h;
@@ -213,7 +250,47 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
       bold: () => { focus(); replace('', '**'); },
       italic: () => { focus(); replace('', '*'); },
       undo: () => { focus(); step(undo, redo); },
-      redo: () => { focus(); step(redo, undo); }
+      redo: () => { focus(); step(redo, undo); },
+      highlight: () => { focus(); replace('', '=='); },
+      plain: () => {
+        focus();
+        const el = ref.current;
+        if (!el) return;
+        const text = shown.current ?? '';
+        const sel = selectionOffsets(el) || lastSel.current || { start: 0, end: 0 };
+        const r = unstyle(text, sel.start, sel.end);
+        if (r.text === text) return;
+        remember(text, sel.start);
+        undo.current[undo.current.length - 1].at = 0;
+        commit(r.text, r.end);
+        setSelection(el, r.start, r.end);
+        lastSel.current = { start: r.start, end: r.end };
+      },
+      select: (a, b) => {
+        const el = ref.current;
+        if (!el) return;
+        el.focus();
+        setSelection(el, a, b);
+        lastSel.current = { start: a, end: b };
+        onCaret(a);
+        showSelection();
+      },
+      replaceRange: (a, b, t) => {
+        const el = ref.current;
+        if (!el) return;
+        const text = shown.current ?? '';
+        remember(text, a);
+        undo.current[undo.current.length - 1].at = 0;
+        commit(text.slice(0, a) + t + text.slice(b), a + t.length);
+        lastSel.current = { start: a + t.length, end: a + t.length };
+      },
+      setAll: (t) => {
+        const text = shown.current ?? '';
+        if (t === text) return;
+        remember(text, 0);
+        undo.current[undo.current.length - 1].at = 0;
+        commit(t, 0);
+      }
     };
   }
 
@@ -244,6 +321,10 @@ export function StyledEditor({ value, onChange, onCaret, label, commands }: {
       onMouseUp={mark}
       onTouchEnd={mark}
       onBlur={mark}
+      onClick={(e) => {
+        const hit = onName && (e.target as HTMLElement).closest && (e.target as HTMLElement).closest('[data-ref]') as HTMLElement | null;
+        if (hit && onName) onName(Number(hit.dataset.ref));
+      }}
     />
   );
 }

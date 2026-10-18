@@ -29,6 +29,8 @@ import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
 import { TodoList } from './TodoList.tsx';
 import { JobsScreen } from './Jobs.tsx';
+import { codexFor } from '../lib/codex.ts';
+import { ChapterPage } from './ChapterPage.tsx';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -323,8 +325,19 @@ export function App() {
           book={book ? { title: book.title, folder: book.folder, groups } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
           onJob={book && source.write ? onJob : undefined}
+          codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
+    }
+  }
+
+  if (route.name === 'chapter' && view && schema) {
+    const note = view.notes[route.path];
+    const book = note ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null;
+    const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
+    if (book && group) {
+      return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
+        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} />;
     }
   }
 
@@ -334,7 +347,7 @@ export function App() {
     body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
   } else if (!snap || !schema || !view) {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
-  } else if (route.name === 'write') {
+  } else if (route.name === 'write' || route.name === 'chapter') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'jobs') {
     body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;

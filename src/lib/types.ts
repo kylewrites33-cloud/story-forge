@@ -86,6 +86,8 @@ export interface SeriesEntry {
   market?: string[];
   /** File names in the series' Market/Rocket Exports folder. Missing in copies saved before the Market board. */
   rocket?: string[];
+  /** Paths of the series' places, items and lore. Missing in copies saved before names lit up in the writing screen. */
+  codex?: string[];
   /** The series note's genre line and status, for the Series view. */
   genre?: string;
   status?: string;
@@ -107,6 +109,12 @@ export interface BookEntry {
   beats?: string[];
   conflicts?: string[];
   characters?: string[];
+  /** Paths of the book's own places, items and lore (book deltas). */
+  codex?: string[];
+  /** The book's Braindump note, if it has one. */
+  braindump?: string | null;
+  /** Scene notes in the book's Archive folder. */
+  archive?: FileEntry[];
   /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
   cover?: FileEntry | null;
 }

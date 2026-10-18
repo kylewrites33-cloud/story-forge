@@ -9,6 +9,7 @@ export type Route =
   | { name: 'board'; board: string; folder: string }
   | { name: 'note'; path: string }
   | { name: 'write'; path: string }
+  | { name: 'chapter'; path: string }
   | { name: 'todo' }
   | { name: 'jobs' }
   | { name: 'settings' };
@@ -24,6 +25,7 @@ export function parseHash(hash: string): Route {
   if (head === 'board' && rest.length > 1) return { name: 'board', board: rest[0], folder: decodeURIComponent(rest.slice(1).join('/')) };
   if (head === 'note' && tail) return { name: 'note', path: tail };
   if (head === 'write' && tail) return { name: 'write', path: tail };
+  if (head === 'chapter' && tail) return { name: 'chapter', path: tail };
   if (head === 'settings') return { name: 'settings' };
   if (head === 'todo') return { name: 'todo' };
   if (head === 'jobs') return { name: 'jobs' };
@@ -40,6 +42,7 @@ export const href = {
   board: (board: string, folder: string) => '#/board/' + board + '/' + encodeURIComponent(folder),
   note: (path: string) => '#/note/' + encodeURIComponent(path),
   write: (path: string) => '#/write/' + encodeURIComponent(path),
+  chapter: (path: string) => '#/chapter/' + encodeURIComponent(path),
   todo: () => '#/todo',
   jobs: () => '#/jobs',
   settings: () => '#/settings'
