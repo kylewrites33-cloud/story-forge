@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appearances, codexFor, matcher, mentions, namedIn } from '../src/lib/codex.ts';
+import { appearances, codexFor, matcher, mentions, namedIn, termsOf } from '../src/lib/codex.ts';
 import { findAll, markList, styledHtml, textOf, unstyle } from '../src/lib/styled.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { parseSchema } from '../src/lib/schema.ts';
@@ -56,4 +56,12 @@ test('Normal takes away the marks the selection touches', () => {
 test('find and the list of marks', () => {
   assert.deepEqual(findAll('Aa aA', 'a'), [0, 1, 3, 4]);
   assert.deepEqual(markList('one ==two==\n==three=='), [{ at: 4, text: 'two' }, { at: 12, text: 'three' }]);
+});
+
+test('everyday words never light up as names', () => {
+  // Kyle, 2026-10-18: "the" lit up as the Demon Lord, whose name starts with a small "the".
+  assert.deepEqual(termsOf('the Demon Lord', { aliases: ['Demon Lord', 'the former Demon Lord'] }, true), ['the Demon Lord', 'Demon Lord', 'the former Demon Lord']);
+  assert.deepEqual(termsOf('The Warden', {}, true), ['The Warden']);
+  assert.deepEqual(termsOf('Grey Merrifield', { aliases: ['Grey', 'healer', 'The', 'Him'] }, true), ['Grey Merrifield', 'Grey']);
+  assert.deepEqual(termsOf('Mara Quill', {}, true), ['Mara Quill', 'Mara']);
 });

@@ -502,6 +502,13 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="tool wide" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /><span class="tool-label">Find</span></button>
               <button type="button" class="tool wide" title="Split this scene at the cursor" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="tool-label">Split</span></button>
               {next && <button type="button" class="tool wide" title="Join the next scene onto this one" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="tool-label">Join</span></button>}
+              {(codex || []).length > 0 && (
+                <button type="button" class="tool wide" aria-pressed={look.names === 'on'} {...keepFocus}
+                  title={look.names === 'on' ? 'Names of characters, places and items are underlined. Press to turn it off.' : 'Underline the names of characters, places and items'}
+                  onClick={() => { const l: PageLook = { ...look, names: look.names === 'on' ? 'off' : 'on' }; setLook(l); saveLook(l); }}>
+                  <Icon name="people" /><span class="tool-label">Names</span>
+                </button>
+              )}
             </div>
             <div class="tool-group team-tools" role="group" aria-label="Ask the team">
               <span class="tool-heading" aria-hidden="true">Ask the team</span>
