@@ -10,6 +10,7 @@ import { EditFields } from './EditFields.tsx';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
+import { EmptyBox } from './screens.tsx';
 
 export interface IdeasProps {
   schema: Schema;
@@ -192,7 +193,7 @@ export function ProposalBoard(props: ProposalBoardProps) {
           {DONE[last.decision]}: {last.title}. <button type="button" class="link" onClick={undo}>Undo</button>
         </p>
       )}
-      {!notes.length && <p class="empty">{props.emptyText}</p>}
+      {!notes.length && <EmptyBox title="Nothing here yet"><p>{props.emptyText}</p></EmptyBox>}
       {notes.length > 0 && !list.length && (
         <p class="empty">{pile === 'decide' ? 'Nothing to decide. Everything on this board has an answer.' : pile === 'rewrite' ? 'Nothing waiting for a rewrite. Rewrite sends a card back to the team with what to change.' : 'Nothing here.'}</p>
       )}

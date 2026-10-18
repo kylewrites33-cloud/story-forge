@@ -20,7 +20,10 @@ import { IdeasBoard } from './IdeasBoard.tsx';
 import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { BoardNav, StoryBoardScreen } from './StoryBoards.tsx';
 import { href, useRoute } from './route.ts';
-import { BookList, ChapterGrid, NoteView } from './screens.tsx';
+import { ChapterGrid, NoteView } from './screens.tsx';
+import { Home, SeriesPage } from './Home.tsx';
+import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
+import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
 import { TodoList } from './TodoList.tsx';
@@ -44,6 +47,7 @@ export function App() {
   const [queue, setQueueState] = useState<Choice[]>(() => loadQueue(source.key));
   const queueRef = useRef<Choice[]>(queue);
   const flushing = useRef(false);
+  const lastOpened = useRef('');
 
   const setQueue = useCallback((list: Choice[]) => {
     queueRef.current = list;
@@ -191,6 +195,42 @@ export function App() {
     }
   }, [source, runSync]);
 
+  /** A picture from the device becomes the book's cover: shrunk here, saved as Cover.jpg in the book's folder. */
+  const onCover = useCallback(async (book: BookEntry, file: File): Promise<string | null> => {
+    const problem = coverProblem(file);
+    if (problem) return problem;
+    if (!navigator.onLine) return 'Connect to the internet to add a cover.';
+    try {
+      await saveCover(source, book, await shrinkToJpeg(file));
+      await runSync();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
+  /** Scenes from a pasted outline, added one after another as planned scenes at the end of the book. */
+  const onAddMany = useCallback(async (book: BookEntry, list: { chapter: number; chapterTitle: string; title: string }[]): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add scenes.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    let prev: NoteRecord | null = book.scenes.length ? cur.index.notes[book.scenes[book.scenes.length - 1]] || null : null;
+    const made: NoteRecord[] = [];
+    try {
+      for (const s of list) {
+        const n = await createScene(source, { bookFolder: book.folder, title: s.title, chapter: s.chapter, chapterTitle: s.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' },
+          new Date(), 'Added from an outline in the Story Forge app.');
+        made.push(n);
+        prev = n;
+      }
+      await runSync();
+      return null;
+    } catch (e) {
+      await runSync();
+      return (made.length ? made.length + ' of ' + list.length + ' scenes were added. ' : '') + (e as Error).message;
+    }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -250,6 +290,7 @@ export function App() {
   if (route.name === 'write' && view && schema) {
     const note = view.notes[route.path];
     if (note) {
+      if (lastOpened.current !== route.path) { lastOpened.current = route.path; noteRecent(source.key, route.path); }
       const book = view.books.find((b) => route.path.startsWith(b.folder + '/')) || null;
       const at = book ? book.scenes.indexOf(route.path) : -1;
       const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
@@ -276,8 +317,10 @@ export function App() {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'note') {
     body = <NoteView schema={schema} index={view} path={route.path} />;
-  } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board' || (route.name === 'home' && activeBook(view))) {
-    const book = route.name === 'home' ? activeBook(view) : view.books.find((b) => b.folder === route.folder);
+  } else if (route.name === 'series') {
+    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} /> : <Home source={source} index={view} series />;
+  } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board') {
+    const book = view.books.find((b) => b.folder === route.folder);
     const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas' : 'chapter-grid';
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
@@ -286,22 +329,25 @@ export function App() {
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
         screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} />;
       } else if (boardKey === 'chapter-grid') {
-        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined} onMove={source.write ? onMove : undefined} />;
+        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
+          onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}
+          source={source} onCover={source.writeBytes ? onCover : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = screen;
     }
   } else {
-    body = <BookList index={view} />;
+    body = <Home source={source} index={view} series={false} />;
   }
 
   // The top bar shows the boards of the book on screen, or else of the active book.
   const navBook = view
     ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' ? view.books.find((b) => b.folder === route.folder) : null) ||
-      (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) || activeBook(view)
+      (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) ||
+      (route.name === 'home' || route.name === 'books' || route.name === 'series' ? null : activeBook(view))
     : null;
   const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
-    : route.name === 'book' || (route.name === 'home' && navBook) ? 'chapter-grid' : '';
+    : route.name === 'book' ? 'chapter-grid' : '';
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
@@ -321,7 +367,7 @@ export function App() {
           <button type="button" class={'sync-chip' + (!online || drafts ? ' warn' : '')} onClick={runSync} disabled={syncing || !online} title={syncLine + (waitingText ? ' ' + waitingText : '')}>
             <Icon name={snap && !syncing && online && !queue.length && !drafts ? 'check' : 'sync'} size={18} /><span class="bar-label">{chip}</span>
           </button>
-          <a href={href.books()} aria-current={route.name === 'books' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
+          <a href={href.home()} aria-current={route.name === 'books' || route.name === 'home' || route.name === 'series' ? 'page' : undefined} title="Books"><Icon name="books" /><span class="bar-label">Books</span></a>
           <a href={href.todo()} aria-current={route.name === 'todo' ? 'page' : undefined} title="To-do"><Icon name="todo" /><span class="bar-label">To-do</span></a>
           <a href={href.settings()} aria-current={route.name === 'settings' ? 'page' : undefined} title="Settings" aria-label="Settings"><Icon name="gear" /></a>
         </nav>

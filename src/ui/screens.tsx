@@ -7,59 +7,20 @@ import { render } from '../lib/markdown.ts';
 import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
 import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
-import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
+import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
+import { labelHue, labelsOf, loadRates, parseOutline, readingLine, sceneMatches, type OutlineScene } from '../lib/home.ts';
+import { Cover } from './Home.tsx';
 import type { Choice } from '../lib/write-queue.ts';
-import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 
-function Warnings({ list }: { list: string[] }) {
+export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
   return (
     <details class="warnings">
       <summary>{list.length === 1 ? '1 note needs a look' : list.length + ' notes need a look'}</summary>
       <ul>{list.map((w) => <li key={w}>{w}</li>)}</ul>
     </details>
-  );
-}
-
-export function BookList({ index }: { index: VaultIndex }) {
-  const active = activeBook(index);
-  if (!index.books.length) {
-    return (
-      <section>
-        <h1>Books</h1>
-        <p class="empty">The vault has no books yet. A book appears here once it has a Book.md.</p>
-        <Warnings list={index.warnings} />
-      </section>
-    );
-  }
-  const bySeries = new Map<string, BookEntry[]>();
-  index.books.forEach((b) => bySeries.set(b.seriesName, (bySeries.get(b.seriesName) || []).concat(b)));
-  return (
-    <section>
-      <h1>Books</h1>
-      {[...bySeries.entries()].map(([series, books]) => (
-        <div class="series" key={series}>
-          <h2>{series}</h2>
-          <ul class="book-list">
-            {books.map((b) => (
-              <li key={b.folder}>
-                <a class="book-link" href={href.book(b.folder)}>
-                  <span class="book-title">{b.number != null ? b.number + '. ' : ''}{b.title}</span>
-                  <span class="meta">
-                    {b.scenes.length === 1 ? '1 scene' : b.scenes.length + ' scenes'} · stage {b.stage}
-                    {active && active.folder === b.folder ? ' · active book' : ''}
-                  </span>
-                </a>
-                <IdeasLink index={index} book={b} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-      <Warnings list={index.warnings} />
-    </section>
   );
 }
 
@@ -134,13 +95,15 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
 }) {
   const fields = cardFields(schema, note.type);
   const title = String(note.data.title || basename(note.path));
-  const rows = fields.filter((k) => k !== 'title' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
+  const rows = fields.filter((k) => k !== 'title' && k !== 'subtitle' && k !== 'labels' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
+  const subtitle = fields.indexOf('subtitle') >= 0 && !isEmptyValue(note.data.subtitle) ? String(note.data.subtitle) : '';
+  const labels = fields.indexOf('labels') >= 0 ? labelsOf(note.data.labels) : [];
   const status = String(note.data.status || '');
   const words = fields.indexOf('words') >= 0 ? formatValue('words', note.data.words, null) : '';
   const accepted = !isEmptyValue(note.data.accepted);
   return (
     <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
-      <a class="card" href={onDecide ? href.write(note.path) : href.note(note.path)}>
+      <a class={'card status-' + (status || 'none').replace(/[^a-z-]/gi, '')} href={onDecide ? href.write(note.path) : href.note(note.path)}>
         <span class="card-top">
           <span class="card-id">{String(note.data.id || '')}{note.data.kind === 'test' ? ' · test drive' : ''}</span>
           <span class="pills">
@@ -149,6 +112,8 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
           </span>
         </span>
         <span class="card-title">{title}</span>
+        {subtitle && <span class="card-subtitle">{subtitle}</span>}
+        {labels.length > 0 && <span class="labels">{labels.map((l) => <Label key={l} name={l} />)}</span>}
         {rows.length > 0 && (
           <dl>
             {rows.map((k) => (
@@ -167,13 +132,18 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift }: {
   );
 }
 
+/** A scene label as a small coloured chip; the same label always has the same colour. */
+export function Label({ name }: { name: string }) {
+  return <span class="label" style={{ '--hue': String(labelHue(name)) }}>{name}</span>;
+}
+
 type OnAdd = (book: BookEntry, chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
 
 /** "Add a scene" under a chapter (or "Start chapter N" at the end): asks for a title, then opens the new scene for writing. */
-function AddScene({ book, chapter, chapterTitle, label, onAdd }: {
-  book: BookEntry; chapter: number | null; chapterTitle: string; label: string; onAdd: OnAdd;
+function AddScene({ book, chapter, chapterTitle, label, onAdd, startOpen, onCancel }: {
+  book: BookEntry; chapter: number | null; chapterTitle: string; label: string; onAdd: OnAdd; startOpen?: boolean; onCancel?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(startOpen));
   const [title, setTitle] = useState('');
   const [chTitle, setChTitle] = useState(chapterTitle);
   const [busy, setBusy] = useState(false);
@@ -200,9 +170,110 @@ function AddScene({ book, chapter, chapterTitle, label, onAdd }: {
       </label>
       <div class="buttons">
         <button type="button" class="primary" disabled={busy || !title.trim()} onClick={go}>{busy ? 'Adding…' : 'Add and start writing'}</button>
-        <button type="button" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+        <button type="button" onClick={() => { setOpen(false); setError(null); if (onCancel) onCancel(); }}>Cancel</button>
       </div>
       {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+type OnAddMany = (book: BookEntry, list: OutlineScene[]) => Promise<string | null>;
+
+/** Paste an outline: "Chapter 1: Title" lines start chapters, every other line becomes a planned scene. */
+function OutlineForm({ book, firstChapter, onAddMany, onCancel }: { book: BookEntry; firstChapter: number; onAddMany: OnAddMany; onCancel: () => void }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const list = parseOutline(text, firstChapter);
+  const chapters = new Set(list.map((s) => s.chapter)).size;
+  const go = async () => {
+    setBusy(true);
+    const err = await onAddMany(book, list);
+    setBusy(false);
+    setError(err);
+    if (!err) { setText(''); onCancel(); }
+  };
+  return (
+    <div class="add-scene outline-form">
+      <label class="reason">
+        Paste or type an outline. A line like "Chapter 1: The Frost" starts a chapter; every other line becomes a planned scene with that title.
+        <textarea rows={8} value={text} onInput={(e) => setText((e.currentTarget as HTMLTextAreaElement).value)}
+          placeholder={'Chapter 1: The Frost\nGrey finds the dead field\nRue brings the letter\nChapter 2: The Offer\nThe buyer arrives'} />
+      </label>
+      {list.length > 0 && <p class="hint">{list.length === 1 ? '1 scene' : list.length + ' scenes'} in {chapters === 1 ? '1 chapter' : chapters + ' chapters'}, added as planned scenes after the book's last scene.</p>}
+      <div class="buttons">
+        <button type="button" class="primary" disabled={busy || !list.length} onClick={go}>{busy ? 'Adding…' : 'Add these scenes'}</button>
+        <button type="button" onClick={onCancel}>Cancel</button>
+      </div>
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+/** A friendly empty page: what is missing and the buttons that fill it. */
+export function EmptyBox({ title, children }: { title: string; children?: ComponentChildren }) {
+  return <div class="empty-box"><h2>{title}</h2>{children}</div>;
+}
+
+/** The book's cover beside its title, with a button to add or change it from the device. */
+function CoverButton({ source, book, onCover }: { source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div class="grid-cover">
+      <Cover source={source} book={book} small />
+      {onCover && (
+        <label class={'button' + (busy ? ' disabled' : '')}>
+          <Icon name="image" size={18} />{busy ? 'Saving…' : book.cover ? 'Change cover' : 'Add a cover'}
+          <input type="file" accept="image/*" class="visually-hidden" disabled={busy} onChange={async (e) => {
+            const input = e.currentTarget as HTMLInputElement;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            setBusy(true);
+            setError(await onCover(book, file));
+            setBusy(false);
+          }} />
+        </label>
+      )}
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+type GridView = 'cards' | 'outline';
+function loadGridView(): GridView {
+  try { return localStorage.getItem('story-forge.grid-view') === 'outline' ? 'outline' : 'cards'; } catch { return 'cards'; }
+}
+
+/** The Outline view: chapter headings with one line per scene, nothing else. */
+function OutlineView({ groups }: { groups: ReturnType<typeof chapterGroups> }) {
+  return (
+    <div class="outline-view">
+      {groups.map((g) => (
+        <section key={g.key}>
+          <h2>{chapterHeading(g)}<span class="meta"> {g.words ? g.words.toLocaleString('en-US') + ' words' : ''}</span></h2>
+          <ol>
+            {g.scenes.map((s) => {
+              const st = String(s.data.status || 'planned');
+              const line = String(s.data.summary || s.data.turn || '');
+              return (
+                <li key={s.path} class={'status-' + st.replace(/[^a-z-]/gi, '')}>
+                  <a href={href.write(s.path)}>
+                    <span class="outline-title"><span class="card-id">{String(s.data.id || '')}</span> {String(s.data.title || basename(s.path))}</span>
+                    {!isEmptyValue(s.data.subtitle) && <span class="card-subtitle">{String(s.data.subtitle)}</span>}
+                    {line && <span class="outline-line">{line}</span>}
+                  </a>
+                  <span class="labels">
+                    {labelsOf(s.data.labels).map((l) => <Label key={l} name={l} />)}
+                    <StatusPill value={st} />
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
     </div>
   );
 }
@@ -238,9 +309,13 @@ function dropAt(x: number, y: number, dragged: string): DropAt | null {
   return null;
 }
 
-export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onMove }: {
-  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onMove?: OnMove;
+export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onAddMany, onMove, source, onCover }: {
+  schema: Schema; index: VaultIndex; book: BookEntry; waiting?: Record<string, Choice>; onDecide?: OnDecide; onAdd?: OnAdd; onAddMany?: OnAddMany; onMove?: OnMove;
+  source?: VaultSource; onCover?: (book: BookEntry, file: File) => Promise<string | null>;
 }) {
+  const [query, setQuery] = useState('');
+  const [view, setView] = useState<GridView>(loadGridView);
+  const [starting, setStarting] = useState<'' | 'scene' | 'outline'>('');
   const [drag, setDrag] = useState<Dragging | null>(null);
   const [hint, setHint] = useState(false);
   const dragRef = useRef<Dragging | null>(null);
@@ -261,15 +336,19 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
   }, [drag && drag.path]);
 
   const scenes = book.scenes.map((p) => index.notes[p]).filter(Boolean);
-  const groups = chapterGroups(schema, scenes);
-  const words = groups.reduce((n, g) => n + g.words, 0);
+  const allGroups = chapterGroups(schema, scenes);
+  const words = allGroups.reduce((n, g) => n + g.words, 0);
+  const filtering = query.trim() !== '';
+  const shown = filtering ? scenes.filter((s) => sceneMatches(s, query)) : scenes;
+  const groups = filtering ? chapterGroups(schema, shown) : allGroups;
+  const rates = loadRates();
   const counts: Record<string, number> = {};
   scenes.forEach((s) => { const st = String(s.data.status || 'planned'); counts[st] = (counts[st] || 0) + 1; });
   const order = schema.statuses.scene || Object.keys(counts);
   const board = schema.boards['chapter-grid'];
   const accepted = scenes.filter((s) => !isEmptyValue(s.data.accepted)).length;
 
-  const handle = (path: string) => onMove && (
+  const handle = (path: string) => onMove && !filtering && (
     <button type="button" class="move-handle icon-button" title="Move" aria-label="Move this card: hold and drag"
       onPointerDown={(e) => {
         e.preventDefault();
@@ -306,25 +385,62 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
     drag && drag.moved && drag.path === path ? 'dragging' : drag && drag.at && drag.at.key === g.key && drag.at.before === path ? 'drop-before' + (drag.at.side ? ' side' : '') : '';
   return (
     <section>
-      <p class="crumb">{book.seriesName} · {(board && board.title) || 'Chapter Grid'}</p>
-      <h1>{book.title}</h1>
-      <p class="meta">
-        Stage {book.stage} · {scenes.length === 1 ? '1 scene' : scenes.length + ' scenes'} · {words.toLocaleString('en-US')} words
-        {order.filter((s) => counts[s]).map((s) => ' · ' + counts[s] + ' ' + s)}
-        {onDecide && scenes.length > 0 ? ' · ' + accepted + ' of ' + scenes.length + ' cards accepted' : ''}
-      </p>
-      <IdeasLink index={index} book={book} />
-      {onMove && scenes.length > 1 && (
+      <div class="grid-head">
+        {source && <CoverButton source={source} book={book} onCover={onCover} />}
+        <div>
+          <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · {(board && board.title) || 'Chapter Grid'}</p>
+          <h1>{book.title}</h1>
+          <p class="meta">
+            Stage {book.stage} · {scenes.length === 1 ? '1 scene' : scenes.length + ' scenes'} · {words.toLocaleString('en-US')} words
+            {words ? ' · ' + readingLine(words, rates) : ''}
+            {order.filter((s) => counts[s]).map((s) => ' · ' + counts[s] + ' ' + s)}
+            {onDecide && scenes.length > 0 ? ' · ' + accepted + ' of ' + scenes.length + ' cards accepted' : ''}
+          </p>
+          <IdeasLink index={index} book={book} />
+        </div>
+      </div>
+      {scenes.length > 0 && (
+        <div class="grid-tools">
+          <label class="search">
+            <Icon name="search" size={18} />
+            <span class="visually-hidden">Filter scenes</span>
+            <input type="search" value={query} placeholder="Filter: a name, a word, a label…" onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)} />
+          </label>
+          <div class="seg small" role="group" aria-label="View as">
+            {(['cards', 'outline'] as GridView[]).map((v) => (
+              <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); try { localStorage.setItem('story-forge.grid-view', v); } catch { /* lasts until reload */ } }}>
+                <Icon name={v} size={18} />{v === 'cards' ? 'Cards' : 'Outline'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {filtering && <p class="meta">{shown.length === 1 ? '1 scene matches' : shown.length + ' scenes match'} "{query.trim()}".{shown.length ? '' : ' Try a shorter word.'}</p>}
+      {view === 'outline' && scenes.length > 0 && <OutlineView groups={groups} />}
+      {view === 'cards' && onMove && !filtering && scenes.length > 1 && (
         <p class={'meta move-hint' + (hint ? ' shown' : '')}>
           {hint ? 'Hold the dotted Move button down and drag the card to where it goes, then let go.' : 'Press a card to write it. To change the order, hold a card\'s dotted Move button and drag the card.'}
         </p>
       )}
-      {!scenes.length && <p class="empty">This book has no scene notes yet. They appear here once they are in the book's Scenes folder.</p>}
-      {groups.map((g) => (
+      {!scenes.length && (
+        <EmptyBox title="Nothing here yet">
+          <p>Start the book with its first scene, or paste an outline and get every scene at once.{onAdd ? '' : ' Add your key in Settings to add scenes from here.'}
+            {' '}To bring in a manuscript you already wrote, send the file to the team in the project chat.</p>
+          {onAdd && !starting && (
+            <div class="buttons">
+              <button type="button" class="primary" onClick={() => setStarting('scene')}><Icon name="plus" size={18} />Create first scene</button>
+              {onAddMany && <button type="button" onClick={() => setStarting('outline')}><Icon name="outline" size={18} />Start from an outline</button>}
+            </div>
+          )}
+          {onAdd && starting === 'scene' && <AddScene book={book} chapter={1} chapterTitle="" label="Start chapter 1" onAdd={onAdd} startOpen onCancel={() => setStarting('')} />}
+          {onAddMany && starting === 'outline' && <OutlineForm book={book} firstChapter={1} onAddMany={onAddMany} onCancel={() => setStarting('')} />}
+        </EmptyBox>
+      )}
+      {view === 'cards' && groups.map((g) => (
         <section class="chapter" key={g.key} data-chapter={g.key}>
           <h2>
             {chapterHeading(g)}
-            <span class="meta"> {g.scenes.length === 1 ? '1 scene' : g.scenes.length + ' scenes'}{g.words ? ' · ' + g.words.toLocaleString('en-US') + ' words' : ''}</span>
+            <span class="meta"> {g.scenes.length === 1 ? '1 scene' : g.scenes.length + ' scenes'}{g.words ? ' · ' + g.words.toLocaleString('en-US') + ' words · ' + readingLine(g.words, rates).replace(/^about /, '') : ''}</span>
           </h2>
           <ul class={'cards' + (drag && drag.moved && drag.at && drag.at.key === g.key && drag.at.before === null ? ' drop-end' : '')}>
             {g.scenes.map((s) => (
@@ -332,12 +448,19 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onM
                 handle={handle(s.path)} cls={clsOf(g, s.path)} shift={shiftOf(s.path)} />
             ))}
           </ul>
-          {onAdd && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}
+          {onAdd && !filtering && g.num != null && <AddScene book={book} chapter={g.num} chapterTitle={g.title} label={'Add a scene to chapter ' + g.num} onAdd={onAdd} />}
         </section>
       ))}
-      {onAdd && (() => {
-        const last = groups.filter((g) => g.num != null).reduce((m, g) => Math.max(m, g.num as number), 0);
-        return <AddScene book={book} chapter={last + 1} chapterTitle="" label={'Start chapter ' + (last + 1)} onAdd={onAdd} />;
+      {onAdd && !filtering && scenes.length > 0 && (() => {
+        const last = allGroups.filter((g) => g.num != null).reduce((m, g) => Math.max(m, g.num as number), 0);
+        return (
+          <>
+            <AddScene book={book} chapter={last + 1} chapterTitle="" label={'Start chapter ' + (last + 1)} onAdd={onAdd} />
+            {onAddMany && (starting === 'outline'
+              ? <OutlineForm book={book} firstChapter={last + 1} onAddMany={onAddMany} onCancel={() => setStarting('')} />
+              : <div class="buttons add-scene"><button type="button" onClick={() => setStarting('outline')}>Add scenes from an outline</button></div>)}
+          </>
+        );
       })()}
     </section>
   );
@@ -353,7 +476,7 @@ const DECIDED_ON: Record<string, { name: string; to: (folder: string) => string 
 
 export function NoteView({ schema, index, path }: { schema: Schema; index: VaultIndex; path: string }) {
   const note = index.notes[path];
-  if (!note) return <p class="empty">That note is not in the saved copy. <a href={href.books()}>Back to books</a>.</p>;
+  if (!note) return <p class="empty">That note is not in the saved copy. <a href={href.home()}>Back to books</a>.</p>;
   const book = index.books.find((b) => path.startsWith(b.folder + '/'));
   const title = String(note.data.title || note.data.name || basename(path));
   const keys = propertyOrder(schema, note.type, note.data).filter((k) => !isEmptyValue(note.data[k]) && k !== 'title');

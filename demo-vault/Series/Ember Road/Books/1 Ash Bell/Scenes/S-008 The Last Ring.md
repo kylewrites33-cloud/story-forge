@@ -10,5 +10,7 @@ goal: Ring the bell before the frost.
 turn: Tobin rings it for her.
 hook: The Warden hears the crack.
 summary: A planned card for the demo.
+labels:
+  - big moment
 ---
 Card notes only.

@@ -16,6 +16,8 @@ export class DemoSource implements VaultSource {
   readonly label = 'the demo vault';
   private changed = new Map<string, string>();
   private removed = new Set<string>();
+  /** Pictures added on the demo vault (a cover), as base64, until the page reloads. */
+  private pictures = new Map<string, string>();
 
   private text(path: string): string {
     if (this.removed.has(path)) throw new Error('The demo vault has no ' + path + '.');
@@ -26,7 +28,8 @@ export class DemoSource implements VaultSource {
 
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
     const paths = new Set(Object.keys(files).map((k) => k.replace(/^\/demo-vault\//, '')).concat([...this.changed.keys()]));
-    const list = [...paths].filter((p) => !this.removed.has(p)).map((path) => ({ path, sha: hash(this.text(path)) }));
+    const list = [...paths].filter((p) => !this.removed.has(p)).map((path) => ({ path, sha: hash(this.text(path)) }))
+      .concat([...this.pictures.entries()].map(([path, b64]) => ({ path, sha: hash(b64) })));
     return { files: list.sort((a, b) => a.path.localeCompare(b.path)), truncated: false };
   }
 
@@ -45,6 +48,22 @@ export class DemoSource implements VaultSource {
     this.changed.set(path, text);
     this.removed.delete(path);
     return hash(text);
+  }
+
+  async writeBytes(path: string, base64: string, sha: string): Promise<string> {
+    const had = this.pictures.get(path);
+    if ((had ? hash(had) : '') !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
+    this.pictures.set(path, base64);
+    return hash(base64);
+  }
+
+  async readBytes(path: string): Promise<Blob> {
+    const b64 = this.pictures.get(path);
+    if (b64 == null) throw new Error('The demo vault has no ' + path + '.');
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: path.endsWith('.png') ? 'image/png' : 'image/jpeg' });
   }
 
   async remove(path: string, sha: string): Promise<void> {

@@ -2,6 +2,7 @@
 type: scene
 id: S-001
 title: The Crack
+subtitle: Dawn, the bell tower
 act: Act One
 chapter: 1
 chapter_title: Frost

@@ -495,6 +495,7 @@
         "type": { "const": "scene" },
         "id": { "type": "string", "pattern": "^S-\\d{3}$" },
         "title": { "type": "string" },
+        "subtitle": { "type": "string" },
         "act": { "type": "string" },
         "chapter": { "type": "integer" },
         "chapter_title": { "type": "string" },
@@ -506,6 +507,7 @@
         "value_change": { "type": "string" },
         "hook": { "type": "string" },
         "summary": { "type": "string" },
+        "labels": { "type": "list", "items": { "type": "string" } },
         "cast": { "type": "list", "items": { "type": "link", "to": "character" } },
         "place": { "type": "link", "to": "place" },
         "lore": { "type": "list", "items": { "type": "link", "to": "lore" } },
@@ -519,7 +521,7 @@
         "published": { "type": "date" },
         "platform": { "enum": ["rr", "kdp", "patreon", "other"] }
       },
-      "board": { "default": "chapter-grid", "card": ["title", "pov", "turn", "hook", "status", "words"] },
+      "board": { "default": "chapter-grid", "card": ["title", "subtitle", "labels", "pov", "turn", "hook", "status", "words"] },
       "body": "The prose, or for a planned scene the card notes."
     },
     "promise": {

@@ -16,6 +16,8 @@ import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { loadRates, readingLine } from '../lib/home.ts';
+import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const STYLED_KEY = 'story-forge.styled';
@@ -40,7 +42,7 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'card' | 'copies' | 'target' | 'tools';
+type Tab = 'card' | 'copies' | 'target' | 'tools' | 'page';
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[] }
 
@@ -73,6 +75,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const [left, setLeft] = useState(() => wide(WIDE_LEFT) && loadSide('chapters', true));
   const [right, setRight] = useState(() => wide(WIDE_RIGHT) && loadSide('scene-panel', true));
   const [tab, setTab] = useState<Tab>('card');
+  const [look, setLook] = useState<PageLook>(loadLook);
+  const [focus, setFocus] = useState(false);
   const commands = useRef<EditorCommands | null>(null);
   const caret = useRef<number | null>(null);
   const [made, setMade] = useState<NoteRecord | null>(null);
@@ -226,6 +230,27 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     return () => window.removeEventListener('keydown', key);
   }, [save]);
 
+  // Focus mode: only the page. Esc (or the button in the corner) brings the bars back. Full screen where the browser allows it.
+  const enterFocus = () => {
+    setFocus(true);
+    const el = document.documentElement as HTMLElement & { requestFullscreen?: () => Promise<void> };
+    try { if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => { /* the page alone is enough */ }); } catch { /* not offered */ }
+  };
+  const leaveFocus = useCallback(() => {
+    setFocus(false);
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => { /* already out */ }); } catch { /* not offered */ }
+  }, []);
+  useEffect(() => {
+    if (!focus) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') leaveFocus(); };
+    // Leaving full screen with the browser's own Esc leaves focus mode too.
+    const fs = () => { if (!document.fullscreenElement) setFocus(false); };
+    window.addEventListener('keydown', key);
+    document.addEventListener('fullscreenchange', fs);
+    return () => { window.removeEventListener('keydown', key); document.removeEventListener('fullscreenchange', fs); };
+  }, [focus, leaveFocus]);
+  useEffect(() => () => { try { if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* gone */ }); } catch { /* not offered */ } }, []);
+
   /** Leave the writing screen for another page, saving first (as Done does). */
   const go = async (to: string) => {
     if (quiet.current) clearTimeout(quiet.current);
@@ -281,9 +306,17 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const sub = [group && group.num != null ? title : String(note.data.id || ''), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
     .filter(Boolean).join(' · ');
   const nextName = next ? String(next.data.title || next.data.id || 'Next scene') : '';
+  const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
+  const reading = readingLine(words, loadRates());
+  // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
+  const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : toNumber(n.data.words) || 0 })) : [];
+  // A scene with few or no words still gets a block wide enough to see and press.
+  const stripMin = Math.max(1, strip.reduce((m, x) => Math.max(m, x.words), 0) * 0.12);
+  const stripTotal = strip.reduce((s, x) => s + Math.max(x.words, stripMin), 0);
 
   return (
-    <div class={'writer' + (left ? ' left-open' : '') + (right ? ' right-open' : '')}>
+    <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '')} style={lookStyle(look)}>
+      {focus && <button type="button" class="leave-focus" onClick={leaveFocus} aria-label="Leave focus mode" title="Leave focus mode (Esc)"><Icon name="focus" /><span class="bar-label">Leave focus</span></button>}
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
         {book && (
@@ -296,12 +329,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           {num(words)}{target ? ' / ' + num(target) : ''} words{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) : ''}
         </span>
         <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>
+        <button type="button" class="bar-button" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
+          <Icon name="focus" /><span class="bar-label">Focus</span>
+        </button>
         <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label="Scene panel">
           <Icon name="panel" /><span class="bar-label">Scene</span>
         </button>
       </header>
       <div class="writer-cols">
-        {book && left && (
+        {book && left && !focus && (
           <aside class="writer-side" aria-label="Chapters">
             <div class="side-head">
               <strong>{book.title}</strong>
@@ -347,7 +383,19 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           </div>
           <div class="page-head">
             <h1>{heading}</h1>
+            {subtitle && <p class="page-subtitle">{subtitle}</p>}
             {sub && <p class="meta">{sub}</p>}
+            {reading && <p class="meta">{reading}</p>}
+            {strip.length > 0 && (
+              <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
+                {strip.map(({ note: n, words: w }) => (
+                  <a key={n.path} {...link(href.write(n.path))} style={{ flexGrow: String(Math.max(w, stripMin) / stripTotal) }}
+                    aria-current={n.path === note.path ? 'page' : undefined} title={String(n.data.title || n.data.id || '') + ' · ' + num(w) + ' words'}>
+                    <span class="visually-hidden">{String(n.data.title || n.data.id || '')}, {num(w)} words</span>
+                  </a>
+                ))}
+              </nav>
+            )}
             {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
             {loud && <p class={state === 'error' ? 'error' : 'note-line'}>{status}</p>}
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
@@ -378,14 +426,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             </span>
           </div>
         </div>
-        {right && (
+        {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
               <strong>Scene</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide the scene panel"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
-              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['tools', 'Split and join']] as [Tab, string][]).map(([k, l]) => (
+              {([['card', 'Card'], ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join']] as [Tab, string][]).map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
@@ -395,6 +443,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
                 onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setTimeout(grow, 0); }} />
             )}
+            {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
             {tab === 'tools' && (
               <ScenePanel status={sceneStatus} next={next}
                 styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
@@ -403,7 +452,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
           </aside>
         )}
-        {(left || right) && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
+        {(left || right) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
       </div>
     </div>
   );
@@ -508,6 +557,25 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
       </label>
       {busy && <p class="hint">Working…</p>}
       {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
+/** How the page looks on this device: text size, spacing, width, font and paper. */
+function PagePanel({ look, onLook }: { look: PageLook; onLook: (l: PageLook) => void }) {
+  return (
+    <div class="writer-panel page-panel">
+      {LOOK_CHOICES.map((c) => (
+        <div key={c.key} role="group" aria-label={c.label}>
+          <span class="panel-key">{c.label}</span>
+          <div class="seg small wrap">
+            {c.options.map(([v, l]) => (
+              <button key={v} type="button" aria-pressed={look[c.key] === v} onClick={() => onLook({ ...look, [c.key]: v })}>{l}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p class="hint">These choices stay on this device. The iPad and the computer can each have their own.</p>
     </div>
   );
 }

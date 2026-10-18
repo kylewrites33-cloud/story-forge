@@ -6,6 +6,7 @@ import { propDef } from '../lib/schema.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
 import { href } from './route.ts';
+import { EmptyBox } from './screens.tsx';
 import { Icon } from './Icon.tsx';
 
 export interface BoardLink { key: string; title: string; to: string; icon: string }
@@ -123,7 +124,11 @@ export function CharactersBoard({ schema, index, book }: { schema: Schema; index
         The cast of {book.seriesName}, as {book.title} has them. {withDrive === 1 ? '1 has' : withDrive + ' have'} a Core Drive on the note so far.
         Core Drives waiting for you are on the <a href={href.board('story-juice', book.folder)}>Story Juice board</a>; once you keep one, the team writes it onto the character.
       </p>
-      {!cast.length && <p class="empty">This series has no character notes yet.</p>}
+      {!cast.length && (
+        <EmptyBox title="Nothing here yet">
+          <p>This series has no characters yet. Character notes live in the series' Characters folder. Ask the team in the project chat to build the cast, and they appear here.</p>
+        </EmptyBox>
+      )}
       {groups.map((g) => (
         <section class="group" key={g.key}>
           <h2>{groupLabel(g.key, 'No role yet')} <span class="meta">{g.notes.length}</span></h2>

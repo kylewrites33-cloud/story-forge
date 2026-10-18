@@ -26,6 +26,13 @@ const PATHS: Record<string, string> = {
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   pen: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
   plus: 'M12 5v14M5 12h14',
+  shelf: 'M3 20h18M5 20V8h3v12M10 20V5h3v15M15.5 20l-1-11 3-.4 1 11.4',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+  focus: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5',
+  type: 'M4 7V5h16v2M12 5v14M9 19h6',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15.5 9.5h.01',
+  outline: 'M4 6h.01M8 6h12M7 12h.01M11 12h9M7 18h.01M11 18h9',
+  cards: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   demo: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5'
 };
 

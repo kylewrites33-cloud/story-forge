@@ -7,7 +7,7 @@ import { DEMO, demoSchemaText, FsSource } from './helpers.ts';
 test('loads the demo vault schema', () => {
   const s = parseSchema(demoSchemaText());
   assert.equal(s.version, 1);
-  assert.deepEqual(cardFields(s, 'scene'), ['title', 'pov', 'turn', 'hook', 'status', 'words']);
+  assert.deepEqual(cardFields(s, 'scene'), ['title', 'subtitle', 'labels', 'pov', 'turn', 'hook', 'status', 'words']);
   assert.deepEqual(enumValues(s, propDef(s, 'scene', 'status')), ['planned', 'drafted', 'revised', 'final']);
   assert.deepEqual(enumValues(s, propDef(s, 'scene', 'kind')), ['story', 'test']);
   assert.equal(defaultBoard(s, 'scene')?.board.title, 'Chapter Grid');
