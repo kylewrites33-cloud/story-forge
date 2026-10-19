@@ -573,7 +573,7 @@ export function App() {
     body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
   } else if (route.name === 'team') {
     body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.write)} />
-      : <TeamScreen index={view} schema={schema} canTalk={Boolean(source.write)}
+      : <TeamScreen source={source} index={view} schema={schema} canTalk={Boolean(source.write)}
         extra={<ForgeSpecialist onJob={source.write ? onJob : undefined} book={(activeBook(view) || view.books[0] || { folder: '' }).folder} />} />;
   } else if (route.name === 'skills') {
     body = <SkillsScreen index={view} skill={route.skill} />;
