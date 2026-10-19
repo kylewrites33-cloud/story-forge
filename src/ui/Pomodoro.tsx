@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   advance, clock, flushLog, loadLog, loadTimer, msLeft, pause, resume, saveLog, saveTimer,
-  startWork, stop, today, wordsSoFar, type TimerState
+  startWork, stop, stoppedRecord, today, wordsSoFar, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
@@ -113,6 +113,17 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key); };
   }, [open]);
 
+  /** Stop a work Pomodoro early: its minutes and words still go to the Writing Log. */
+  const stopWork = () => {
+    const record = stoppedRecord(loadTimer(), Date.now());
+    act((c) => stop(c));
+    if (record) {
+      saveLog(source.key, loadLog(source.key).concat(record));
+      setWaiting(loadLog(source.key));
+      flush();
+    }
+  };
+
   const act = (fn: (cur: TimerState, t: number) => TimerState) => {
     const t = Date.now();
     const next = fn(loadTimer(), t);
@@ -150,14 +161,14 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'work' && (paused
               ? <button type="button" class="primary" onClick={() => act(resume)}>Carry on</button>
               : <button type="button" onClick={() => act(pause)}>Pause</button>)}
-            {s.phase === 'work' && <button type="button" onClick={() => act((c) => stop(c))} title="Stops without counting this one">Stop</button>}
+            {s.phase === 'work' && <button type="button" onClick={stopWork} title="Stops now and keeps the minutes and words so far">Stop</button>}
             {s.phase === 'break' && <button type="button" class="primary" onClick={() => act((c, t) => startWork(c, t))}>Skip the break</button>}
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
           {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
-          <p class="pomodoro-today"><strong>Today:</strong> {day.pomodoros} {day.pomodoros === 1 ? 'Pomodoro' : 'Pomodoros'}, {num(day.words)} words.</p>
-          {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 finished Pomodoro is' : waiting.length + ' finished Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
-          <p class="hint">A Pomodoro counts when its time runs out. Stop does not count it.</p>
+          <p class="pomodoro-today"><strong>Today:</strong> {day.pomodoros} {day.pomodoros === 1 ? 'Pomodoro' : 'Pomodoros'}, {num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}, {num(day.words)} words.</p>
+          {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
+          <p class="hint">A Pomodoro counts when its time runs out. If you stop early, its minutes and words still go in today's log.</p>
           {error && <p class="error">{error}</p>}
         </div>
       )}

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  addToDay, advance, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, stop, today, wordsSoFar
+  addToDay, advance, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, stop, stoppedRecord, today, wordsSoFar
 } from '../src/lib/pomodoro.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { VaultIndex } from '../src/lib/types.ts';
@@ -56,6 +56,25 @@ test('each Pomodoro adds one line to the day and raises its counts', () => {
   assert.match(n.body, /Kyle's note\.\n\n## Pomodoros\n- 09:30, 25 minutes, 412 words \(S-012\)\n- 10:00, 25 minutes, 1 word\n$/);
 });
 
+test('a Pomodoro stopped early keeps its minutes and words but is not a whole Pomodoro', () => {
+  let s = startWork(idleState(), T0);
+  s = noteWords(s, 'a.md', 'S-001', 100, 220);
+  s = pause(s, T0 + 10 * 60000);
+  s = resume(s, T0 + 20 * 60000);
+  const r = stoppedRecord(s, T0 + 25 * 60000);
+  assert.deepEqual(r, { date: '2026-10-18', time: '09:30', minutes: 15, words: 120, scenes: ['S-001'], stopped: true });
+  assert.equal(stoppedRecord(startWork(idleState(), T0), T0 + 20000), null, 'under a minute and no words');
+  assert.equal(stoppedRecord(idleState(), T0), null);
+  assert.equal(recordLine(r!), '- 09:30, 15 minutes (stopped early), 120 words (S-001)');
+  const full = { date: '2026-10-18', time: '10:00', minutes: 25, words: 10, scenes: [] };
+  const n = makeNote('Writing Log/2026-10-18.md', 'x', addToDay(addToDay('', r!, new Date(T0)), full, new Date(T0)));
+  assert.equal(n.data.pomodoros, 1);
+  assert.equal(n.data.minutes, 40);
+  assert.equal(n.data.words, 130);
+  const index = { notes: {} } as unknown as VaultIndex;
+  assert.deepEqual(today(index, [r!, full], new Date(T0)), { pomodoros: 1, minutes: 40, words: 130 });
+});
+
 test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\'s commits', async () => {
   const src = new MemSource();
   saveLog(src.key, [
@@ -63,7 +82,7 @@ test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\
     { date: '2026-10-18', time: '10:00', minutes: 25, words: 200, scenes: ['S-001'] }
   ]);
   const index = { notes: {} } as unknown as VaultIndex;
-  assert.deepEqual(today(index, loadLog(src.key), new Date('2026-10-18T12:00:00')), { pomodoros: 2, words: 500 });
+  assert.deepEqual(today(index, loadLog(src.key), new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500 });
   const saved = await flushLog(src, new Date('2026-10-18T10:30:00Z'));
   assert.equal(saved.length, 2);
   assert.deepEqual(loadLog(src.key), []);
@@ -72,8 +91,8 @@ test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\
   assert.equal(n.data.words, 500);
   assert.doesNotMatch(src.writes.map((w) => w.message).join('\n'), /Agent:/);
   const withNote = { notes: { [n.path]: n } } as unknown as VaultIndex;
-  assert.deepEqual(today(withNote, [], new Date('2026-10-18T12:00:00')), { pomodoros: 2, words: 500 });
-  assert.deepEqual(today(withNote, [], new Date('2026-10-19T12:00:00')), { pomodoros: 0, words: 0 });
+  assert.deepEqual(today(withNote, [], new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500 });
+  assert.deepEqual(today(withNote, [], new Date('2026-10-19T12:00:00')), { pomodoros: 0, minutes: 0, words: 0 });
 });
 
 test('a writing day the app wrote passes sf validate', { skip: !hasVault && 'the vault is not beside this repository' }, () => {

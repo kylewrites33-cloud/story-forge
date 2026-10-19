@@ -83,6 +83,9 @@ add a dated line here when you add or change one.
   bottom right outside the writing screens and sits in their top bar (beside Leave focus in Focus mode), so it never
   covers the page or the toolbar. Each finished Pomodoro adds a line to the vault's `Writing Log/YYYY-MM-DD.md`
   (`writing-day`: pomodoros, minutes, words) with the words written in it; offline ones wait on the device.
+  A Pomodoro stopped early still logs its minutes (pauses left out) and words, marked "(stopped early)", without adding
+  to the Pomodoro count; the panel shows today's Pomodoros, minutes and words (Kyle, 2026-10-19: "it doesnt show the 15
+  minutes or so of the pomodoro i stopped").
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
   Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
   per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.
