@@ -116,6 +116,12 @@ add a dated line here when you add or change one.
   Narrower than 860 px of page (iPad, or desktop beside the team chat) each agent is a card. An agent's page adds Role,
   Model, Never sees (`never_sees:`), Can (its tools in plain words), Called in when (its description) and "In the
   workflow", each step linking to `#/workflow/<n>`.
+  Quick jobs on Sonnet (Kyle, 2026-10-19: "for these cases, where I'm doing a quick chat in the app or if I'm pressing
+  one of those quick buttons like filling in the brackets, I would like to use Sonnet... I do want the ideal models to
+  persist in workflow use and be reflected on the team page"): chat, Fill brackets, Options, Check and scene summaries
+  run on the vault's `job_quick_model` (Sonnet 5.5), helpers included; every other job keeps the workflow's models.
+  Naming a model in the ask ("use Opus", "on Fable") runs that one job on it. The Team page keeps each agent's own model
+  and says so under the table; an agent's page adds "Quick chats and buttons".
   The Workflow (Kyle, 2026-10-19: "put the slightly modified (workflow 1.1) in the app so it shows all the tables. I want
   to always be able to assess and judge this workflow"): `#/workflow`, in the sidebar's foot and the icon strip, reads
   the vault's `System/Workflow.md` (synced with the team's files) and shows each stage's table: Step, Who (agents as

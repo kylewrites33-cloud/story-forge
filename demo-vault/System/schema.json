@@ -2492,6 +2492,9 @@
         "run_url": {
           "type": "string"
         },
+        "model": {
+          "type": "string"
+        },
         "result": {
           "type": "string"
         }

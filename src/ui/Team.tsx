@@ -86,6 +86,7 @@ export function TeamScreen({ source, index, schema, canTalk, extra }: { source: 
     return out;
   }, [team, index, schema]);
   const jobModel = String((index.config || {}).job_model || '');
+  const quickModel = String((index.config || {}).job_quick_model || '');
   const wf = useMemo(() => parseWorkflow(team.workflow, team.members.map((m) => m.name)), [team]);
   const pick = (s: TeamSort) => { setSort(s); try { localStorage.setItem('sf-team-sort', s); } catch { /* per visit only */ } };
   const rows = sortMembers(team.members, stats, sort);
@@ -138,7 +139,7 @@ export function TeamScreen({ source, index, schema, canTalk, extra }: { source: 
               );
             })}
           </div>
-          <p class="hint">Model: "Your pick" is whichever model the conversation runs on (the one you choose in the Project or a Claude Code session); in the app's jobs it is the job model in Config{jobModel ? ' (' + modelLabel(jobModel) + ')' : ''}. The other agents always run on the model named, so they are a different mind from the builders.</p>
+          <p class="hint">Model: in the Project and Claude Code sessions each agent runs on the model named ("Your pick" is the one you choose for the conversation). In the app's jobs it is the job model in Config{jobModel ? ' (' + modelLabel(jobModel) + ')' : ''}. Quick jobs (a chat with the team, Fill brackets, Options){quickModel ? ' run on ' + modelLabel(quickModel) : ' run on the quick model in Config'} for everyone. Name a model in your message, for example "use Opus" or "on Fable", and that job runs on it.</p>
           <p class="hint">Teams: {TEAMS.filter(([t]) => team.members.some((m) => m.team === t)).map(([t]) => t).join(', ')}. Talk starts a new conversation addressed to that agent.</p>
           <h2 id="team-history">Session history</h2>
           <p class="meta">What each team member has done: their journal entries after each piece of work, the jobs they ran for you, and their saves to the vault. Tap a face to see only that agent's.</p>
@@ -214,6 +215,7 @@ export function MemberPage({ source, index, schema, slug, canTalk }: { source: V
   const done = history(team, index, saves).filter((e) => e.who.toLowerCase() === m.name.toLowerCase());
   const usedBy = team.skills.filter((s) => m.skills.indexOf(s.name) >= 0);
   const jobModel = String((index.config || {}).job_model || '');
+  const quickModel = String((index.config || {}).job_quick_model || '');
   const steps = stepsFor(parseWorkflow(team.workflow, team.members.map((x) => x.name)), m.name);
   const calledIn = team.skills.filter((s) => m.skills.indexOf(s.name) < 0 && s.bringsIn.toLowerCase().indexOf(m.name.toLowerCase()) >= 0);
   return (
@@ -230,6 +232,7 @@ export function MemberPage({ source, index, schema, slug, canTalk }: { source: V
       <dl class="member-facts">
         <dt>Role</dt><dd>{m.role}</dd>
         <dt>Model</dt><dd>{modelLabel(m.model, jobModel)}</dd>
+        {quickModel && <><dt>Quick chats and buttons</dt><dd>{modelLabel(quickModel)}, unless you name another model in your message</dd></>}
         {m.neverSees && <><dt>Never sees</dt><dd>{m.neverSees}</dd></>}
         <dt>Can</dt><dd>{toolsLabel(m.tools)}</dd>
         <dt>Called in when</dt><dd>{m.description}</dd>
