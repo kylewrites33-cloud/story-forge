@@ -127,8 +127,8 @@ add a dated line here when you add or change one.
   Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's
   opening words show as a numbered beat with no name yet, and move like any other; once they are not first in their
   scene they are saved in the beats note as "Untitled beat", which reads back with no name.
-  The writing screen's top bar (Kyle, 2026-10-19): below 1300 px each button keeps a short name under its icon (Chapters,
-  Whole chapter, Page or Beats, To-dos, Timer, Focus, Chat, Panel) and the bar takes two lines when it must.
+  The writing screen's top bar stays on one line with icons only below 1300 px (Kyle, 2026-10-19, after trying short
+  names under the icons: "bring it back to what it was before for now. i like them all on one line").
   Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
   for the team (`src/lib/brackets.ts`; never `[[links]]`, `[!callouts]`, `[^notes]` or `[text](links)`). Fill brackets in
   the toolbar (or, per device, on their own after 20 quiet seconds) writes a `fill` job listing them; the Writer answers in

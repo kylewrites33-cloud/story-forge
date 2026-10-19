@@ -50,7 +50,6 @@ const PATHS: Record<string, string> = {
   matrix: 'M4 4h16v16H4zM4 10h16M4 15h16M10 4v16M15 4v16',
   queue: 'M4 6h16M4 12h10M4 18h7M17 15l3 3-3 3',
   page: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
-  pages: 'M9 3h8l3 3v12H9zM16 3v4h4M5 7v14h11',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
