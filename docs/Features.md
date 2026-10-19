@@ -86,6 +86,8 @@ add a dated line here when you add or change one.
   A Pomodoro stopped early still logs its minutes (pauses left out) and words, marked "(stopped early)", without adding
   to the Pomodoro count; the panel shows today's Pomodoros, minutes and words (Kyle, 2026-10-19: "it doesnt show the 15
   minutes or so of the pomodoro i stopped").
+  Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
+  (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
   Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
   per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.
