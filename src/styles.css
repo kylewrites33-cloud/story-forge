@@ -1584,7 +1584,6 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
   display: inline-flex; align-items: center; justify-content: center; min-width: 1.8em; height: 1.8em; margin-right: 6px; border-radius: 999px;
   background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums;
 }
-.wf-pill { display: inline-block; margin-top: 6px; }
 .wf-several .wf-minds { color: var(--accent); font-weight: 600; }
 .wf-agents { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .wf-agents a { display: inline-flex; min-width: 32px; min-height: 32px; align-items: center; }

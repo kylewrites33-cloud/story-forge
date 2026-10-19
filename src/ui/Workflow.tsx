@@ -49,7 +49,6 @@ function Step({ s, slugOf, colour, here, canNote, noting, onNoteStep }: {
       <div class="wf-step" role="cell">
         {s.number > 0 && <span class="wf-num">{s.number}</span>}
         <span class="wf-step-text" dangerouslySetInnerHTML={html(s.step)} />
-        {s.several && <span class="pill pill-plain wf-pill">Several minds</span>}
       </div>
       <div class="wf-who" role="cell">
         <span class="wf-label">Who</span>

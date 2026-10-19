@@ -113,7 +113,8 @@ add a dated line here when you add or change one.
   to always be able to assess and judge this workflow"): `#/workflow`, in the sidebar's foot and the icon strip, reads
   the vault's `System/Workflow.md` (synced with the team's files) and shows each stage's table: Step, Who (agents as
   linked faces), Minds (several minds marked), Needs, Why, with filters for one agent's steps or only the steps with
-  several minds. Below 600 px of page each step is a card. Add a note on the workflow, or Note on a step, saves a dated
+  several minds. The Step column has no "Several minds" bubble; the Minds column already says it (Kyle, 2026-10-19).
+  Below 600 px of page each step is a card. Add a note on the workflow, or Note on a step, saves a dated
   line under "## Kyle's notes" at the end of the note (`addWorkflowNote`), so the next version answers it; the team chat
   beside the page knows it is on the workflow. Note views now show Markdown tables too.
   Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` is the writing screen with
