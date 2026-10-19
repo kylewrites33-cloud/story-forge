@@ -113,7 +113,7 @@ add a dated line here when you add or change one.
   it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
   writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
   (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
-  `src/lib/beats.ts`). Prose before a scene's first beat shows without a heading. Add a beat after, Take off this heading.
+  `src/lib/beats.ts`). Prose before a scene's first beat shows as an unnamed beat. Add a beat after, Take off this heading.
   Ask the team writes a `beats` job (the Story Specialist finds the beats in the prose, plans them from Kyle's words, or
   redoes them, archiving the old note). Reached from the writing screen's and whole chapter's Beats button and each
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
