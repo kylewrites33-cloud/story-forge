@@ -17,7 +17,7 @@ import { Icon } from './Icon.tsx';
 import { boardLinks } from './StoryBoards.tsx';
 import { RecipePicker } from './Recipes.tsx';
 import { withRecipe } from '../lib/recipes.ts';
-import { BeatsView } from './BeatsPage.tsx';
+import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
@@ -143,6 +143,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
 }) {
   const beatsMode = Boolean(beats);
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
+  // In beats mode the tool row works on the beat Kyle is in (Kyle, 2026-10-19: "the full word processor tool set too").
+  const beatsApi = useRef<BeatsApi | null>(null);
+  const beatText = useRef('');
+  const [, setBeatRev] = useState(0);
   const [beatsChip, setBeatsChip] = useState({ text: 'Saved', cls: 'good' });
   const bookFolder = book ? book.folder : null;
   const canSave = Boolean(source.readFresh && source.write);
@@ -196,6 +200,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const names = look.names === 'on' && (codex || []).length ? allNames : null;
   const findQ = findOpen ? query : '';
   const styleOpts = useMemo(() => ({ names, find: findQ, asks: true, asking: askingMarkers, added: dotSet }), [names, findQ, askingMarkers, dotSet]);
+  const beatOpts = useMemo(() => ({ names, find: findQ, asks: true }), [names, findQ]);
   const box = useRef<HTMLTextAreaElement>(null);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -437,14 +442,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       }
     };
   };
-  const cmd = (): EditorCommands | null => (styled ? commands.current : plainBox());
+  const cmd = (): EditorCommands | null => (beatsMode ? (beatsApi.current ? beatsApi.current.cmd() : null) : styled ? commands.current : plainBox());
   /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
   const applyText = (next: string, map: (n: number) => number) => {
     const c = cmd();
     if (c) c.apply(next, map);
     else { changed(next); reload(); }
   };
-  const pageText = () => splitLead(draftRef.current.body).text;
+  const pageText = () => (beatsMode ? beatText.current : splitLead(draftRef.current.body).text);
 
   // ---- [Brackets] ----
   // Brackets sent a moment ago, before the job shows up in the next read of the vault (key: when it was sent).
@@ -543,7 +548,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     const id = String(note.data.id || '');
     if (!onChat || !id) { setAsked({ busy: '', error: true, text: 'Asking the team needs your own vault, not the demo.' }); return; }
     const c = cmd();
-    const passage = passageFor(tool, splitLead(draftRef.current.body).text, c ? c.selection() : null);
+    const passage = passageFor(tool, pageText(), c ? c.selection() : null);
     if (!passage) { setAsked({ busy: '', error: true, text: 'Write a few words first, or pick some, then ask again.' }); return; }
     setAsked({ busy: tool, error: false, text: '' });
     const r = await onChat(id, passageMessage(tool, [id, note.data.title].filter(Boolean).join(' '), passage), bookFolder || '');
@@ -555,7 +560,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
   // Check, Listen and Options for a passage (Writers Room, Kyle 2026-10-18).
-  const pageRoot = () => (styled ? document.querySelector<HTMLElement>('.writer-page .writer-text.styled') : null);
+  const pageRoot = () => (beatsMode ? (beatsApi.current ? beatsApi.current.root() : null) : styled ? document.querySelector<HTMLElement>('.writer-page .writer-text.styled') : null);
   const checkOptions = useMemo<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 }, [JSON.stringify(checkOpts || null)]);
   const listen = useListen(() => [{ text: pageText(), root: pageRoot }], () => {
     const c = cmd();
@@ -709,30 +714,25 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           </aside>
         )}
         <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>
-          {beats && group && group.num != null && bookFolder ? (
-            <BeatsView source={source} group={group} bookFolder={bookFolder} beatsNote={beats.note} codex={codex || []} startAt={note.path}
-              onSaved={onSaved} onJob={onJob} asking={beats.asking} saver={beatsSaver}
-              onStatus={(text, cls) => setBeatsChip({ text, cls })} onOpen={(p) => go(href.write(p))} />
-          ) : <>
           <div class="writer-tools" role="toolbar" aria-label="Writing tools">
             <div class="tool-group" role="group" aria-label="Undo and redo">
-              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" title="Redo" disabled={!styled} {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" disabled={!styled && !beatsMode} {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" title="Redo" disabled={!styled && !beatsMode} {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
             </div>
             <div class="tool-group" role="group" aria-label="Formatting">
-              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={styled && typing.b} {...keepFocus}
+              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={(styled || beatsMode) && typing.b} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={styled && typing.i} {...keepFocus}
+              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={(styled || beatsMode) && typing.i} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={styled && typing.h} {...keepFocus}
+              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={(styled || beatsMode) && typing.h} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
               <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.plain(); }}><Icon name="clear" /><span class="tool-label">Normal</span></button>
             </div>
             <div class="tool-group" role="group" aria-label="Find and scenes">
               <button type="button" class="tool wide" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /><span class="tool-label">Find</span></button>
-              <button type="button" class="tool wide" title="Split this scene at the cursor" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="tool-label">Split</span></button>
-              {next && <button type="button" class="tool wide" title="Join the next scene onto this one" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="tool-label">Join</span></button>}
+              {!beatsMode && <button type="button" class="tool wide" title="Split this scene at the cursor" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="tool-label">Split</span></button>}
+              {next && !beatsMode && <button type="button" class="tool wide" title="Join the next scene onto this one" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="tool-label">Join</span></button>}
               {(codex || []).length > 0 && (
                 <button type="button" class="tool wide" aria-pressed={look.names === 'on'} {...keepFocus}
                   title={look.names === 'on' ? 'Names of characters, places and items are underlined. Press to turn it off.' : 'Underline the names of characters, places and items'}
@@ -754,15 +754,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
                   <Icon name={TOOL_ICON[t.key]} /><span class="tool-label">{asked && asked.busy === t.key ? 'Sending…' : t.label}</span>
                 </button>
               ))}
-              <button type="button" class="tool wide team-tool" aria-pressed={optionsOpen} {...keepFocus} onClick={() => { setOptionsOpen(!optionsOpen); opt.setSaid(null); }}
+              {!beatsMode && <button type="button" class="tool wide team-tool" aria-pressed={optionsOpen} {...keepFocus} onClick={() => { setOptionsOpen(!optionsOpen); opt.setSaid(null); }}
                 title="Two or three versions of the words you picked to choose from: Expand, Describe, Tighten or More like my voice">
                 <Icon name="swap" /><span class="tool-label">Options</span>{opt.ready > 0 && <span class="count-badge">{opt.ready}</span>}
-              </button>
-              <button type="button" class="tool wide team-tool" {...keepFocus} disabled={Boolean(filling && filling.busy)} onClick={() => fill()}
+              </button>}
+              {!beatsMode && <button type="button" class="tool wide team-tool" {...keepFocus} disabled={Boolean(filling && filling.busy)} onClick={() => fill()}
                 title="Fill the [brackets] on this page: [...] is a gap the team fills in place, [a question] gets an answer as a paragraph under it. Keep writing while they work.">
                 <Icon name="bracket" /><span class="tool-label">{filling && filling.busy ? 'Sending…' : 'Fill brackets'}</span>
                 {newBrackets > 0 && <span class="count-badge">{newBrackets}</span>}
-              </button>
+              </button>}
               <button type="button" class="tool wide" title="Everything you can ask the team for" {...keepFocus} onClick={() => openTab('team')}><Icon name="team" /><span class="tool-label">Team</span></button>
             </div>
             <ListenBar l={listen} />
@@ -775,7 +775,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               <button type="button" class="icon-button" aria-label="Close" onClick={() => opt.setSaid(null)}><Icon name="close" size={16} /></button>
             </p>
           )}
-          {opt.ready > 0 && !(right && tab === 'options') && (
+          {opt.ready > 0 && !beatsMode && !(right && tab === 'options') && (
             <p class="tool-said ok" role="status">The team's options are ready. <button type="button" class="link" onClick={() => openTab('options')}>Show them</button></p>
           )}
           {asked && !asked.busy && (
@@ -808,8 +808,16 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               </span>
             </div>
           ))}
-          {findOpen && <FindBar text={text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
+          {findOpen && <FindBar text={beatsMode ? beatText.current : text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
             cmd={cmd} onClose={() => setFindOpen(false)} />}
+          {beats && group && group.num != null && bookFolder ? (
+            <BeatsView source={source} group={group} bookFolder={bookFolder} beatsNote={beats.note} codex={codex || []} startAt={note.path}
+              onSaved={onSaved} onJob={onJob} asking={beats.asking} saver={beatsSaver}
+              onStatus={(text, cls) => setBeatsChip({ text, cls })} onOpen={(p) => go(href.write(p))}
+              options={beatOpts} onLook={setTyping} api={beatsApi}
+              onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
+              onActive={(t) => { beatText.current = t; if (findOpen) setBeatRev((r) => r + 1); }} />
+          ) : <>
           <div class="page-head">
             <h1>{heading}</h1>
             {subtitle && <p class="page-subtitle">{subtitle}</p>}

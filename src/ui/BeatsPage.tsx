@@ -75,7 +75,13 @@ function Summary({ value, onInput, label }: { value: string; onInput: (v: string
 /** The chapter by its beats, drawn in the writing screen's page area in place of the page (the chapter list, the
  * right-hand column and the top bar stay). `saver` is filled in with "save everything", which the writing screen calls
  * before it leaves or switches back to the page. */
-export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen }: {
+/** What the writing screen's tool row needs from the beat Kyle is in. */
+export interface BeatsApi {
+  cmd: () => EditorCommands | null;
+  root: () => HTMLElement | null;
+}
+
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen, options, onName, onLook, api, onActive }: {
   source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
@@ -91,6 +97,15 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   onStatus: (text: string, cls: string) => void;
   /** Open a scene in the page (its name above its beats). */
   onOpen: (path: string) => void;
+  /** The writing screen's look for the prose (names underlined, Find); its own when left out. */
+  options?: StyleOptions;
+  /** A name pressed in the prose. */
+  onName?: (i: number) => void;
+  onLook?: Parameters<typeof StyledEditor>[0]['onLook'];
+  /** Filled in so the writing screen's tool row works on the beat Kyle is in. */
+  api?: { current: BeatsApi | null };
+  /** The words of the beat Kyle is in, whenever they change or he moves to another beat. */
+  onActive?: (text: string) => void;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [st, setSt] = useState<State>(() => start(source, group, bookFolder, beatsNote));
@@ -107,7 +122,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
   const look = loadLook();
-  const [opts] = useState<StyleOptions>(() => ({ names: look.names === 'on' && codex.length ? matcher(codex) : null }));
+  const [ownOpts] = useState<StyleOptions>(() => ({ names: look.names === 'on' && codex.length ? matcher(codex) : null }));
+  const opts = options || ownOpts;
 
   const keepOpen = (next: Set<string>, beats = ref.current.beats) => {
     setOpen(next);
@@ -261,22 +277,13 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
   }, []);
   const cmd = () => { const c = commands.current[focused]; return c ? c.current : null; };
-  const keepFocus = { onMouseDown: (e: Event) => e.preventDefault() };
-  const anyOpen = beats.some((b) => open.has(b.key));
+  const focusedProse = (beats.find((b) => b.key === focused) || { prose: '' }).prose;
+  if (api) api.current = { cmd, root: () => document.querySelector<HTMLElement>('.beat-body[data-active] .writer-text.styled') };
+  useEffect(() => { if (onActive) onActive(focusedProse); }, [focused, focusedProse]);
   let n = 0;
 
   return (
     <>
-          {anyOpen && (
-            <div class="writer-tools" role="toolbar" aria-label="Formatting">
-              <button type="button" class="tool" aria-label="Bold" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-              <button type="button" class="tool" aria-label="Italic" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-              <button type="button" class="tool wide" aria-label="Normal" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.plain(); }}><span class="bar-label always">Normal</span></button>
-              <button type="button" class="tool" aria-label="Highlight" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
-              <button type="button" class="tool" aria-label="Undo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.undo(); }}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.redo(); }}><Icon name="redo" /></button>
-            </div>
-          )}
           <div class="page-head">
             <h1>{chapterHeading(group)}</h1>
             <p class="meta">The chapter by its beats. Press a number to open or close a beat. Change any words in place; they save like the page. Press Page at the top to go back.</p>
@@ -339,9 +346,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                       </div>
                     </div>
                     {isOpen && (
-                      <div class="beat-body" onFocusCapture={() => setFocused(b.key)}>
+                      <div class="beat-body" data-active={focused === b.key ? '' : undefined} onFocusCapture={() => setFocused(b.key)}>
                         <StyledEditor key={b.key + ':' + rev} value={b.prose} onChange={(t) => edit(b.key, { prose: t, lost: false })} onCaret={() => {}}
-                          label={'Prose of ' + label} commands={c} options={opts} />
+                          label={'Prose of ' + label} commands={c} options={opts} onName={onName} onLook={onLook} />
                         <div class="beat-actions">
                           <button type="button" onClick={() => { const next = addBeatAfter(ref.current.beats, b.key, ''); apply(next, []); const k = next[next.indexOf(next.find((x) => x.key === b.key)!) + 1].key; keepOpen(new Set([...open, k]), next); }}>
                             <Icon name="plus" size={16} />Add a beat after
