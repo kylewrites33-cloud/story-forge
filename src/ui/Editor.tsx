@@ -25,7 +25,7 @@ import { askBody, defaultJobTitle, jobAsk, resultBody, type JobKind, type OnJob 
 import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
-import { askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
+import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
 import { lineAt, loadDots, mapFor, merge3, saveDots } from '../lib/live.ts';
 import { planHead, planPath } from '../lib/plans.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
@@ -189,6 +189,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const fills = fillJobs || [];
   const fillKey = fills.map((j) => j.path + '@' + j.sha).join(';');
   const asking = useMemo(() => askingKeys(fills), [fillKey]);
+  const answered = useMemo(() => answeredKeys(fills), [fillKey]);
   const askingMarkers = useMemo(() => {
     const out = new Set<string>();
     fills.filter(isOpenJob).forEach((j) => askItems(askBody(j.body)).forEach((it) => out.add(it.marker.trim().toLowerCase())));
@@ -457,7 +458,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const notAsked = (b: Bracket) => {
     const k = bracketKey(b);
     const t = sent.current.get(k);
-    return !asking.has(k) && !(t && Date.now() - t < 10 * 60 * 1000);
+    return !asking.has(k) && !answered.has(k) && !(t && Date.now() - t < 10 * 60 * 1000);
   };
   const fill = async (auto = false) => {
     const id = String(note.data.id || '');
@@ -465,13 +466,16 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     const words = pageText();
     const list = findBrackets(words).filter(notAsked);
     if (!list.length) {
-      if (!auto) setFilling({ busy: false, error: false, text: findBrackets(words).length ? 'The team already has every bracket on this page.' : 'Put [brackets] in your text first: [...] for a gap the team fills in, or [a question] for an answer under that paragraph.' });
+      const all = findBrackets(words);
+      if (!auto) setFilling({ busy: false, error: false, text: all.length ? (all.some((b) => asking.has(bracketKey(b)))
+        ? 'The team already has every bracket on this page.'
+        : 'The team has answered every bracket on this page. Delete a bracket once you are happy with its answer, or change its words to ask again.') : 'Put [brackets] in your text first: [...] for a gap the team fills in, or [a question] for an answer under that paragraph.' });
       return;
     }
     setFilling({ busy: true, error: false, text: '' });
     const r = await onJob(fillJob(id, [id, note.data.title].filter(Boolean).join(' '), bookFolder, list, words));
     if (!r.error) list.forEach((b) => sent.current.set(bracketKey(b), Date.now()));
-    setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 bracket' : list.length + ' brackets') + '. Keep writing: the words appear in place, with a dot beside them.' });
+    setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 bracket' : list.length + ' brackets') + '. Keep writing: the words appear by each bracket, with a dot beside them. Your brackets stay until you delete them.' });
   };
 
   // The team's answers: put each one into the page once, where its bracket is now.
@@ -577,7 +581,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const words = beatsMode && beatWords[note.path] != null ? beatWords[note.path] : bodyWords(draft.body);
   const brackets = findBrackets(text);
   const newBrackets = brackets.filter(notAsked).length;
-  const askedBrackets = brackets.length - newBrackets;
+  const askedBrackets = brackets.filter((b) => !notAsked(b) && !answered.has(bracketKey(b))).length;
   // Fill brackets on their own: 20 quiet seconds after the last change, any closed bracket the cursor is not in goes.
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {

@@ -154,8 +154,11 @@ add a dated line here when you add or change one.
   Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
   for the team (`src/lib/brackets.ts`; never `[[links]]`, `[!callouts]`, `[^notes]` or `[text](links)`). Fill brackets in
   the toolbar (or, per device, on their own after 20 quiet seconds) writes a `fill` job listing them; the Writer answers in
-  the job note only, and the page puts each answer in once: a gap in place, an ask as a paragraph under its paragraph with
-  the bracket taken out. An answer whose bracket is gone offers Put it at the end. Added lines get a dot drawn by CSS
+  the job note only, and the page puts each answer in once: a gap's words right after it, an ask as a paragraph under its
+  paragraph. The bracket always stays until Kyle deletes it (Kyle, 2026-10-19: "I do want to keep the bracket so that I
+  can check the results"), and an answered bracket is not sent again unless he changes its words. Answers come in plain,
+  in the page's own style: "> " quote arrows are taken off and each quoted line becomes its own paragraph (Kyle,
+  2026-10-19: "I don't like the arrows"). An answer whose bracket is gone offers Put it at the end. Added lines get a dot drawn by CSS
   (never in the file), kept per device, gone when Kyle clicks or types in that line. The right-hand column opens on Chat
   (the scene's conversation) or Plan (the chapter's `chapter-plan` note in the book's `Chapter Plans/`, never the prose),
   remembers its tab, hides with its arrow or the top bar's panel button, and sits beside the page from 900 px while the

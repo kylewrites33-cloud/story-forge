@@ -1,9 +1,10 @@
 // [Brackets] in the prose are asks for the team that Kyle leaves without stopping (Kyle, 2026-10-18). A gap such as
-// "she was wearing [...]" is filled in place; a bracket with words in it ("[how was she dressed]", "[research: make this
-// farmerly]") is a question, answered as a paragraph right under the paragraph it sits in. Fill brackets sends them as a
-// `fill` job; the Writer answers in the job note only, and the app puts the words into the page, so the team never
-// races the paragraph Kyle is typing.
-import { askBody, type NewJob } from './jobs.ts';
+// "she was wearing [...]" gets its words right after the marker; a bracket with words in it ("[how was she dressed]",
+// "[research: make this farmerly]") is a question, answered as a paragraph right under the paragraph it sits in. Fill
+// brackets sends them as a `fill` job; the Writer answers in the job note only, and the app puts the words into the
+// page, so the team never races the paragraph Kyle is typing. The bracket itself always stays until Kyle deletes it, so
+// he can check the answer against what he asked (Kyle, 2026-10-19).
+import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
 
 export interface Bracket {
@@ -84,15 +85,37 @@ export function askItems(body: string): FillItem[] {
   return out;
 }
 
-/** The answers in a fill job's ## Result, by bracket name. */
+/** The answers in a fill job's ## Result, by bracket name, as plain text for the page. */
 export function fillAnswers(result: string): Record<string, string> {
   const out: Record<string, string> = {};
   const parts = ('\n' + result).split(/\n### (B\d+)[^\n]*\n/);
   for (let i = 1; i + 1 < parts.length; i += 2) {
-    const t = parts[i + 1].replace(/\r\n?/g, '\n').trim();
+    const t = plainAnswer(parts[i + 1]);
     if (t) out[parts[i]] = t;
   }
   return out;
+}
+
+/** An answer in the page's own style: no "> " quote arrows (Kyle, 2026-10-19: "I don't like the arrows"). The lines of a
+ * quote block become paragraphs of their own, the way his pages set out a status box. */
+export function plainAnswer(answer: string): string {
+  const lines = answer.replace(/\r\n?/g, '\n').trim().split('\n');
+  const out: string[] = [];
+  let inQuote = false;
+  lines.forEach((l) => {
+    const q = /^\s*>\s?(.*)$/.exec(l);
+    if (q) {
+      if (/^\s*$/.test(q[1])) { inQuote = true; return; }
+      if (out.length && out[out.length - 1].trim()) out.push('');
+      out.push(q[1].trimEnd());
+      inQuote = true;
+      return;
+    }
+    if (inQuote && l.trim() && out.length && out[out.length - 1].trim()) out.push('');
+    inQuote = false;
+    out.push(l);
+  });
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** Where a listed bracket is in the text now: the occurrence of its marker with the same words before it, or the only
@@ -116,42 +139,42 @@ function tidy(s: string): string {
   return s.replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/** Put an answer into the text: a gap's words in place of its marker; a question's answer as a new paragraph under its
- * paragraph, with the marker taken out. Null when the bracket is no longer in the text. */
+/** Put an answer into the text, keeping the bracket where it is: a gap's words right after its marker; a question's answer
+ * as a new paragraph under its paragraph. Null when the bracket is no longer in the text. */
 export function placeAnswer(text: string, item: FillItem, answer: string): Placed | null {
   const i = locate(text, item);
   if (i < 0) return null;
   const end = i + item.marker.length;
   const lineStart = text.lastIndexOf('\n', i - 1) + 1;
+  // Already in the page (put there on another device and saved, since the bracket stays): leave the text as it is.
+  if (placedAlready(text.slice(end), answer)) return { text, added: [], map: (n) => n };
   if (item.kind === 'gap') {
     let s = tidy(answer).replace(/\s*\n+\s*/g, ' ').replace(/^["“]([\s\S]*)["”]$/, '$1');
-    const prev = text[i - 1], next = text[end];
-    if (prev && !/\s/.test(prev) && !/^[,.;:!?)’'"”—-]/.test(s)) s = ' ' + s;
+    const next = text[end];
+    if (!/^[,.;:!?)’'"”—-]/.test(s)) s = ' ' + s;
     if (next && /[A-Za-z0-9(“"]/.test(next) && !/\s$/.test(s)) s += ' ';
-    const out = text.slice(0, i) + s + text.slice(end);
-    let lineEnd = out.indexOf('\n', i);
+    const out = text.slice(0, end) + s + text.slice(end);
+    let lineEnd = out.indexOf('\n', end);
     if (lineEnd < 0) lineEnd = out.length;
-    const d = s.length - item.marker.length;
-    return { text: out, added: [out.slice(lineStart, lineEnd)], map: (n) => (n <= i ? n : n >= end ? n + d : i + s.length) };
+    return { text: out, added: [out.slice(lineStart, lineEnd)], map: (n) => (n <= end ? n : n + s.length) };
   }
-  // A question: take the marker out (with the space before it when the sentence goes on without it), then add the
-  // answer two lines down, after the paragraph.
-  const from = text[i - 1] === ' ' && (end >= text.length || /[\s,.;:!?)’'"”]/.test(text[end])) ? i - 1 : i;
-  const cut = text.slice(0, from) + text.slice(end);
-  let lineEnd = cut.indexOf('\n', from);
-  if (lineEnd < 0) lineEnd = cut.length;
+  // A question: the answer goes two lines down, after the paragraph.
+  let lineEnd = text.indexOf('\n', end);
+  if (lineEnd < 0) lineEnd = text.length;
   const s = tidy(answer);
   const ins = '\n\n' + s;
-  const out = cut.slice(0, lineEnd) + ins + cut.slice(lineEnd);
-  const gone = end - from;
+  const out = text.slice(0, lineEnd) + ins + text.slice(lineEnd);
   return {
     text: out,
     added: s.split('\n').filter((l) => l.trim()),
-    map: (n) => {
-      const m = n <= from ? n : n >= end ? n - gone : from;
-      return m > lineEnd ? m + ins.length : m;
-    }
+    map: (n) => (n > lineEnd ? n + ins.length : n)
   };
+}
+
+function placedAlready(after: string, answer: string): boolean {
+  const flat = (t: string) => t.replace(/\s+/g, ' ').trim();
+  const first = flat(answer.split('\n').find((l) => l.trim()) || '').slice(0, 40);
+  return !!first && flat(after).indexOf(first) >= 0;
 }
 
 /** A fill job's state for a scene's brackets: listed in a job the team has not finished, or answered. */
@@ -162,6 +185,17 @@ export function fillJobsFor(jobs: NoteRecord[], sceneId: string, bookFolder: str
 export function isOpenJob(j: NoteRecord): boolean {
   const s = String(j.data.status || 'requested');
   return s === 'requested' || s === 'running';
+}
+
+/** Keys of brackets the team has answered already. The bracket stays on the page after its answer, so Fill brackets must
+ * not send it again; changing its words asks afresh. */
+export function answeredKeys(jobs: NoteRecord[]): Set<string> {
+  const out = new Set<string>();
+  jobs.filter((j) => String(j.data.status || '') === 'done').forEach((j) => {
+    const answers = fillAnswers(resultBody(j.body));
+    askItems(askBody(j.body)).forEach((it) => { if (answers[it.name]) out.add(bracketKey(it)); });
+  });
+  return out;
 }
 
 /** Keys of brackets the team is working on now, so the page shows them as asked and Fill brackets skips them. */
