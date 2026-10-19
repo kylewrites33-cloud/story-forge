@@ -572,7 +572,9 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     selection: () => { const c = cmd(); return c ? c.selection() : null; }, pageText, body: () => draftRef.current.body, apply: applyText });
 
   const { text } = splitLead(draft.body);
-  const words = bodyWords(draft.body);
+  const [beatWords, setBeatWords] = useState<Record<string, number>>({});
+  // In beats mode the beats hold the live words (Kyle, 2026-10-19: the target bar and the rest show there too).
+  const words = beatsMode && beatWords[note.path] != null ? beatWords[note.path] : bodyWords(draft.body);
   const brackets = findBrackets(text);
   const newBrackets = brackets.filter(notAsked).length;
   const askedBrackets = brackets.length - newBrackets;
@@ -593,7 +595,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // The Pomodoro timer counts the words written while it runs.
   const lastWords = useRef(words);
   useEffect(() => {
-    if (lastWords.current !== words) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
+    if (lastWords.current !== words && !beatsMode) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
     lastWords.current = words;
   }, [words, note.path]);
   const title = [note.data.id, sceneHeader(note.data)].filter(Boolean).join(' ') || note.path;
@@ -620,7 +622,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
   const reading = readingLine(words, loadRates());
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
-  const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : toNumber(n.data.words) || 0 })) : [];
+  const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : beatsMode && beatWords[n.path] != null ? beatWords[n.path] : toNumber(n.data.words) || 0 })) : [];
   // A scene with few or no words still gets a block wide enough to see and press.
   const stripMin = Math.max(1, strip.reduce((m, x) => Math.max(m, x.words), 0) * 0.12);
   const stripTotal = strip.reduce((s, x) => s + Math.max(x.words, stripMin), 0);
@@ -628,6 +630,34 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const chapterList = chapterTodos(todos || [], chapterNum);
   const openTodos = chapterList.filter(isOpen).length;
 
+  // The page's heading: the chapter, the scene line, reading time, the chapter strip and the target bar. Beats mode shows it too.
+  const headParts = (
+    <>
+      <h1>{heading}</h1>
+      {subtitle && <p class="page-subtitle">{subtitle}</p>}
+      {sub && <p class="meta">{sub}</p>}
+      {reading && <p class="meta">{reading}</p>}
+      {strip.length > 0 && (
+        <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
+          {strip.map(({ note: n, words: w }) => (
+            <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} style={{ flexGrow: String(Math.max(w, stripMin) / stripTotal) }}
+              aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data) + ' · ' + num(w) + ' words'}>
+              <span class="visually-hidden">{sceneHeader(n.data)}, {num(w)} words</span>
+            </a>
+          ))}
+        </nav>
+      )}
+      {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
+    </>
+  );
+  const pageHead = (
+    <div class="page-head">
+      {headParts}
+      {loud && <p class={state === 'error' ? 'error' : 'note-line'}>{status}</p>}
+      {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
+      {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, sceneHeader(made.data)].filter(Boolean).join(' ')}</a>.</p>}
+    </div>
+  );
   return (
     <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
       {focus && (
@@ -639,7 +669,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
         {book && (
-          <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
+          <button type="button" class="bar-button labelled" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
             <Icon name="list" /><span class="bar-label">Chapters</span>
           </button>
         )}
@@ -651,34 +681,34 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>}
         {group && group.scenes.length > 1 && (
-          <button type="button" class="bar-button compact" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
-            <Icon name="page" /><span class="bar-label">Whole chapter</span>
+          <button type="button" class="bar-button compact labelled" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
+            <Icon name="pages" /><span class="bar-label">Whole chapter</span>
           </button>
         )}
         {group && group.num != null && (beatsMode
-          ? <button type="button" class="bar-button compact" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
+          ? <button type="button" class="bar-button compact labelled" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
               <Icon name="page" /><span class="bar-label">Page</span>
             </button>
-          : <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
+          : <button type="button" class="bar-button compact labelled" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
               <Icon name="beats" /><span class="bar-label">Beats</span>
             </button>)}
         {book && (
-          <button type="button" class="bar-button compact" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
+          <button type="button" class="bar-button compact labelled" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
             aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
             <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
           </button>
         )}
         {timer && timer('bar')}
-        <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
+        <button type="button" class="bar-button compact labelled" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
         </button>
-        <button type="button" class="bar-button compact" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
+        <button type="button" class="bar-button compact labelled" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
           aria-label="Chat with the team" title="Chat with the team beside the page">
           <Icon name="chat" /><span class="bar-label">Chat</span>{convo && convo.pending && <span class="job-dot" aria-hidden="true" />}
         </button>
-        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
+        <button type="button" class="bar-button labelled" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
           title={right ? 'Hide the right-hand column' : 'Show the right-hand column: chat, plan, card and more'}>
-          <Icon name="panel" />
+          <Icon name="panel" /><span class="bar-label">Panel</span>
         </button>
       </header>
       <div class="writer-cols">
@@ -816,28 +846,10 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               onStatus={(text, cls) => setBeatsChip({ text, cls })} onOpen={(p) => go(href.write(p))}
               options={beatOpts} onLook={setTyping} api={beatsApi}
               onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
-              onActive={(t) => { beatText.current = t; if (findOpen) setBeatRev((r) => r + 1); }} />
+              onActive={(t) => { beatText.current = t; if (findOpen) setBeatRev((r) => r + 1); }}
+              head={headParts} onWords={setBeatWords} />
           ) : <>
-          <div class="page-head">
-            <h1>{heading}</h1>
-            {subtitle && <p class="page-subtitle">{subtitle}</p>}
-            {sub && <p class="meta">{sub}</p>}
-            {reading && <p class="meta">{reading}</p>}
-            {strip.length > 0 && (
-              <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
-                {strip.map(({ note: n, words: w }) => (
-                  <a key={n.path} {...link(href.write(n.path))} style={{ flexGrow: String(Math.max(w, stripMin) / stripTotal) }}
-                    aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data) + ' · ' + num(w) + ' words'}>
-                    <span class="visually-hidden">{sceneHeader(n.data)}, {num(w)} words</span>
-                  </a>
-                ))}
-              </nav>
-            )}
-            {target ? <span class="writer-progress" aria-hidden="true"><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
-            {loud && <p class={state === 'error' ? 'error' : 'note-line'}>{status}</p>}
-            {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
-            {made && <p class="note-line">The rest is now <a {...link(href.write(made.path))}>{[made.data.id, sceneHeader(made.data)].filter(Boolean).join(' ')}</a>.</p>}
-          </div>
+          {pageHead}
           {styled ? (
             <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />

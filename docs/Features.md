@@ -119,6 +119,13 @@ add a dated line here when you add or change one.
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
   processor tool set too"): Undo, Redo, Bold, Italic, Highlight, Normal, Find, Names, Check, Listen and the Ask the team
   buttons work on the open beat the cursor is in. Split, Join, Options and Fill brackets stay on the page only.
+  Beats mode also shows the page's heading: the scene line, reading time, the chapter strip and the target bar, all
+  counting the words as Kyle types in the beats (Kyle, 2026-10-19). A beat's prose looks like the page while it is edited
+  (no tinted box). Each beat with a heading has a Move handle: hold and drag it up or down (finger or mouse), or press
+  Move up / Move down on an open beat; its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
+  A scene's opening words (no heading) always stay first in their scene.
+  The writing screen's top bar (Kyle, 2026-10-19): below 1300 px each button keeps a short name under its icon (Chapters,
+  Whole chapter, Page or Beats, To-dos, Timer, Focus, Chat, Panel) and the bar takes two lines when it must.
   Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
   for the team (`src/lib/brackets.ts`; never `[[links]]`, `[!callouts]`, `[^notes]` or `[text](links)`). Fill brackets in
   the toolbar (or, per device, on their own after 20 quiet seconds) writes a `fill` job listing them; the Writer answers in
