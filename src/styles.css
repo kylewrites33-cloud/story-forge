@@ -1033,7 +1033,6 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-scene a { color: var(--muted); font-weight: 600; text-decoration: none; text-align: center; }
 .beat-break { color: var(--muted); font-family: var(--serif); letter-spacing: 0.3em; font-size: 1.1rem; }
 .beat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.beat.loose { border-style: dashed; }
 .beat-row { display: grid; grid-template-columns: 52px 1fr; gap: 4px; align-items: start; padding: 6px 12px 6px 4px; }
 .beat.open .beat-row { padding-bottom: 0; }
 .beat-toggle { border: none; background: none; min-height: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; gap: 2px;
@@ -1044,7 +1043,6 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-title { font-weight: 700; font-size: 1.05rem; }
 .beat-summary { color: var(--muted); font-size: 0.95rem; line-height: 1.45; resize: none; overflow: hidden; display: block; }
 .beat-title:focus, .beat-summary:focus { outline: none; background: var(--bg); }
-.beat.loose .beat-title { font-weight: 400; font-style: italic; }
 .beat-lost { margin: 0 6px 6px; font-size: 0.85rem; color: var(--muted); }
 .beat-body { padding: 0 12px 10px 60px; }
 .beat-body .writer-text { min-height: 3em; padding: 4px 0 8px; max-width: none; }

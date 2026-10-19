@@ -140,10 +140,21 @@ test('a beat dragged up or down takes its prose with it, into the scene it lands
   // To the end, and nowhere.
   assert.equal(moveBeat(beats, theory, null).beats.at(-1)!.key, theory);
   assert.deepEqual(moveBeat(beats, blighted, wait).touched, []);
-  // Never in front of a scene's opening words.
+  // A scene's opening words are a beat too: they move, and once not first they are saved as an unnamed beat.
   const late = layoutChapter(scenes, [{ title: 'Regrets', summary: '', scene: 'S-052', words: 'Grey had offered' }, { title: 'Ad', summary: '', scene: 'S-053', words: '"Is that an ad?"' }]).beats;
   const m = moveBeat(late, late[3].key, late[0].key);
-  assert.equal(m.beats[0].loose, true);
-  assert.equal(m.beats[1].title, 'Ad');
-  assert.equal(m.beats[1].scene, 'S-052');
+  assert.equal(m.beats[0].title, 'Ad');
+  assert.equal(m.beats[0].scene, 'S-052');
+  assert.equal(m.beats[1].loose, false);
+  const shapes2 = layoutChapter(scenes, []).scenes;
+  const a2 = sceneBody(shapes2[0], m.beats);
+  assert.ok(a2.startsWith('\n"Is that an ad?"\n\nReed had a theory'));
+  const defs = parseBeats(beatsBody(beatDefs(m.beats)));
+  assert.deepEqual(defs.map((d) => d.title), ['Ad', '', 'Regrets']);
+  const re = layoutChapter([{ ...scenes[0], body: a2 }, { ...scenes[1], body: sceneBody(shapes2[1], m.beats) }], defs).beats;
+  assert.deepEqual(re.map((x) => x.prose.slice(0, 12)), m.beats.map((x) => x.prose.slice(0, 12)));
+  // The opening words themselves can move down.
+  const o = moveBeat(late, late[0].key, late[2].key);
+  assert.deepEqual(o.beats.map((x) => x.key), [late[1].key, late[0].key, late[2].key, late[3].key]);
+  assert.ok(o.beats.every((x) => !x.loose || x === o.beats[2]));
 });

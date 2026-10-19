@@ -29,6 +29,10 @@ export interface BeatDef {
 
 const STARTS = /^Starts:\s*(S-\d{3,})?\s*(?:·\s*(.*?))?\s*$/i;
 
+/** A beat Kyle has not named is saved as "Untitled beat" and reads back with no title. */
+const UNTITLED = 'Untitled beat';
+const unnamed = (t: string) => (t === UNTITLED ? '' : t);
+
 /** The beats in a beats note's body, in order. Text before the first `## ` heading is left out. */
 export function parseBeats(body: string): BeatDef[] {
   const out: BeatDef[] = [];
@@ -36,7 +40,7 @@ export function parseBeats(body: string): BeatDef[] {
   const close = () => { if (cur) { out.push({ title: cur.title, summary: cur.lines.join(' ').replace(/\s+/g, ' ').trim(), scene: cur.scene, words: cur.words }); cur = null; } };
   body.split(/\r?\n/).forEach((line) => {
     const h = /^##\s+(.*)$/.exec(line);
-    if (h && !/^###/.test(line)) { close(); cur = { title: h[1].trim(), summary: '', scene: '', words: '', lines: [] }; return; }
+    if (h && !/^###/.test(line)) { close(); cur = { title: unnamed(h[1].trim()), summary: '', scene: '', words: '', lines: [] }; return; }
     if (!cur) return;
     const s = STARTS.exec(line.trim());
     if (s) { cur.scene = (s[1] || '').toUpperCase(); cur.words = s[2] || ''; return; }
@@ -51,7 +55,7 @@ const oneLine = (s: string) => String(s || '').replace(/\s+/g, ' ').trim();
 /** A beats note's body from its beats. */
 export function beatsBody(beats: BeatDef[]): string {
   const parts = beats.map((b) => {
-    const L = ['## ' + (oneLine(b.title) || 'Untitled beat')];
+    const L = ['## ' + (oneLine(b.title) || UNTITLED)];
     if (oneLine(b.summary)) L.push(oneLine(b.summary));
     if (b.scene) L.push('', 'Starts: ' + b.scene + (b.words ? ' · ' + oneLine(b.words) : ''));
     return L.join('\n');
@@ -218,26 +222,24 @@ export function nameLoose(beats: BeatView[], key: string, title: string): BeatVi
 }
 
 /** Move a beat (and its prose) to just before another beat, or to the chapter's end when `before` is null.
- * It joins the scene of the beat it lands under (keeping its own scene at a scene break), so its words move there; a scene's opening words
- * (the part with no heading) always stay first in their scene. Returns the beats and the scenes whose words change. */
+ * Every part of a scene is a beat (Kyle, 2026-10-19), so a scene's opening words move too: once moved, or once
+ * something lands in front of them, they become a beat of their own (no name yet) so the app can find them again.
+ * The beat joins the scene of the beat it lands next to (keeping its own scene at a scene break, else the one above).
+ * Returns the beats and the scenes whose words change. */
 export function moveBeat(beats: BeatView[], key: string, before: string | null): { beats: BeatView[]; touched: string[] } {
   const b = beats.find((x) => x.key === key);
-  if (!b || b.loose || before === key) return { beats, touched: [] };
+  if (!b || before === key) return { beats, touched: [] };
   const rest = beats.filter((x) => x.key !== key);
-  let at = before == null ? rest.length : rest.findIndex((x) => x.key === before);
+  const at = before == null ? rest.length : rest.findIndex((x) => x.key === before);
   if (at < 0) return { beats, touched: [] };
-  // Never land in front of a scene's opening words: go to the end of the scene above, or after the opening words at the top.
-  if (rest[at] && rest[at].loose) {
-    if (at === 0) at = 1;
-  }
   const above = rest[at - 1];
-  const below = rest[at] && !rest[at].loose ? rest[at] : undefined;
-  // Between two scenes it keeps its own scene if that is one of them, otherwise it joins the scene above.
+  const below = rest[at];
   const home = [above, below].find((x) => x && x.path === b.path) || above || below;
   if (!home) return { beats, touched: [] };
-  const moved = { ...b, path: home.path, scene: home.scene };
   const out = rest.slice();
-  out.splice(at, 0, moved);
-  if (out.map((x) => x.key).join() === beats.map((x) => x.key).join() && moved.path === b.path) return { beats, touched: [] };
-  return { beats: out, touched: b.path === moved.path ? [b.path] : [b.path, moved.path] };
+  out.splice(at, 0, { ...b, path: home.path, scene: home.scene, loose: false });
+  if (out.map((x) => x.key).join() === beats.map((x) => x.key).join() && home.path === b.path) return { beats, touched: [] };
+  // Only the first part of a scene may go without a saved heading.
+  const fixed = out.map((x, i) => (x.loose && i > 0 && out[i - 1].path === x.path ? { ...x, loose: false } : x));
+  return { beats: fixed, touched: b.path === home.path ? [b.path] : [b.path, home.path] };
 }
