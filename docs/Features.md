@@ -111,11 +111,15 @@ add a dated line here when you add or change one.
   the rest, and a link to one skill opens that one.
   Team page update (Kyle, 2026-10-19: "update the agents list in the app, including their roles, the model, the skills
   they possess"): the table's columns are Agent, Role (the agent file's `role:` line, else its specialty), Model ("Your
-  pick" for `inherit`, with the job model from Config; otherwise Opus 5.5, Sonnet 5.5), Skills, Steps (workflow steps
+  pick" for `inherit`, otherwise Opus 5.5, Sonnet 5.5, with "In the app:" and the job model from Config under it), Skills, Steps (workflow steps
   whose Who names the agent, linking to the Workflow page) and Kept, with last used, ideas and lessons under the role.
   Narrower than 860 px of page (iPad, or desktop beside the team chat) each agent is a card. An agent's page adds Role,
   Model, Never sees (`never_sees:`), Can (its tools in plain words), Called in when (its description) and "In the
   workflow", each step linking to `#/workflow/<n>`.
+  App jobs on Sonnet (Kyle, 2026-10-19: "When I call the agents from the API, can we default to using Sonnet unless I
+  specifically say otherwise?"): every job the app asks for, and the helpers it calls, runs on the vault's `job_model`
+  (Sonnet 5.5); naming a model in the ask ("use Opus", "on Fable") runs that one job on it. The Team page and each
+  agent's page show "In the app" beside the agent file's own model, which still applies in the Project.
   The Workflow (Kyle, 2026-10-19: "put the slightly modified (workflow 1.1) in the app so it shows all the tables. I want
   to always be able to assess and judge this workflow"): `#/workflow`, in the sidebar's foot and the icon strip, reads
   the vault's `System/Workflow.md` (synced with the team's files) and shows each stage's table: Step, Who (agents as

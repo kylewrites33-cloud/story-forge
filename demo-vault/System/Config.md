@@ -6,6 +6,7 @@ active_book: "Series/Ember Road/Books/1 Ash Bell"
 em_dash_limit_per_1000: 4
 lint_min_score: 2
 timezone: ""
+job_model: claude-sonnet-5-5
 ---
 
 Demo settings. The app shows this vault until a token is entered in Settings.

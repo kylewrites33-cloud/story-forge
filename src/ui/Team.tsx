@@ -112,7 +112,8 @@ export function TeamScreen({ source, index, schema, canTalk, extra }: { source: 
             {rows.map((m, i) => {
               const st = stats[m.slug];
               const steps = stepsFor(wf, m.name).length;
-              const model = modelLabel(m.model, jobModel);
+              const model = modelLabel(m.model);
+              const inApp = jobModel ? modelLabel(jobModel) : '';
               const skills = m.skills.filter((n) => team.skills.some((x) => x.name === n)).length;
               const heading = sort === 'team' && (i === 0 || rows[i - 1].team !== m.team);
               return (
@@ -127,18 +128,18 @@ export function TeamScreen({ source, index, schema, canTalk, extra }: { source: 
                       <span class="team-specialty">{m.role}</span>
                       <span class="team-used">Last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · {m.lessons.length === 1 ? '1 lesson' : m.lessons.length + ' lessons'}</span>
                     </span>
-                    <span role="cell" class="team-model">{model}</span>
+                    <span role="cell" class="team-model">{model}{inApp && <span class="meta team-app-model">In the app: {inApp}</span>}</span>
                     <span role="cell" class="num">{skills}</span>
                     <span role="cell" class="num">{steps ? <a href={href.workflow()} title={'Steps ' + stepsFor(wf, m.name).map((x) => x.step.number).join(', ')}>{steps}</a> : '—'}</span>
                     <span role="cell" class="num">{keptLabel(st)}</span>
                     <span role="cell" class="team-talk-cell"><TalkButton name={m.name} canTalk={canTalk} /></span>
-                    <span class="team-stats-line" aria-hidden="true">{model} · {skills === 1 ? '1 skill' : skills + ' skills'} · {steps === 1 ? '1 step' : steps + ' steps'} · last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · kept {keptLabel(st)}</span>
+                    <span class="team-stats-line" aria-hidden="true">{model}{inApp ? ' (in the app: ' + inApp + ')' : ''} · {skills === 1 ? '1 skill' : skills + ' skills'} · {steps === 1 ? '1 step' : steps + ' steps'} · last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · kept {keptLabel(st)}</span>
                   </div>
                 </Fragment>
               );
             })}
           </div>
-          <p class="hint">Model: "Your pick" is whichever model the conversation runs on (the one you choose in the Project or a Claude Code session); in the app's jobs it is the job model in Config{jobModel ? ' (' + modelLabel(jobModel) + ')' : ''}. The other agents always run on the model named, so they are a different mind from the builders.</p>
+          <p class="hint">Model: in the Project and Claude Code sessions each agent runs on the model named ("Your pick" is the one you choose for the conversation). When you ask the team from this app, every agent and its helpers run on {jobModel ? modelLabel(jobModel) : 'the job model in Config'}, unless you name another in your message, for example "use Opus" or "on Fable".</p>
           <p class="hint">Teams: {TEAMS.filter(([t]) => team.members.some((m) => m.team === t)).map(([t]) => t).join(', ')}. Talk starts a new conversation addressed to that agent.</p>
           <h2 id="team-history">Session history</h2>
           <p class="meta">What each team member has done: their journal entries after each piece of work, the jobs they ran for you, and their saves to the vault. Tap a face to see only that agent's.</p>
@@ -223,13 +224,14 @@ export function MemberPage({ source, index, schema, slug, canTalk }: { source: V
         <Avatar name={m.name} size={64} />
         <div>
           <h1>{m.name}</h1>
-          <p class="meta">{m.team} · {modelLabel(m.model, jobModel)} · last used {lastUsedLabel(st.lastUsed)}</p>
+          <p class="meta">{m.team} · {modelLabel(m.model)}{jobModel ? ' (in the app: ' + modelLabel(jobModel) + ')' : ''} · last used {lastUsedLabel(st.lastUsed)}</p>
         </div>
         <TalkButton name={m.name} canTalk={canTalk} />
       </div>
       <dl class="member-facts">
         <dt>Role</dt><dd>{m.role}</dd>
-        <dt>Model</dt><dd>{modelLabel(m.model, jobModel)}</dd>
+        <dt>Model</dt><dd>{modelLabel(m.model)}</dd>
+        {jobModel && <><dt>In the app</dt><dd>{modelLabel(jobModel)}, unless you name another model in your message</dd></>}
         {m.neverSees && <><dt>Never sees</dt><dd>{m.neverSees}</dd></>}
         <dt>Can</dt><dd>{toolsLabel(m.tools)}</dd>
         <dt>Called in when</dt><dd>{m.description}</dd>
