@@ -140,6 +140,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
             {item(href.chat(), 'chat', 'Chat', place === 'chat')}
             {item(href.jobs(), 'team', 'Jobs', place === 'jobs')}
             {item(href.todo(), 'todo', 'To-do', place === 'todo')}
+            {item(href.workflow(), 'outline', 'Workflow', place === 'workflow')}
             {item(href.recipes(), 'recipe', 'Recipes', place === 'recipes')}
             {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
             <button type="button" class={'rail-item rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>
@@ -152,6 +153,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
               {item(href.team(), 'team', 'Team', place === 'team')}
               {item(href.skills(), 'idea', 'Skills', place === 'skills')}
               {item(href.history(), 'history', 'History', place === 'history')}
+              {item(href.workflow(), 'outline', 'Workflow', place === 'workflow')}
             </div>
             <details class="rail-section" open={teamOpen} onToggle={(e) => setTeamOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary class="rail-summary">The AI team <span class="rail-count">{team.members.length}</span></summary>

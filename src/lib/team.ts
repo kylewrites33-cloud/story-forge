@@ -1,9 +1,10 @@
 // The AI team and its skills, read from the vault's .claude folder: one file per agent (.claude/agents/<name>.md),
 // one folder per skill (.claude/skills/<name>/SKILL.md), and each agent's memory (.claude/agent-memory/<name>/
 // MEMORY.md for lessons, Journal.md for what it has done). The lists follow the files, so a new agent or skill shows
-// up on the next sync. Which agents can use a skill comes from each agent's `skills:` list; the coordinator can run any.
+// up on the next sync. The workflow (System/Workflow.md) is read with them, since it says which agent does each step. Which agents can use a skill comes from each agent's `skills:` list; the coordinator can run any.
 import { Frontmatter } from './frontmatter.js';
 import type { FileEntry, SaveEntry, Schema, VaultIndex } from './types.ts';
+import { WORKFLOW_PATH } from './workflow.ts';
 
 /** The team's files as text, by path, with the blob sha so an unchanged file is never fetched twice. */
 export type TeamFiles = Record<string, { sha: string; text: string }>;
@@ -14,7 +15,7 @@ const MEMORY_RE = /^\.claude\/agent-memory\/([^/]+)\/(MEMORY|Journal)\.md$/;
 
 /** The team's files in the vault's tree. */
 export function teamFiles(files: FileEntry[]): FileEntry[] {
-  return files.filter((f) => AGENT_RE.test(f.path) || SKILL_RE.test(f.path) || MEMORY_RE.test(f.path));
+  return files.filter((f) => f.path === WORKFLOW_PATH || AGENT_RE.test(f.path) || SKILL_RE.test(f.path) || MEMORY_RE.test(f.path));
 }
 
 /** Teams in the order the Team page shows them, each with its colour (a mid tone that reads in light and dark). */
@@ -94,6 +95,12 @@ export interface Member {
   specialty: string;
   model: string;
   tools: string;
+  /** The agent's job in one line (its `role:`), or its specialty when it has none. */
+  role: string;
+  /** What the agent must never see (`never_sees:`), or ''. */
+  neverSees: string;
+  /** The workflow steps its file names (`workflow_steps:`), or ''. */
+  workflowSteps: string;
   /** Skills loaded whenever this agent starts, by folder name. */
   skills: string[];
   /** The curated lessons in MEMORY.md, one line each. */
@@ -116,6 +123,8 @@ export interface Skill {
 export interface Team {
   members: Member[];
   skills: Skill[];
+  /** The text of System/Workflow.md, or ''. */
+  workflow: string;
 }
 
 function str(v: unknown): string {
@@ -197,6 +206,7 @@ export function buildTeam(files: TeamFiles | undefined): Team {
       members.push({
         slug, name, description, specialty: specialtyOf(description),
         team: str(d.team) || 'Other', model: str(d.model), tools: str(d.tools), skills: list(d.skills),
+        role: str(d.role) || specialtyOf(description), neverSees: str(d.never_sees), workflowSteps: str(d.workflow_steps),
         lessons: [], journal: [], path
       });
     } else if (s) {
@@ -216,7 +226,35 @@ export function buildTeam(files: TeamFiles | undefined): Team {
   const teamAt = (t: string) => { const i = TEAMS.findIndex(([n]) => n.toLowerCase() === t.toLowerCase()); return i < 0 ? TEAMS.length : i; };
   members.sort((x, y) => teamAt(x.team) - teamAt(y.team) || x.name.localeCompare(y.name));
   skills.sort((x, y) => x.name.localeCompare(y.name));
-  return { members, skills };
+  const wf = files && files[WORKFLOW_PATH];
+  return { members, skills, workflow: wf ? wf.text : '' };
+}
+
+/** A model setting in plain words: "inherit" is whatever model the conversation (or the app's job) runs on. */
+export function modelLabel(model: string, jobModel = ''): string {
+  const m = String(model || '').trim().toLowerCase();
+  const named = (id: string) => {
+    const x = /^(?:claude-)?(fable|opus|sonnet|haiku)(?:-(\d+)-(\d+))?/.exec(id.toLowerCase());
+    if (!x) return id;
+    const word = x[1][0].toUpperCase() + x[1].slice(1);
+    const ver = x[2] ? x[2] + '.' + x[3] : { fable: '5.1', opus: '5.5', sonnet: '5.5', haiku: '5.5' }[x[1]] || '';
+    return word + (ver ? ' ' + ver : '');
+  };
+  if (!m || m === 'inherit') return 'Your pick' + (jobModel ? ' (jobs: ' + named(jobModel) + ')' : '');
+  return named(m);
+}
+
+/** A tools line in Kyle's words: what the agent can do to the vault. */
+export function toolsLabel(tools: string): string {
+  const t = String(tools || '');
+  if (!t.trim() || t.trim() === '*') return 'Everything';
+  const has = (n: string) => new RegExp('\\b' + n + '\\b').test(t);
+  const out = ['reads the vault'];
+  if (has('Write')) out.push(has('Edit') ? 'writes and edits notes' : 'writes new notes (no editing)');
+  else if (has('Edit')) out.push('edits notes');
+  if (has('Bash')) out.push('runs the vault tool');
+  if (has('WebSearch') || has('WebFetch')) out.push('searches the web');
+  return out.join(', ');
 }
 
 const same = (a: unknown, b: string) => str(a).toLowerCase() === b.toLowerCase();

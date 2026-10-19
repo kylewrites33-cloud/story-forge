@@ -5,12 +5,13 @@ import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { render } from '../lib/markdown.ts';
 import {
-  avatarColour, buildTeam, history, initials, keptLabel, lastUsedLabel, memberStats, sortMembers, teamColour, TEAMS,
+  avatarColour, buildTeam, history, initials, keptLabel, lastUsedLabel, memberStats, modelLabel, sortMembers, teamColour, TEAMS, toolsLabel,
   type HistoryEntry, type MemberStats, type Team, type TeamSort
 } from '../lib/team.ts';
 import type { SaveEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
+import { parseWorkflow, stepsFor } from '../lib/workflow.ts';
 import { href } from './route.ts';
 
 const PREFILL = 'sf-chat-prefill';
@@ -82,14 +83,16 @@ export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultInde
     team.members.forEach((m) => { out[m.slug] = memberStats(m, index, schema); });
     return out;
   }, [team, index, schema]);
+  const jobModel = String((index.config || {}).job_model || '');
+  const wf = useMemo(() => parseWorkflow(team.workflow, team.members.map((m) => m.name)), [team]);
   const pick = (s: TeamSort) => { setSort(s); try { localStorage.setItem('sf-team-sort', s); } catch { /* per visit only */ } };
   const rows = sortMembers(team.members, stats, sort);
   return (
     <section class="team-screen">
       <h1>The team</h1>
       <p class="meta">
-        {team.members.length} agents, {team.skills.length} skills. Ideas counts the proposals each agent wrote; Kept is the share of
-        those you kept, of the ones you decided. <a href={href.skills()}>See every skill</a> · <a href={href.history()}>What the team has done</a>
+        {team.members.length} agents, {team.skills.length} skills. Steps counts the workflow steps each agent works on; Ideas counts the
+        proposals it wrote; Kept is the share of those you kept, of the ones you decided. <a href={href.workflow()}>The workflow</a> · <a href={href.skills()}>See every skill</a> · <a href={href.history()}>What the team has done</a>
       </p>
       {extra}
       {!team.members.length ? <NoTeam /> : (
@@ -99,12 +102,16 @@ export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultInde
           </div>
           <div class="team-table" role="table" aria-label="The team">
             <div class="team-row team-head" role="row">
-              <span role="columnheader">Agent</span><span role="columnheader">Specialty</span><span role="columnheader">Last used</span>
-              <span role="columnheader" class="num">Ideas</span><span role="columnheader" class="num">Kept</span><span role="columnheader" class="num">Lessons</span>
+              <span role="columnheader">Agent</span><span role="columnheader">Role</span><span role="columnheader" class="team-model">Model</span>
+              <span role="columnheader" class="num">Skills</span><span role="columnheader" class="num">Steps</span>
+              <span role="columnheader" class="num">Kept</span>
               <span role="columnheader"><span class="sr-only">Talk</span></span>
             </div>
             {rows.map((m, i) => {
               const st = stats[m.slug];
+              const steps = stepsFor(wf, m.name).length;
+              const model = modelLabel(m.model, jobModel);
+              const skills = m.skills.filter((n) => team.skills.some((x) => x.name === n)).length;
               const heading = sort === 'team' && (i === 0 || rows[i - 1].team !== m.team);
               return (
                 <Fragment key={m.slug}>
@@ -112,20 +119,24 @@ export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultInde
                   <div class="team-row" role="row" style={{ borderLeftColor: teamColour(m.team) }}>
                     <a class="team-agent" role="cell" href={href.team(m.slug)}>
                       <Avatar name={m.name} />
-                      <span class="team-agent-text"><span class="team-name">{m.name}</span><span class="meta">{m.team}{m.model && m.model !== 'inherit' ? ' · ' + m.model : ''}</span></span>
+                      <span class="team-agent-text"><span class="team-name">{m.name}</span><span class="meta">{m.team}</span></span>
                     </a>
-                    <span role="cell" class="team-specialty">{m.specialty}</span>
-                    <span role="cell" class="team-last">{lastUsedLabel(st.lastUsed)}</span>
-                    <span role="cell" class="num">{st.ideas}</span>
+                    <span role="cell" class="team-role">
+                      <span class="team-specialty">{m.role}</span>
+                      <span class="team-used">Last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · {m.lessons.length === 1 ? '1 lesson' : m.lessons.length + ' lessons'}</span>
+                    </span>
+                    <span role="cell" class="team-model">{model}</span>
+                    <span role="cell" class="num">{skills}</span>
+                    <span role="cell" class="num">{steps ? <a href={href.workflow()} title={'Steps ' + stepsFor(wf, m.name).map((x) => x.step.number).join(', ')}>{steps}</a> : '—'}</span>
                     <span role="cell" class="num">{keptLabel(st)}</span>
-                    <span role="cell" class="num">{m.lessons.length}</span>
                     <span role="cell" class="team-talk-cell"><TalkButton name={m.name} canTalk={canTalk} /></span>
-                    <span class="team-stats-line" aria-hidden="true">Last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · kept {keptLabel(st)} · {m.lessons.length === 1 ? '1 lesson' : m.lessons.length + ' lessons'}</span>
+                    <span class="team-stats-line" aria-hidden="true">{model} · {skills === 1 ? '1 skill' : skills + ' skills'} · {steps === 1 ? '1 step' : steps + ' steps'} · last used {lastUsedLabel(st.lastUsed)} · {st.ideas === 1 ? '1 idea' : st.ideas + ' ideas'} · kept {keptLabel(st)}</span>
                   </div>
                 </Fragment>
               );
             })}
           </div>
+          <p class="hint">Model: "Your pick" is whichever model the conversation runs on (the one you choose in the Project or a Claude Code session); in the app's jobs it is the job model in Config{jobModel ? ' (' + modelLabel(jobModel) + ')' : ''}. The other agents always run on the model named, so they are a different mind from the builders.</p>
           <p class="hint">Teams: {TEAMS.filter(([t]) => team.members.some((m) => m.team === t)).map(([t]) => t).join(', ')}. Talk starts a new conversation addressed to that agent.</p>
         </>
       )}
@@ -196,6 +207,8 @@ export function MemberPage({ source, index, schema, slug, canTalk }: { source: V
   const st = memberStats(m, index, schema);
   const done = history(team, index, saves).filter((e) => e.who.toLowerCase() === m.name.toLowerCase());
   const usedBy = team.skills.filter((s) => m.skills.indexOf(s.name) >= 0);
+  const jobModel = String((index.config || {}).job_model || '');
+  const steps = stepsFor(parseWorkflow(team.workflow, team.members.map((x) => x.name)), m.name);
   const calledIn = team.skills.filter((s) => m.skills.indexOf(s.name) < 0 && s.bringsIn.toLowerCase().indexOf(m.name.toLowerCase()) >= 0);
   return (
     <section class="member-page">
@@ -204,18 +217,37 @@ export function MemberPage({ source, index, schema, slug, canTalk }: { source: V
         <Avatar name={m.name} size={64} />
         <div>
           <h1>{m.name}</h1>
-          <p class="meta">{m.team}{m.model && m.model !== 'inherit' ? ' · model: ' + m.model : ''} · last used {lastUsedLabel(st.lastUsed)}</p>
+          <p class="meta">{m.team} · {modelLabel(m.model, jobModel)} · last used {lastUsedLabel(st.lastUsed)}</p>
         </div>
         <TalkButton name={m.name} canTalk={canTalk} />
       </div>
-      <p>{m.description}</p>
+      <dl class="member-facts">
+        <dt>Role</dt><dd>{m.role}</dd>
+        <dt>Model</dt><dd>{modelLabel(m.model, jobModel)}</dd>
+        {m.neverSees && <><dt>Never sees</dt><dd>{m.neverSees}</dd></>}
+        <dt>Can</dt><dd>{toolsLabel(m.tools)}</dd>
+        <dt>Called in when</dt><dd>{m.description}</dd>
+      </dl>
       <dl class="member-stats">
         <div><dt>Ideas</dt><dd>{st.ideas}</dd></div>
         <div><dt>Kept</dt><dd>{keptLabel(st)}</dd></div>
+        <div><dt>Workflow steps</dt><dd>{steps.length}</dd></div>
+        <div><dt>Skills</dt><dd>{usedBy.length}</dd></div>
         <div><dt>Lessons</dt><dd>{m.lessons.length}</dd></div>
         <div><dt>Journal entries</dt><dd>{m.journal.length}</dd></div>
       </dl>
-      <h2>Skills</h2>
+      <h2>In the workflow <span class="meta">{steps.length}</span></h2>
+      {steps.length ? (
+        <ul class="member-steps">
+          {steps.map(({ stage, step }) => (
+            <li key={step.number}>
+              <a href={href.workflow(step.number)}>{step.number}. {step.step.replace(/\*\*|`/g, '')}</a>
+              <span class="meta"> · {stage} · {step.several ? 'several minds' : 'one mind'}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p class="meta">{m.workflowSteps ? m.workflowSteps + ' (the workflow note is not in this vault).' : 'Not named in the workflow.'}</p>}
+      <h2>Skills <span class="meta">{usedBy.length}</span></h2>
       {usedBy.length ? (
         <ul class="chips">{usedBy.map((s) => <li key={s.name}><a class="chip" href={href.skills(s.name)}>{s.label}</a></li>)}</ul>
       ) : <p class="meta">No skills load with this agent; it works from its own file.</p>}

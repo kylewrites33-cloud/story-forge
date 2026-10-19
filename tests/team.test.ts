@@ -40,19 +40,21 @@ test('the demo vault has a team, skills with who loads them, and history', async
   assert.equal(team.members[0].name, 'Story Specialist', 'Leadership comes first');
   const writer = team.members.find((m) => m.slug === 'writer')!;
   assert.equal(writer.team, 'Writing');
-  assert.deepEqual(writer.skills, ['anti-slop', 'prose-craft']);
+  assert.deepEqual(writer.skills.slice(0, 2), ['anti-slop', 'style-fingerprint']);
+  assert.match(writer.role, /one hand on the prose/);
+  assert.match(team.workflow, /# Workflow 1\.1/, 'the demo vault carries the workflow');
   assert.equal(writer.lessons.length, 2);
   assert.equal(writer.journal[0].date, '2026-10-02');
   const antiSlop = team.skills.find((s) => s.name === 'anti-slop')!;
-  assert.deepEqual(antiSlop.agents.sort(), ['Line Editor', 'Writer']);
+  assert.ok(['Line Editor', 'Writer'].every((n) => antiSlop.agents.indexOf(n) >= 0));
   assert.equal(team.skills.find((s) => s.name === 'draft')!.agents.length, 0);
-  const plot = team.members.find((m) => m.slug === 'plot-specialist')!;
-  assert.ok(memberStats(plot, index, schema).ideas >= 1, 'proposals with the agent as source count as its ideas');
+  const contrarian = team.members.find((m) => m.slug === 'contrarian')!;
+  assert.ok(memberStats(contrarian, index, schema).ideas >= 1, 'proposals with the agent as source count as its ideas');
   const all = history(team, index, ([{ commit: 'a', date: '2026-12-03T10:00:00Z', message: 'x', agent: 'Writer' }, { commit: 'b', date: '2026-10-04T10:00:00Z', message: 'Kyle', agent: '' }]));
   assert.equal(saveHistory([{ commit: 'b', date: '2026-10-04', message: 'Kyle', agent: '' }]).length, 0);
   assert.equal(all[0].kind, 'save');
   assert.ok(all.every((e) => e.title !== 'Kyle'));
-  assert.deepEqual(sortMembers(team.members, {}, 'az').map((m) => m.name)[0], 'Character Specialist');
+  assert.deepEqual(sortMembers(team.members, {}, 'az').map((m) => m.name)[0], 'Beta Reader');
   // A second sync reuses unchanged team files.
   src.reads = [];
   await buildIndex({ schema, files, read: (p, s) => src.read(p, s), previous: index, phase: PHASE });

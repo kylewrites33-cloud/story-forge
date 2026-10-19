@@ -62,6 +62,8 @@ import { OverviewPage } from './Overview.tsx';
 import { NotesScreen } from './NotesToTeam.tsx';
 import { SessionsScreen, SessionView } from './Sessions.tsx';
 import { RecipesScreen } from './Recipes.tsx';
+import { WorkflowScreen } from './Workflow.tsx';
+import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
 
 function makeSource(s: Settings): VaultSource {
@@ -406,6 +408,19 @@ export function App() {
     try { await saveRecipe(source, note, r); await runSync(); return null; } catch (e) { return (e as Error).message; }
   }, [source, runSync]);
 
+  const onWorkflowNote = useCallback(async (note: string): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a note to the workflow.';
+    if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
+    try {
+      const fresh = await source.readFresh(WORKFLOW_PATH);
+      const d = new Date();
+      const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      await source.write(WORKFLOW_PATH, addWorkflowNote(fresh.text, note, day), fresh.sha, 'workflow: Kyle\'s note');
+      await runSync();
+      return null;
+    } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -564,6 +579,8 @@ export function App() {
     body = <SkillsScreen index={view} skill={route.skill} />;
   } else if (route.name === 'history') {
     body = <HistoryScreen source={source} index={view} who={route.who} />;
+  } else if (route.name === 'workflow') {
+    body = <WorkflowScreen index={view} step={route.step} onNote={source.write && source.readFresh ? onWorkflowNote : undefined} />;
   } else if (route.name === 'recipes') {
     body = <RecipesScreen index={view} onAdd={source.write ? onAddRecipe : undefined} onSave={source.write && source.readFresh ? onSaveRecipe : undefined} />;
   } else if (route.name === 'note' && view.notes[route.path] && view.notes[route.path].type === 'session') {
@@ -625,9 +642,9 @@ export function App() {
 
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
     : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
-      || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' ? route.name : '';
+      || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' || route.name === 'workflow' ? route.name : '';
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
-    team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes' };
+    team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
   const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
@@ -635,7 +652,7 @@ export function App() {
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
   const sideBook = view ? navBook || activeBook(view) : null;
   const WHERE: Record<string, string> = { home: 'the Books page', series: 'the Series page', jobs: 'the Jobs page', todo: 'the To-do list',
-    team: 'the Team page', skills: 'the Skills page', history: 'Session history', recipes: 'the Recipes page' };
+    team: 'the Team page', skills: 'the Skills page', history: 'Session history', recipes: 'the Recipes page', workflow: 'the Workflow page' };
   const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : 'this page');
   const pageView = (): PageView => {
     const v: PageView = { name: where, book: sideBook };
@@ -658,6 +675,7 @@ export function App() {
       }
     } else if (route.name === 'team' && route.slug) v.lines = ['Looking at the team member: ' + route.slug];
     else if (route.name === 'skills' && route.skill) v.lines = ['Looking at the skill: ' + route.skill];
+    else if (route.name === 'workflow') v.lines = ['Looking at the workflow (System/Workflow.md)' + (route.step ? ', step ' + route.step : '') + '. Kyle may want to judge or change a step: answer about the workflow, and propose changes as a note, never by editing it.'];
     else if (route.name === 'series' && route.folder) v.lines = ['Looking at the series: `' + route.folder + '`'];
     return v;
   };
