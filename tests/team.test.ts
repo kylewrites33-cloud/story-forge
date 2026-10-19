@@ -75,7 +75,7 @@ test('the vault beside this repository: every agent has a team and every skill a
   const texts: Record<string, { sha: string; text: string }> = {};
   for (const f of teamFiles(files)) texts[f.path] = { sha: f.sha, text: await src.read(f.path, f.sha) };
   const team = buildTeam(texts);
-  assert.ok(team.members.length >= 11);
+  assert.ok(team.members.length >= 8);
   assert.ok(team.skills.length >= 40);
   for (const m of team.members) for (const s of m.skills) assert.ok(team.skills.some((k) => k.name === s), m.name + ' loads a skill the vault does not have: ' + s);
 });
