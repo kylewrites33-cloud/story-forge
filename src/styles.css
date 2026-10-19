@@ -905,10 +905,6 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .pomodoro-panel p { margin: 0; }
 .pomodoro-now { font-weight: 600; }
 .pomodoro-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.pomodoro-lengths { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 10px; color: var(--muted); }
-.pomodoro-panel .segmented { display: flex; gap: 4px; }
-.pomodoro-panel .segmented button { flex: 1; }
-.pomodoro-panel .segmented button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .pomodoro-focus .pomodoro-chip { opacity: 0.6; background: var(--surface); }
 .pomodoro-focus .pomodoro-chip:hover, .pomodoro-focus .pomodoro-chip:focus-visible, .pomodoro-focus.is-work .pomodoro-chip { opacity: 1; }
 /* The floating timer never sits on the last lines of a page: the page can scroll them clear of it. */

@@ -40,7 +40,7 @@ test('a work Pomodoro counts only the words written in it', () => {
   assert.equal(after.state.phase, 'idle');
   assert.equal(after.record, null);
   assert.equal(noteWords(idleState(), 'a.md', 'S-001', 1, 9).phase, 'idle');
-  assert.equal(stop(startWork(idleState(50, 10), T0)).workMin, 50);
+  assert.equal(stop(startWork(idleState(), T0)).workMin, 25);
 });
 
 test('each Pomodoro adds one line to the day and raises its counts', () => {

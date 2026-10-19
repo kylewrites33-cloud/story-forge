@@ -3,7 +3,7 @@
 // a small panel: start, pause, stop, the lengths, and today's Pomodoros and words.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  BREAK_CHOICES, WORK_CHOICES, advance, clock, flushLog, loadLog, loadTimer, msLeft, pause, resume, saveLog, saveTimer,
+  advance, clock, flushLog, loadLog, loadTimer, msLeft, pause, resume, saveLog, saveTimer,
   startWork, stop, today, wordsSoFar, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
@@ -154,22 +154,7 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'break' && <button type="button" class="primary" onClick={() => act((c, t) => startWork(c, t))}>Skip the break</button>}
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
-          {s.phase === 'idle' && (
-            <div class="pomodoro-lengths">
-              <span>Write</span>
-              <div class="segmented" role="group" aria-label="Minutes of writing">
-                {WORK_CHOICES.map((m) => (
-                  <button key={m} type="button" aria-pressed={s.workMin === m} onClick={() => act((c) => ({ ...c, workMin: m }))}>{m} min</button>
-                ))}
-              </div>
-              <span>Break</span>
-              <div class="segmented" role="group" aria-label="Minutes of break">
-                {BREAK_CHOICES.map((m) => (
-                  <button key={m} type="button" aria-pressed={s.breakMin === m} onClick={() => act((c) => ({ ...c, breakMin: m }))}>{m} min</button>
-                ))}
-              </div>
-            </div>
-          )}
+          {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
           <p class="pomodoro-today"><strong>Today:</strong> {day.pomodoros} {day.pomodoros === 1 ? 'Pomodoro' : 'Pomodoros'}, {num(day.words)} words.</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 finished Pomodoro is' : waiting.length + ' finished Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
           <p class="hint">A Pomodoro counts when its time runs out. Stop does not count it.</p>
