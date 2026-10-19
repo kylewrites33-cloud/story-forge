@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  addBeatAfter, anchorOf, beatDefs, beatsBody, blocks, layoutChapter, newBeatsText, parseBeats, removeBeat, sceneBody, type BeatDef
+  addBeatAfter, anchorOf, beatDefs, beatsBody, blocks, layoutChapter, moveBeat, newBeatsText, parseBeats, removeBeat, sceneBody, type BeatDef
 } from '../src/lib/beats.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 
@@ -117,4 +117,33 @@ test('a new beats note follows the schema', () => {
   assert.equal(n.data.chapter, 31);
   assert.equal(n.data.title, 'Chapter 31 beats');
   assert.equal(parseBeats(n.body).length, 4);
+});
+
+test('a beat dragged up or down takes its prose with it, into the scene it lands in, and lays out the same again', () => {
+  const { beats, scenes: shapes } = layoutChapter(scenes, parseBeats(NOTE));
+  const [theory, regrets, blighted, wait] = beats.map((b) => b.key);
+  // Up, within its scene.
+  const up = moveBeat(beats, regrets, theory);
+  assert.deepEqual(up.touched, ['S/S-052 A.md']);
+  const a = sceneBody(shapes[0], up.beats);
+  assert.ok(a.startsWith('\nGrey had offered to help.\n\nReed zoomed in on his nose.\n\nReed had a theory'));
+  assert.deepEqual(layoutChapter([{ ...scenes[0], body: a }, scenes[1]], beatDefs(up.beats)).beats.map((b) => b.title), ['Regrets', "Reed's theory", 'Blighted, with an ad', 'The wait']);
+  // Down, into the next scene.
+  const down = moveBeat(beats, regrets, wait);
+  assert.deepEqual(down.touched, ['S/S-052 A.md', 'S/S-053 B.md']);
+  const b0 = sceneBody(shapes[0], down.beats), b1 = sceneBody(shapes[1], down.beats);
+  assert.ok(!b0.includes('Grey had offered'));
+  assert.ok(b1.trimEnd().endsWith('Reed zoomed in on his nose.'));
+  const again = layoutChapter([{ ...scenes[0], body: b0 }, { ...scenes[1], body: b1 }], beatDefs(down.beats)).beats;
+  assert.deepEqual(again.map((b) => b.title), ["Reed's theory", 'Blighted, with an ad', 'Regrets', 'The wait']);
+  assert.equal(again[2].prose, 'Grey had offered to help.\n\nReed zoomed in on his nose.');
+  // To the end, and nowhere.
+  assert.equal(moveBeat(beats, theory, null).beats.at(-1)!.key, theory);
+  assert.deepEqual(moveBeat(beats, blighted, wait).touched, []);
+  // Never in front of a scene's opening words.
+  const late = layoutChapter(scenes, [{ title: 'Regrets', summary: '', scene: 'S-052', words: 'Grey had offered' }, { title: 'Ad', summary: '', scene: 'S-053', words: '"Is that an ad?"' }]).beats;
+  const m = moveBeat(late, late[3].key, late[0].key);
+  assert.equal(m.beats[0].loose, true);
+  assert.equal(m.beats[1].title, 'Ad');
+  assert.equal(m.beats[1].scene, 'S-052');
 });

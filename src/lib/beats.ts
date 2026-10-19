@@ -216,3 +216,28 @@ export function addBeatAfter(beats: BeatView[], key: string, title: string): Bea
 export function nameLoose(beats: BeatView[], key: string, title: string): BeatView[] {
   return beats.map((b) => (b.key === key ? { ...b, title, loose: false } : b));
 }
+
+/** Move a beat (and its prose) to just before another beat, or to the chapter's end when `before` is null.
+ * It joins the scene of the beat it lands under (keeping its own scene at a scene break), so its words move there; a scene's opening words
+ * (the part with no heading) always stay first in their scene. Returns the beats and the scenes whose words change. */
+export function moveBeat(beats: BeatView[], key: string, before: string | null): { beats: BeatView[]; touched: string[] } {
+  const b = beats.find((x) => x.key === key);
+  if (!b || b.loose || before === key) return { beats, touched: [] };
+  const rest = beats.filter((x) => x.key !== key);
+  let at = before == null ? rest.length : rest.findIndex((x) => x.key === before);
+  if (at < 0) return { beats, touched: [] };
+  // Never land in front of a scene's opening words: go to the end of the scene above, or after the opening words at the top.
+  if (rest[at] && rest[at].loose) {
+    if (at === 0) at = 1;
+  }
+  const above = rest[at - 1];
+  const below = rest[at] && !rest[at].loose ? rest[at] : undefined;
+  // Between two scenes it keeps its own scene if that is one of them, otherwise it joins the scene above.
+  const home = [above, below].find((x) => x && x.path === b.path) || above || below;
+  if (!home) return { beats, touched: [] };
+  const moved = { ...b, path: home.path, scene: home.scene };
+  const out = rest.slice();
+  out.splice(at, 0, moved);
+  if (out.map((x) => x.key).join() === beats.map((x) => x.key).join() && moved.path === b.path) return { beats, touched: [] };
+  return { beats: out, touched: b.path === moved.path ? [b.path] : [b.path, moved.path] };
+}

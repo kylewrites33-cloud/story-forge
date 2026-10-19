@@ -2,10 +2,10 @@
 // edit its prose right under a slim title row. The scenes keep only the story; the beats live in the book's
 // `Chapter Beats/` note for the chapter (see lib/beats.ts). Everything Kyle types is kept on the device at once and saves
 // the same way as the writing screen: Done, two quiet minutes, putting the iPad down, or back online.
-import { Fragment } from 'preact';
+import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
-  BEATS_TYPE, addBeatAfter, beatDefs, beatsBody, beatsPath, beatsTitle, layoutChapter, nameLoose, parseBeats, removeBeat, sceneBody,
+  BEATS_TYPE, addBeatAfter, beatDefs, beatsBody, beatsPath, beatsTitle, layoutChapter, moveBeat, nameLoose, parseBeats, removeBeat, sceneBody,
   type BeatView, type SceneShape
 } from '../lib/beats.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
@@ -81,7 +81,31 @@ export interface BeatsApi {
   root: () => HTMLElement | null;
 }
 
-export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen, options, onName, onLook, api, onActive }: {
+/** A beat being dragged up or down by its Move handle (finger or mouse). `before` is where it would land:
+ * before that beat, at the chapter's end (null), or nowhere yet (undefined). */
+interface BeatDrag { key: string; pointer: number; startY: number; startScroll: number; y: number; moved: boolean; before: string | null | undefined }
+
+const beatsScroller = () => document.querySelector<HTMLElement>('.writer-page');
+
+/** Where a beat held at height y would land: before the beat under it (its top half) or the one after (its bottom half). */
+function beatDropAt(y: number, dragged: string): string | null | undefined {
+  const list = document.querySelector<HTMLElement>('.beats');
+  if (!list) return undefined;
+  const r = list.getBoundingClientRect();
+  const items = [...list.querySelectorAll<HTMLElement>('[data-beat]')].filter((e) => e.dataset.beat !== dragged);
+  for (const el of document.elementsFromPoint(r.left + r.width / 2, y)) {
+    const item = (el as HTMLElement).closest('[data-beat]') as HTMLElement | null;
+    if (!item || item.dataset.beat === dragged) continue;
+    const b = item.getBoundingClientRect();
+    if (y < b.top + b.height / 2) return item.dataset.beat || null;
+    const next = items[items.indexOf(item) + 1];
+    return next ? next.dataset.beat || null : null;
+  }
+  if (items.length && y > items[items.length - 1].getBoundingClientRect().bottom) return null;
+  return undefined;
+}
+
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords }: {
   source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
@@ -106,6 +130,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   api?: { current: BeatsApi | null };
   /** The words of the beat Kyle is in, whenever they change or he moves to another beat. */
   onActive?: (text: string) => void;
+  /** The writing screen's own heading (chapter, scene line, reading time, the chapter strip, the target bar); a plain heading when left out. */
+  head?: ComponentChildren;
+  /** Each scene's words as Kyle types, for the heading's counts. */
+  onWords?: (words: Record<string, number>) => void;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [st, setSt] = useState<State>(() => start(source, group, bookFolder, beatsNote));
@@ -125,6 +153,33 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   const [ownOpts] = useState<StyleOptions>(() => ({ names: look.names === 'on' && codex.length ? matcher(codex) : null }));
   const opts = options || ownOpts;
 
+  // Moving beats: hold the Move handle and drag (Kyle, 2026-10-19). The beat's prose moves with it.
+  const [drag, setDrag] = useState<BeatDrag | null>(null);
+  const dragRef = useRef<BeatDrag | null>(null);
+  const putDrag = (d: BeatDrag | null) => { dragRef.current = d; setDrag(d); };
+  useEffect(() => {
+    if (!drag) return;
+    // Near the top or bottom of the page it scrolls, so a beat can travel far.
+    const t = setInterval(() => {
+      const d = dragRef.current;
+      const sc = beatsScroller();
+      if (!d || !d.moved || !sc) return;
+      const r = sc.getBoundingClientRect();
+      const edge = 70;
+      const step = d.y < r.top + edge ? -Math.ceil((r.top + edge - d.y) / 4) : d.y > r.bottom - edge ? Math.ceil((d.y - r.bottom + edge) / 4) : 0;
+      if (!step) return;
+      sc.scrollBy(0, step);
+      const at = beatDropAt(d.y, d.key);
+      putDrag({ ...d, before: at === undefined ? d.before : at });
+    }, 30);
+    return () => clearInterval(t);
+  }, [drag && drag.key]);
+  const move = (key: string, before: string | null) => {
+    const r = moveBeat(ref.current.beats, key, before);
+    if (!r.touched.length) return;
+    apply(r.beats, r.touched);
+    keepOpen(new Set(open), r.beats);
+  };
   const keepOpen = (next: Set<string>, beats = ref.current.beats) => {
     setOpen(next);
     try { localStorage.setItem(okey, JSON.stringify(beats.map((b, i) => (next.has(b.key) ? i : -1)).filter((i) => i >= 0))); } catch { /* the device would not keep it */ }
@@ -280,12 +335,18 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   const focusedProse = (beats.find((b) => b.key === focused) || { prose: '' }).prose;
   if (api) api.current = { cmd, root: () => document.querySelector<HTMLElement>('.beat-body[data-active] .writer-text.styled') };
   useEffect(() => { if (onActive) onActive(focusedProse); }, [focused, focusedProse]);
+  useEffect(() => {
+    if (!onWords) return;
+    const w: Record<string, number> = {};
+    Object.values(st.scenes).forEach((d) => { w[d.path] = bodyWords(d.body); });
+    onWords(w);
+  }, [st.scenes]);
   let n = 0;
 
   return (
     <>
           <div class="page-head">
-            <h1>{chapterHeading(group)}</h1>
+            {head || <h1>{chapterHeading(group)}</h1>}
             <p class="meta">The chapter by its beats. Press a number to open or close a beat. Change any words in place; they save like the page. Press Page at the top to go back.</p>
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
             <div class="buttons beat-tools">
@@ -313,7 +374,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
               </div>
             )}
           </div>
-          <div class="beats">
+          <div class={'beats' + (drag && drag.moved && drag.before === null ? ' drop-end' : '')}>
             {beats.map((b, i) => {
               const isOpen = open.has(b.key);
               const newScene = i === 0 || beats[i - 1].path !== b.path;
@@ -322,6 +383,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
               if (!b.loose) n++;
               const toggle = () => { const next = new Set(open); if (isOpen) next.delete(b.key); else next.add(b.key); keepOpen(next); };
               const c = commands.current[b.key] || (commands.current[b.key] = { current: null });
+              const dragging = Boolean(drag && drag.moved && drag.key === b.key);
+              // Move down: in front of the beat after next (or to the end).
+              const after = beats[i + 2] ? beats[i + 2].key : null;
               return (
                 <Fragment key={b.key}>
                   {newScene && (
@@ -330,7 +394,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                       <a href={href.write(b.path)} data-beats-scene={b.path} onClick={(e) => { e.preventDefault(); onOpen(b.path); }}>{[b.scene, note ? sceneHeader(note.data) : ''].filter(Boolean).join(' ')}</a>
                     </p>
                   )}
-                  <section class={'beat' + (isOpen ? ' open' : '') + (b.loose ? ' loose' : '')}>
+                  <section class={'beat' + (isOpen ? ' open' : '') + (b.loose ? ' loose' : '') + (dragging ? ' dragging' : '') + (drag && drag.moved && drag.before === b.key ? ' drop-before' : '')}
+                    data-beat={b.key} style={dragging ? { transform: 'translateY(' + (drag!.y - drag!.startY + ((beatsScroller() || { scrollTop: 0 }).scrollTop - drag!.startScroll)) + 'px)' } : undefined}>
                     <div class="beat-row">
                       <button type="button" class="beat-toggle" aria-expanded={isOpen} aria-label={(isOpen ? 'Close ' : 'Open ') + label} onClick={toggle}>
                         <span>{b.loose ? '·' : n}</span><Icon name={isOpen ? 'down' : 'right'} size={16} />
@@ -344,6 +409,31 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                         {!isOpen && b.lost && <p class="beat-lost">Its first words changed in the page, so its prose now sits in the beat above.</p>}
                         {!isOpen && !b.prose.trim() && !b.lost && <p class="beat-lost">No prose yet.</p>}
                       </div>
+                      {!b.loose && (
+                        <button type="button" class="move-handle beat-move icon-button" title="Move: hold and drag up or down" aria-label={'Move ' + label + ': hold and drag'}
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                            const sc = beatsScroller();
+                            putDrag({ key: b.key, pointer: e.pointerId, startY: e.clientY, startScroll: sc ? sc.scrollTop : 0, y: e.clientY, moved: false, before: undefined });
+                          }}
+                          onPointerMove={(e) => {
+                            const d = dragRef.current;
+                            if (!d || d.pointer !== e.pointerId) return;
+                            const moved = d.moved || Math.abs(e.clientY - d.startY) > 6;
+                            const at = moved ? beatDropAt(e.clientY, d.key) : undefined;
+                            putDrag({ ...d, y: e.clientY, moved, before: at === undefined ? d.before : at });
+                          }}
+                          onPointerUp={(e) => {
+                            const d = dragRef.current;
+                            putDrag(null);
+                            if (!d || d.pointer !== e.pointerId || !d.moved || d.before === undefined) return;
+                            move(d.key, d.before);
+                          }}
+                          onPointerCancel={() => putDrag(null)}>
+                          <Icon name="move" />
+                        </button>
+                      )}
                     </div>
                     {isOpen && (
                       <div class="beat-body" data-active={focused === b.key ? '' : undefined} onFocusCapture={() => setFocused(b.key)}>
@@ -353,6 +443,12 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                           <button type="button" onClick={() => { const next = addBeatAfter(ref.current.beats, b.key, ''); apply(next, []); const k = next[next.indexOf(next.find((x) => x.key === b.key)!) + 1].key; keepOpen(new Set([...open, k]), next); }}>
                             <Icon name="plus" size={16} />Add a beat after
                           </button>
+                          {!b.loose && i > 0 && !(i === 1 && beats[0].loose) && (
+                            <button type="button" onClick={() => move(b.key, beats[i - 1].key)}><Icon name="up" size={16} />Move up</button>
+                          )}
+                          {!b.loose && i < beats.length - 1 && (
+                            <button type="button" onClick={() => move(b.key, after)}><Icon name="down" size={16} />Move down</button>
+                          )}
                           {!b.loose && (
                             <button type="button" onClick={() => { apply(removeBeat(ref.current.beats, b.key), [b.path]); setRev((r) => r + 1); }}>
                               Take off this heading

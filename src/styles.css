@@ -917,7 +917,14 @@ a.button.team-talk { gap: 6px; width: 100%; }
 @media (max-width: 600px) { .writer-bar { flex-wrap: wrap; row-gap: 6px; } }
 /* Buttons in the writing screen's top bar keep their size; the book's title gives way first, then two short names. */
 .writer-bar > .bar-button, .writer-bar > .pomodoro, .writer-bar > .save-chip { flex-shrink: 0; }
-@media (max-width: 1299px) { .writer-bar .bar-button.compact .bar-label { display: none; } }
+/* Narrower, each button keeps a short name under its icon (Kyle, 2026-10-19: icons alone were hard to tell apart at half width on the iPad),
+   and the bar takes two lines when it must. */
+@media (max-width: 1299px) {
+  .writer-bar { flex-wrap: wrap; row-gap: 6px; }
+  .writer-bar .bar-button.labelled { flex-direction: column; gap: 1px; padding: 4px 6px; min-width: 52px; position: relative; }
+  .writer-bar .bar-button.labelled .bar-label { display: block; font-size: 0.68rem; line-height: 1.1; font-weight: 600; max-width: 64px; white-space: normal; text-align: center; }
+  .writer-bar .bar-button.labelled .count-badge { position: absolute; top: 1px; right: 2px; }
+}
 
 /* The AI team, its skills and its history: the foot of the sidebar, the Team table, an agent's page, Skills, History */
 .rail-team { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 1px; }
@@ -1036,7 +1043,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-title, .beat-summary { width: 100%; border: none; background: transparent; color: var(--text); font: inherit; padding: 4px 6px; border-radius: 6px; min-height: 0; }
 .beat-title { font-weight: 700; font-size: 1.05rem; }
 .beat-summary { color: var(--muted); font-size: 0.95rem; line-height: 1.45; resize: none; overflow: hidden; display: block; }
-.beat-title:focus, .beat-summary:focus { outline: none; background: var(--accent-soft); }
+.beat-title:focus, .beat-summary:focus { outline: none; background: var(--bg); }
 .beat.loose .beat-title { font-weight: 400; font-style: italic; }
 .beat-lost { margin: 0 6px 6px; font-size: 0.85rem; color: var(--muted); }
 .beat-body { padding: 0 12px 10px 60px; }
@@ -1627,3 +1634,13 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .member-steps li { padding: 8px 0; border-top: 1px solid var(--line); }
 .member-steps a { font-weight: 600; }
 @media (max-width: 600px) { .member-facts { grid-template-columns: minmax(0, 1fr); gap: 2px; } .member-facts dd { margin-bottom: 8px; } }
+/* Moving beats (Kyle, 2026-10-19): hold the Move handle and drag. */
+.beat-row:has(.beat-move) { grid-template-columns: 52px 1fr 44px; }
+.beat-move { border: none; background: none; color: var(--muted); min-height: 44px; }
+.beat { position: relative; }
+.beat.dragging { z-index: 5; outline: 2px solid var(--accent); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); }
+.beat.dragging .beat-move { cursor: grabbing; }
+.beat.drop-before::before, .beats.drop-end::after { content: ''; display: block; height: 4px; border-radius: 2px; background: var(--accent); }
+.beat.drop-before::before { position: absolute; left: 0; right: 0; top: -8px; }
+.beats { position: relative; }
+.beats.drop-end::after { margin-top: -6px; }
