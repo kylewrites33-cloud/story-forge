@@ -941,7 +941,6 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .team-specialty { font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .team-used { font-size: 0.85rem; color: var(--muted); }
 .team-model { font-size: 0.95rem; }
-.team-app-model { display: block; font-size: 0.85rem; }
 .team-head .team-model { font-size: inherit; }
 .team-talk-cell { justify-self: end; }
 a.button.talk { gap: 6px; padding: 6px 14px; }
