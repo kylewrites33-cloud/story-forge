@@ -927,12 +927,12 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .team-screen { container-type: inline-size; }
 .team-table { margin: 0.6rem 0 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .team-row {
-  display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2.2fr) 6rem 3.2rem 3.2rem 3.6rem auto; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2.2fr) 7.5rem 3.2rem 3.2rem 3.6rem 6.5rem; gap: 12px; align-items: center;
   padding: 12px 14px 12px 12px; border-top: 1px solid var(--line); border-left: 5px solid transparent;
 }
 .team-head { border-top: none; background: var(--hover); color: var(--muted); font-size: 0.85rem; font-weight: 650; padding-top: 10px; padding-bottom: 10px; }
 .team-group { padding: 10px 14px 4px 17px; border-top: 1px solid var(--line); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.team-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.team-row .num { text-align: center; font-variant-numeric: tabular-nums; }
 .team-agent { display: flex; align-items: center; gap: 12px; min-width: 0; color: var(--text); text-decoration: none; min-height: 44px; }
 .team-agent-text { display: grid; min-width: 0; }
 .team-name { font-weight: 700; overflow-wrap: anywhere; }
@@ -941,6 +941,7 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .team-specialty { font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .team-used { font-size: 0.85rem; color: var(--muted); }
 .team-model { font-size: 0.95rem; }
+.team-head .team-model { font-size: inherit; }
 .team-talk-cell { justify-self: end; }
 a.button.talk { gap: 6px; padding: 6px 14px; }
 .team-stats-line { display: none; font-size: 0.9rem; color: var(--muted); }
