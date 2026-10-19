@@ -86,6 +86,9 @@ add a dated line here when you add or change one.
   A Pomodoro stopped early still logs its minutes (pauses left out) and words, marked "(stopped early)", without adding
   to the Pomodoro count; the panel shows today's Pomodoros, minutes and words (Kyle, 2026-10-19: "it doesnt show the 15
   minutes or so of the pomodoro i stopped").
+  The panel and its button count the day in Pomodoros by minutes, so stopped ones add up: 40 minutes shows as
+  1.6 Pomodoros (Kyle, 2026-10-19: "my goal is to amount to 5 pomodoro sessions worth of writing"). The log keeps the real
+  count of whole ones.
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
   (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
