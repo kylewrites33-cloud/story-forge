@@ -379,8 +379,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
               const isOpen = open.has(b.key);
               const newScene = i === 0 || beats[i - 1].path !== b.path;
               const note = group.scenes.find((s) => s.path === b.path);
-              const label = b.loose ? 'Opening of ' + b.scene : 'Beat ' + (n + 1);
-              if (!b.loose) n++;
+              // Every part of a scene is a beat, named or not (Kyle, 2026-10-19).
+              const label = 'Beat ' + (n + 1);
+              n++;
               const toggle = () => { const next = new Set(open); if (isOpen) next.delete(b.key); else next.add(b.key); keepOpen(next); };
               const c = commands.current[b.key] || (commands.current[b.key] = { current: null });
               const dragging = Boolean(drag && drag.moved && drag.key === b.key);
@@ -398,18 +399,18 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                     data-beat={b.key} style={dragging ? { transform: 'translateY(' + (drag!.y - drag!.startY + ((beatsScroller() || { scrollTop: 0 }).scrollTop - drag!.startScroll)) + 'px)' } : undefined}>
                     <div class="beat-row">
                       <button type="button" class="beat-toggle" aria-expanded={isOpen} aria-label={(isOpen ? 'Close ' : 'Open ') + label} onClick={toggle}>
-                        <span>{b.loose ? '·' : n}</span><Icon name={isOpen ? 'down' : 'right'} size={16} />
+                        <span>{n}</span><Icon name={isOpen ? 'down' : 'right'} size={16} />
                       </button>
                       <div class="beat-head">
                         <input class="beat-title" type="text" value={b.title} aria-label={label + ' title'}
-                          placeholder={b.loose ? 'Before the first beat (name it to make it one)' : 'Name this beat'}
+                          placeholder="Name this beat"
                           onInput={(e) => edit(b.key, { title: (e.target as HTMLInputElement).value })}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }} />
-                        {!isOpen && !b.loose && <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />}
+                        {!isOpen && <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />}
                         {!isOpen && b.lost && <p class="beat-lost">Its first words changed in the page, so its prose now sits in the beat above.</p>}
                         {!isOpen && !b.prose.trim() && !b.lost && <p class="beat-lost">No prose yet.</p>}
                       </div>
-                      {!b.loose && (
+                      {(
                         <button type="button" class="move-handle beat-move icon-button" title="Move: hold and drag up or down" aria-label={'Move ' + label + ': hold and drag'}
                           onPointerDown={(e) => {
                             e.preventDefault();
@@ -443,10 +444,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                           <button type="button" onClick={() => { const next = addBeatAfter(ref.current.beats, b.key, ''); apply(next, []); const k = next[next.indexOf(next.find((x) => x.key === b.key)!) + 1].key; keepOpen(new Set([...open, k]), next); }}>
                             <Icon name="plus" size={16} />Add a beat after
                           </button>
-                          {!b.loose && i > 0 && !(i === 1 && beats[0].loose) && (
+                          {i > 0 && (
                             <button type="button" onClick={() => move(b.key, beats[i - 1].key)}><Icon name="up" size={16} />Move up</button>
                           )}
-                          {!b.loose && i < beats.length - 1 && (
+                          {i < beats.length - 1 && (
                             <button type="button" onClick={() => move(b.key, after)}><Icon name="down" size={16} />Move down</button>
                           )}
                           {!b.loose && (

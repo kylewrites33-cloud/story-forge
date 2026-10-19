@@ -113,7 +113,7 @@ add a dated line here when you add or change one.
   it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
   writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
   (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
-  `src/lib/beats.ts`). Prose before a scene's first beat shows without a heading. Add a beat after, Take off this heading.
+  `src/lib/beats.ts`). Prose before a scene's first beat shows as an unnamed beat. Add a beat after, Take off this heading.
   Ask the team writes a `beats` job (the Story Specialist finds the beats in the prose, plans them from Kyle's words, or
   redoes them, archiving the old note). Reached from the writing screen's and whole chapter's Beats button and each
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
@@ -123,7 +123,9 @@ add a dated line here when you add or change one.
   counting the words as Kyle types in the beats (Kyle, 2026-10-19). A beat's prose looks like the page while it is edited
   (no tinted box). Each beat with a heading has a Move handle: hold and drag it up or down (finger or mouse), or press
   Move up / Move down on an open beat; its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
-  A scene's opening words (no heading) always stay first in their scene.
+  Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's
+  opening words show as a numbered beat with no name yet, and move like any other; once they are not first in their
+  scene they are saved in the beats note as "Untitled beat", which reads back with no name.
   The writing screen's top bar (Kyle, 2026-10-19): below 1300 px each button keeps a short name under its icon (Chapters,
   Whole chapter, Page or Beats, To-dos, Timer, Focus, Chat, Panel) and the bar takes two lines when it must.
   Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
