@@ -917,27 +917,8 @@ a.button.team-talk { gap: 6px; width: 100%; }
 
 /* The AI team, its skills and its history: the foot of the sidebar, the Team table, an agent's page, Skills, History */
 .rail-team { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 1px; }
-.rail-strip-only { display: none; }
-.rail-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
-.rail-section > * { min-width: 0; }
-.rail-section + .rail-section { margin-top: 6px; }
-.rail-summary {
-  display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; cursor: pointer; list-style: none;
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-radius: 10px;
-}
-.rail-summary::-webkit-details-marker { display: none; }
-.rail-summary::after { content: ''; width: 7px; height: 7px; margin-left: auto; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
-.rail-section[open] > .rail-summary::after { transform: rotate(45deg); }
-.rail-summary:hover { background: var(--hover); }
-.rail-count { font-weight: 600; letter-spacing: 0; padding: 0 7px; border-radius: 999px; background: var(--hover); }
-.rail-person { border-left: 3px solid transparent; }
-.rail-skill { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 6px 10px 6px 42px; }
-.rail-skill .rail-label { font-size: 0.92rem; }
-.rail-skill-who { font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 1099px) {
-  .shell:not(.rail-open) .rail-section { display: none; }
-  .shell:not(.rail-open) .rail-strip-only { display: grid; gap: 1px; }
-}
+.rail-item .rail-count { margin-left: auto; flex: none; font-size: 0.8rem; }
+@media (max-width: 1099px) { .shell:not(.rail-open) .rail-item .rail-count { display: none; } }
 .avatar {
   flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
   color: #fff; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
@@ -988,9 +969,17 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .lessons { padding-left: 1.2em; display: grid; gap: 6px; }
 
 .skills { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 12px; }
-.skill { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); scroll-margin-top: 70px; }
+.skill { padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); scroll-margin-top: 70px; }
 .skill-here { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.skill-name { margin: 0 0 0.2em; font-size: 1.15rem; }
+.skill-head { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px; cursor: pointer; list-style: none; }
+.skill-head::-webkit-details-marker { display: none; }
+.skill-head::after { content: ''; flex: none; width: 8px; height: 8px; margin-left: auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform 0.15s; }
+.skill[open] > .skill-head::after { transform: rotate(45deg); }
+.skill-head:hover { background: var(--hover); border-radius: var(--radius); }
+.skill-short { flex: none; max-width: 40%; font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-body { padding: 0 16px 14px; }
+.skills { gap: 6px; }
+.skill-name { margin: 0; font-size: 1.05rem; min-width: 0; }
 .skill-name .meta { font-weight: 400; font-size: 0.8rem; }
 .skill p { margin: 0.3em 0; }
 .skill-who { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }

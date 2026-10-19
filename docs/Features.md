@@ -102,6 +102,13 @@ add a dated line here when you add or change one.
   the agent), kept share, lessons (MEMORY.md) and Talk (a new chat that starts with the agent's name). An agent's page
   (`#/team/<name>`) adds its skills, lessons and what it has done. Session history (`#/history`) is every agent's
   Journal.md entries, the jobs it ran and the vault's last 100 saves with an `Agent:` line.
+  One link each (Kyle, 2026-10-19: "it's not important for me to have a dropdown. I just want to click AI team with the
+  number of AI team members and get to the whole team page. Session history should be available on that page too"; and
+  for skills, "I'd like them to be in a dropdown format, so you don't see the details of any individual skill until you
+  click"): the sidebar's foot ends with "AI team" and "Skills", each with its count, in place of the two folding lists.
+  The Team page ends with Session history for everyone (the last 30, Show all for more); a face still opens one agent's
+  history at `#/history/<name>`. The Skills page shows each skill folded to its name and who loads it; opening it shows
+  the rest, and a link to one skill opens that one.
   Team page update (Kyle, 2026-10-19: "update the agents list in the app, including their roles, the model, the skills
   they possess"): the table's columns are Agent, Role (the agent file's `role:` line, else its specialty), Model ("Your
   pick" for `inherit`, with the job model from Config; otherwise Opus 5.5, Sonnet 5.5), Skills, Steps (workflow steps

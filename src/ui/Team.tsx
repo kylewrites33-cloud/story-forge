@@ -75,8 +75,10 @@ function loadSort(): TeamSort {
 }
 
 /** The whole team as a table: agent, specialty, last used, ideas, kept, lessons and Talk. */
-export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultIndex; schema: Schema | null; canTalk: boolean; extra?: ComponentChildren }) {
+export function TeamScreen({ source, index, schema, canTalk, extra }: { source: VaultSource; index: VaultIndex; schema: Schema | null; canTalk: boolean; extra?: ComponentChildren }) {
   const team = useTeam(index);
+  const { saves, note } = useSaves(source);
+  const done = history(team, index, saves);
   const [sort, setSort] = useState<TeamSort>(loadSort);
   const stats = useMemo(() => {
     const out: Record<string, MemberStats> = {};
@@ -92,7 +94,7 @@ export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultInde
       <h1>The team</h1>
       <p class="meta">
         {team.members.length} agents, {team.skills.length} skills. Steps counts the workflow steps each agent works on; Ideas counts the
-        proposals it wrote; Kept is the share of those you kept, of the ones you decided. <a href={href.workflow()}>The workflow</a> · <a href={href.skills()}>See every skill</a> · <a href={href.history()}>What the team has done</a>
+        proposals it wrote; Kept is the share of those you kept, of the ones you decided. <a href={href.workflow()}>The workflow</a> · <a href={href.skills()}>See every skill</a> · Session history is at the foot of this page
       </p>
       {extra}
       {!team.members.length ? <NoTeam /> : (
@@ -138,6 +140,10 @@ export function TeamScreen({ index, schema, canTalk, extra }: { index: VaultInde
           </div>
           <p class="hint">Model: "Your pick" is whichever model the conversation runs on (the one you choose in the Project or a Claude Code session); in the app's jobs it is the job model in Config{jobModel ? ' (' + modelLabel(jobModel) + ')' : ''}. The other agents always run on the model named, so they are a different mind from the builders.</p>
           <p class="hint">Teams: {TEAMS.filter(([t]) => team.members.some((m) => m.team === t)).map(([t]) => t).join(', ')}. Talk starts a new conversation addressed to that agent.</p>
+          <h2 id="team-history">Session history</h2>
+          <p class="meta">What each team member has done: their journal entries after each piece of work, the jobs they ran for you, and their saves to the vault. Tap a face to see only that agent's.</p>
+          {note && <p class="hint">{note}</p>}
+          <HistoryList entries={done} showWho limit={30} />
         </>
       )}
     </section>
@@ -283,7 +289,7 @@ export function SkillsScreen({ index, skill }: { index: VaultIndex; skill: strin
       <h1>Skills</h1>
       <p class="meta">
         {team.skills.length} skills saved in the vault. "Loaded by" are the agents that start with the skill every time; "Brings in"
-        is the skill's own list of who it calls on. The main conversation (the coordinator) can run any skill.
+        is the skill's own list of who it calls on. The main conversation (the coordinator) can run any skill. Open a skill to see what it is for.
       </p>
       {team.skills.length > 0 && (
         <label class="filter-box"><Icon name="search" size={18} />
@@ -291,10 +297,15 @@ export function SkillsScreen({ index, skill }: { index: VaultIndex; skill: strin
         </label>
       )}
       {!team.skills.length ? <NoTeam /> : (
-        <ul class="skills">
+        <div class="skills">
           {shown.map((s) => (
-            <li key={s.name} id={'skill-' + s.name} class={'skill' + (s.name === skill ? ' skill-here' : '')}>
-              <h2 class="skill-name">{s.label} <span class="meta">{s.name}</span></h2>
+            <details key={s.name} id={'skill-' + s.name} class={'skill' + (s.name === skill ? ' skill-here' : '')} open={s.name === skill || undefined}>
+              <summary class="skill-head">
+                <h2 class="skill-name">{s.label}</h2>
+                <span class="skill-short">{s.agents.length ? s.agents.length === 1 ? s.agents[0] : s.agents.length + ' agents' : 'Coordinator'}</span>
+              </summary>
+              <div class="skill-body">
+              <p class="meta">{s.name}</p>
               <p>{s.description}</p>
               <div class="skill-who">
                 {s.agents.length ? <>
@@ -303,10 +314,11 @@ export function SkillsScreen({ index, skill }: { index: VaultIndex; skill: strin
                 </> : <span class="meta">Run by the coordinator, the main conversation</span>}
               </div>
               {s.bringsIn && <p class="skill-brings"><span class="meta">Brings in </span>{s.bringsIn.replace(/\*\*/g, '')}</p>}
-            </li>
+              </div>
+            </details>
           ))}
           {!shown.length && <p class="empty">No skill matches.</p>}
-        </ul>
+        </div>
       )}
       <p class="hint">Skills saved in your Claude account (such as the steps for a new browser key) live in Claude, not the vault, so they do not show here.</p>
     </section>
