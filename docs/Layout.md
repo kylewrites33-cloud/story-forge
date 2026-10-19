@@ -26,7 +26,7 @@ src/lib/chat.ts          Chat with the team: conversations from chat jobs by thr
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
 src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
-src/lib/markdown.ts      small, escaping Markdown reader for the note view
+src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
@@ -48,6 +48,8 @@ src/ui/EditQueue.tsx     editorial notes and to-dos on one page
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/lib/team.ts          the AI team: agents, skills and who loads them, lessons, journals, history, numbers for the Team page
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
+src/lib/workflow.ts      the workflow from System/Workflow.md: stages, steps, who does each, Kyle's dated notes
+src/ui/Workflow.tsx      the Workflow page: each stage's table, filters, notes
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/lib/taste.ts         the Taste page's numbers: keeps and drops by kind, agent and round, top reasons

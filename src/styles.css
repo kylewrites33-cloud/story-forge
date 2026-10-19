@@ -947,9 +947,10 @@ a.button.team-talk { gap: 6px; width: 100%; }
   color: #fff; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
 }
 
+.team-screen { container-type: inline-size; }
 .team-table { margin: 0.6rem 0 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .team-row {
-  display: grid; grid-template-columns: minmax(12rem, 1.2fr) minmax(0, 2fr) 7.5rem 4rem 4rem 4.5rem 6.5rem; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2.2fr) 6rem 3.2rem 3.2rem 3.6rem auto; gap: 12px; align-items: center;
   padding: 12px 14px 12px 12px; border-top: 1px solid var(--line); border-left: 5px solid transparent;
 }
 .team-head { border-top: none; background: var(--hover); color: var(--muted); font-size: 0.85rem; font-weight: 650; padding-top: 10px; padding-bottom: 10px; }
@@ -957,20 +958,22 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .team-row .num { text-align: right; font-variant-numeric: tabular-nums; }
 .team-agent { display: flex; align-items: center; gap: 12px; min-width: 0; color: var(--text); text-decoration: none; min-height: 44px; }
 .team-agent-text { display: grid; min-width: 0; }
-.team-name { font-weight: 700; }
+.team-name { font-weight: 700; overflow-wrap: anywhere; }
 .team-agent .meta { font-size: 0.85rem; }
+.team-role { display: grid; gap: 4px; min-width: 0; }
 .team-specialty { font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.team-last { font-size: 0.95rem; }
+.team-used { font-size: 0.85rem; color: var(--muted); }
+.team-model { font-size: 0.95rem; }
 .team-talk-cell { justify-self: end; }
 a.button.talk { gap: 6px; padding: 6px 14px; }
-@media (max-width: 980px) {
-  .team-head, .team-row > .team-last, .team-row > .num { display: none; }
+.team-stats-line { display: none; font-size: 0.9rem; color: var(--muted); }
+@container (max-width: 860px) {
+  .team-head, .team-row > .num, .team-row > .team-model, .team-used { display: none; }
   .team-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
-  .team-specialty, .team-stats-line { grid-column: 1 / -1; }
+  .team-role, .team-stats-line { grid-column: 1 / -1; }
+  .team-stats-line { display: block; }
   .team-talk-cell { grid-column: 2; grid-row: 1; }
 }
-.team-stats-line { display: none; font-size: 0.9rem; color: var(--muted); }
-@media (max-width: 980px) { .team-stats-line { display: block; } }
 
 .member-head { display: flex; align-items: center; gap: 16px; padding-left: 14px; border-left: 5px solid var(--line); margin: 0.6rem 0 0.4rem; }
 .member-head > div { flex: 1 1 auto; min-width: 0; }
@@ -1566,3 +1569,62 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .matrix td.missing { background: var(--danger); background: color-mix(in srgb, var(--danger) 22%, transparent); box-shadow: inset 0 0 0 2px var(--danger); }
 .matrix-red-line { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .red-key { width: 14px; height: 14px; border-radius: 3px; border: 2px solid var(--danger); background: color-mix(in srgb, var(--danger) 22%, transparent); flex: none; }
+
+/* The Workflow page (Kyle, 2026-10-19): one table per stage on a wide page, one card per step on a narrow one. */
+.workflow-screen { container-type: inline-size; }
+.wf-intro { font-size: 1rem; }
+.wf-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 0.5rem; }
+.wf-toggle input { width: 22px; height: 22px; }
+.wf-stage { margin: 1.4rem 0; }
+.wf-stage h2, .wf-section h2 { font-family: var(--serif); margin-bottom: 0.3em; }
+.wf-stage .prose, .wf-section .prose { font-size: 1rem; }
+.wf-table { margin: 0.6rem 0 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.wf-row {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.5fr); gap: 14px;
+  padding: 12px 14px 12px 12px; border-top: 1px solid var(--line); border-left: 5px solid transparent; font-size: 0.95rem; line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.wf-head { border-top: none; background: var(--hover); color: var(--muted); font-size: 0.85rem; font-weight: 650; padding-top: 10px; padding-bottom: 10px; }
+.wf-row code { font-size: 0.85em; }
+.wf-step { font-weight: 600; }
+.wf-num {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.8em; height: 1.8em; margin-right: 6px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums;
+}
+.wf-pill { display: inline-block; margin-top: 6px; }
+.wf-several .wf-minds { color: var(--accent); font-weight: 600; }
+.wf-agents { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.wf-agents a { display: inline-flex; min-width: 32px; min-height: 32px; align-items: center; }
+.wf-label { display: none; }
+.wf-note-btn { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 12px; }
+.wf-add { display: inline-flex; align-items: center; gap: 8px; }
+.wf-here { background: var(--accent-soft); }
+.wf-note-row { padding: 0 14px 12px 17px; }
+.wf-note-box { margin: 0.4rem 0 1rem; }
+.wf-note-box textarea { width: 100%; font: inherit; font-size: 1rem; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
+.wf-note-box .buttons { margin-top: 8px; }
+@container (max-width: 1000px) {
+  .wf-row { gap: 10px; font-size: 0.9rem; padding: 10px 10px 10px 9px; }
+  .wf-step { font-size: 0.95rem; }
+}
+@container (max-width: 600px) {
+  .wf-head { display: none; }
+  .wf-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .wf-label { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; }
+  .wf-step { font-size: 1.05rem; }
+}
+
+/* Tables in notes: scroll inside their own box, never the page. */
+.md-table { max-width: 100%; overflow-x: auto; margin: 1em 0; border: 1px solid var(--line); border-radius: 10px; }
+.md-table table { border-collapse: collapse; width: 100%; font-size: 0.92rem; line-height: 1.45; }
+.md-table th, .md-table td { padding: 8px 10px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+.md-table th { background: var(--hover); color: var(--muted); font-weight: 650; border-top: none; }
+
+/* The Team page's member details. */
+.member-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 1rem 0; }
+.member-facts dt { color: var(--muted); font-weight: 600; }
+.member-facts dd { margin: 0; }
+.member-steps { padding-left: 0; list-style: none; }
+.member-steps li { padding: 8px 0; border-top: 1px solid var(--line); }
+.member-steps a { font-weight: 600; }
+@media (max-width: 600px) { .member-facts { grid-template-columns: minmax(0, 1fr); gap: 2px; } .member-facts dd { margin-bottom: 8px; } }

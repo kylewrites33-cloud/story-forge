@@ -1,5 +1,5 @@
 // A small Markdown reader for the read-only note view: headings, paragraphs, lists, quotes and Obsidian callouts,
-// rules, code, emphasis and wiki links. Everything is escaped before any tag is added, so note text cannot inject HTML.
+// tables, rules, code, emphasis and wiki links. Everything is escaped before any tag is added, so note text cannot inject HTML.
 import { linkName } from './links.ts';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -18,6 +18,16 @@ export function inline(text: string): string {
     .replace(/(^|[^_\w])_([^_\s][^_]*)_(?!\w)/g, '$1<em>$2</em>')
     .replace(/==([^=]+)==/g, '<mark>$1</mark>');
   return s.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => '<code>' + codes[Number(i)] + '</code>');
+}
+
+/** A table starts with a row of cells and a line of dashes under it: | a | b | then |---|---|. */
+export function isTableStart(lines: string[], i: number): boolean {
+  return /^\s*\|.*\|\s*$/.test(lines[i] || '') && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(lines[i + 1] || '');
+}
+
+/** The cells of one table row, trimmed, without the outer pipes. */
+export function cells(line: string): string[] {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 }
 
 export function render(md: string): string {
@@ -57,6 +67,15 @@ export function render(md: string): string {
       } else {
         out.push('<blockquote>' + render(buf.join('\n')) + '</blockquote>');
       }
+      continue;
+    }
+    if (isTableStart(lines, i)) {
+      const head = cells(lines[i]);
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push('<div class="md-table"><table><thead><tr>' + head.map((c) => '<th>' + inline(c) + '</th>').join('') + '</tr></thead><tbody>'
+        + rows.map((r) => '<tr>' + head.map((_h, k) => '<td>' + inline(r[k] || '') + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>');
       continue;
     }
     const list = line.match(/^\s*([-*+]|\d+[.)])\s+/);

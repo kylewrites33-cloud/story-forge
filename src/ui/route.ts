@@ -22,7 +22,9 @@ export type Route =
   | { name: 'skills'; skill: string }
   | { name: 'history'; who: string }
   /** Kyle's recipes, for every book. */
-  | { name: 'recipes' };
+  | { name: 'recipes' }
+  /** The workflow, every step of a book and who does it; step 0 is the top. */
+  | { name: 'workflow'; step: number };
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
@@ -43,6 +45,7 @@ export function parseHash(hash: string): Route {
   if (head === 'history') return { name: 'history', who: tail };
   if (head === 'todo') return { name: 'todo' };
   if (head === 'recipes') return { name: 'recipes' };
+  if (head === 'workflow') return { name: 'workflow', step: Number(tail) || 0 };
   if (head === 'jobs') return { name: 'jobs' };
   if (head === 'chat') return { name: 'chat', thread: decodeURIComponent(rest[0] || ''), book: decodeURIComponent(rest.slice(1).join('/')) };
   return { name: 'home' };
@@ -67,7 +70,8 @@ export const href = {
   team: (slug = '') => '#/team' + (slug ? '/' + encodeURIComponent(slug) : ''),
   skills: (skill = '') => '#/skills' + (skill ? '/' + encodeURIComponent(skill) : ''),
   history: (who = '') => '#/history' + (who ? '/' + encodeURIComponent(who) : ''),
-  recipes: () => '#/recipes'
+  recipes: () => '#/recipes',
+  workflow: (step = 0) => '#/workflow' + (step ? '/' + step : '')
 };
 
 export function useRoute(): Route {

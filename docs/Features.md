@@ -93,6 +93,20 @@ add a dated line here when you add or change one.
   the agent), kept share, lessons (MEMORY.md) and Talk (a new chat that starts with the agent's name). An agent's page
   (`#/team/<name>`) adds its skills, lessons and what it has done. Session history (`#/history`) is every agent's
   Journal.md entries, the jobs it ran and the vault's last 100 saves with an `Agent:` line.
+  Team page update (Kyle, 2026-10-19: "update the agents list in the app, including their roles, the model, the skills
+  they possess"): the table's columns are Agent, Role (the agent file's `role:` line, else its specialty), Model ("Your
+  pick" for `inherit`, with the job model from Config; otherwise Opus 5.5, Sonnet 5.5), Skills, Steps (workflow steps
+  whose Who names the agent, linking to the Workflow page) and Kept, with last used, ideas and lessons under the role.
+  Narrower than 860 px of page (iPad, or desktop beside the team chat) each agent is a card. An agent's page adds Role,
+  Model, Never sees (`never_sees:`), Can (its tools in plain words), Called in when (its description) and "In the
+  workflow", each step linking to `#/workflow/<n>`.
+  The Workflow (Kyle, 2026-10-19: "put the slightly modified (workflow 1.1) in the app so it shows all the tables. I want
+  to always be able to assess and judge this workflow"): `#/workflow`, in the sidebar's foot and the icon strip, reads
+  the vault's `System/Workflow.md` (synced with the team's files) and shows each stage's table: Step, Who (agents as
+  linked faces), Minds (several minds marked), Needs, Why, with filters for one agent's steps or only the steps with
+  several minds. Below 600 px of page each step is a card. Add a note on the workflow, or Note on a step, saves a dated
+  line under "## Kyle's notes" at the end of the note (`addWorkflowNote`), so the next version answers it; the team chat
+  beside the page knows it is on the workflow. Note views now show Markdown tables too.
   Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` is the writing screen with
   its page area showing the scene's chapter by its beats (chapter list, right column and top bar stay; the top bar's Beats
   button becomes Page to switch back, Kyle 2026-10-18), each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under
