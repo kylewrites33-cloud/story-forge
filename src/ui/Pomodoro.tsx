@@ -157,12 +157,12 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
           {s.phase === 'work' && <p class="hint">{num(words)} {words === 1 ? 'word' : 'words'} so far in this one.</p>}
           {s.phase === 'break' && s.justDone && <p class="hint">That one: {num(s.justDone.words)} {s.justDone.words === 1 ? 'word' : 'words'}.</p>}
           <div class="pomodoro-actions">
-            {s.phase === 'idle' && <button type="button" class="primary" onClick={() => act((c, t) => startWork(c, t))}>Start {s.workMin} minutes</button>}
+            {s.phase === 'idle' && <button type="button" class="primary" onClick={() => { act((c, t) => startWork(c, t)); setOpen(false); }}>Start {s.workMin} minutes</button>}
             {s.phase === 'work' && (paused
-              ? <button type="button" class="primary" onClick={() => act(resume)}>Carry on</button>
+              ? <button type="button" class="primary" onClick={() => { act(resume); setOpen(false); }}>Carry on</button>
               : <button type="button" onClick={() => act(pause)}>Pause</button>)}
             {s.phase === 'work' && <button type="button" onClick={stopWork} title="Stops now and keeps the minutes and words so far">Stop</button>}
-            {s.phase === 'break' && <button type="button" class="primary" onClick={() => act((c, t) => startWork(c, t))}>Skip the break</button>}
+            {s.phase === 'break' && <button type="button" class="primary" onClick={() => { act((c, t) => startWork(c, t)); setOpen(false); }}>Skip the break</button>}
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
           {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
