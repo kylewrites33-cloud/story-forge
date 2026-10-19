@@ -669,7 +669,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       <header class="writer-bar">
         <button type="button" class="primary" onClick={done}>Done</button>
         {book && (
-          <button type="button" class="bar-button labelled" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
+          <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
             <Icon name="list" /><span class="bar-label">Chapters</span>
           </button>
         )}
@@ -681,34 +681,34 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>}
         {group && group.scenes.length > 1 && (
-          <button type="button" class="bar-button compact labelled" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
-            <Icon name="pages" /><span class="bar-label">Whole chapter</span>
+          <button type="button" class="bar-button compact" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
+            <Icon name="page" /><span class="bar-label">Whole chapter</span>
           </button>
         )}
         {group && group.num != null && (beatsMode
-          ? <button type="button" class="bar-button compact labelled" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
+          ? <button type="button" class="bar-button compact" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
               <Icon name="page" /><span class="bar-label">Page</span>
             </button>
-          : <button type="button" class="bar-button compact labelled" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
+          : <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
               <Icon name="beats" /><span class="bar-label">Beats</span>
             </button>)}
         {book && (
-          <button type="button" class="bar-button compact labelled" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
+          <button type="button" class="bar-button compact" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
             aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
             <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
           </button>
         )}
         {timer && timer('bar')}
-        <button type="button" class="bar-button compact labelled" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
+        <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
         </button>
-        <button type="button" class="bar-button compact labelled" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
+        <button type="button" class="bar-button compact" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
           aria-label="Chat with the team" title="Chat with the team beside the page">
           <Icon name="chat" /><span class="bar-label">Chat</span>{convo && convo.pending && <span class="job-dot" aria-hidden="true" />}
         </button>
-        <button type="button" class="bar-button labelled" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
+        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
           title={right ? 'Hide the right-hand column' : 'Show the right-hand column: chat, plan, card and more'}>
-          <Icon name="panel" /><span class="bar-label">Panel</span>
+          <Icon name="panel" />
         </button>
       </header>
       <div class="writer-cols">

@@ -131,10 +131,10 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
 
   return (
     <div ref={box} class={'pomodoro pomodoro-' + variant + (s.phase !== 'idle' ? ' is-' + s.phase : '') + (paused ? ' is-paused' : '')}>
-      <button type="button" class={variant === 'float' ? 'pomodoro-chip' : 'bar-button pomodoro-chip' + (variant === 'bar' ? ' labelled' : '')} aria-expanded={open} aria-label={label} title={label}
+      <button type="button" class={variant === 'float' ? 'pomodoro-chip' : 'bar-button pomodoro-chip'} aria-expanded={open} aria-label={label} title={label}
         onClick={() => setOpen(!open)}>
         <Icon name="timer" size={variant === 'float' ? 22 : 20} />
-        {chipText ? <span class="pomodoro-time">{chipText}</span> : variant === 'bar' && <span class="bar-label">Timer</span>}
+        {chipText && <span class="pomodoro-time">{chipText}</span>}
       </button>
       {open && (
         <div class="pomodoro-panel" role="dialog" aria-label="Pomodoro timer">
