@@ -1,4 +1,4 @@
-// The Pomodoro timer: work for 25 (or 50) minutes, rest for 5 (or 10). The timer lives on this device (localStorage), so
+// The Pomodoro timer: work for 25 minutes, rest for 5 (Kyle, 2026-10-19: only these). The timer lives on this device (localStorage), so
 // it keeps time across screens and a reload. Each finished work Pomodoro is written to the vault's Writing Log, one
 // `writing-day` note per day (`Writing Log/YYYY-MM-DD.md`), with the words written in it: the scenes' word counts at the
 // end minus where they stood when Kyle first typed in them during that Pomodoro. A Pomodoro stopped early is not counted.
@@ -36,14 +36,14 @@ export interface PomodoroRecord {
   scenes: string[];
 }
 
-export const WORK_CHOICES = [25, 50];
-export const BREAK_CHOICES = [5, 10];
+export const WORK_MIN = 25;
+export const BREAK_MIN = 5;
 export const LOG_FOLDER = 'Writing Log';
 
 const STATE_KEY = 'sf-pomodoro';
 const logKey = (sourceKey: string) => 'sf-pomodoro-log:' + sourceKey;
 
-export function idleState(workMin = 25, breakMin = 5): TimerState {
+export function idleState(workMin = WORK_MIN, breakMin = BREAK_MIN): TimerState {
   return { phase: 'idle', endsAt: null, pausedLeft: null, startedAt: null, workMin, breakMin, base: {}, latest: {}, ids: {}, justDone: null };
 }
 
@@ -52,7 +52,9 @@ export function loadTimer(): TimerState {
     const raw = localStorage.getItem(STATE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as TimerState;
-      if (s && (s.phase === 'idle' || s.phase === 'work' || s.phase === 'break')) return { ...idleState(), ...s };
+      // Older saves may hold 50 or 10; a running Pomodoro keeps its length, the next one is 25 and 5.
+      if (s && (s.phase === 'work' || s.phase === 'break')) return { ...idleState(), ...s, breakMin: BREAK_MIN };
+      if (s && s.phase === 'idle') return { ...idleState(), ...s, workMin: WORK_MIN, breakMin: BREAK_MIN };
     }
   } catch { /* a private window or cleared storage: start idle */ }
   return idleState();
@@ -84,7 +86,7 @@ export function resume(s: TimerState, now: number): TimerState {
 
 /** Stop without counting: back to idle, keeping the chosen lengths. */
 export function stop(s: TimerState): TimerState {
-  return idleState(s.workMin, s.breakMin);
+  return idleState();
 }
 
 /** Milliseconds left in the phase. */
@@ -139,7 +141,7 @@ export function advance(s: TimerState, now: number): { state: TimerState; record
     const record: PomodoroRecord = { date: ymd(start), time: hm(start), minutes: s.workMin, words, scenes };
     return { state: { ...startBreak(s, s.endsAt), justDone: { words, at: s.endsAt } }, record };
   }
-  return { state: { ...idleState(s.workMin, s.breakMin), justDone: s.justDone }, record: null };
+  return { state: { ...idleState(), justDone: s.justDone }, record: null };
 }
 
 // ------------------------------------------------------------------ the log
