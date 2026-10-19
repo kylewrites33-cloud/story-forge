@@ -2123,17 +2123,17 @@
         },
         "minutes": {
           "type": "integer",
-          "description": "Minutes of finished work Pomodoros."
+          "description": "Minutes of work Pomodoros, including ones stopped early."
         },
         "words": {
           "type": "integer",
-          "description": "Words written during them, after deletions (can be below zero on a cutting day)."
+          "description": "Words written during them, stopped ones included, after deletions (can be below zero on a cutting day)."
         },
         "updated": {
           "type": "datetime"
         }
       },
-      "body": "## Pomodoros: one line per finished Pomodoro, `- HH:MM, N minutes, W words (S-012, S-013)`, oldest first. The app appends lines and never rewrites earlier ones."
+      "body": "## Pomodoros: one line per Pomodoro, `- HH:MM, N minutes, W words (S-012, S-013)`, with `(stopped early)` after the minutes for one stopped before its time (it adds minutes and words, not to pomodoros), oldest first. The app appends lines and never rewrites earlier ones."
     },
     "style-guide": {
       "description": "The book's voice rules. Overrides the default prose rules.",

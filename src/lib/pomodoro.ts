@@ -1,7 +1,8 @@
 // The Pomodoro timer: work for 25 minutes, rest for 5 (Kyle, 2026-10-19: only these). The timer lives on this device (localStorage), so
 // it keeps time across screens and a reload. Each finished work Pomodoro is written to the vault's Writing Log, one
 // `writing-day` note per day (`Writing Log/YYYY-MM-DD.md`), with the words written in it: the scenes' word counts at the
-// end minus where they stood when Kyle first typed in them during that Pomodoro. A Pomodoro stopped early is not counted.
+// end minus where they stood when Kyle first typed in them during that Pomodoro. A Pomodoro stopped early keeps its minutes
+// and words in the log but does not count as a Pomodoro (Kyle, 2026-10-19).
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
@@ -34,6 +35,8 @@ export interface PomodoroRecord {
   minutes: number;
   words: number;
   scenes: string[];
+  /** Stopped before its time ran out: its minutes and words count, it is not a whole Pomodoro. */
+  stopped?: boolean;
 }
 
 export const WORK_MIN = 25;
@@ -84,9 +87,24 @@ export function resume(s: TimerState, now: number): TimerState {
   return { ...s, endsAt: now + s.pausedLeft, pausedLeft: null };
 }
 
-/** Stop without counting: back to idle, keeping the chosen lengths. */
+/** Stop: back to idle. */
 export function stop(s: TimerState): TimerState {
   return idleState();
+}
+
+/** What a work Pomodoro stopped early leaves in the log: the minutes worked (pauses left out) and its words, or null
+ *  when less than a minute ran and nothing was written. */
+export function stoppedRecord(s: TimerState, now: number): PomodoroRecord | null {
+  if (s.phase !== 'work' || s.startedAt == null) return null;
+  const minutes = Math.round(Math.max(0, s.workMin * 60000 - msLeft(s, now)) / 60000);
+  const words = wordsSoFar(s);
+  if (minutes < 1 && !words) return null;
+  const start = new Date(s.startedAt);
+  return { date: ymd(start), time: hm(start), minutes, words, scenes: sceneIds(s), stopped: true };
+}
+
+function sceneIds(s: TimerState): string[] {
+  return Object.keys(s.latest).map((p) => s.ids[p]).filter((x, i, a) => Boolean(x) && a.indexOf(x) === i).sort();
 }
 
 /** Milliseconds left in the phase. */
@@ -137,7 +155,7 @@ export function advance(s: TimerState, now: number): { state: TimerState; record
   if (s.phase === 'work') {
     const start = new Date(s.startedAt ?? s.endsAt - s.workMin * 60000);
     const words = wordsSoFar(s);
-    const scenes = Object.keys(s.latest).map((p) => s.ids[p]).filter((x, i, a) => Boolean(x) && a.indexOf(x) === i).sort();
+    const scenes = sceneIds(s);
     const record: PomodoroRecord = { date: ymd(start), time: hm(start), minutes: s.workMin, words, scenes };
     return { state: { ...startBreak(s, s.endsAt), justDone: { words, at: s.endsAt } }, record };
   }
@@ -158,20 +176,21 @@ export function logPath(date: string): string {
   return LOG_FOLDER + '/' + date + '.md';
 }
 
-/** One line of the day's ## Pomodoros list: "- 09:30, 25 minutes, 412 words (S-012, S-013)". */
+/** One line of the day's ## Pomodoros list: "- 09:30, 25 minutes, 412 words (S-012, S-013)", with "(stopped early)"
+ *  after the minutes for one stopped before its time. */
 export function recordLine(r: PomodoroRecord): string {
-  return '- ' + r.time + ', ' + r.minutes + ' minutes, ' + r.words + (r.words === 1 ? ' word' : ' words') + (r.scenes.length ? ' (' + r.scenes.join(', ') + ')' : '');
+  return '- ' + r.time + ', ' + r.minutes + (r.minutes === 1 ? ' minute' : ' minutes') + (r.stopped ? ' (stopped early)' : '') + ', ' + r.words + (r.words === 1 ? ' word' : ' words') + (r.scenes.length ? ' (' + r.scenes.join(', ') + ')' : '');
 }
 
 /** The day's note with one more Pomodoro: the counts go up, the line goes at the end of ## Pomodoros, nothing else changes. */
 export function addToDay(text: string, r: PomodoroRecord, now: Date): string {
   if (!text.trim()) {
-    const data = { type: 'writing-day', date: r.date, pomodoros: 1, minutes: r.minutes, words: r.words, updated: now.toISOString().slice(0, 19) + 'Z' };
+    const data = { type: 'writing-day', date: r.date, pomodoros: r.stopped ? 0 : 1, minutes: r.minutes, words: r.words, updated: now.toISOString().slice(0, 19) + 'Z' };
     return Frontmatter.join(data, '## Pomodoros\n' + recordLine(r) + '\n');
   }
   const p = Frontmatter.parse(text);
   const data = { ...((p.data || {}) as Record<string, unknown>) };
-  data.pomodoros = (toNumber(data.pomodoros) || 0) + 1;
+  data.pomodoros = (toNumber(data.pomodoros) || 0) + (r.stopped ? 0 : 1);
   data.minutes = (toNumber(data.minutes) || 0) + r.minutes;
   data.words = (toNumber(data.words) || 0) + r.words;
   data.updated = now.toISOString().slice(0, 19) + 'Z';
@@ -204,7 +223,7 @@ export async function flushLog(source: VaultSource, now: Date): Promise<NoteReco
       const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
       const text = addToDay(cur.text, r, now);
       try {
-        const sha = await source.write(path, text, cur.sha, 'log: Pomodoro at ' + r.time + ' on ' + r.date + ', ' + r.words + ' words\n\nKept by the Story Forge app\'s timer.');
+        const sha = await source.write(path, text, cur.sha, 'log: ' + (r.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + r.time + ' on ' + r.date + ', ' + r.words + ' words\n\nKept by the Story Forge app\'s timer.');
         saved.push(makeNote(path, sha, text));
         break;
       } catch (e) {
@@ -219,12 +238,13 @@ export async function flushLog(source: VaultSource, now: Date): Promise<NoteReco
   return saved;
 }
 
-/** Today's Pomodoros and words: the day's note in the vault plus the ones still waiting on this device. */
-export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date): { pomodoros: number; words: number } {
+/** Today's Pomodoros, minutes and words: the day's note in the vault plus the ones still waiting on this device. */
+export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date): { pomodoros: number; minutes: number; words: number } {
   const date = ymd(now);
   const n = index ? index.notes[logPath(date)] : undefined;
   let pomodoros = n ? toNumber(n.data.pomodoros) || 0 : 0;
+  let minutes = n ? toNumber(n.data.minutes) || 0 : 0;
   let words = n ? toNumber(n.data.words) || 0 : 0;
-  waiting.filter((r) => r.date === date).forEach((r) => { pomodoros++; words += r.words; });
-  return { pomodoros, words };
+  waiting.filter((r) => r.date === date).forEach((r) => { if (!r.stopped) pomodoros++; minutes += r.minutes; words += r.words; });
+  return { pomodoros, minutes, words };
 }
