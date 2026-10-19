@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   advance, clock, flushLog, loadLog, loadTimer, msLeft, pause, resume, saveLog, saveTimer,
-  startWork, stop, stoppedRecord, today, wordsSoFar, type TimerState
+  pomodoroCount, startWork, stop, stoppedRecord, today, wordsSoFar, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
@@ -135,10 +135,11 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   const left = msLeft(s, now);
   const paused = s.pausedLeft != null;
   const day = today(index, waiting, new Date(now));
+  const done = pomodoroCount(day.minutes);
   const words = s.phase === 'work' ? wordsSoFar(s) : 0;
-  const chipText = s.phase === 'work' ? clock(left) : s.phase === 'break' ? 'Break ' + clock(left) : day.pomodoros ? String(day.pomodoros) : '';
+  const chipText = s.phase === 'work' ? clock(left) : s.phase === 'break' ? 'Break ' + clock(left) : day.minutes ? done : '';
   const label = s.phase === 'work' ? 'Pomodoro: ' + clock(left) + ' left' + (paused ? ', paused' : '')
-    : s.phase === 'break' ? 'Break: ' + clock(left) + ' left' : 'Pomodoro timer. ' + day.pomodoros + ' today.';
+    : s.phase === 'break' ? 'Break: ' + clock(left) + ' left' : 'Pomodoro timer. ' + done + ' today.';
 
   return (
     <div ref={box} class={'pomodoro pomodoro-' + variant + (s.phase !== 'idle' ? ' is-' + s.phase : '') + (paused ? ' is-paused' : '')}>
@@ -166,9 +167,9 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
           {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
-          <p class="pomodoro-today"><strong>Today:</strong> {day.pomodoros} {day.pomodoros === 1 ? 'Pomodoro' : 'Pomodoros'}, {num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}, {num(day.words)} words.</p>
+          <p class="pomodoro-today"><strong>Today:</strong> {done} {done === '1' ? 'Pomodoro' : 'Pomodoros'} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}), {num(day.words)} words.</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
-          <p class="hint">A Pomodoro counts when its time runs out. If you stop early, its minutes and words still go in today's log.</p>
+          <p class="hint">If you stop early, the minutes still count: 15 minutes is 0.6 of a Pomodoro.</p>
           {error && <p class="error">{error}</p>}
         </div>
       )}

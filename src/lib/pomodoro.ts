@@ -238,6 +238,12 @@ export async function flushLog(source: VaultSource, now: Date): Promise<NoteReco
   return saved;
 }
 
+/** Minutes of writing as Pomodoros, to two places: 40 minutes is "1.6", 44 is "1.76". Stopped ones add up this way
+ *  (Kyle, 2026-10-19: "my goal is to amount to 5 pomodoro sessions worth of writing"). */
+export function pomodoroCount(minutes: number): string {
+  return String(Math.round((minutes / WORK_MIN) * 100) / 100);
+}
+
 /** Today's Pomodoros, minutes and words: the day's note in the vault plus the ones still waiting on this device. */
 export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date): { pomodoros: number; minutes: number; words: number } {
   const date = ymd(now);

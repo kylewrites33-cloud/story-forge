@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  addToDay, advance, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, stop, stoppedRecord, today, wordsSoFar
+  addToDay, advance, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
 } from '../src/lib/pomodoro.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { VaultIndex } from '../src/lib/types.ts';
@@ -73,6 +73,10 @@ test('a Pomodoro stopped early keeps its minutes and words but is not a whole Po
   assert.equal(n.data.words, 130);
   const index = { notes: {} } as unknown as VaultIndex;
   assert.deepEqual(today(index, [r!, full], new Date(T0)), { pomodoros: 1, minutes: 40, words: 130 });
+  assert.equal(pomodoroCount(40), '1.6');
+  assert.equal(pomodoroCount(44), '1.76');
+  assert.equal(pomodoroCount(125), '5');
+  assert.equal(pomodoroCount(0), '0');
 });
 
 test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\'s commits', async () => {
