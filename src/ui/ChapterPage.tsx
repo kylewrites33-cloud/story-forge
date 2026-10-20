@@ -4,6 +4,7 @@
 import type { ComponentChildren } from 'preact';
 import { sceneHeader } from '../lib/format.ts';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useLockedPage } from './viewport.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import { bodyWords, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
@@ -37,6 +38,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   /** The book's settings for Check (its Style Guide and the vault's Config). */
   checkOpts?: CheckOptions;
 }) {
+  useLockedPage();
   const canSave = Boolean(source.readFresh && source.write);
   const [sections, setSections] = useState<Section[]>(() => {
     const drafts = loadDrafts(source.key);
