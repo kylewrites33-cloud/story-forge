@@ -42,6 +42,17 @@ test('a to-do added beside the page goes into the book\'s Tasks folder', async (
   assert.equal(n.data.generated, undefined);
   assert.match(src.writes[0].message, /^tasks: add T-005/);
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
+  assert.equal(n.data.title, 'Mara: tin or brass lantern?');
+});
+
+test('a long to-do keeps every word; only its file name is shortened', async () => {
+  const src = new MemSource();
+  const long = 'find a way to communicate one more tension point of reed and poppys relationship here. make it a time for reed\nto clarify hes not intersted in poppy. first signal that grey may have feelings for her?';
+  const n = await createTodo(src, BOOK, { title: long, chapter: 1, scene: '' }, new Date('2026-10-20T09:00:00'));
+  assert.equal(n.data.title, long.replace('\n', ' '));
+  const name = n.path.slice(n.path.lastIndexOf('/') + 1);
+  assert.ok(name.length <= 'T-001 '.length + 90 + '.md'.length);
+  assert.match(name, /^T-001 find a way/);
 });
 
 test('the team\'s to-do jobs carry their steps', () => {

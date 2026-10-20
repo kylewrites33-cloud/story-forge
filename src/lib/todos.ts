@@ -63,18 +63,25 @@ export function todoText(id: string, t: NewTodo, now: Date): string {
   return Frontmatter.join(data, '\nKyle added this beside the page in the Story Forge app.\n');
 }
 
+/** A to-do's title as Kyle typed it, on one line, at any length. */
+export function fullTitle(s: string): string {
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
 /** Add a to-do to a book's Tasks folder as Kyle's commit. */
 export async function createTodo(source: VaultSource, bookFolder: string, t: NewTodo, now: Date): Promise<NoteRecord> {
   if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const title = safeTitle(t.title);
-  if (!title) throw new Error('Write the to-do first.');
+  // The note keeps every word Kyle wrote; only the file name is shortened.
+  const title = fullTitle(t.title);
+  const name = safeTitle(title);
+  if (!name) throw new Error('Write the to-do first.');
   for (let attempt = 0; ; attempt++) {
     const { files } = await source.tree();
     const id = nextBookTaskId(files, bookFolder);
-    const path = bookFolder + '/Tasks/' + id + ' ' + title + '.md';
+    const path = bookFolder + '/Tasks/' + id + ' ' + name + '.md';
     const text = todoText(id, { ...t, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + title + '\n\nAdded beside the page in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded beside the page in the Story Forge app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
