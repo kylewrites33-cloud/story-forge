@@ -10,7 +10,7 @@ import {
 } from '../lib/beats.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { matcher, type CodexEntry } from '../lib/codex.ts';
-import { bodyWords, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, type Draft } from '../lib/drafts.ts';
+import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, saveDraft, type Draft } from '../lib/drafts.ts';
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { jobAsk, defaultJobTitle, type OnJob } from '../lib/jobs.ts';
@@ -23,6 +23,8 @@ import { href } from './route.ts';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
+// While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
+const TYPING_SAVE_MS = 5 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
 
 interface State {
@@ -148,6 +150,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   const [focused, setFocused] = useState('');
   const commands = useRef<Record<string, { current: EditorCommands | null }>>({});
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingSince = useRef<number | null>(null);
   const saving = useRef(false);
   const look = loadLook();
   const [ownOpts] = useState<StyleOptions>(() => ({ names: look.names === 'on' && codex.length ? matcher(codex) : null }));
@@ -203,15 +206,17 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     setState('saving');
     let ok = true;
     const clashes: string[] = [];
+    const mergedIn: string[] = [];
     for (const d of todo) {
       try {
         const r = await saveDraft(source, d, new Date());
         onSaved(r.note);
         if (r.clash) clashes.push(String(r.note.data.id || r.note.data.title || d.path));
+        else if (r.merged) mergedIn.push(String(r.note.data.id || r.note.data.title || d.path));
         const now = ref.current;
         const isBeats = d.path === now.beatsDraft.path;
         const latest = isBeats ? now.beatsDraft : now.scenes[d.path];
-        const next: Draft = { ...latest, baseSha: r.note.sha, baseBody: d.body, pending: false, error: undefined, create: undefined };
+        const next: Draft = { ...latest, baseSha: r.merged ? '' : r.note.sha, baseBody: d.body, pending: false, error: undefined, create: undefined };
         if (closing && !isUnsaved(next)) putDraft(source.key, d.path, null);
         else putDraft(source.key, d.path, next);
         const s2 = ref.current;
@@ -228,7 +233,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     saving.current = false;
     if (ok) {
       setState('saved');
-      setMessage(clashes.length ? clashes.join(', ') + ' had also changed somewhere else. Your version is saved; the other one is kept as a copy.' : null);
+      setMessage(mergeNotice(mergedIn, clashes));
     }
     return ok;
   }, [source, canSave, onSaved]);
@@ -262,7 +267,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     setSt(ref.current);
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
-    quiet.current = setTimeout(() => { saveAll(false); }, QUIET_SAVE_MS);
+    quiet.current = setTimeout(() => { typingSince.current = null; saveAll(false); }, QUIET_SAVE_MS);
+    if (typingSince.current == null) typingSince.current = Date.now();
+    else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; saveAll(false); }
   };
 
   const edit = (key: string, change: Partial<BeatView>, structural = false) => {

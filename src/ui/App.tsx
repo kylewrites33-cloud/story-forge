@@ -19,7 +19,7 @@ import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource }
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups } from '../lib/board.ts';
 import { Icon } from './Icon.tsx';
-import { flushDrafts, pendingCount } from '../lib/drafts.ts';
+import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
@@ -78,6 +78,10 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What happened when writing that waited on this device met changes made elsewhere. It stays until Kyle closes it,
+  // even across a reload, because it may come while he is on a writing screen.
+  const [notice, setNoticeState] = useState<string | null>(() => loadNotice(source.key));
+  const setNotice = useCallback((n: string | null) => { setNoticeState(n); saveNotice(source.key, n); }, [source]);
   const [online, setOnline] = useState(navigator.onLine);
   const [, tick] = useState(0);
   const snapRef = useRef<Snapshot | null>(null);
@@ -136,6 +140,7 @@ export function App() {
     try {
       const written = await flushDrafts(source, source.key, new Date());
       await foldNotes(written.saved);
+      if (written.notice) setNotice(written.notice);
       const saveError = (await runFlush()) || written.error;
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       setSnap(next);
@@ -146,7 +151,7 @@ export function App() {
     } finally {
       setSyncing(false);
     }
-  }, [source, runFlush, foldNotes]);
+  }, [source, runFlush, foldNotes, setNotice]);
 
   /** Add a scene to a book, sync so every screen has it, and open it for writing. */
   const onAddScene = useCallback(async (book: BookEntry, chapter: number | null, chapterTitle: string, title: string): Promise<string | null> => {
@@ -689,8 +694,9 @@ export function App() {
   return (
     <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
-      {(error || (!online && (queue.length > 0 || drafts > 0))) && (
+      {(error || notice || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">
+          {notice && <p class="notice"><span>{notice}</span> <button type="button" onClick={() => setNotice(null)}>OK</button></p>}
           {!online && waitingText && <p class="waiting">{waitingText}</p>}
           {error && <p class="error">{error}</p>}
         </div>

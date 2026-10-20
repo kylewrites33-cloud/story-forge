@@ -1,11 +1,14 @@
 // Writing in the app: a scene's prose as Kyle is typing it. Every change is kept on this device at once (localStorage),
 // so nothing is lost offline or if the browser closes, and goes to the vault as one commit with Kyle's token, so it counts
 // as his. Only the body and the computed word count change; every property line stays as it was.
-// When the scene changed somewhere else since Kyle opened it (Obsidian, an agent), Kyle's version wins and the other
-// version is saved first as a snapshot, the way the vault's clash rule says.
+// When the scene changed somewhere else since Kyle opened it (another device, an agent), the two are merged line by line,
+// as the open page does: lines only the other side changed come in, lines Kyle changed stay his. Only where both changed
+// the same lines does Kyle's version win, with the other version saved first as a snapshot, the way the vault's clash
+// rule says (Kyle, 2026-10-20: words written offline must sync back without losing either side).
 import { Frontmatter } from './frontmatter.js';
 import { Prose, wordCount } from './prose.js';
 import { makeNote } from './vault-index.ts';
+import { merge3 } from './live.ts';
 import type { NoteRecord, VaultSource } from './types.ts';
 
 export interface Draft {
@@ -188,11 +191,14 @@ export async function saveSnapshot(source: VaultSource, note: { path: string; da
 
 export interface SaveResult {
   note: NoteRecord;
-  /** Where the other version went, when the scene had changed elsewhere. */
+  /** Where the other version went, when the scene had changed elsewhere on the same lines Kyle changed. */
   clash: string | null;
+  /** Lines from the other version came into the saved scene, so it holds more than the draft did. */
+  merged: boolean;
 }
 
-/** Save a draft to the vault: re-read the scene, keep any other version as a snapshot, write Kyle's body. */
+/** Save a draft to the vault: re-read the scene, merge in what changed elsewhere, keep a clashing version as a
+ * snapshot, write Kyle's body. */
 export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promise<SaveResult> {
   if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
   let clash: string | null = null;
@@ -201,7 +207,7 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
     const data = makeNote(d.path, '', text).data;
     try {
       const sha = await source.write(d.path, text, '', verbFor(String(data.type || ''), true) + (data.title || d.path) + '\n\nWritten in the Story Forge app.');
-      return { note: makeNote(d.path, sha, text), clash };
+      return { note: makeNote(d.path, sha, text), clash, merged: false };
     } catch (e) {
       // Made somewhere else a moment ago: save over it the usual way, keeping the other version as a copy.
       if (!(e as { conflict?: boolean }).conflict) throw e;
@@ -211,23 +217,27 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
     const { text, sha } = await source.readFresh(d.path);
     const cur = makeNote(d.path, sha, text);
     if (cur.error) throw new Error('This scene\'s properties cannot be read (' + cur.error + '). Fix it in Obsidian, then try again.');
-    if (!clash && cur.body !== d.baseBody && cur.body !== d.body) {
-      clash = await saveSnapshot(source, cur, cur.body, 'changed elsewhere', now);
+    let body = d.body;
+    if (cur.body !== d.baseBody && cur.body !== d.body) {
+      const m = merge3(d.baseBody, d.body, cur.body);
+      if (m.clash && !clash) clash = await saveSnapshot(source, cur, cur.body, 'changed elsewhere', now);
+      body = m.text;
     }
+    const merged = body !== d.body;
     const set: Record<string, unknown> = {};
     if (d.status && cur.data.status !== d.status) set.status = d.status;
     if (cur.type === 'scene') {
-      const w = sceneWords(d.status || cur.data.status, d.body);
+      const w = sceneWords(d.status || cur.data.status, body);
       if (cur.data.words !== w) set.words = w;
     }
     if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;
-    let next = withBody(text, d.body, set);
+    let next = withBody(text, body, set);
     if (d.freshHeadline) next = withoutProperty(next, 'headline');
-    if (next === text) return { note: cur, clash };
+    if (next === text) return { note: cur, clash, merged };
     const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || d.path;
     try {
       const newSha = await source.write(d.path, next, sha, verbFor(cur.type, false) + name + '\n\nWritten in the Story Forge app.');
-      return { note: makeNote(d.path, newSha, next), clash };
+      return { note: makeNote(d.path, newSha, next), clash, merged };
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
       throw e;
@@ -245,27 +255,61 @@ export interface DraftFlush {
   saved: NoteRecord[];
   /** A plain sentence when something did not save. */
   error: string | null;
+  /** A plain sentence when a scene that waited had also changed somewhere else, so Kyle knows what happened. */
+  notice: string | null;
+}
+
+/** The scene's name for Kyle: its ID and title, or its file name. */
+function nameOf(d: Draft, note?: NoteRecord): string {
+  const n = note ? [note.data.id, note.data.title].filter(Boolean).join(' ') : '';
+  return n || d.path.slice(d.path.lastIndexOf('/') + 1).replace(/\.md$/, '');
+}
+
+/** What Kyle is told when scenes that waited on the device met changes made elsewhere. */
+export function mergeNotice(mergedIn: string[], clashed: string[]): string | null {
+  const parts: string[] = [];
+  if (mergedIn.length) parts.push(mergedIn.join(', ') + ' had also changed somewhere else. Both sets of changes are now in the scene.');
+  if (clashed.length) parts.push(clashed.join(', ') + ' had the same lines changed in two places. Your lines are kept; the other version is in the scene\'s Copies, named "changed elsewhere".');
+  return parts.length ? parts.join(' ') : null;
 }
 
 /** Save every draft Kyle finished while offline. A draft that saves is forgotten; one that fails stays, with its error. */
 export async function flushDrafts(source: VaultSource, sourceKey: string, now: Date, storage: Store = defaultStore()): Promise<DraftFlush> {
   const saved: NoteRecord[] = [];
   let error: string | null = null;
+  const mergedIn: string[] = [], clashed: string[] = [];
   for (const d of Object.values(loadDrafts(sourceKey, storage)).filter((x) => x.pending)) {
     try {
       const r = await saveDraft(source, d, now);
       saved.push(r.note);
+      if (r.clash) clashed.push(nameOf(d, r.note));
+      else if (r.merged) mergedIn.push(nameOf(d, r.note));
       // Kyle may have opened it again since: forget it only if it still holds what was sent.
       const still = loadDrafts(sourceKey, storage)[d.path];
       if (still && still.body === d.body && still.pending) putDraft(sourceKey, d.path, null, storage);
     } catch (e) {
       const err = e as Error & { status?: number };
-      if (err.status === 0) return { saved, error: null };
+      if (err.status === 0) return { saved, error: null, notice: mergeNotice(mergedIn, clashed) };
       error = 'Your writing in ' + d.path.slice(d.path.lastIndexOf('/') + 1).replace(/\.md$/, '') + ' did not save: ' + err.message;
       putDraft(sourceKey, d.path, { ...d, error: err.message }, storage);
     }
   }
-  return { saved, error };
+  return { saved, error, notice: mergeNotice(mergedIn, clashed) };
+}
+
+const NOTICE = 'story-forge.sync-notice.';
+
+/** The last merge notice Kyle has not closed yet. */
+export function loadNotice(sourceKey: string, storage: Store = defaultStore()): string | null {
+  try { return (storage && storage.getItem(NOTICE + sourceKey)) || null; } catch { return null; }
+}
+
+export function saveNotice(sourceKey: string, notice: string | null, storage: Store = defaultStore()): void {
+  try {
+    if (!storage) return;
+    if (notice) storage.setItem(NOTICE + sourceKey, notice);
+    else storage.removeItem(NOTICE + sourceKey);
+  } catch { /* it shows until the page reloads */ }
 }
 
 /** How many finished drafts wait for a connection. */

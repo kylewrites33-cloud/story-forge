@@ -175,6 +175,13 @@ add a dated line here when you add or change one.
   chapter list is closed. While a scene is open the app reads the vault every 30 seconds (15 while the team is answering)
   and merges a newer version line by line into the page (`src/lib/live.ts`): Kyle's lines win a clash, the other version is
   saved as a copy. The vault's `put-in-page` skill tells any Claude session how to push words there.
+  Offline sync made safe (Kyle, 2026-10-20: the iPad is the main device; words written offline must reach the vault the
+  way Scrivener's do). Every save, including a scene that waited on the device with no connection, merges line by line
+  with what changed elsewhere (`saveDraft` uses `merge3`): only lines both sides changed make a "changed elsewhere" copy,
+  with Kyle's lines kept. A save that waited tells Kyle in a notice at the top of the page that stays until he presses OK
+  (`mergeNotice`, kept per device). While he types without a two-minute pause the page still saves every five minutes.
+  The app asks the browser to keep its stored words (`navigator.storage.persist`). On a touch screen, holding a finger on
+  any button with a name shows the name (`src/ui/hold.ts`), so the icon-only bars can be learnt on the iPad.
   Team chat beside every page (Kyle, 2026-10-18): outside the writing screens, every page but Chat and Settings has the
   team chat on the right (`TeamSide` in `src/ui/Chat.tsx`, placed by `Shell`): beside the page from 1200 px, over it
   narrower; a round Chat button at the bottom right opens it, its arrow hides it (per device), and the Pomodoro moves
