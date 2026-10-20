@@ -7,7 +7,7 @@ import { rangesIn } from './StyledEditor.tsx';
 import { bringIntoView, paintHighlight } from './highlight.ts';
 import { Icon } from './Icon.tsx';
 
-/** One scene on the page: its words and the writing box it is in (null for the plain text box). */
+/** One scene on the page: its words and the writing box it is in. */
 export interface ListenPart { text: string; root: () => HTMLElement | null }
 
 export interface Listening {

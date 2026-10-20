@@ -25,7 +25,7 @@ add a dated line here when you add or change one.
   Markdown (`readText`). Bold, Italic and Highlight (buttons, Ctrl or Cmd+B and I, the iPad's B and I keys) style or
   unstyle the selection or the word at the cursor, or wait for the next letters typed; Enter inside styled words closes and
   reopens their marks; copy gives other apps styled text and paste keeps a word processor's italics and bold
-  (`toggleStyle`, `insertText`). A per-device switch in Scene goes back to the plain text box with its stars.
+  (`toggleStyle`, `insertText`). The plain text box with its stars is gone (Kyle, 2026-10-20: no need to keep it).
   Export to Word (Kyle, 2026-10-18) on Book details: the whole book in reading order as a .docx named
   `series_book_YYYY-MM-DD.docx`, made on the device and downloaded (`src/lib/docx.ts`, the layout of sf's Docx.build;
   italics and bold read with styled.ts, so they come back unchanged through `sf import`). Each export also saves a copy in the vault's

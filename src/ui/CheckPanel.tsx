@@ -7,7 +7,7 @@ import { checkText, combine, loadShowFlags, saveShowFlags, sevWord, type CheckIs
 import { rangesIn } from './StyledEditor.tsx';
 import { bringIntoView, canHighlight, paintHighlight } from './highlight.ts';
 
-/** One scene on the page: its words, the writing box it is in (null for the plain text box) and how to select in it. */
+/** One scene on the page: its words, the writing box it is in and how to select in it. */
 export interface CheckSection {
   key: string;
   /** Shown above its flags when the page holds several scenes (Whole chapter). */
