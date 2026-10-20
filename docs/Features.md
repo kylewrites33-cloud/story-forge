@@ -95,6 +95,8 @@ add a dated line here when you add or change one.
   not taken away, so rewriting a passage counts its new words (Kyle, 2026-10-20: a rewrite in Beats logged 0 words).
   Opened from the iPad's home screen, the app moves down below the device's clock and battery bar (the `ios-app` class
   and `--safe-top`, 24 px), since iPadOS lays that bar over the page and reports no safe area (Kyle's screenshot, 2026-10-20).
+  The writing screens lock the page in place, so dragging a text selection down on the iPad scrolls the writing, not the
+  whole app (Kyle's screenshot, 2026-10-20).
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
   (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,

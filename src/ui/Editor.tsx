@@ -1,6 +1,7 @@
 // Full-screen writing: one scene's prose, styled the way a word processor shows it. Each change is kept on this device
 // straight away; it goes to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useLockedPage } from './viewport.ts';
 import {
   bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
   type Draft, type SnapshotEntry
@@ -132,6 +133,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   /** The vault's recipes by name, for the Team tab's "With a recipe". */
   recipes?: string[];
 }) {
+  useLockedPage();
   const beatsMode = Boolean(beats);
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
   // In beats mode the tool row works on the beat Kyle is in (Kyle, 2026-10-19: "the full word processor tool set too").
