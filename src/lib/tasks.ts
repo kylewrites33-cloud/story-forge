@@ -3,6 +3,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
+import { fullTitle } from './todos.ts';
 import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
@@ -76,15 +77,17 @@ export function taskText(id: string, t: NewTask, now: Date): string {
 /** Add a to-do to the vault's Tasks folder as Kyle's commit. */
 export async function createTask(source: VaultSource, t: NewTask, now: Date): Promise<NoteRecord> {
   if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const title = safeTitle(t.title);
-  if (!title) throw new Error('Give the to-do a title first.');
+  // The note keeps every word Kyle wrote; only the file name is shortened.
+  const title = fullTitle(t.title);
+  const name = safeTitle(title);
+  if (!name) throw new Error('Give the to-do a title first.');
   for (let attempt = 0; ; attempt++) {
     const { files } = await source.tree();
     const id = nextTaskId(files);
-    const path = 'Tasks/' + id + ' ' + title + '.md';
+    const path = 'Tasks/' + id + ' ' + name + '.md';
     const text = taskText(id, { ...t, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + title + '\n\nAdded on the To-do list in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded on the To-do list in the Story Forge app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;

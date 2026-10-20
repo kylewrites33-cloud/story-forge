@@ -78,6 +78,8 @@ add a dated line here when you add or change one.
   Kyle adds one in a line and ticks it off; the team's carry `generated: true` and `found_by` and show a Generated label.
   Ask the team to check this chapter (`chapter-check`) and to tick off fixed ones (`todo-review`, which sets `done_note`).
   The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs. Kyle's "~" notes in Quest Declined became to-dos (Kyle, 2026-10-18).
+  A to-do keeps every word Kyle types, at any length; only its file name is shortened (Kyle, 2026-10-20: "when I pasted
+  it in this to do, it cut it off short").
   The Pomodoro timer (Kyle, 2026-10-18): 25 minutes of writing and a 5 minute break, kept on the device ("just 25 minutes
   and a 5 minute break option. no 50 or 10", Kyle 2026-10-19). It floats at the
   bottom right outside the writing screens and sits in their top bar (beside Leave focus in Focus mode), so it never
