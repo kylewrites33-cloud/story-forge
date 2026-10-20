@@ -89,6 +89,10 @@ add a dated line here when you add or change one.
   The panel and its button count the day in Pomodoros by minutes, so stopped ones add up: 40 minutes shows as
   1.6 Pomodoros (Kyle, 2026-10-19: "my goal is to amount to 5 pomodoro sessions worth of writing"). The log keeps the real
   count of whole ones.
+  While a Pomodoro runs, its button only changes colour (no ticking clock); the time shows when Kyle taps it, and
+  starting one leaves the panel closed (Kyle, 2026-10-20).
+  Opened from the iPad's home screen, the app moves down below the device's clock and battery bar (the `ios-app` class
+  and `--safe-top`, 24 px), since iPadOS lays that bar over the page and reports no safe area (Kyle's screenshot, 2026-10-20).
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
   (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
