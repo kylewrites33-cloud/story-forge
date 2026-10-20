@@ -2127,7 +2127,7 @@
         },
         "words": {
           "type": "integer",
-          "description": "Words written during them, stopped ones included, after deletions (can be below zero on a cutting day)."
+          "description": "Words written during them, stopped ones included. Cuts are not taken away, so rewriting a passage counts the new words (Kyle, 2026-10-20)."
         },
         "updated": {
           "type": "datetime"
