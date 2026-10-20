@@ -1,7 +1,7 @@
 // The Pomodoro timer: work for 25 minutes, rest for 5 (Kyle, 2026-10-19: only these). The timer lives on this device (localStorage), so
 // it keeps time across screens and a reload. Each finished work Pomodoro is written to the vault's Writing Log, one
-// `writing-day` note per day (`Writing Log/YYYY-MM-DD.md`), with the words written in it: the scenes' word counts at the
-// end minus where they stood when Kyle first typed in them during that Pomodoro. A Pomodoro stopped early keeps its minutes
+// `writing-day` note per day (`Writing Log/YYYY-MM-DD.md`), with the words written in it: every rise in a scene's word count while it ran, with
+// cuts not taken away, so rewriting a passage counts the new words (Kyle, 2026-10-20). A Pomodoro stopped early keeps its minutes
 // and words in the log but does not count as a Pomodoro (Kyle, 2026-10-19).
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
@@ -23,6 +23,9 @@ export interface TimerState {
   /** Per scene path: the word count when Kyle first typed in it this Pomodoro, and the latest one. */
   base: Record<string, number>;
   latest: Record<string, number>;
+  /** Words written: each change that raises a scene's count adds the rise, and cuts take nothing away, so rewriting a
+   *  passage counts the new words (Kyle, 2026-10-20). Missing on a timer saved before then. */
+  added?: number;
   ids: Record<string, string>;
   /** Set when a work phase just finished, for the "Time for a break" line. */
   justDone: { words: number; at: number } | null;
@@ -47,7 +50,7 @@ const STATE_KEY = 'sf-pomodoro';
 const logKey = (sourceKey: string) => 'sf-pomodoro-log:' + sourceKey;
 
 export function idleState(workMin = WORK_MIN, breakMin = BREAK_MIN): TimerState {
-  return { phase: 'idle', endsAt: null, pausedLeft: null, startedAt: null, workMin, breakMin, base: {}, latest: {}, ids: {}, justDone: null };
+  return { phase: 'idle', endsAt: null, pausedLeft: null, startedAt: null, workMin, breakMin, base: {}, latest: {}, added: 0, ids: {}, justDone: null };
 }
 
 export function loadTimer(): TimerState {
@@ -70,11 +73,11 @@ export function saveTimer(s: TimerState): void {
 
 /** Start a work Pomodoro now. */
 export function startWork(s: TimerState, now: number, workMin = s.workMin): TimerState {
-  return { ...s, phase: 'work', workMin, startedAt: now, endsAt: now + workMin * 60000, pausedLeft: null, base: {}, latest: {}, ids: {}, justDone: null };
+  return { ...s, phase: 'work', workMin, startedAt: now, endsAt: now + workMin * 60000, pausedLeft: null, base: {}, latest: {}, added: 0, ids: {}, justDone: null };
 }
 
 export function startBreak(s: TimerState, now: number): TimerState {
-  return { ...s, phase: 'break', endsAt: now + s.breakMin * 60000, pausedLeft: null, startedAt: null, base: {}, latest: {}, ids: {} };
+  return { ...s, phase: 'break', endsAt: now + s.breakMin * 60000, pausedLeft: null, startedAt: null, base: {}, latest: {}, added: 0, ids: {} };
 }
 
 export function pause(s: TimerState, now: number): TimerState {
@@ -122,8 +125,9 @@ export function clock(ms: number): string {
   return m + ':' + String(sec).padStart(2, '0');
 }
 
-/** Words written this Pomodoro, never below nothing. */
+/** Words written this Pomodoro, never below nothing (an older saved timer falls back to end minus start). */
 export function wordsSoFar(s: TimerState): number {
+  if (s.added != null) return s.added;
   let n = 0;
   Object.keys(s.latest).forEach((p) => { n += s.latest[p] - (s.base[p] ?? s.latest[p]); });
   return Math.max(0, n);
@@ -133,7 +137,8 @@ export function wordsSoFar(s: TimerState): number {
 export function noteWords(s: TimerState, path: string, id: string, before: number, after: number): TimerState {
   if (s.phase !== 'work' || s.endsAt == null || before === after) return s;
   const base = s.base[path] == null ? { ...s.base, [path]: before } : s.base;
-  return { ...s, base, latest: { ...s.latest, [path]: after }, ids: id ? { ...s.ids, [path]: id } : s.ids };
+  const added = s.added == null ? undefined : s.added + Math.max(0, after - before);
+  return { ...s, base, latest: { ...s.latest, [path]: after }, added, ids: id ? { ...s.ids, [path]: id } : s.ids };
 }
 
 /** Call from the writing screen: records a word-count change in the stored timer. */

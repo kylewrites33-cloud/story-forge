@@ -91,6 +91,8 @@ add a dated line here when you add or change one.
   count of whole ones.
   While a Pomodoro runs, its button only changes colour (no ticking clock); the time shows when Kyle taps it, and
   starting one leaves the panel closed (Kyle, 2026-10-20).
+  Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
+  not taken away, so rewriting a passage counts its new words (Kyle, 2026-10-20: a rewrite in Beats logged 0 words).
   Opened from the iPad's home screen, the app moves down below the device's clock and battery bar (the `ios-app` class
   and `--safe-top`, 24 px), since iPadOS lays that bar over the page and reports no safe area (Kyle's screenshot, 2026-10-20).
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer

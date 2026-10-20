@@ -27,20 +27,25 @@ test('a work Pomodoro counts only the words written in it', () => {
   s = noteWords(s, 'a.md', 'S-001', 1000, 1004);
   s = noteWords(s, 'a.md', 'S-001', 1004, 1300);
   s = noteWords(s, 'b.md', 'S-002', 50, 40);
-  assert.equal(wordsSoFar(s), 290);
+  assert.equal(wordsSoFar(s), 300);
   s = pause(s, T0 + 60000);
   assert.equal(noteWords(s, 'a.md', 'S-001', 1300, 1400), s, 'paused: not counted');
   s = resume(s, T0 + 120000);
   assert.equal(advance(s, T0 + 25 * 60000).record, null, 'the pause moved the end');
   const { state, record } = advance(s, T0 + 26 * 60000);
-  assert.deepEqual(record, { date: '2026-10-18', time: '09:30', minutes: 25, words: 290, scenes: ['S-001', 'S-002'] });
+  assert.deepEqual(record, { date: '2026-10-18', time: '09:30', minutes: 25, words: 300, scenes: ['S-001', 'S-002'] });
   assert.equal(state.phase, 'break');
-  assert.equal(state.justDone?.words, 290);
+  assert.equal(state.justDone?.words, 300);
   const after = advance(state, T0 + 40 * 60000);
   assert.equal(after.state.phase, 'idle');
   assert.equal(after.record, null);
   assert.equal(noteWords(idleState(), 'a.md', 'S-001', 1, 9).phase, 'idle');
   assert.equal(stop(startWork(idleState(), T0)).workMin, 25);
+  // Rewriting: cutting 200 words and writing 120 new ones counts the 120.
+  let r = startWork(idleState(), T0);
+  r = noteWords(r, 'a.md', 'S-059', 943, 743);
+  for (let w = 743; w < 863; w += 6) r = noteWords(r, 'a.md', 'S-059', w, w + 6);
+  assert.equal(wordsSoFar(r), 120);
 });
 
 test('each Pomodoro adds one line to the day and raises its counts', () => {
