@@ -1,5 +1,5 @@
-// Full-screen writing: one scene's prose in a plain text box. Each change is kept on this device straight away; it goes
-// to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
+// Full-screen writing: one scene's prose, styled the way a word processor shows it. Each change is kept on this device
+// straight away; it goes to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
@@ -40,7 +40,7 @@ const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
 import type { CodexNow } from '../lib/codexnow.ts';
 import { CodexNowBox } from './CodexNow.tsx';
-import { findAll, markList, unstyle } from '../lib/styled.ts';
+import { findAll, markList } from '../lib/styled.ts';
 import { withBody } from '../lib/drafts.ts';
 import { propertyOrder } from '../lib/schema.ts';
 import { render } from '../lib/markdown.ts';
@@ -51,15 +51,6 @@ import { ListenBar, ListenButton, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
-const STYLED_KEY = 'story-forge.styled';
-
-/** Styled text is on unless Kyle turned it off on this device. */
-function loadStyled(): boolean {
-  try { return localStorage.getItem(STYLED_KEY) !== 'off'; } catch { return true; }
-}
-function saveStyled(on: boolean) {
-  try { if (on) localStorage.removeItem(STYLED_KEY); else localStorage.setItem(STYLED_KEY, 'off'); } catch { /* the choice lasts until reload */ }
-}
 const num = (n: number) => n.toLocaleString('en-US');
 
 // The chapter list (left) and scene panel (right) sit beside the page when there is room, and slide over it when there
@@ -202,7 +193,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const findQ = findOpen ? query : '';
   const styleOpts = useMemo(() => ({ names, find: findQ, asks: true, asking: askingMarkers, added: dotSet }), [names, findQ, askingMarkers, dotSet]);
   const beatOpts = useMemo(() => ({ names, find: findQ, asks: true }), [names, findQ]);
-  const box = useRef<HTMLTextAreaElement>(null);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
   const kept = useRef(true);
@@ -215,14 +205,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     setDraftState(d);
     kept.current = putDraft(source.key, d.path, d);
   }, [source]);
-
-  const grow = () => {
-    const el = box.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  };
-  useEffect(grow, []);
 
   /** Send the draft to the vault. `closing` keeps it waiting on the device if the connection is down. */
   const save = useCallback(async (closing: boolean): Promise<boolean> => {
@@ -264,17 +246,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     }
   }, [source, canSave, onSaved, setDraft]);
 
-  const [styled, setStyled] = useState(loadStyled);
   // Whether what is typed at the cursor will be bold, italic or highlighted: the tool row's buttons show it pressed.
   const [typing, setTyping] = useState({ i: false, b: false, h: false });
   // Bumped when the text changes from outside the writing box (copy restored, split, join), so the styled box reloads.
   const [loaded, setLoaded] = useState(0);
   const reload = () => setLoaded((n) => n + 1);
-  const onInput = (e: Event) => changed((e.currentTarget as HTMLTextAreaElement).value);
   const changed = (text: string) => {
     setDraft({ ...draftRef.current, body: splitLead(draftRef.current.body).lead + text, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
-    grow();
     if (quiet.current) clearTimeout(quiet.current);
     quiet.current = setTimeout(() => { save(false); }, QUIET_SAVE_MS);
   };
@@ -294,8 +273,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     };
   }, [source, save, setDraft]);
 
-  const mark = () => { const el = box.current; if (el) { caret.current = el.selectionStart; clearDot(el.selectionStart); } };
-
   /** Split at the cursor: the words after it become a new scene right after this one. */
   const split = async (newTitle: string): Promise<string | null> => {
     if (!bookFolder || !canSave) return 'Splitting needs your own vault, not the demo.';
@@ -310,7 +287,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       const created = await splitOff(source, note, next, d.body, parts.after, newTitle, bookFolder, new Date());
       setDraft({ ...draftRef.current, body: lead + parts.before, freshHeadline: true });
       reload();
-      setTimeout(grow, 0);
       await save(false);
       await onChanged();
       setMade(created);
@@ -329,7 +305,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       const taken = await archiveForJoin(source, note, next, new Date());
       setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body), freshHeadline: true });
       reload();
-      setTimeout(grow, 0);
       if (!(await save(false)) || isUnsaved(draftRef.current)) return 'The joined words did not save, so ' + String(next.data.id || 'the next scene') + ' stays where it is. Its copy is in the Archive.';
       await removeJoined(source, next, taken.sha, title);
       setMade(null);
@@ -401,49 +376,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
   const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
 
-  /** Bold or italic in the plain text box: put stars around the selection. */
-  const wrapPlain = (stars: string) => {
-    const el = box.current;
-    if (!el) return;
-    const a = el.selectionStart, b = el.selectionEnd, v = el.value;
-    const nv = v.slice(0, a) + stars + v.slice(a, b) + stars + v.slice(b);
-    el.value = nv;
-    changed(nv);
-    el.focus();
-    el.setSelectionRange(a + stars.length, b + stars.length);
-  };
-  /** The same commands for the plain text box, so the tool row and Find work in either view. */
-  const plainBox = (): EditorCommands => {
-    const set = (v: string, a: number, b: number) => {
-      const el = box.current;
-      if (!el) return;
-      el.value = v;
-      changed(v);
-      el.focus();
-      el.setSelectionRange(a, b);
-      caret.current = a;
-    };
-    const cur = () => box.current;
-    return {
-      bold: () => wrapPlain('**'), italic: () => wrapPlain('*'), undo: () => {}, redo: () => {},
-      highlight: () => wrapPlain('=='),
-      plain: () => { const el = cur(); if (!el) return; const r = unstyle(el.value, el.selectionStart, el.selectionEnd); set(r.text, r.start, r.end); },
-      select: (a, b) => { const el = cur(); if (!el) return; el.focus(); el.setSelectionRange(a, b); caret.current = a; },
-      replaceRange: (a, b, t) => { const el = cur(); if (!el) return; set(el.value.slice(0, a) + t + el.value.slice(b), a + t.length, a + t.length); },
-      setAll: (t) => { const el = cur(); if (el) set(t, 0, 0); },
-      selection: () => { const el = cur(); return el ? { start: el.selectionStart, end: el.selectionEnd } : null; },
-      apply: (t, map) => {
-        const el = cur();
-        if (!el) { changed(t); return; }
-        const inside = document.activeElement === el;
-        const a = map(el.selectionStart), b = map(el.selectionEnd);
-        el.value = t;
-        changed(t);
-        if (inside) el.setSelectionRange(a, b);
-      }
-    };
-  };
-  const cmd = (): EditorCommands | null => (beatsMode ? (beatsApi.current ? beatsApi.current.cmd() : null) : styled ? commands.current : plainBox());
+  const cmd = (): EditorCommands | null => (beatsMode ? (beatsApi.current ? beatsApi.current.cmd() : null) : commands.current);
   /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
   const applyText = (next: string, map: (n: number) => number) => {
     const c = cmd();
@@ -564,7 +497,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
   // Check, Listen and Options for a passage (Writers Room, Kyle 2026-10-18).
-  const pageRoot = () => (beatsMode ? (beatsApi.current ? beatsApi.current.root() : null) : styled ? document.querySelector<HTMLElement>('.writer-page .writer-text.styled') : null);
+  const pageRoot = () => (beatsMode ? (beatsApi.current ? beatsApi.current.root() : null) : document.querySelector<HTMLElement>('.writer-page .writer-text.styled'));
   const checkOptions = useMemo<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 }, [JSON.stringify(checkOpts || null)]);
   const listen = useListen(() => [{ text: pageText(), root: pageRoot }], () => {
     const c = cmd();
@@ -750,15 +683,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
         <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>
           <div class="writer-tools" role="toolbar" aria-label="Writing tools">
             <div class="tool-group" role="group" aria-label="Undo and redo">
-              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" disabled={!styled && !beatsMode} {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" title="Redo" disabled={!styled && !beatsMode} {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
             </div>
             <div class="tool-group" role="group" aria-label="Formatting">
-              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={(styled || beatsMode) && typing.b} {...keepFocus}
+              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={typing.b} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={(styled || beatsMode) && typing.i} {...keepFocus}
+              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={typing.i} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={(styled || beatsMode) && typing.h} {...keepFocus}
+              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={typing.h} {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
               <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
                 onClick={() => { const c = cmd(); if (c) c.plain(); }}><Icon name="clear" /><span class="tool-label">Normal</span></button>
@@ -854,22 +787,8 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
               head={headParts} onWords={setBeatWords} />
           ) : <>
           {pageHead}
-          {styled ? (
-            <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
+          <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
-          ) : <textarea
-            ref={box}
-            class="writer-text"
-            value={text}
-            onInput={onInput}
-            onSelect={mark}
-            onKeyUp={mark}
-            onClick={mark}
-            onBlur={mark}
-            spellcheck
-            autocapitalize="sentences"
-            aria-label={'Text of ' + title}
-          />}
           <div class="writer-done">
             <span>Done with this scene?</span>
             <span class="buttons">
@@ -911,7 +830,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
             {tab === 'copies' && (
               <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
-                onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); setTimeout(grow, 0); }} />
+                onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); }} />
             )}
             {tab === 'team' && (
               <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
@@ -928,7 +847,6 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'tools' && (
               <ScenePanel status={sceneStatus} next={next}
-                styled={styled} onStyled={(on) => { saveStyled(on); setStyled(on); setTimeout(grow, 0); }}
                 onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
                 onSplit={split} onJoin={join} />
             )}
@@ -1252,8 +1170,8 @@ function AddInList({ onAdd, chapter }: { onAdd: (title: string) => Promise<strin
   );
 }
 
-function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled }: {
-  status: string; next: NoteRecord | null; onDrafted: () => void; styled: boolean; onStyled: (on: boolean) => void;
+function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
+  status: string; next: NoteRecord | null; onDrafted: () => void;
   onSplit: (title: string) => Promise<string | null>; onJoin: () => Promise<string | null>;
 }) {
   const [title, setTitle] = useState('');
@@ -1297,10 +1215,6 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin, styled, onStyled
           </div>
         </div>
       )}
-      <label class="check">
-        <input type="checkbox" checked={styled} onChange={(e) => onStyled((e.currentTarget as HTMLInputElement).checked)} />
-        Show italics and bold the way a word processor does on this device. Turn it off to see the plain text with its * and ** marks.
-      </label>
       {busy && <p class="hint">Working…</p>}
       {error && <p class="error">{error}</p>}
     </div>
