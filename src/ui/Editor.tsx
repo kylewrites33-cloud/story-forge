@@ -52,6 +52,8 @@ import { ListenBar, ListenButton, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
+// While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
+const TYPING_SAVE_MS = 5 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
 
 // The chapter list (left) and scene panel (right) sit beside the page when there is room, and slide over it when there
@@ -197,6 +199,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const beatOpts = useMemo(() => ({ names, find: findQ, asks: true }), [names, findQ]);
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingSince = useRef<number | null>(null);
   const kept = useRef(true);
 
   // Every version of the scene this page has started from, so an older copy that a slow read brings back is never merged.
@@ -226,11 +229,13 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       onSaved(r.note);
       const now = draftRef.current;
       // Words typed while it was saving stay in the draft for the next save.
-      const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, freshHeadline: undefined, pending: false, error: undefined };
+      // Lines from elsewhere went into the saved scene: an empty base sha lets the live read below bring them into the page.
+      const next: Draft = { ...now, baseSha: r.merged ? '' : r.note.sha, baseBody: d.body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, freshHeadline: undefined, pending: false, error: undefined };
       if (closing && !isUnsaved(next)) { draftRef.current = next; putDraft(source.key, d.path, null); }
       else setDraft(next);
       setState('saved');
-      setMessage(r.clash ? 'This scene had also changed somewhere else. Your version is saved; the other one is kept as a copy (' + r.clash.slice(r.clash.lastIndexOf('/') + 1).replace(/\.md$/, '') + ').' : null);
+      setMessage(r.clash ? 'This scene had also changed somewhere else, on lines you changed too. Your lines are saved; the other version is kept as a copy (' + r.clash.slice(r.clash.lastIndexOf('/') + 1).replace(/\.md$/, '') + ').'
+        : r.merged ? 'This scene had also changed somewhere else. Both sets of changes are saved, and the new lines come into your page.' : null);
       return true;
     } catch (e) {
       if (offlineError(e)) {
@@ -257,7 +262,9 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     setDraft({ ...draftRef.current, body: splitLead(draftRef.current.body).lead + text, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
-    quiet.current = setTimeout(() => { save(false); }, QUIET_SAVE_MS);
+    quiet.current = setTimeout(() => { typingSince.current = null; save(false); }, QUIET_SAVE_MS);
+    if (typingSince.current == null) typingSince.current = Date.now();
+    else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; save(false); }
   };
 
   // Leaving the page or putting the iPad down: try to save, and keep it waiting on the device either way.

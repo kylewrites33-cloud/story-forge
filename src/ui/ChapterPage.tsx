@@ -6,7 +6,7 @@ import { sceneHeader } from '../lib/format.ts';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useLockedPage } from './viewport.ts';
 import { trackWords } from '../lib/pomodoro.ts';
-import { bodyWords, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
+import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
@@ -20,6 +20,8 @@ import { CheckPanel } from './CheckPanel.tsx';
 import { ListenBar, ListenButton, useListen } from './Listen.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
+// While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
+const TYPING_SAVE_MS = 5 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
 
 interface Section {
@@ -50,6 +52,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   const [message, setMessage] = useState<string | null>(null);
   const [focused, setFocused] = useState(startAt);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingSince = useRef<number | null>(null);
   const saving = useRef(false);
   const commands = useRef<Record<string, { current: EditorCommands | null }>>({});
   const look = loadLook();
@@ -77,14 +80,16 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
     setState('saving');
     let ok = true;
     const clashes: string[] = [];
+    const mergedIn: string[] = [];
     for (const s of todo) {
       const d = s.draft;
       try {
         const r = await saveDraft(source, d, new Date());
         onSaved(r.note);
         if (r.clash) clashes.push(String(s.note.data.id || s.note.path));
+        else if (r.merged) mergedIn.push(String(s.note.data.id || s.note.path));
         const now = ref.current.find((x) => x.note.path === d.path)!.draft;
-        const next: Draft = { ...now, baseSha: r.note.sha, baseBody: d.body, pending: false, error: undefined };
+        const next: Draft = { ...now, baseSha: r.merged ? '' : r.note.sha, baseBody: d.body, pending: false, error: undefined };
         if (closing && !isUnsaved(next)) putDraft(source.key, d.path, null);
         else setDraft(d.path, next);
       } catch (e) {
@@ -98,7 +103,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
     saving.current = false;
     if (ok) {
       setState('saved');
-      setMessage(clashes.length ? clashes.join(', ') + ' had also changed somewhere else. Your version is saved; the other one is kept as a copy.' : null);
+      setMessage(mergeNotice(mergedIn, clashes));
     }
     return ok;
   }, [source, canSave, onSaved]);
@@ -111,7 +116,9 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
     setDraft(path, { ...s.draft, body, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
-    quiet.current = setTimeout(() => { saveAll(false); }, QUIET_SAVE_MS);
+    quiet.current = setTimeout(() => { typingSince.current = null; saveAll(false); }, QUIET_SAVE_MS);
+    if (typingSince.current == null) typingSince.current = Date.now();
+    else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; saveAll(false); }
   };
 
   useEffect(() => {

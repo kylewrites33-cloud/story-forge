@@ -417,7 +417,7 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .writer-tools .team-tool { color: var(--accent); }
 .writer-tools .team-tool .icon { color: var(--accent); }
 .tool-label { font-size: 0.85rem; }
-/* Short of room, the tool names go and the icons stay (each has its name on a long press or hover). */
+/* Short of room, the tool names go and the icons stay (each has its name on a long press, src/ui/hold.ts, or hover). */
 @media (max-width: 1499px) { .writer.has-both .tool-group:not(.team-tools) .tool-label { display: none; } }
 @media (max-width: 600px) { .tool-group:not(.team-tools) .tool-label { display: none; } }
 .tool-said { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; padding: 6px 12px; font-size: 0.9rem; background: var(--accent-soft); color: var(--text); }
@@ -1630,3 +1630,10 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .beats.drop-end::after { margin-top: -6px; }
 /* Half an iPad: the one-line top bar fits by closing up the gaps between buttons. */
 @media (max-width: 899px) and (min-width: 601px) { .writer-bar { gap: 4px; } .writer-bar .save-chip { padding-left: 4px; padding-right: 4px; } }
+
+/* A button's name, shown while a finger holds it (src/ui/hold.ts). Buttons give no iPad callout menu on a long press. */
+.hold-tip { position: fixed; z-index: 1000; max-width: min(280px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 0.9rem; line-height: 1.3; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+button, [role="button"] { -webkit-touch-callout: none; }
+/* What happened when words that waited on this device met changes made elsewhere: stays until Kyle presses OK. */
+.banner .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 8px 12px; }
+.banner .notice button { flex: none; min-height: 44px; min-width: 44px; padding: 4px 14px; }

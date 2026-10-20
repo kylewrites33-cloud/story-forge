@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
-  bodyWords, flushDrafts, isUnsaved, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
+  bodyWords, flushDrafts, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
   sceneWords, snapshotFolder, splitLead, withBody, type Draft
 } from '../src/lib/drafts.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
@@ -117,6 +117,40 @@ test('when the scene changed elsewhere, Kyle\'s version wins and the other one i
   assert.deepEqual(src.writes.map((w) => w.path), [snap, SCENE]);
 });
 
+test('a scene changed elsewhere on other lines is merged: both sets of changes stay, no copy is made', async () => {
+  const src = new MemSource();
+  src.files.set(SCENE, TEXT);
+  // On the iPad, offline: Kyle adds a line at the end.
+  const d = draftOf(src, '\nMara cut rope.\n\n> [!plan] Team notes\n> Not counted.\n\nShe ran for the ferry.\n');
+  // Meanwhile on the desktop: the first line changed.
+  src.files.set(SCENE, TEXT.replace('Mara cut rope.', 'Mara cut the rope at 6:14.'));
+  const r = await saveDraft(src, d, new Date());
+  assert.equal(r.clash, null);
+  assert.equal(r.merged, true);
+  const saved = src.files.get(SCENE)!;
+  assert.match(saved, /Mara cut the rope at 6:14\./);
+  assert.match(saved, /She ran for the ferry\./);
+  assert.match(saved, new RegExp('^words: ' + bodyWords(Frontmatter.parse(saved).body) + '$', 'm'));
+  assert.deepEqual(src.writes.map((w) => w.path), [SCENE]);
+});
+
+test('a scene that waited offline tells Kyle when it met changes made elsewhere, until he closes the notice', async () => {
+  const src = new MemSource();
+  src.files.set(SCENE, TEXT);
+  const st = store();
+  putDraft('mem', SCENE, { ...draftOf(src, TEXT.split('---\n')[2] + '\nWritten on the train.\n'), pending: true }, st);
+  src.files.set(SCENE, TEXT.replace('Mara cut rope.', 'Mara cut the rope.'));
+  const r = await flushDrafts(src, 'mem', new Date(), st);
+  assert.equal(r.notice, 'S-002 The Ferry had also changed somewhere else. Both sets of changes are now in the scene.');
+  assert.match(src.files.get(SCENE)!, /Mara cut the rope\.[\s\S]*Written on the train\./);
+  assert.match(mergeNotice([], ['S-002']) || '', /Copies, named "changed elsewhere"/);
+  assert.equal(mergeNotice([], []), null);
+  saveNotice('mem', 'Hello', st);
+  assert.equal(loadNotice('mem', st), 'Hello');
+  saveNotice('mem', null, st);
+  assert.equal(loadNotice('mem', st), null);
+});
+
 test('snapshots number on from the ones already in the book\'s Snapshots folder', async () => {
   const src = new MemSource();
   src.files.set(SCENE, TEXT);
@@ -138,7 +172,7 @@ test('drafts finished offline wait on the device and save when the connection is
   putDraft('mem', SCENE, { ...draftOf(src, '\nWritten on the train.\n'), pending: true }, st);
   assert.equal(pendingCount('mem', st), 1);
   src.offline = true;
-  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st), { saved: [], error: null });
+  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st), { saved: [], error: null, notice: null });
   assert.equal(pendingCount('mem', st), 1);
   src.offline = false;
   const r = await flushDrafts(src, 'mem', new Date(), st);
