@@ -137,7 +137,8 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   const day = today(index, waiting, new Date(now));
   const done = pomodoroCount(day.minutes);
   const words = s.phase === 'work' ? wordsSoFar(s) : 0;
-  const chipText = s.phase === 'work' ? clock(left) : s.phase === 'break' ? 'Break ' + clock(left) : day.minutes ? done : '';
+  // While it runs the button only changes colour; the time shows when Kyle opens the panel (Kyle, 2026-10-20).
+  const chipText = s.phase === 'idle' && day.minutes ? done : '';
   const label = s.phase === 'work' ? 'Pomodoro: ' + clock(left) + ' left' + (paused ? ', paused' : '')
     : s.phase === 'break' ? 'Break: ' + clock(left) + ' left' : 'Pomodoro timer. ' + done + ' today.';
 
