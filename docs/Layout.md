@@ -28,6 +28,7 @@ src/lib/codex.ts         the codex: names that light up, mentions, presence per 
 src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
+src/lib/search.ts        the Chapter Grid search: chapter and scene numbers, chapter titles, codex names, near misses, best first
 src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name
