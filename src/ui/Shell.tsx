@@ -15,6 +15,8 @@ import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { useTeam } from './Team.tsx';
+import { loadMode } from '../lib/flow.ts';
+import { ModeSwitch, stageIcon, useFlow } from './Flow.tsx';
 
 const GROUPS: [string, string[]][] = [
   ['Write', ['chapter-grid']],
@@ -59,12 +61,22 @@ export interface ShellProps {
 
 const WIDE_SIDE = '(min-width: 1200px)';
 
+/** A stage's name for the sidebar: the part after the colon ("Story planning: premise and cast seeds" is "Premise and cast seeds"). */
+export function shortStage(title: string): string {
+  const at = title.indexOf(':');
+  const t = at >= 0 ? title.slice(at + 1).trim() : title.trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : title;
+}
+
 export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, children }: ShellProps) {
   const [open, setOpen] = useState(false);
   const [sideOpen, setSideOpenState] = useState(() => loadSideOpen(typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches));
   const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
   const showSide = Boolean(side) && sideOpen;
   const team = useTeam(index);
+  const flow = useFlow(index, book);
+  const mode = book && index ? loadMode(source.key, index, book) : 'writing';
+  const hash = typeof location === 'undefined' ? '' : location.hash;
   useEffect(() => {
     const close = () => setOpen(false);
     const key = (e: KeyboardEvent) => {
@@ -100,30 +112,56 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
         <nav class="rail-scroll" aria-label="Places">
           {item(href.home(), 'home', 'Books', place === 'home')}
           {item(href.allSeries(), 'shelf', 'Series', place === 'series')}
-          {book && (
-            <>
-              <a class="rail-book" href={href.book(book.folder)} title={book.title}>
-                <Cover source={source} book={book} small />
-                <span class="rail-book-text rail-label">
-                  <span class="rail-book-title">{book.title}</span>
-                  <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
-                </span>
-              </a>
-              {resume && item(href.write(resume), 'pen', 'Keep writing', false, 'rail-write')}
-              {item(href.board('details', book.folder), 'image', 'Book details', board === 'details', 'rail-details')}
-              {item(href.board('overview', book.folder), 'gauge', 'Overview', board === 'overview')}
-              {GROUPS.map(([name, keys]) => {
-                const here = keys.map((k) => byKey[k]).filter(Boolean);
-                if (!here.length) return null;
-                return (
-                  <div class="rail-group" key={name}>
-                    <p class="rail-heading">{name}</p>
-                    {here.map((l) => item(l.to, l.icon, l.title, l.key === board))}
-                  </div>
-                );
-              })}
-            </>
-          )}
+          {book && index && (() => {
+            const tools = (
+              <>
+                {resume && item(href.write(resume), 'pen', 'Keep writing', false, 'rail-write')}
+                {item(href.board('details', book.folder), 'image', 'Book details', board === 'details', 'rail-details')}
+                {item(href.board('overview', book.folder), 'gauge', 'Overview', board === 'overview')}
+                {GROUPS.map(([name, keys]) => {
+                  const here = keys.map((k) => byKey[k]).filter(Boolean);
+                  if (!here.length) return null;
+                  return (
+                    <div class="rail-group" key={name}>
+                      <p class="rail-heading">{name}</p>
+                      {here.map((l) => item(mode === 'workflow' && l.key === 'chapter-grid' ? href.board('chapter-grid', book.folder) : l.to, l.icon, l.title, l.key === board))}
+                    </div>
+                  );
+                })}
+              </>
+            );
+            return (
+              <>
+                <a class="rail-book" href={mode === 'workflow' ? href.flow(book.folder) : href.book(book.folder)} title={book.title}>
+                  <Cover source={source} book={book} small />
+                  <span class="rail-book-text rail-label">
+                    <span class="rail-book-title">{book.title}</span>
+                    <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
+                  </span>
+                </a>
+                <ModeSwitch sourceKey={source.key} index={index} book={book} waiting={mode === 'workflow' ? 0 : flow.waiting} compact />
+                {mode === 'workflow' ? (
+                  <>
+                    {item(href.flow(book.folder), 'outline', 'Workflow home', hash === href.flow(book.folder), undefined, flow.waiting || undefined)}
+                    {flow.stages.length > 0 && (
+                      <div class="rail-group">
+                        <p class="rail-heading">Stages</p>
+                        {flow.stages.map((st) => {
+                          const n = st.tasks.filter((t) => flow.statuses[t.key] && (flow.statuses[t.key].state === 'judge' || flow.statuses[t.key].state === 'check')).length;
+                          const here = hash === href.flowStage(book.folder, st.index + 1) || st.tasks.some((t) => hash === href.flowStep(book.folder, t.key));
+                          return item(href.flowStage(book.folder, st.index + 1), stageIcon(st.index), shortStage(st.title), here, 'rail-stage', n || undefined);
+                        })}
+                      </div>
+                    )}
+                    <details class="rail-more" open={Boolean(board)}>
+                      <summary class="rail-item"><Icon name="more" size={20} /><span class="rail-label">Writing tools</span></summary>
+                      {tools}
+                    </details>
+                  </>
+                ) : tools}
+              </>
+            );
+          })()}
           <div class="rail-foot">
             {item(href.chat(), 'chat', 'Chat', place === 'chat')}
             {item(href.jobs(), 'team', 'Jobs', place === 'jobs')}

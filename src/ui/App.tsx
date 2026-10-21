@@ -65,6 +65,9 @@ import { RecipesScreen } from './Recipes.tsx';
 import { WorkflowScreen } from './Workflow.tsx';
 import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
+import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
+import { createResults, flowResults, loadMode, saveMode, type NewResult } from '../lib/flow.ts';
+import { nameList } from '../lib/links.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -426,6 +429,13 @@ export function App() {
     } catch (e) { return (e as Error).message; }
   }, [source, runSync]);
 
+  /** Workflow mode: results Kyle brought in or wrote, saved as idea notes in the book's Ideas folder, then a sync so every screen has them. */
+  const onResults = useCallback(async (book: BookEntry, list: NewResult[]): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to save results.';
+    if (!list.length) return 'Write or paste a result first.';
+    try { await createResults(source, book.folder, list, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
+  }, [source, runSync]);
+
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
     runFlush();
@@ -547,6 +557,7 @@ export function App() {
           plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           recipes={recipeNotes(view).map(recipeName)}
+          flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
@@ -590,10 +601,26 @@ export function App() {
     body = <WorkflowScreen index={view} step={route.step} onNote={source.write && source.readFresh ? onWorkflowNote : undefined} />;
   } else if (route.name === 'recipes') {
     body = <RecipesScreen index={view} onAdd={source.write ? onAddRecipe : undefined} onSave={source.write && source.readFresh ? onSaveRecipe : undefined} />;
+  } else if (route.name === 'flow') {
+    const book = view.books.find((b) => b.folder === route.folder);
+    if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
+    else {
+      saveMode(source.key, book.folder, 'workflow');
+      body = <FlowScreen index={view} book={book} stage={route.stage} step={route.step} sourceKey={source.key} waiting={waiting}
+        onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} onResults={source.write ? onResults : undefined} />;
+    }
   } else if (route.name === 'note' && view.notes[route.path] && view.notes[route.path].type === 'session') {
     body = <SessionView index={view} note={view.notes[route.path]} />;
   } else if (route.name === 'note') {
-    body = <NoteView schema={schema} index={view} path={route.path} />;
+    const n = view.notes[route.path];
+    const nb = n && n.type === 'character' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) || activeBook(view) : null;
+    const who = n ? String(n.data.name || n.data.title || '').trim() : '';
+    body = (
+      <>
+        <NoteView schema={schema} index={view} path={route.path} />
+        {nb && who && <FromTheWorkflow index={view} book={nb} names={[who].concat(nameList(n.data.aliases))} title={who} onResults={source.write ? onResults : undefined} />}
+      </>
+    );
   } else if (route.name === 'series') {
     body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} onCreateBook={source.write ? onCreateBook : undefined} />
       : <Home source={source} index={view} series onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
@@ -603,7 +630,10 @@ export function App() {
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       let screen;
-      if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
+      if (route.name === 'book' && loadMode(source.key, view, book) === 'workflow') {
+        screen = <FlowScreen index={view} book={book} stage={0} step="" sourceKey={source.key} waiting={waiting}
+          onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} onResults={source.write ? onResults : undefined} />;
+      } else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
@@ -631,13 +661,13 @@ export function App() {
 
   // The top bar shows the boards of the book on screen, or else of the active book.
   const navBook = view
-    ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' ? view.books.find((b) => b.folder === route.folder) : null) ||
+    ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' || route.name === 'flow' ? view.books.find((b) => b.folder === route.folder) : null) ||
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) ||
       (route.name === 'home' || route.name === 'books' || route.name === 'series' ? null : activeBook(view))
     : null;
   const at = route.name === 'team' ? href.team(route.slug) : route.name === 'skills' ? href.skills(route.skill) : route.name === 'history' ? href.history(route.who) : '';
   const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
-    : route.name === 'book' ? 'chapter-grid' : '';
+    : route.name === 'book' ? (view && navBook && loadMode(source.key, view, navBook) === 'workflow' ? '' : 'chapter-grid') : '';
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
@@ -653,14 +683,14 @@ export function App() {
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
     team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
-  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : '') : 'Story Forge');
+  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : route.name === 'flow' ? ' · Workflow' : '') : 'Story Forge');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
 
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
   const sideBook = view ? navBook || activeBook(view) : null;
   const WHERE: Record<string, string> = { home: 'the Books page', series: 'the Series page', jobs: 'the Jobs page', todo: 'the To-do list',
     team: 'the Team page', skills: 'the Skills page', history: 'Session history', recipes: 'the Recipes page', workflow: 'the Workflow page' };
-  const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : 'this page');
+  const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : route.name === 'flow' ? 'Workflow mode' : 'this page');
   const pageView = (): PageView => {
     const v: PageView = { name: where, book: sideBook };
     if (!view) return v;
@@ -682,6 +712,7 @@ export function App() {
       }
     } else if (route.name === 'team' && route.slug) v.lines = ['Looking at the team member: ' + route.slug];
     else if (route.name === 'skills' && route.skill) v.lines = ['Looking at the skill: ' + route.skill];
+    else if (route.name === 'flow') v.lines = ['In Workflow mode' + (route.step ? ', on step ' + route.step : route.stage ? ', on stage ' + route.stage : ', on its home') + ' of the workflow (System/Workflow.md). Results are idea notes with `step`; Kyle keeps, puts off or drops them.'];
     else if (route.name === 'workflow') v.lines = ['Looking at the workflow (System/Workflow.md)' + (route.step ? ', step ' + route.step : '') + '. Kyle may want to judge or change a step: answer about the workflow, and propose changes as a note, never by editing it.'];
     else if (route.name === 'series' && route.folder) v.lines = ['Looking at the series: `' + route.folder + '`'];
     return v;

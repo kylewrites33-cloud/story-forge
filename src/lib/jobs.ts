@@ -8,7 +8,7 @@ import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
-  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'next-step' | 'forge';
+  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'next-step' | 'forge' | 'workflow-step';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -41,6 +41,7 @@ export function jobLabel(kind: unknown): string {
     case 'options': return 'Options for a passage';
     case 'next-step': return 'The next step';
     case 'forge': return 'Forge a new specialist';
+    case 'workflow-step': return 'A workflow step';
     default: return 'Ask the team';
   }
 }

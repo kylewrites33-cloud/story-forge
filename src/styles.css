@@ -1656,3 +1656,101 @@ button, [role="button"] { -webkit-touch-callout: none; }
 /* What happened when words that waited on this device met changes made elsewhere: stays until Kyle presses OK. */
 .banner .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 8px 12px; }
 .banner .notice button { flex: none; min-height: 44px; min-width: 44px; padding: 4px 14px; }
+
+/* Workflow mode (Kyle, 2026-10-21): the Workflow | Writing switch, the stage road, steps and their results. */
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 10px 0 14px; border-radius: 12px; background: var(--hover); max-width: 26rem; }
+.mode-switch a {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 10px; border-radius: 9px;
+  color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.95rem;
+}
+.mode-switch a[aria-current="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+.mode-switch a .count-badge { margin-left: 2px; }
+.mode-switch.compact { margin: 2px 0 8px; }
+.mode-switch.compact a { font-size: 0.85rem; padding: 4px 6px; min-height: 40px; }
+@media (max-width: 1099px) {
+  .shell:not(.rail-open) .mode-switch.compact { grid-template-columns: 1fr; padding: 3px; }
+  .shell:not(.rail-open) .mode-switch.compact a { flex-direction: column; gap: 2px; font-size: 0.68rem; min-height: 48px; padding: 4px 2px; }
+}
+.rail-more > summary { list-style: none; cursor: pointer; color: var(--muted); }
+.rail-more > summary::-webkit-details-marker { display: none; }
+.rail-more[open] > summary { margin-bottom: 2px; }
+.rail-stage .rail-count, .rail-item .rail-count { color: var(--accent); font-weight: 700; }
+
+.flow { padding-left: var(--gutter); padding-right: var(--gutter); }
+.flow h1.flow-step-h { font-size: 1.6rem; max-width: 48rem; }
+.flow-label { color: var(--muted); font-size: 0.75rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+.flow-next {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; margin: 4px 0 18px; padding: 16px 18px;
+  border-radius: var(--radius); background: var(--accent); color: var(--on-accent); text-decoration: none; box-shadow: var(--shadow);
+}
+.flow-next > * { grid-column: 1; }
+.flow-next > .icon { grid-column: 2; grid-row: 1 / span 3; }
+.flow-next-kicker { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; }
+.flow-next-text { font-size: 1.15rem; font-weight: 650; }
+.flow-next .meta { color: inherit; opacity: 0.85; }
+.flow-next code { color: inherit; background: none; }
+.flow-road { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); counter-reset: stage; }
+.flow-road a {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 6px; align-items: center; height: 100%; padding: 14px 16px;
+  border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none; box-shadow: var(--shadow);
+}
+.flow-road a:hover { border-color: var(--accent); }
+.flow-road .flow-bar, .flow-road .meta { grid-column: 1 / -1; }
+.flow-road .meta { margin: 0; font-size: 0.85rem; }
+.flow-road-num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.flow-road a.done .flow-road-num { background: var(--accent); color: var(--on-accent); }
+.flow-road-title { font-weight: 650; line-height: 1.25; }
+.flow-bar { display: block; height: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.flow-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.flow-chip { flex: none; display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 650; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.flow-chip.flow-judge, .flow-chip.flow-check { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.flow-chip.flow-working { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.flow-chip.flow-kept { border-color: var(--ok); color: var(--ok); }
+.flow-steps { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.flow-steps a {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 14px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none;
+}
+.flow-steps a:hover { border-color: var(--accent); }
+.flow-steps a > .icon { color: var(--muted); flex: none; }
+.flow-step-num { flex: none; min-width: 3.2em; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.flow-step-body { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; }
+.flow-step-text { font-weight: 600; }
+.flow-steps .meta { margin: 0; font-size: 0.85rem; }
+@media (max-width: 640px) { .flow-steps a { flex-wrap: wrap; } .flow-steps .flow-chip { margin-left: calc(3.2em + 12px); } }
+.flow-step-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 6px 0 12px; max-width: 60rem; }
+.flow-working, .flow-check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); }
+.flow-working .job-dot { display: inline-block; }
+.flow-check p { margin: 0; flex: 1 1 18rem; }
+.flow-results { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.flow-result { padding: 12px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); max-width: 52rem; }
+.flow-result .buttons { margin-top: 8px; }
+.flow-result .meta { margin: 2px 0 0; font-size: 0.85rem; }
+.flow-result-head { display: flex; align-items: baseline; gap: 10px; justify-content: space-between; }
+.flow-result-title { font-weight: 650; font-size: 1.05rem; color: var(--text); text-decoration: none; }
+.flow-result-title:hover { text-decoration: underline; }
+.flow-pitch { margin: 6px 0 0; }
+.flow-panel-note { display: flex; gap: 6px; align-items: baseline; margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; }
+.flow-score { flex: none; color: var(--accent); letter-spacing: 2px; font-size: 0.8rem; }
+.flow-score-off { color: var(--line); }
+.flow-dropped { margin: 14px 0; }
+.flow-dropped summary { cursor: pointer; color: var(--muted); min-height: 44px; display: flex; align-items: center; }
+.flow-dropped .flow-result { display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: none; }
+.flow-make { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: start; }
+.flow-make .reason, .flow .ov-panel .reason, .flow-about .reason { display: grid; gap: 4px; margin: 8px 0; }
+.flow textarea, .flow input[type="text"], .flow-about textarea, .flow-about input[type="text"] { width: 100%; }
+.flow-hand { margin: 14px 0; }
+.flow-hand .meta { margin: 6px 0 0; }
+.flow-said { color: var(--ok); margin: 8px 0 0; }
+.flow-prevnext { display: flex; justify-content: space-between; gap: 10px; margin: 24px 0 8px; }
+.flow-prevnext a.button { display: inline-flex; align-items: center; gap: 6px; }
+.flow-own-add { margin-top: 10px; }
+.flow-about { margin: 18px var(--gutter) 0; padding: 16px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); max-width: 52rem; }
+.flow-about h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1.1rem; }
+.flow-about h2 .icon { color: var(--accent); }
+.flow-kept-list { list-style: none; padding: 0; margin: 6px 0 10px; display: grid; gap: 8px; }
+.flow-kept-list li { line-height: 1.4; }
+.flow-tag { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.75rem; font-weight: 650; }
+.flow-tab { padding: 4px 14px 14px; }
+.flow-tab h3 { margin: 14px 0 4px; font-size: 1rem; }
+.flow-tab a.button { display: inline-flex; align-items: center; gap: 6px; }
