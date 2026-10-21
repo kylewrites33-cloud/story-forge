@@ -20,7 +20,7 @@ src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved 
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
 src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, new ones in the book's Tasks folder
-src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, the Writing Log notes
+src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes

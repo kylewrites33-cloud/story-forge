@@ -30,7 +30,7 @@ import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, f
 import { lineAt, loadDots, mapFor, merge3, saveDots } from '../lib/live.ts';
 import { planHead, planPath } from '../lib/plans.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
-import { trackWords } from '../lib/pomodoro.ts';
+import { trackWords, wordsNotTyped } from '../lib/pomodoro.ts';
 import type { ComponentChildren } from 'preact';
 import type { Decision } from '../lib/ideas.ts';
 import type { Choice } from '../lib/write-queue.ts';
@@ -317,7 +317,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!navigator.onLine) return 'Connect to the internet to join scenes.';
     try {
       const taken = await archiveForJoin(source, note, next, new Date());
-      setDraft({ ...draftRef.current, body: joinedBody(draftRef.current.body, taken.body), freshHeadline: true });
+      const joined = joinedBody(draftRef.current.body, taken.body);
+      wordsNotTyped(bodyWords(joined) - bodyWords(draftRef.current.body));
+      setDraft({ ...draftRef.current, body: joined, freshHeadline: true });
       reload();
       if (!(await save(false)) || isUnsaved(draftRef.current)) return 'The joined words did not save, so ' + String(next.data.id || 'the next scene') + ' stays where it is. Its copy is in the Archive.';
       await removeJoined(source, next, taken.sha, title);
@@ -413,6 +415,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const cmd = (): EditorCommands | null => (beatsMode ? (beatsApi.current ? beatsApi.current.cmd() : null) : commands.current);
   /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
   const applyText = (next: string, map: (n: number) => number) => {
+    // These words are not Kyle's typing: they count in neither the Pomodoro nor the day's words typed.
+    wordsNotTyped(bodyWords(next) - bodyWords(pageText()));
     const c = cmd();
     if (c) c.apply(next, map);
     else { changed(next); reload(); }
@@ -563,7 +567,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   }, [text, autoFill, newBrackets]);
   const target = draft.target != null ? draft.target : toNumber(note.data.target_words);
   const sitting = words - draft.startWords;
-  // The Pomodoro timer counts the words written while it runs.
+  // Words typed count for the day, and for the Pomodoro while it runs.
   const lastWords = useRef(words);
   useEffect(() => {
     if (lastWords.current !== words && !beatsMode) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
@@ -868,7 +872,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
             {tab === 'copies' && (
               <CopiesPanel source={source} note={note} body={draft.body} canSave={canSave}
-                onUse={(body) => { setDraft({ ...draftRef.current, body }); reload(); }} />
+                onUse={(body) => { wordsNotTyped(bodyWords(body) - bodyWords(draftRef.current.body)); setDraft({ ...draftRef.current, body }); reload(); }} />
             )}
             {tab === 'team' && (
               <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}

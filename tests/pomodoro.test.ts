@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  addToDay, advance, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
+  addToDay, addTypedToDay, advance, flushTyped, loadTyped, trackWords, wordsNotTyped, typedDue, saveTimer, loadTimer, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
 } from '../src/lib/pomodoro.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { VaultIndex } from '../src/lib/types.ts';
@@ -77,7 +77,7 @@ test('a Pomodoro stopped early keeps its minutes and words but is not a whole Po
   assert.equal(n.data.minutes, 40);
   assert.equal(n.data.words, 130);
   const index = { notes: {} } as unknown as VaultIndex;
-  assert.deepEqual(today(index, [r!, full], new Date(T0)), { pomodoros: 1, minutes: 40, words: 130 });
+  assert.deepEqual(today(index, [r!, full], new Date(T0)), { pomodoros: 1, minutes: 40, words: 130, typed: 0 });
   assert.equal(pomodoroCount(40), '1.6');
   assert.equal(pomodoroCount(44), '1.76');
   assert.equal(pomodoroCount(125), '5');
@@ -91,7 +91,7 @@ test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\
     { date: '2026-10-18', time: '10:00', minutes: 25, words: 200, scenes: ['S-001'] }
   ]);
   const index = { notes: {} } as unknown as VaultIndex;
-  assert.deepEqual(today(index, loadLog(src.key), new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500 });
+  assert.deepEqual(today(index, loadLog(src.key), new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500, typed: 0 });
   const saved = await flushLog(src, new Date('2026-10-18T10:30:00Z'));
   assert.equal(saved.length, 2);
   assert.deepEqual(loadLog(src.key), []);
@@ -100,15 +100,64 @@ test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\
   assert.equal(n.data.words, 500);
   assert.doesNotMatch(src.writes.map((w) => w.message).join('\n'), /Agent:/);
   const withNote = { notes: { [n.path]: n } } as unknown as VaultIndex;
-  assert.deepEqual(today(withNote, [], new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500 });
-  assert.deepEqual(today(withNote, [], new Date('2026-10-19T12:00:00')), { pomodoros: 0, minutes: 0, words: 0 });
+  assert.deepEqual(today(withNote, [], new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500, typed: 500 });
+  assert.deepEqual(today(withNote, [], new Date('2026-10-19T12:00:00')), { pomodoros: 0, minutes: 0, words: 0, typed: 0 });
+});
+
+test('words typed count with no Pomodoro running, and the team\'s words never count', async () => {
+  store.clear();
+  const t = new Date('2026-10-21T09:00:00').getTime();
+  trackWords('a.md', 'S-001', 100, 160, t);
+  assert.equal(loadTyped().days['2026-10-21'], 60, 'no Pomodoro running: still counted');
+  trackWords('a.md', 'S-001', 160, 100, t + 1000);
+  assert.equal(loadTyped().days['2026-10-21'], 60, 'deleting takes nothing away');
+  // The team fills a bracket with 40 words while Kyle types 3 more: only his 3 count.
+  wordsNotTyped(40, t + 2000);
+  trackWords('a.md', 'S-001', 100, 143, t + 2100);
+  assert.equal(loadTyped().days['2026-10-21'], 63);
+  // Deleting the team's words does not lower the count; typing afterwards counts again.
+  trackWords('a.md', 'S-001', 143, 103, t + 3000);
+  trackWords('a.md', 'S-001', 103, 105, t + 4000);
+  assert.equal(loadTyped().days['2026-10-21'], 65);
+  // Words not typed that never arrive do not swallow Kyle's later typing.
+  wordsNotTyped(50, t + 5000);
+  trackWords('a.md', 'S-001', 105, 110, t + 11000);
+  assert.equal(loadTyped().days['2026-10-21'], 70);
+  // A running Pomodoro counts the same typed words and leaves the team's out.
+  saveTimer(startWork(idleState(), t + 12000));
+  wordsNotTyped(30, t + 13000);
+  trackWords('a.md', 'S-001', 110, 145, t + 13100);
+  assert.equal(wordsSoFar(loadTimer()), 5);
+  assert.equal(loadTyped().days['2026-10-21'], 75);
+  assert.equal(typedDue(loadTyped(), t + 13100 + 60000), false, 'still typing');
+  assert.equal(typedDue(loadTyped(), t + 13100 + 2 * 60000), true, 'a two-minute pause');
+  assert.equal(typedDue({ ...loadTyped(), typedAt: t + 10 * 60000 }, t + 10 * 60000), true, 'ten minutes of steady typing');
+
+  // It goes to the day's note as `typed`; a day logged before then starts from its Pomodoro words.
+  const src = new MemSource();
+  src.files.set('Writing Log/2026-10-21.md', addToDay('', { date: '2026-10-21', time: '08:00', minutes: 25, words: 516, scenes: ['S-051'] }, new Date(t)));
+  const saved = await flushTyped(src, new Date(t + 20 * 60000));
+  assert.equal(saved.length, 1);
+  assert.deepEqual(loadTyped().days, {});
+  const n = makeNote('Writing Log/2026-10-21.md', 'x', src.files.get('Writing Log/2026-10-21.md') as string);
+  assert.equal(n.data.typed, 516 + 75);
+  assert.equal(n.data.words, 516, 'the Pomodoro words stay as they were');
+  assert.match(n.body, /## Pomodoros\n- 08:00, 25 minutes, 516 words \(S-051\)/);
+  assert.doesNotMatch(src.writes.map((w) => w.message).join('\n'), /Agent:/);
+  assert.equal(today({ notes: { [n.path]: n } } as unknown as VaultIndex, [], new Date(t), { days: { '2026-10-21': 9 }, firstAt: 0, typedAt: 0 }).typed, 600);
+  // A day with no Pomodoro gets a note of its own.
+  const fresh = makeNote('Writing Log/2026-10-22.md', 'x', addTypedToDay('', '2026-10-22', 300, new Date(t)));
+  assert.equal(fresh.data.typed, 300);
+  assert.equal(fresh.data.pomodoros, 0);
+  store.clear();
 });
 
 test('a writing day the app wrote passes sf validate', { skip: !hasVault && 'the vault is not beside this repository' }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-log-'));
   fs.cpSync(DEMO, dir, { recursive: true });
   const r = { date: '2026-10-18', time: '09:30', minutes: 25, words: 412, scenes: ['S-001'] };
-  fs.writeFileSync(path.join(dir, 'Writing Log', '2026-10-18.md'), addToDay(addToDay('', r, new Date()), r, new Date()));
+  fs.writeFileSync(path.join(dir, 'Writing Log', '2026-10-18.md'), addTypedToDay(addToDay(addToDay('', r, new Date()), r, new Date()), '2026-10-18', 900, new Date()));
+  fs.writeFileSync(path.join(dir, 'Writing Log', '2026-10-19.md'), addTypedToDay('', '2026-10-19', 250, new Date()));
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], { cwd: dir, encoding: 'utf8' });
   assert.match(out, /no errors, no warnings/);
 });
