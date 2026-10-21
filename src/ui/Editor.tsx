@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useLockedPage } from './viewport.ts';
 import {
-  bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
+  bodyWords, holdOpen, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
   type Draft, type SnapshotEntry
 } from '../lib/drafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
@@ -266,6 +266,9 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
     if (typingSince.current == null) typingSince.current = Date.now();
     else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; save(false); }
   };
+
+  // While the scene is open, only this page saves it (the 30-second sync leaves it alone).
+  useEffect(() => holdOpen(note.path), [note.path]);
 
   // Leaving the page or putting the iPad down: try to save, and keep it waiting on the device either way.
   useEffect(() => {

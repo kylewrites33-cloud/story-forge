@@ -273,12 +273,27 @@ export function mergeNotice(mergedIn: string[], clashed: string[]): string | nul
   return parts.length ? parts.join(' ') : null;
 }
 
-/** Save every draft Kyle finished while offline. A draft that saves is forgotten; one that fails stays, with its error. */
+// Scenes open in the writing screen right now. Their page saves them itself; a flush that saved them too, from the copy
+// kept on the device with an older starting point, made the two saves meet as a merge (2026-10-21: one line went in again
+// every 30 seconds).
+const openHere = new Map<string, number>();
+
+/** The writing screen has this scene open: flushes leave it to the page until the returned function is called. */
+export function holdOpen(path: string): () => void {
+  openHere.set(path, (openHere.get(path) || 0) + 1);
+  return () => {
+    const n = (openHere.get(path) || 0) - 1;
+    if (n > 0) openHere.set(path, n); else openHere.delete(path);
+  };
+}
+
+/** Save every draft Kyle finished while offline. A draft that saves is forgotten; one that fails stays, with its error.
+ * A scene open on the page is left to the page. */
 export async function flushDrafts(source: VaultSource, sourceKey: string, now: Date, storage: Store = defaultStore()): Promise<DraftFlush> {
   const saved: NoteRecord[] = [];
   let error: string | null = null;
   const mergedIn: string[] = [], clashed: string[] = [];
-  for (const d of Object.values(loadDrafts(sourceKey, storage)).filter((x) => x.pending)) {
+  for (const d of Object.values(loadDrafts(sourceKey, storage)).filter((x) => x.pending && !openHere.has(x.path))) {
     try {
       const r = await saveDraft(source, d, now);
       saved.push(r.note);

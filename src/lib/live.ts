@@ -66,12 +66,29 @@ export function merge3(base: string, mine: string, theirs: string): Merged {
   const B = base.split('\n'), M = mine.split('\n'), T = theirs.split('\n');
   // Where each of the base's lines is in Kyle's version (-1: he changed or removed it).
   const inMine = new Array<number>(B.length).fill(-1);
-  matches(B, M).forEach(([i, j]) => { inMine[i] = j; });
+  // Kyle's own lines: the ones that are not the base's.
+  const his = new Array<boolean>(M.length).fill(true);
+  matches(B, M).forEach(([i, j]) => { inMine[i] = j; his[j] = false; });
+  // Whether Kyle's own lines, between the written base lines around a hunk, already hold its new lines in order. Then
+  // both sides made the same change (2026-10-21: one save went in twice, so "Peppermint was right." came back every 30
+  // seconds) and it must not come in a second time.
+  const already = (h: Hunk, lines: string[]): boolean => {
+    const want = lines.filter((l) => l.trim());
+    let lo = 0, hi = M.length;
+    for (let k = h.a0 - 1; k >= 0; k--) if (B[k].trim() && inMine[k] >= 0) { lo = inMine[k] + 1; break; }
+    for (let k = h.a1; k < B.length; k++) if (B[k].trim() && inMine[k] >= 0) { hi = inMine[k]; break; }
+    // Only empty lines added where Kyle is writing too: his spacing stands.
+    if (!want.length) return h.a0 === h.a1 && his.slice(lo, hi).some(Boolean);
+    let w = 0;
+    for (let j = lo; j < hi && w < want.length; j++) if (his[j] && M[j] === want[w]) w++;
+    return w === want.length;
+  };
   const ops: { at: number; del: number; lines: string[]; order: number }[] = [];
   const added: string[] = [];
   let clash = false;
   hunks(B, T).forEach((h, order) => {
     const lines = T.slice(h.b0, h.b1);
+    if (already(h, lines)) return;
     if (h.a0 === h.a1) {
       // Only new lines: after the base line before them, or before the base line after them, or at the end.
       let at = -1;
