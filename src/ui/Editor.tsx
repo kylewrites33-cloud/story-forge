@@ -86,10 +86,12 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, optionJobs, checkOpts, recipes = [] }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, optionJobs, checkOpts, recipes = [] }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
+  /** The scene before this one in reading order, for the Previous button at the bottom of the page. */
+  prev: NoteRecord | null;
   nextMentions: NoteRecord[];
   /** The book the scene is in, for the chapter list. */
   book: EditorBook | null;
@@ -587,7 +589,12 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const heading = group && group.num != null ? chapterHeading(group) : sceneHeader(note.data, title);
   const sub = [group && group.num != null ? title : String(note.data.id || ''), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
     .filter(Boolean).join(' · ');
-  const nextName = next ? sceneHeader(next.data, 'Next scene') : '';
+  // The bottom bar names where it goes: the chapter when it is another chapter or a one-scene chapter, else the scene.
+  const sideName = (n: NoteRecord | null) => {
+    if (!n) return '';
+    const g = book ? book.groups.find((x) => x.scenes.some((y) => y.path === n.path)) : null;
+    return g && g.num != null && (g !== group || g.scenes.length === 1) ? chapterHeading(g) : sceneHeader(n.data, String(n.data.id || ''));
+  };
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
   const reading = readingLine(words, loadRates());
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
@@ -821,15 +828,14 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
           {pageHead}
           <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
-          <div class="writer-done">
-            <span>Done with this scene?</span>
-            <span class="buttons">
-              {sceneStatus === 'planned' && <button type="button" onClick={() => setDraft({ ...draftRef.current, status: 'drafted' })}>Mark as drafted</button>}
-              {next
-                ? <a class="button primary" {...link(href.write(next.path))}>Next: {nextName} <Icon name="right" size={18} /></a>
-                : <button type="button" class="primary" onClick={done}>Back to the Chapter Grid</button>}
-            </span>
-          </div>
+          <nav class="writer-done side-arrows" aria-label="Previous and next section">
+            {prev
+              ? <a class="side-go" {...link(href.write(prev.path))} aria-label={'Previous section: ' + sideName(prev)} title={'Previous: ' + sideName(prev)}><Icon name="left" size={22} /></a>
+              : <span class="side-go" aria-hidden="true" />}
+            {next
+              ? <a class="side-go" {...link(href.write(next.path))} aria-label={'Next section: ' + sideName(next)} title={'Next: ' + sideName(next)}><Icon name="right" size={22} /></a>
+              : <span class="side-go" aria-hidden="true" />}
+          </nav>
           </>}
         </div>
         {right && !focus && (
@@ -856,7 +862,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
             )}
             {tab === 'card' && (picked
               ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} now={codexNow ? codexNow(picked.note) : null} />
-              : <CardPanel schema={schema} note={note} status={sceneStatus} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
+              : <CardPanel schema={schema} note={note} status={sceneStatus} onDrafted={() => setDraft({ ...draftRef.current, status: 'drafted' })} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
             {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
@@ -891,14 +897,15 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
 }
 
 /** The scene's card beside the page: its turn, hook and the rest, read only. */
-function CardPanel({ schema, note, status, link, named, onPick, notes }: {
-  schema: Schema; note: NoteRecord; status: string; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
+function CardPanel({ schema, note, status, link, named, onPick, notes, onDrafted }: {
+  schema: Schema; note: NoteRecord; status: string; onDrafted: () => void; link: (to: string) => { href: string; onClick: (e: MouseEvent) => void };
   named: { entry: CodexEntry; count: number }[]; onPick: (e: CodexEntry) => void; notes: NoteRecord | null;
 }) {
   const rows = cardFields(schema, note.type).filter((k) => k !== 'title' && k !== 'words' && k !== 'status' && !isEmptyValue(note.data[k]));
   return (
     <div class="writer-panel">
       {status && <p class="hint">Status: {status}{!isEmptyValue(note.data.accepted) ? ' · card accepted' : ''}</p>}
+      {status === 'planned' && <div class="buttons"><button type="button" onClick={onDrafted}>Mark as drafted</button></div>}
       {rows.length ? rows.map((k) => (
         <div class="panel-card" key={k}>
           <span class="panel-key">{fieldLabel(k)}</span>
