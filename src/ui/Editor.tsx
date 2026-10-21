@@ -805,13 +805,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {pageHead}
           <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
-          <nav class="writer-done" aria-label="Previous and next section">
+          <nav class="writer-done side-arrows" aria-label="Previous and next section">
             {prev
-              ? <a class="button side-go" {...link(href.write(prev.path))}><Icon name="left" size={18} /><span><small>Previous section</small>{sideName(prev)}</span></a>
-              : <button type="button" class="side-go" disabled><Icon name="left" size={18} /><span><small>Previous section</small>This is the first</span></button>}
+              ? <a class="side-go" {...link(href.write(prev.path))} aria-label={'Previous section: ' + sideName(prev)} title={'Previous: ' + sideName(prev)}><Icon name="left" size={22} /></a>
+              : <span class="side-go" aria-hidden="true" />}
             {next
-              ? <a class="button side-go primary" {...link(href.write(next.path))}><span><small>Next section</small>{sideName(next)}</span><Icon name="right" size={18} /></a>
-              : <button type="button" class="side-go" disabled><span><small>Next section</small>This is the last</span><Icon name="right" size={18} /></button>}
+              ? <a class="side-go" {...link(href.write(next.path))} aria-label={'Next section: ' + sideName(next)} title={'Next: ' + sideName(next)}><Icon name="right" size={22} /></a>
+              : <span class="side-go" aria-hidden="true" />}
           </nav>
           </>}
         </div>

@@ -439,13 +439,10 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
   padding-top: 14px; padding-bottom: 16px; border-top: 1px solid var(--line);
 }
 .writer-done a.button { gap: 6px; }
-/* Previous and next section: two wide buttons, each names where it goes. */
-.writer-done .side-go { flex: 1 1 0; min-width: 0; min-height: 56px; display: inline-flex; align-items: center; gap: 8px; text-align: left; }
-.writer-done .side-go:last-child { justify-content: flex-end; text-align: right; }
-.writer-done .side-go span { display: flex; flex-direction: column; min-width: 0; }
-.writer-done .side-go span, .writer-done .side-go small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.writer-done .side-go small { font-size: 0.8rem; font-weight: 400; opacity: 0.8; }
-.writer-done .side-go:disabled { opacity: 0.45; }
+/* Previous and next section: a quiet arrow at each side, no line, no colour. At the ends the arrow is left out. */
+.writer-done.side-arrows { border-top: none; padding-top: 8px; padding-bottom: 8px; }
+.side-arrows .side-go { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 22px; color: var(--muted); opacity: 0.55; text-decoration: none; }
+.side-arrows a.side-go:hover, .side-arrows a.side-go:focus-visible { opacity: 1; background: var(--bg); }
 
 .panel-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 .panel-tabs button { min-height: 40px; padding: 4px 10px; font-size: 0.85rem; border-color: transparent; background: var(--bg); }

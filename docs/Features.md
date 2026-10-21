@@ -34,9 +34,10 @@ add a dated line here when you add or change one.
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; Previous section and Next section at the bottom), and the scene panel on the right (Card, Copies,
   Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
-  section and next section") has two buttons that open the scene before and after in reading order, crossing chapters;
-  each names where it goes (the chapter when it is another chapter or a one-scene chapter), and each greys out at the
-  start or end of the book. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
+  section and next section"; then "really subtle ... just an arrow to the left on the left side, and an arrow to the right
+  on the right side. no colored text") is a faint arrow at each side with no line above it, opening the scene before and
+  after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
+  shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
   Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
   holds Books and Series, the open book's cover and title, Keep writing, the book's boards grouped as Write, Plan, Codex,
