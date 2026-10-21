@@ -103,3 +103,25 @@ test('bookProgress: the step comes from the least finished scenes', () => {
   assert.equal(bookProgress(['odd', 'drafted']).step, 'drafting');
   assert.equal(bookProgress([]).percent, 0);
 });
+
+test('the Chapter Grid search finds what Kyle means, best first', async () => {
+  const { searchScenes } = await import('../src/lib/search.ts');
+  const list = [
+    scene('a', { id: 'S-033', chapter: 20, title: 'Room 33' }, 'The mill.'),
+    scene('b', { id: 'S-050', chapter: 33, chapter_title: 'The Preorders', title: 'Numbers' }, 'Grey counts.'),
+    scene('c', { id: 'S-051', chapter: 33, title: 'The vote' }, 'Pip votes.'),
+    scene('d', { id: 'S-052', chapter: 34, title: 'Aftermath', cast: ['[[Pipwick Dorn]]'] }, 'Nothing.')
+  ];
+  const ids = (q: string) => searchScenes(list, q, [{ name: 'Pipwick Dorn', terms: ['Pipwick Dorn', 'Pip'] }]).map((h) => h.note.path);
+  assert.deepEqual(ids('33'), ['b', 'c', 'a']);
+  assert.deepEqual(ids('ch 33'), ['b', 'c']);
+  assert.deepEqual(ids('Chapter 33'), ['b', 'c']);
+  assert.deepEqual(ids('s51'), ['c']);
+  assert.deepEqual(ids('S-051'), ['c']);
+  assert.deepEqual(ids('preorders'), ['b', 'c']);
+  assert.deepEqual(ids('aftermth'), ['d']);
+  assert.equal(ids('pip')[0], 'd');
+  assert.ok(ids('pip').indexOf('c') >= 0);
+  assert.deepEqual(ids('vote 33'), ['c']);
+  assert.deepEqual(ids('nothing here'), []);
+});

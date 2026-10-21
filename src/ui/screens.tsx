@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { chapterGroups, chapterHeading } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label, sceneHeader } from '../lib/format.ts';
-import { basename } from '../lib/links.ts';
+import { basename, toNumber } from '../lib/links.ts';
+import { searchScenes } from '../lib/search.ts';
 import { render } from '../lib/markdown.ts';
 import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
 import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
-import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, sceneMatches, type OutlineScene, type ReadRates } from '../lib/home.ts';
+import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, type OutlineScene, type ReadRates } from '../lib/home.ts';
 import { Cover } from './Home.tsx';
 import type { Choice } from '../lib/write-queue.ts';
 import { href } from './route.ts';
@@ -421,8 +422,11 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
   const allGroups = chapterGroups(schema, scenes);
   const words = allGroups.reduce((n, g) => n + g.words, 0);
   const filtering = query.trim() !== '';
-  const shown = filtering ? scenes.filter((s) => sceneMatches(s, query)) : scenes;
-  const groups = filtering ? chapterGroups(schema, shown) : allGroups;
+  const hits = filtering ? searchScenes(scenes, query, codexFor(index, book)) : [];
+  const shown = filtering ? hits.map((h) => h.note) : scenes;
+  // While searching, the chapter with the best match comes first, and each chapter lists its best match first.
+  const groups = filtering ? chapterGroups(schema, shown).sort((a, b) => shown.indexOf(a.scenes[0]) - shown.indexOf(b.scenes[0])) : allGroups;
+  const top = shown[0];
   const rates = loadRates();
   const counts: Record<string, number> = {};
   scenes.forEach((s) => { const st = String(s.data.status || 'planned'); counts[st] = (counts[st] || 0) + 1; });
@@ -489,7 +493,9 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           <label class="search">
             <Icon name="search" size={18} />
             <span class="visually-hidden">Filter scenes</span>
-            <input type="search" value={query} placeholder="Filter: a name, a word, a label…" onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)} />
+            <input type="search" value={query} placeholder="Search: 33, S-051, a title, a name…" enterKeyHint="go"
+              onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && top) { e.preventDefault(); location.hash = href.write(top.path); } }} />
           </label>
           <div class="seg small" role="group" aria-label="View as">
             {(['outline', 'cards'] as GridView[]).map((v) => (
@@ -504,6 +510,14 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
         </div>
       )}
       {filtering && <p class="meta">{shown.length === 1 ? '1 scene matches' : shown.length + ' scenes match'} "{query.trim()}".{shown.length ? '' : ' Try a shorter word.'}</p>}
+      {filtering && top && (
+        <p class="best-match">
+          <a class="button" href={href.write(top.path)}>
+            <Icon name="search" size={18} />
+            <span>Best match: {(toNumber(top.data.chapter) != null ? 'Chapter ' + toNumber(top.data.chapter) + ' · ' : '') + sceneHeader(top.data, basename(top.path))}</span>
+          </a>
+        </p>
+      )}
       {view === 'outline' && scenes.length > 0 && <OutlineView groups={groups} />}
       {view === 'cards' && onMove && !filtering && scenes.length > 1 && (
         <p class={'meta move-hint' + (hint ? ' shown' : '')}>

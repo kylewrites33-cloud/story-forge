@@ -690,6 +690,9 @@ details.group[open] > summary h2::before { content: '▾ '; }
 @media (max-width: 640px) { .grid-cover .cover.small { width: 56px; } .grid-head { gap: 12px; } }
 .grid-tools { margin-top: 0.8rem; }
 .grid-tools .seg.small button { gap: 6px; }
+.best-match { margin: 0.4rem 0 0.8rem; }
+.best-match .button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; text-align: left; }
+.best-match .button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .book-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0.4rem 0 0.5rem; }
 .book-summary .stats { display: flex; flex-wrap: wrap; gap: 8px 14px; }
 .book-summary .stat { display: flex; flex-direction: column; min-width: 2.4rem; }
