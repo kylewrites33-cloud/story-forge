@@ -36,7 +36,9 @@ add a dated line here when you add or change one.
   Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
   section and next section"; then "really subtle ... just an arrow to the left on the left side, and an arrow to the right
   on the right side. no colored text"; then "stay fixed at the bottom ... i just always see it" with "a subtle visible
-  horizontal divider") is a faint arrow at each side, pinned to the bottom of the page under a faint line, opening the scene before and
+  horizontal divider") is a faint arrow at each side, pinned to the bottom of the screen under a faint line (also while typing with a hardware keyboard: the screen
+  keeps its full height and the iPad's small shortcut bar floats between the arrows; Kyle, 2026-10-21, "bring the bar all
+  the way down, even when im tapped in the word processor"), opening the scene before and
   after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
   shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
   Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
