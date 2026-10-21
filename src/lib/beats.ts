@@ -108,6 +108,13 @@ function startsWith(para: string, words: string): boolean {
   return Boolean(w) && p.startsWith(w);
 }
 
+/** Where a beat starts in a scene's text: the paragraph its first words open, or -1 when they are not there. */
+export function beatStart(text: string, words: string): number {
+  if (!words) return -1;
+  const b = blocks(text).find((k) => startsWith(text.slice(k.start, k.end), words));
+  return b ? b.start : -1;
+}
+
 // ---- Laying a chapter out under its beats ----
 
 export interface ChapterScene { path: string; id: string; body: string }

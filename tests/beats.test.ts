@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  addBeatAfter, anchorOf, beatDefs, beatsBody, blocks, layoutChapter, moveBeat, newBeatsText, parseBeats, removeBeat, sceneBody, type BeatDef
+  addBeatAfter, anchorOf, beatStart, beatDefs, beatsBody, blocks, layoutChapter, moveBeat, newBeatsText, parseBeats, removeBeat, sceneBody, type BeatDef
 } from '../src/lib/beats.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 
@@ -157,4 +157,11 @@ test('a beat dragged up or down takes its prose with it, into the scene it lands
   const o = moveBeat(late, late[0].key, late[2].key);
   assert.deepEqual(o.beats.map((x) => x.key), [late[1].key, late[0].key, late[2].key, late[3].key]);
   assert.ok(o.beats.every((x) => !x.loose || x === o.beats[2]));
+});
+
+test('beatStart finds the paragraph a beat opens, and -1 when its words are gone', () => {
+  const at = beatStart(A, anchorOf('"Nobody watches the first minute," he said.'));
+  assert.equal(A.slice(at, at + 8), '"Nobody ');
+  assert.equal(beatStart(A, 'Words that are not here'), -1);
+  assert.equal(beatStart(A, ''), -1);
 });

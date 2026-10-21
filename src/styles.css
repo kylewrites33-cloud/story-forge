@@ -513,6 +513,10 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .scene-notes { margin: 4px 0 8px; }
 .scene-notes .callout { margin: 8px 0; }
 .scene-notes > a.link { display: inline-flex; align-items: center; min-height: 44px; }
+.beat-list { margin: 4px 0 0; padding-left: 1.6em; }
+.beat-list li { min-height: 44px; padding: 6px 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.beat-list li .hint { margin: 0; }
+.beat-list button.link { min-height: 44px; padding: 0; text-align: left; }
 .mark-list mark { background: var(--mark, #fff1a8); color: inherit; border-radius: 3px; padding: 0 2px; }
 .name-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 .codex-name { margin: 8px 0 0; font-size: 1.2rem; }
