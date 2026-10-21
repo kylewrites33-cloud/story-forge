@@ -28,7 +28,7 @@ export function boardLinks(schema: Schema, folder: string): BoardLink[] {
     { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
     { key: 'edit-queue', title: 'Edit Queue', to: href.board('edit-queue', folder), icon: 'queue' },
     { key: 'taste', title: 'Taste', to: href.board('taste', folder), icon: 'taste' },
-    { key: 'overview', title: 'Overview', to: href.board('overview', folder), icon: 'gauge' },
+    { key: 'overview', title: 'Home', to: href.board('overview', folder), icon: 'home' },
     { key: 'notes', title: 'Notes to the Team', to: href.board('notes', folder), icon: 'note' },
     { key: 'sessions', title: 'Sessions', to: href.board('sessions', folder), icon: 'sessions' },
     { key: 'tension', title: 'Tension and Pacing', to: href.board('tension', folder), icon: 'tension' },

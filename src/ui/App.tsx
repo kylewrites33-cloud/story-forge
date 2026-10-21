@@ -25,7 +25,9 @@ import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
-import { Shell } from './Shell.tsx';
+import { keepWriting, Shell } from './Shell.tsx';
+import { RoomTabs, TeamTabs } from './Rooms.tsx';
+import { isTeamPlace } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, Home, SeriesPage } from './Home.tsx';
@@ -636,7 +638,13 @@ export function App() {
       } else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
-      else if (boardKey === 'overview') screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'overview') {
+        const resume = keepWriting(view, book, source.key);
+        const rn = resume ? view.notes[resume] : null;
+        const keep = rn ? { to: href.write(rn.path), title: String(rn.data.title || rn.data.headline || 'Your scene'),
+          where: [rn.data.chapter != null && rn.data.chapter !== '' ? 'Chapter ' + rn.data.chapter : '', typeof rn.data.words === 'number' ? rn.data.words.toLocaleString('en-US') + ' words' : ''].filter(Boolean).join(' · ') } : null;
+        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keep={keep} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
+      }
       else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;
       else if (boardKey === 'sessions') screen = <SessionsScreen index={view} book={book} />;
       else if (SEEING_BOARDS.indexOf(boardKey) >= 0) screen = <SeeingBoard board={boardKey} schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
@@ -653,7 +661,8 @@ export function App() {
           onRename={source.remove ? onRename : undefined} onImport={source.write ? onImport : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
-      body = screen;
+      const flowHome = route.name === 'book' && loadMode(source.key, view, book) === 'workflow';
+      body = flowHome ? screen : <><RoomTabs schema={schema} book={book} board={boardKey} workflow={loadMode(source.key, view, book) === 'workflow'} />{screen}</>;
     }
   } else {
     body = <Home source={source} index={view} series={false} onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
@@ -680,6 +689,7 @@ export function App() {
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
     : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
       || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' || route.name === 'workflow' ? route.name : '';
+  if (view && isTeamPlace(place)) body = <><TeamTabs place={place} />{body}</>;
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
     team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;

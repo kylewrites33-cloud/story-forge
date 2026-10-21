@@ -1756,3 +1756,93 @@ button, [role="button"] { -webkit-touch-callout: none; }
 .flow-tab a.button { display: inline-flex; align-items: center; gap: 6px; }
 .ov-list a > span.flow-chip { flex: none !important; }
 .flow button, .flow-about button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* The cleaner look (Kyle, 2026-10-21): six rooms in the sidebar, tabs inside rooms, white cards with more room,
+   rounder corners and plain status chips. Every colour comes from the theme variables, so all ten themes still work. */
+:root { --radius: 14px; --ok-soft: color-mix(in srgb, var(--ok) 13%, var(--surface)); --warn: #c76a00; --warn-soft: color-mix(in srgb, var(--warn) 13%, var(--surface)); }
+:root[data-mode="dark"] { --warn: #f0a650; }
+@media (prefers-color-scheme: dark) { :root:not([data-mode]) { --warn: #f0a650; } }
+.rail { background: var(--surface); }
+.rail-scroll { padding: 6px 12px 12px; gap: 2px; }
+.rail-item { min-height: 44px; border-radius: 10px; font-size: 0.97rem; gap: 13px; }
+.rail-item .job-dot { margin-left: auto; }
+.rail-book { display: flex; align-items: center; gap: 4px; margin: 10px 0 8px; padding: 4px 2px; border: none; background: none; box-shadow: none; }
+.rail-book-link { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 10px; color: var(--text); text-decoration: none; }
+.rail-book-link:hover, .rail-book-switch:hover { background: var(--hover); }
+.rail-book .cover.small { width: 36px; border-radius: 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); }
+.rail-book-switch { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; color: var(--muted); }
+.rail-heading { margin: 16px 10px 4px; }
+.rail-foot { gap: 2px; padding-top: 10px; }
+.rail-sync-line {
+  display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; padding: 6px 12px; border: none; border-radius: 10px;
+  background: none; color: var(--muted); font-size: 0.85rem; text-align: left;
+}
+.rail-sync-line:hover { background: var(--hover); }
+.rail-sync-line:disabled { opacity: 1; }
+.sync-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.rail-sync-line.good .sync-dot { background: var(--ok); }
+.rail-sync-line.warn .sync-dot { background: var(--warn); }
+@media (max-width: 1099px) and (min-width: 700px) {
+  .shell:not(.rail-open) .rail-book { justify-content: center; margin: 8px 0 4px; }
+  .shell:not(.rail-open) .rail-book-link { justify-content: center; padding: 4px; }
+  .shell:not(.rail-open) .rail-book-switch { display: none; }
+  .shell:not(.rail-open) .rail-sync-line { justify-content: center; padding: 6px 2px; }
+  .shell:not(.rail-open) .rail-item .job-dot { position: absolute; margin: -22px 0 0 22px; }
+  .shell:not(.rail-open) .rail-item { position: relative; }
+}
+
+/* Room tabs: the room's name, then its boards, underlined. */
+.room-tabs { display: flex; align-items: flex-end; gap: 18px; margin: 0 0 22px; border-bottom: 1px solid var(--line); max-width: 100%; }
+.room-name { flex: none; padding: 0 0 12px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.room-tab-row { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.room-tab-row::-webkit-scrollbar { display: none; }
+.room-tab-row a {
+  flex: none; display: flex; align-items: center; min-height: 44px; padding: 8px 12px 10px; margin-bottom: -1px;
+  color: var(--muted); font-weight: 600; font-size: 0.95rem; text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent;
+}
+.room-tab-row a:hover { color: var(--text); }
+.room-tab-row a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+@media (max-width: 699px) { .room-tabs { flex-direction: column; align-items: stretch; gap: 0; } .room-name { padding: 0 0 2px; } }
+.flow + .room-tabs, main > .room-tabs:first-child { margin-top: 4px; }
+
+/* Home: Keep writing as the big button. */
+.hero-card {
+  display: flex; align-items: center; gap: 18px; margin: 18px 0 8px; padding: 20px 24px; border-radius: 18px;
+  background: var(--accent); color: var(--on-accent); text-decoration: none; box-shadow: var(--shadow-lift);
+}
+.hero-card:hover { filter: brightness(1.06); }
+.hero-text { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; }
+.hero-text small { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.hero-text b { font-size: 1.3rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+.hero-text span { opacity: 0.85; font-size: 0.95rem; }
+.hero-go { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 12px; background: var(--surface); color: var(--accent); font-weight: 700; }
+@media (max-width: 599px) { .hero-card { flex-direction: column; align-items: stretch; } .hero-go { justify-content: center; } }
+
+/* Cards, panels and headings: more room, softer edges. */
+main { padding-top: 28px; }
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+.card, .ov-panel { border-radius: 16px; }
+.ov-panel h2 { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.ov-panel h2 .icon { color: var(--accent); }
+button, .button { border-radius: 12px; }
+
+/* Writing screen: one switch for Page, Beats and Whole chapter; the side column's tabs in four groups. */
+.view-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--hover); flex: none; }
+.view-seg button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: none; border-radius: 9px;
+  background: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;
+}
+.view-seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.view-seg button:not(:disabled):hover { border-color: transparent; color: var(--text); }
+.panel-groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 4px; margin: 0 0 10px; border-radius: 12px; background: var(--hover); }
+.panel-groups button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 40px; padding: 0 4px; border: none; border-radius: 9px;
+  background: none; color: var(--muted); font-weight: 650; font-size: 0.88rem;
+}
+.panel-groups button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.panel-groups button:not(:disabled):hover { border-color: transparent; color: var(--text); }
+.panel-groups .count-badge { font-size: 0.7rem; }
+.panel-tabs button { border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--muted); }
+.panel-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.room-tab-row { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 24px; }
+@media (max-width: 1100px) { .view-seg button:not([aria-pressed="true"]) .bar-label { display: none; } }

@@ -305,3 +305,17 @@ add a dated line here when you add or change one.
   writing screen's) show "now", the subject's latest progression up to the open scene (or where the writing is), and its
   > [!secret] callouts with whether the team may see each yet, timed the way sf's packet times them (`codexnow.ts`).
   The Matrix marks a red square where a character is on a written scene's card but never named in its prose.
+- The cleaner look (Kyle, 2026-10-21: "a visual redesign... keep the app as simple and uncluttered as is realistically
+  possible... keeps all the app's capabilities"; "cool, lets do it. we'll tweak things as I use it"). The sidebar has the
+  book card (its books button opens Books and Series), the Workflow | Writing switch, then six rooms: Home (the Overview,
+  with Keep writing as the big button at the top), Manuscript (Chapter Grid, Edit Queue), Plan (Ideas, Story Juice, Beat
+  Sheet, Conflicts, Promises, Plot Grid, Timeline, Character Arcs, Notes to the Team), Codex (Characters, Matrix, Cast
+  web), Review (Tension and Pacing, Themes, Sessions, Taste) and Publish (Market, Book details with Export to Word). Each
+  room shows its boards as tabs across the top (`src/lib/rooms.ts`, `src/ui/Rooms.tsx`). In Workflow mode the stages come
+  first and the rooms follow under "The book". The foot has Team (tabs: Chat, Jobs, Agents, Skills, Recipes, Workflow
+  table; a dot while a job runs), To-do (open count), Settings, and a small sync line (press it to sync). Edit Queue went
+  in Manuscript and To-do stayed its own link (Claude's defaults; Kyle did not choose). The writing screen's top bar has
+  one switch for Page, Beats and Whole chapter; its To-dos, Workflow and Chat buttons moved into the side column, whose
+  fifteen tabs are now four groups (Team: Chat, Options, Ask the team; Chapter: Plan, Beats, Workflow, To-dos; Scene:
+  Card, Notes, Marks, Copies, Target, Split and join; Tools: Page look, Check), with the to-do count and the chat's dot on
+  them. Rounder cards, a 44 px sidebar row and theme colours only, so all ten themes still work.
