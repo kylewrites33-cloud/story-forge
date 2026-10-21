@@ -24,7 +24,9 @@ export type Route =
   /** Kyle's recipes, for every book. */
   | { name: 'recipes' }
   /** The workflow, every step of a book and who does it; step 0 is the top. */
-  | { name: 'workflow'; step: number };
+  | { name: 'workflow'; step: number }
+  /** Workflow mode for a book: its home (stage 0, step ''), one stage (1 to 6) or one step ("18-19"). */
+  | { name: 'flow'; folder: string; stage: number; step: string };
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
@@ -47,6 +49,12 @@ export function parseHash(hash: string): Route {
   if (head === 'recipes') return { name: 'recipes' };
   if (head === 'workflow') return { name: 'workflow', step: Number(tail) || 0 };
   if (head === 'jobs') return { name: 'jobs' };
+  if (head === 'flow' && rest.length) {
+    const folder = decodeURIComponent(rest[0]);
+    if (rest[1] === 'stage') return { name: 'flow', folder, stage: Number(rest[2]) || 0, step: '' };
+    if (rest[1] === 'step') return { name: 'flow', folder, stage: 0, step: decodeURIComponent(rest[2] || '') };
+    return { name: 'flow', folder, stage: 0, step: '' };
+  }
   if (head === 'chat') return { name: 'chat', thread: decodeURIComponent(rest[0] || ''), book: decodeURIComponent(rest.slice(1).join('/')) };
   return { name: 'home' };
 }
@@ -71,7 +79,10 @@ export const href = {
   skills: (skill = '') => '#/skills' + (skill ? '/' + encodeURIComponent(skill) : ''),
   history: (who = '') => '#/history' + (who ? '/' + encodeURIComponent(who) : ''),
   recipes: () => '#/recipes',
-  workflow: (step = 0) => '#/workflow' + (step ? '/' + step : '')
+  workflow: (step = 0) => '#/workflow' + (step ? '/' + step : ''),
+  flow: (folder: string) => '#/flow/' + encodeURIComponent(folder),
+  flowStage: (folder: string, n: number) => '#/flow/' + encodeURIComponent(folder) + '/stage/' + n,
+  flowStep: (folder: string, key: string) => '#/flow/' + encodeURIComponent(folder) + '/step/' + encodeURIComponent(key)
 };
 
 export function useRoute(): Route {

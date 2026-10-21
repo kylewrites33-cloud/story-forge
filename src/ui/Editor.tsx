@@ -40,6 +40,7 @@ type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record
 
 const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
+import { FlowTab } from './Flow.tsx';
 import type { CodexNow } from '../lib/codexnow.ts';
 import { CodexNowBox } from './CodexNow.tsx';
 import { findAll, markList } from '../lib/styled.ts';
@@ -68,8 +69,8 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'chat' | 'plan' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
-const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['beats', 'Beats'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+type Tab = 'flow' | 'chat' | 'plan' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
+const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team'], ['check', 'Check'], ['options', 'Options']];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
@@ -87,7 +88,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, chapterBeats, optionJobs, checkOpts, recipes = [] }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -139,6 +140,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   checkOpts?: CheckOptions;
   /** The vault's recipes by name, for the Team tab's "With a recipe". */
   recipes?: string[];
+  /** Workflow mode's results for this book and the way there, for the Workflow tab (what was kept about this chapter and its people). */
+  flow?: { results: NoteRecord[]; href: string };
 }) {
   useLockedPage();
   const beatsMode = Boolean(beats);
@@ -681,6 +684,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
           </button>
         )}
+        {flow && (
+          <button type="button" class="bar-button compact" onClick={() => go(flow.href)} aria-label="Workflow mode" title="Switch to Workflow mode">
+            <Icon name="outline" /><span class="bar-label">Workflow</span>
+          </button>
+        )}
         {timer && timer('bar')}
         <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
@@ -848,7 +856,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : 'Scene'}</strong>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : tab === 'flow' ? 'From the workflow' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
@@ -891,6 +899,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <CheckPanel sections={[{ key: note.path, label: title, text, root: pageRoot, select: (a, b) => { const c = cmd(); if (c) c.select(a, b); } }]}
                 opts={checkOptions} onJump={closeOver}
                 deeper={<p class="hint">For a closer read by the Line Editor (a paid team job), use the Team tab's deeper check.</p>} />
+            )}
+            {tab === 'flow' && (
+              <FlowTab results={flow ? flow.results : []} chapter={chapterNum} sceneId={String(note.data.id || '')} flowHref={flow ? flow.href : href.home()} link={link}
+                names={namedIn(text, allNames).filter((x) => x.entry.type === 'character').map((x) => x.entry.name)} />
             )}
             {tab === 'options' && (
               <OptionsPanel jobs={optionJobs || []} done={opt.done} onPick={opt.pick} onEnd={opt.end} onDone={opt.markDone} />

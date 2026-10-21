@@ -26,8 +26,8 @@ test('what is waiting on Kyle: ideas, to-dos, notes, questions and unseen jobs, 
   const { index, book } = await demoIndex();
   const items = waitingOnKyle(index, book);
   const by = Object.fromEntries(items.map((i) => [i.key, i]));
-  assert.equal(by.ideas.count, 5);
-  assert.equal(by.ideas.label, '5 ideas to decide');
+  assert.equal(by.ideas.count, 7);
+  assert.equal(by.ideas.label, '7 ideas to decide');
   assert.equal(by.todos.count, 2);
   assert.equal(by.notes.count, 1);
   assert.equal(by.notes.href, '#/board/notes/' + encodeURIComponent(BOOK));

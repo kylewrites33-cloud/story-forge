@@ -829,6 +829,30 @@
         "round": {
           "type": "integer",
           "description": "The brainstorm round the idea came from (1 blind pitch, 2 response, 3 fusion), so the keep rate per round shows if later rounds earn their cost."
+        },
+        "step": {
+          "type": "string",
+          "description": "The workflow step (System/Workflow.md) this result belongs to, as its number (\"18\"), or the name of a step of Kyle's own. Results of one step are that step's store; the app's Workflow mode reads them."
+        },
+        "origin": {
+          "enum": [
+            "team",
+            "brought-in",
+            "kyle"
+          ],
+          "description": "Where a workflow result came from: made by the team, brought in by Kyle from elsewhere, or written by Kyle in the app."
+        },
+        "panel_score": {
+          "type": "integer",
+          "description": "The judging panel's score, 1 to 5, for a workflow result; Kyle decides."
+        },
+        "panel_note": {
+          "type": "string",
+          "description": "The panel's one line on why it scored the result so."
+        },
+        "checked": {
+          "type": "datetime",
+          "description": "When Kyle said a kept result still holds after an earlier step changed (Workflow mode's Still fine)."
         }
       },
       "board": {
@@ -2462,7 +2486,8 @@
             "voice-check",
             "compare-read",
             "learn-taste",
-            "fill-cards"
+            "fill-cards",
+            "workflow-step"
           ]
         },
         "target": {
