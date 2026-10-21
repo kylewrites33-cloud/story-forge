@@ -32,7 +32,7 @@ add a dated line here when you add or change one.
   `Book Backups/<series>/<book>/` (same day replaces that day's file); New series and New book make their backup folders.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
-  a chapter heading; Previous section and Next section at the bottom), and the scene panel on the right (Card, Copies,
+  a chapter heading; an arrow to the previous and next section at the bottom), and the scene panel on the right (Card, Copies,
   Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
   section and next section"; then "really subtle ... just an arrow to the left on the left side, and an arrow to the right
   on the right side. no colored text") is a faint arrow at each side with no line above it, opening the scene before and
