@@ -184,6 +184,11 @@ add a dated line here when you add or change one.
   (`mergeNotice`, kept per device). While he types without a two-minute pause the page still saves every five minutes.
   The app asks the browser to keep its stored words (`navigator.storage.persist`). On a touch screen, holding a finger on
   any button with a name shows the name (`src/ui/hold.ts`), so the icon-only bars can be learnt on the iPad.
+  Repeated lines fixed (Kyle, 2026-10-21: "Peppermint was right." appeared three times with big gaps in chapter 32; "i
+  definitely didn't type this"). A scene left marked as waiting on the device was also saved by the 30-second sync while
+  the page saved it, and the merge then added his new line a second time on every round. Now a scene open on the page is
+  saved only by the page (`holdOpen`), and `merge3` never brings in lines Kyle already added himself in the same place,
+  nor empty lines where he is writing.
   Team chat beside every page (Kyle, 2026-10-18): outside the writing screens, every page but Chat and Settings has the
   team chat on the right (`TeamSide` in `src/ui/Chat.tsx`, placed by `Shell`): beside the page from 1200 px, over it
   narrower; a round Chat button at the bottom right opens it, its arrow hides it (per device), and the Pomodoro moves

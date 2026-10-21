@@ -112,3 +112,18 @@ test('the cursor keeps its place when words come in before or after it', () => {
   assert.equal(map(2), 2);
   assert.equal(map(5), 9);
 });
+
+test('a line both sides added comes in once, not again (2026-10-21, S-051)', () => {
+  const base = 'They read the posts.\n\n\n\n';
+  // The same save went in from two places on the iPad; Kyle kept typing after it.
+  const theirs = 'They read the posts.\n\n\n\n\n\nPeppermint was right. \n\n\n\n\n';
+  const mine = theirs + '\n\nShe always was.';
+  const m = merge3(base, mine, theirs);
+  assert.equal(m.text, mine);
+  assert.deepEqual(m.added, []);
+  assert.equal(m.clash, false);
+  // The same change on both sides is no clash either.
+  assert.deepEqual(merge3('One.\n\nTwo.', 'One!\n\nTwo. More', 'One!\n\nTwo.'), { text: 'One!\n\nTwo. More', added: [], clash: false });
+  // A new line the other side added that Kyle does not have still comes in.
+  assert.equal(merge3('One.\n\nTwo.', 'One.\n\nTwo. More', 'One.\n\nNew.\n\nTwo.').text, 'One.\n\nNew.\n\nTwo. More');
+});

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
-  bodyWords, flushDrafts, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
+  bodyWords, flushDrafts, holdOpen, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
   sceneWords, snapshotFolder, splitLead, withBody, type Draft
 } from '../src/lib/drafts.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
@@ -199,4 +199,17 @@ test('the prose copy matches the sf tool in the vault', { skip: !hasVault && 'au
   const sf = fs.readFileSync(path.join(VAULT, 'System', 'Tools', 'sf.js'), 'utf8');
   const copy = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'prose.js'), 'utf8');
   assert.equal(copy, renderProse(sf), 'src/lib/prose.js differs from sf.js. Run npm run sync-parser.');
+});
+
+test('a scene open on the page is saved by the page, not by the sync beside it', async () => {
+  const src = new MemSource();
+  src.files.set(SCENE, TEXT);
+  const st = store();
+  putDraft('mem', SCENE, { ...draftOf(src, '\nPeppermint was right.\n'), pending: true }, st);
+  const release = holdOpen(SCENE);
+  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st), { saved: [], error: null, notice: null });
+  assert.equal(src.files.get(SCENE), TEXT);
+  release();
+  const r = await flushDrafts(src, 'mem', new Date(), st);
+  assert.equal(r.saved.length, 1);
 });
