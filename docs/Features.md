@@ -34,7 +34,9 @@ add a dated line here when you add or change one.
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; "Done with this scene?" with Next at the bottom), and the scene panel on the right (Card, Copies,
   Target, Split and join). The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
-  slides over the page. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
+  slides over the page. The chapter list opens at the chapter Kyle is in, its scene highlighted, on every size (Kyle,
+  2026-10-21: "right now im regularly having to scroll down from chapter 1"); while it stays open it scrolls only when
+  the open scene is out of sight. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
   holds Books and Series, the open book's cover and title, Keep writing, the book's boards grouped as Write, Plan, Codex,
   Review and Publish, and at its foot Chat, Jobs, To-do, sync and Settings. From 1100 px it shows names; from 700 px it is
   a strip of icons with short names that the menu button opens in full; narrower, a slim top bar opens it over the page. A Chapter Grid

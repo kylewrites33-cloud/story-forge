@@ -1,6 +1,6 @@
 // Full-screen writing: one scene's prose, styled the way a word processor shows it. Each change is kept on this device
 // straight away; it goes to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useLockedPage } from './viewport.ts';
 import {
   bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
@@ -381,6 +381,26 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
   const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); if (v && right && shared()) setRight(false); };
   const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide('scene-panel', v); if (v && left && shared()) setLeft(false); };
   const toggleRight = () => showRight(!right);
+  // The chapter list opens at the chapter Kyle is in, not at chapter 1 (Kyle, 2026-10-21). While it stays open, moving
+  // to another scene scrolls only when that scene is out of sight, so a scene picked in the list does not jump.
+  const sideRef = useRef<HTMLElement | null>(null);
+  const sideShown = Boolean(book && left && !focus);
+  const sideWasShown = useRef(false);
+  useLayoutEffect(() => {
+    const opened = sideShown && !sideWasShown.current;
+    sideWasShown.current = sideShown;
+    const side = sideRef.current;
+    if (!sideShown || !side) return;
+    const here = side.querySelector<HTMLElement>('.side-scene[aria-current="page"]');
+    if (!here) return;
+    const box = side.getBoundingClientRect();
+    const r = here.getBoundingClientRect();
+    if (!opened && r.top >= box.top && r.bottom <= box.bottom) return;
+    // The chapter's heading sits a quarter of the way down, with the chapters before it above.
+    const head = here.parentElement && here.parentElement.querySelector<HTMLElement>('.side-chapter');
+    const top = (head || here).getBoundingClientRect().top - box.top + side.scrollTop;
+    side.scrollTop = Math.max(0, top - side.clientHeight / 4);
+  }, [sideShown, note.path]);
   const openTab = (t: Tab) => { setTab(t); if (!right) showRight(true); };
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
   const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
@@ -659,7 +679,7 @@ export function Editor({ source, schema, note, next, nextMentions, book, backTo,
       </header>
       <div class="writer-cols">
         {book && left && !focus && (
-          <aside class="writer-side" aria-label="Chapters">
+          <aside class="writer-side" aria-label="Chapters" ref={sideRef}>
             <div class="side-head">
               <strong>{book.title}</strong>
               <button type="button" class="icon-button" onClick={toggleLeft} aria-label="Hide the chapter list"><Icon name="left" /></button>
