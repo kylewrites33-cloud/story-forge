@@ -703,17 +703,25 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <button type="button" class="icon-button" onClick={toggleLeft} aria-label="Hide the chapter list"><Icon name="left" /></button>
             </div>
             <nav class="scene-list">
-              {book.groups.map((g) => (
-                <div key={g.key}>
-                  <p class="side-chapter">{chapterHeading(g)}</p>
-                  {g.scenes.map((n) => (
-                    <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene" aria-current={n.path === note.path ? 'page' : undefined}>
-                      <span>{sceneHeader(n.data, n.path)}</span>
-                      <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
-                    </a>
-                  ))}
-                </div>
-              ))}
+              {book.groups.map((g) => {
+                // A chapter's name shows on one line (Kyle, 2026-10-21); a chapter of one scene is one row, and the
+                // scenes of a longer chapter sit under its name, each on one line. The full summary is in the row's title.
+                const row = (n: NoteRecord, label: string, numText: string) => (
+                  <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class={'side-scene' + (numText ? ' side-chapter-row' : '')}
+                    aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data, n.path)}>
+                    {numText && <span class="side-num">{numText}</span>}
+                    <span class="side-name">{label}</span>
+                    <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
+                  </a>
+                );
+                if (g.num != null && g.scenes.length === 1) return <div key={g.key}>{row(g.scenes[0], g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path), String(g.num))}</div>;
+                return (
+                  <div key={g.key}>
+                    <p class="side-chapter">{g.num != null ? <><span class="side-num">{g.num}</span>{g.title || chapterHeading(g)}</> : chapterHeading(g)}</p>
+                    {g.scenes.map((n) => row(n, sceneHeader(n.data, n.path), ''))}
+                  </div>
+                );
+              })}
               {onAdd && <AddInList onAdd={async (t) => {
                 if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
                 return onAdd(group ? group.num : null, group ? group.title : '', t);
