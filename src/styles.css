@@ -1874,3 +1874,45 @@ button, .button { border-radius: 12px; }
 }
 @keyframes sheet-up { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .writer-right { animation: none; } }
+
+/* Workflow home, tidied (Kyle, 2026-10-21: "i dont see number order, and these rounded rectangles are not presented
+   cleanly"): numbered stages in even rows (two across on an upright iPad, three on a wide screen), every card the same
+   height with its bar at the bottom; Waiting on you and The team side by side, Your own steps across the full width. */
+.flow-road { grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 600px) { .flow-road { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1180px) { .flow-road { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.flow-road li { display: flex; }
+.flow-road a { flex: 1; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr auto auto; align-items: start; column-gap: 14px; row-gap: 10px; min-height: 150px; padding: 18px; border-radius: 16px; }
+.flow-road .flow-bar { align-self: end; }
+.flow-road-num { width: 40px; height: 40px; border-radius: 50%; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.flow-road-head { display: grid; gap: 2px; min-width: 0; }
+.flow-road-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.flow-road-title { font-size: 1.1rem; }
+.flow-home-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 8px; }
+@media (min-width: 760px) { .flow-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow-home-grid .flow-own { grid-column: 1 / -1; } }
+.flow-home-grid > .ov-panel { min-width: 0; }
+@media (min-width: 700px) { .flow > .mode-switch { display: none; } }
+@media (min-width: 900px) {
+  .flow-own .flow-own-add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 12px; align-items: end; }
+  .flow-own .flow-own-add > :not(label) { grid-column: 1 / -1; }
+}
+
+/* The writing screen's chapter list: one line per chapter or scene, its number in front (Kyle, 2026-10-21). */
+.side-scene .side-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block !important; }
+.side-num { flex: none; min-width: 1.6em; color: var(--muted); font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.side-scene[aria-current="page"] .side-num { color: var(--on-accent); opacity: 0.8; }
+.side-chapter { display: flex; align-items: baseline; gap: 6px; margin-top: 14px; text-transform: none; letter-spacing: 0; font-size: 0.95rem; font-weight: 650; color: var(--text); padding: 0 2px; }
+.side-chapter .side-num { margin-left: 8px; }
+.side-scene:not(.side-chapter-row) { padding-left: 34px; }
+.side-chapter-row { gap: 6px; }
+/* The stage rows follow the page's own width, so the chat column beside it never squeezes three cards into slivers. */
+.flow { container-type: inline-size; }
+.flow-road { grid-template-columns: 1fr !important; }
+@container (min-width: 520px) { .flow-road { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@container (min-width: 900px) { .flow-road { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+@container (min-width: 700px) { .flow-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow-home-grid .flow-own { grid-column: 1 / -1; } }
+.flow-home-grid .ov-list a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 6px; }
+.flow-home-grid .ov-list a > .flow-chip { grid-column: 1; justify-self: start; }
+.flow-home-grid .ov-list a > span:not(.flow-chip):not(.job-dot) { grid-column: 1; }
+.flow-home-grid .ov-list a > .icon { grid-column: 2; grid-row: 1 / span 2; }
+.flow-home-grid { align-items: start; }

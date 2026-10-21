@@ -325,3 +325,12 @@ add a dated line here when you add or change one.
   The writing screen keeps its own timer in its top bar. Below 900 px wide (an iPad held upright, a phone) the writing
   screen's right-hand column is a sheet pulled up from the bottom over the lower part of the page; its arrow or a press
   on the page above puts it away.
+- Chapter names and a tidier Workflow page (Kyle, 2026-10-21: "maybe you invent and store in your database a chapter
+  name for each of these scenes, and then the chapter title is just presented there"; "i dont see number order, and these
+  rounded rectangles are not presented cleanly"). The writing screen's chapter list shows each chapter's number and
+  name (`chapter_title`, written on the first scene of each Quest Declined chapter, vault e70ded9) on one line; a
+  chapter of one scene is one row, and a longer chapter's scenes sit under its name, one line each, with the full
+  summary on a long press or hover. Workflow home numbers its six stages (Stage 1 to 6, the group name beside it) in even
+  cards, two across or three when the page is wide enough, the bar at the bottom of each; Waiting on you and The team
+  sit side by side, Your own steps across the full width; the page's own Workflow | Writing switch hides wherever the
+  sidebar shows one.

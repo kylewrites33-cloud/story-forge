@@ -134,8 +134,11 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
           return (
             <li key={s.index}>
               <a href={href.flowStage(book.folder, s.index + 1)} class={p.done === p.total && p.total ? 'done' : p.done ? 'started' : ''}>
-                <span class="flow-road-num"><Icon name={stageIcon(s.index)} size={20} /></span>
-                <span class="flow-road-title">{s.title}</span>
+                <span class="flow-road-num">{p.done === p.total && p.total ? <Icon name="check" size={20} /> : s.index + 1}</span>
+                <span class="flow-road-head">
+                  <span class="flow-road-kicker">Stage {s.index + 1}{stageGroup(s.title) ? ' · ' + stageGroup(s.title) : ''}</span>
+                  <span class="flow-road-title">{stageName(s.title)}</span>
+                </span>
                 <span class="flow-bar" aria-hidden="true"><span style={{ width: (p.total ? Math.round((100 * p.done) / p.total) : 0) + '%' }} /></span>
                 <span class="meta">{p.done} of {p.total} {p.total === 1 ? 'step' : 'steps'} kept{p.waiting ? ' · ' + p.waiting + ' waiting on you' : ''}</span>
               </a>
@@ -143,7 +146,7 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
           );
         })}
       </ol>
-      <div class="ov-grid">
+      <div class="flow-home-grid">
         <section class="ov-panel" aria-labelledby="flow-wait">
           <h2 id="flow-wait"><Icon name="todo" size={20} /> Waiting on you</h2>
           {!wait.length ? <p class="ov-clear"><Icon name="check" size={20} /> Nothing is waiting on you.</p> : (
@@ -164,7 +167,7 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
             </ul>
           )}
         </section>
-        <section class="ov-panel" aria-labelledby="flow-own">
+        <section class="ov-panel flow-own" aria-labelledby="flow-own">
           <h2 id="flow-own"><Icon name="pen" size={20} /> Your own steps</h2>
           <p class="meta">Anything you add that the workflow has no step for. It shows in Writing mode like the rest.</p>
           {own.length > 0 && <ul class="flow-results">{own.map((n) => <ResultCard key={n.path} n={n} waiting={waiting} onDecide={onDecide} kept={String(n.data.status) === 'keep'} />)}</ul>}
@@ -173,6 +176,17 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
       </div>
     </section>
   );
+}
+
+/** "Story planning: premise and cast seeds" is the group "Story planning" and the name "Premise and cast seeds". */
+function stageGroup(title: string): string {
+  const at = title.indexOf(':');
+  return at >= 0 ? title.slice(0, at).trim() : '';
+}
+function stageName(title: string): string {
+  const at = title.indexOf(':');
+  const t = at >= 0 ? title.slice(at + 1).trim() : title.trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : title;
 }
 
 // ---- A stage ----
