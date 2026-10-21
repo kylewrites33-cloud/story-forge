@@ -2100,7 +2100,7 @@
       "body": "What needs doing and how to tell it is done."
     },
     "writing-day": {
-      "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them. Lives in Writing Log/ at the vault root, one note per day.",
+      "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them, and every word he typed that day (`typed`). Lives in Writing Log/ at the vault root, one note per day.",
       "scope": "vault",
       "folder": "Writing Log",
       "filename": "{date}",
@@ -2128,6 +2128,10 @@
         "words": {
           "type": "integer",
           "description": "Words written during them, stopped ones included. Cuts are not taken away, so rewriting a passage counts the new words (Kyle, 2026-10-20)."
+        },
+        "typed": {
+          "type": "integer",
+          "description": "Words Kyle typed in the app that day, with or without a Pomodoro. Cuts are not taken away, and words the team puts on the page (filled brackets, Options, lines merged in from elsewhere) never count, so deleting them does not lower it either (Kyle, 2026-10-21)."
         },
         "updated": {
           "type": "datetime"

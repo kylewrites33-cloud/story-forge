@@ -4,6 +4,8 @@
 // not type. New lines, pasting, copying, bold and italic and undo are handled here, so the browser never adds its own
 // formatting.
 import { useEffect, useRef } from 'preact/hooks';
+import { bodyWords } from '../lib/drafts.ts';
+import { wordsNotTyped } from '../lib/pomodoro.ts';
 import { insertText, piecesToMarkdown, styledHtml, stylesAt, toggleStyle, unstyle, type StyleKind, type StyleOptions } from '../lib/styled.ts';
 
 // Stand-ins for the start and end of the selection while the page is read back; private-use characters no prose holds.
@@ -457,6 +459,8 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   const step = (from: { current: Step[] }, to: { current: Step[] }) => {
     const s = from.current.pop();
     if (!s) return;
+    // Words brought back by undo or redo were counted when they first went on the page, so they are not typed again.
+    wordsNotTyped(bodyWords(s.text) - bodyWords(shown.current ?? ''));
     to.current.push({ text: shown.current ?? '', caret: (ref.current && selectionOffsets(ref.current)?.start) || 0, at: 0 });
     commit(s.text, Math.min(s.caret, s.text.length));
   };

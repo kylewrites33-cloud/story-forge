@@ -3,6 +3,10 @@
 // `writing-day` note per day (`Writing Log/YYYY-MM-DD.md`), with the words written in it: every rise in a scene's word count while it ran, with
 // cuts not taken away, so rewriting a passage counts the new words (Kyle, 2026-10-20). A Pomodoro stopped early keeps its minutes
 // and words in the log but does not count as a Pomodoro (Kyle, 2026-10-19).
+// Words typed are counted all the time, with or without a Pomodoro, and go to the same day note as `typed` (Kyle, 2026-10-21:
+// "sometimes ill write in the app but forget to hit the pomodoro"). Words the team puts on the page (filled brackets, Options,
+// lines merged in from elsewhere), a copy brought back, a joined scene and a beat moved to another scene are not typed, so
+// they count nowhere; cuts never take words away, so deleting the team's words does not lower the count either.
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
@@ -141,13 +145,118 @@ export function noteWords(s: TimerState, path: string, id: string, before: numbe
   return { ...s, base, latest: { ...s.latest, [path]: after }, added, ids: id ? { ...s.ids, [path]: id } : s.ids };
 }
 
-/** Call from the writing screen: records a word-count change in the stored timer. */
-export function trackWords(path: string, id: string, before: number, after: number): void {
+// ------------------------------------------------------------------ words not typed
+
+/** How long a word-count change may take to arrive after the page was handed words that are not Kyle's. */
+const NOT_TYPED_MS = 5000;
+let notTypedWords = 0;
+let notTypedUntil = 0;
+
+/** Call just before putting words on the page that Kyle did not type: the next rises, up to `n` words, are not his. */
+export function wordsNotTyped(n: number, now = Date.now()): void {
+  if (!(n > 0)) return;
+  notTypedWords = (now < notTypedUntil ? notTypedWords : 0) + n;
+  notTypedUntil = now + NOT_TYPED_MS;
+}
+
+/** The part of a rise that Kyle typed, after taking away words just put on the page for him. */
+export function typedPart(rise: number, now = Date.now()): number {
+  if (rise <= 0) return 0;
+  if (now >= notTypedUntil || !notTypedWords) return rise;
+  const skip = Math.min(rise, notTypedWords);
+  notTypedWords -= skip;
+  return rise - skip;
+}
+
+/** Call from the writing screens: records a word-count change in the stored timer and in today's words typed. */
+export function trackWords(path: string, id: string, before: number, after: number, now = Date.now()): void {
+  if (after === before) return;
+  const typed = typedPart(after - before, now);
+  // What was not typed moves the counts' starting point, so the Pomodoro and the day count only the typed part.
   const s = loadTimer();
-  const next = noteWords(s, path, id, before, after);
+  const next = noteWords(s, path, id, before, before + typed);
   if (next !== s) {
-    try { localStorage.setItem(STATE_KEY, JSON.stringify(next)); } catch { /* fine */ }
+    const fixed = next.latest[path] != null ? { ...next, latest: { ...next.latest, [path]: after } } : next;
+    try { localStorage.setItem(STATE_KEY, JSON.stringify(fixed)); } catch { /* fine */ }
   }
+  if (typed > 0) addTyped(ymd(new Date(now)), typed, now);
+}
+
+// ------------------------------------------------------------------ words typed today
+
+const TYPED_KEY = 'sf-typed';
+
+/** Words typed on this device and not yet in the vault, per day, with when the first and the last of them were typed. */
+export interface TypedWaiting { days: Record<string, number>; firstAt: number; typedAt: number }
+
+export function loadTyped(): TypedWaiting {
+  try {
+    const t = JSON.parse(localStorage.getItem(TYPED_KEY) || 'null') as TypedWaiting | null;
+    if (t && t.days) return { days: t.days, firstAt: t.firstAt || 0, typedAt: t.typedAt || 0 };
+  } catch { /* start empty */ }
+  return { days: {}, firstAt: 0, typedAt: 0 };
+}
+
+function saveTyped(t: TypedWaiting): void {
+  try { localStorage.setItem(TYPED_KEY, JSON.stringify(t)); } catch { /* counted for this page only */ }
+}
+
+function addTyped(date: string, n: number, now: number): void {
+  const t = loadTyped();
+  if (!Object.keys(t.days).length) t.firstAt = now;
+  t.days[date] = (t.days[date] || 0) + n;
+  t.typedAt = now;
+  saveTyped(t);
+}
+
+/** Send the words typed when Kyle has paused for two minutes, or every ten minutes while he keeps typing. */
+export function typedDue(t: TypedWaiting, now: number): boolean {
+  if (!Object.keys(t.days).length) return false;
+  return now - t.typedAt >= 2 * 60000 || now - t.firstAt >= 10 * 60000;
+}
+
+/** The day's note with more words typed. A day written before `typed` existed starts from its Pomodoro words. */
+export function addTypedToDay(text: string, date: string, n: number, now: Date): string {
+  const stamp = now.toISOString().slice(0, 19) + 'Z';
+  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: n, updated: stamp }, '');
+  const p = Frontmatter.parse(text);
+  const data = { ...((p.data || {}) as Record<string, unknown>) };
+  const had = data.typed != null ? toNumber(data.typed) || 0 : toNumber(data.words) || 0;
+  data.typed = had + n;
+  data.updated = stamp;
+  return Frontmatter.join(data, p.body || '');
+}
+
+/** Write the words typed to the vault, one commit per day, as Kyle's commits. Returns the notes written. */
+export async function flushTyped(source: VaultSource, now: Date): Promise<NoteRecord[]> {
+  if (!source.write) return [];
+  const saved: NoteRecord[] = [];
+  for (const date of Object.keys(loadTyped().days).sort()) {
+    const n = loadTyped().days[date];
+    if (!n) continue;
+    const path = logPath(date);
+    for (let attempt = 0; ; attempt++) {
+      const { files } = await source.tree();
+      const exists = files.some((f) => f.path === path);
+      const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
+      const text = addTypedToDay(cur.text, date, n, now);
+      try {
+        const sha = await source.write(path, text, cur.sha, 'log: ' + n + (n === 1 ? ' word' : ' words') + ' typed on ' + date + '\n\nKept by the Story Forge app.');
+        saved.push(makeNote(path, sha, text));
+        break;
+      } catch (e) {
+        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
+        throw e;
+      }
+    }
+    // Words typed while it was sending stay for the next time.
+    const t = loadTyped();
+    const left = (t.days[date] || 0) - n;
+    if (left > 0) t.days[date] = left; else delete t.days[date];
+    if (left > 0) t.firstAt = now.getTime();
+    saveTyped(t);
+  }
+  return saved;
 }
 
 function pad(n: number): string { return String(n).padStart(2, '0'); }
@@ -249,13 +358,17 @@ export function pomodoroCount(minutes: number): string {
   return String(Math.round((minutes / WORK_MIN) * 100) / 100);
 }
 
-/** Today's Pomodoros, minutes and words: the day's note in the vault plus the ones still waiting on this device. */
-export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date): { pomodoros: number; minutes: number; words: number } {
+/** Today's Pomodoros, minutes and words, and the words typed with or without a Pomodoro: the day's note in the vault plus
+ *  what is still waiting on this device. */
+export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date, typedWaiting: TypedWaiting = { days: {}, firstAt: 0, typedAt: 0 }): { pomodoros: number; minutes: number; words: number; typed: number } {
   const date = ymd(now);
   const n = index ? index.notes[logPath(date)] : undefined;
   let pomodoros = n ? toNumber(n.data.pomodoros) || 0 : 0;
   let minutes = n ? toNumber(n.data.minutes) || 0 : 0;
   let words = n ? toNumber(n.data.words) || 0 : 0;
+  // A day logged before words typed were counted starts from its Pomodoro words.
+  let typed = n ? (n.data.typed != null ? toNumber(n.data.typed) || 0 : words) : 0;
   waiting.filter((r) => r.date === date).forEach((r) => { if (!r.stopped) pomodoros++; minutes += r.minutes; words += r.words; });
-  return { pomodoros, minutes, words };
+  typed += typedWaiting.days[date] || 0;
+  return { pomodoros, minutes, words, typed };
 }

@@ -180,7 +180,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   const move = (key: string, before: string | null) => {
     const r = moveBeat(ref.current.beats, key, before);
     if (!r.touched.length) return;
-    apply(r.beats, r.touched);
+    apply(r.beats, r.touched, false);
     keepOpen(new Set(open), r.beats);
   };
   const keepOpen = (next: Set<string>, beats = ref.current.beats) => {
@@ -238,8 +238,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     return ok;
   }, [source, canSave, onSaved]);
 
-  /** New beats: the scenes they touch and the beats note follow, and everything is kept on the device. */
-  const apply = (beats: BeatView[], touched: string[]) => {
+  /** New beats: the scenes they touch and the beats note follow, and everything is kept on the device. A beat moved
+   *  to another scene is not typed, so it counts in no words typed (`typed` false). */
+  const apply = (beats: BeatView[], touched: string[], typed = true) => {
     const cur = ref.current;
     const scenes = { ...cur.scenes };
     const at = new Date().toISOString();
@@ -250,7 +251,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
       const body = sceneBody(shape, beats);
       if (body === d.body) return;
       const note = group.scenes.find((n) => n.path === path);
-      trackWords(path, String((note && note.data.id) || ''), bodyWords(d.body), bodyWords(body));
+      if (typed) trackWords(path, String((note && note.data.id) || ''), bodyWords(d.body), bodyWords(body));
       scenes[path] = { ...d, body, updatedAt: at };
       putDraft(source.key, path, scenes[path]);
     });

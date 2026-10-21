@@ -105,6 +105,13 @@ add a dated line here when you add or change one.
   starting one leaves the panel closed (Kyle, 2026-10-20).
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
   not taken away, so rewriting a passage counts its new words (Kyle, 2026-10-20: a rewrite in Beats logged 0 words).
+  Words typed count all the time, with or without a Pomodoro (Kyle, 2026-10-21: "sometimes ill write in the app but forget
+  to hit the pomodoro"): the day's total goes to the same Writing Log note as `typed`, after a two-minute pause or every ten
+  minutes of steady typing (and when the app is put away), and the panel leads with "Today: N words typed". They count
+  Kyle's own words only: words the team puts on the page (filled brackets, Options, Put it at the end, lines merged in from
+  elsewhere), a copy brought back, a joined scene, a beat moved to another scene and undo or redo add nothing, and since
+  cuts never take words away, deleting the team's words does not lower the count (Kyle, 2026-10-21: "how the words typed
+  might be affected by deleting generated text"). The Pomodoro's own words follow the same rule.
   Opened from the iPad's home screen, the app moves down below the device's clock and battery bar (the `ios-app` class
   and `--safe-top`, 24 px), since iPadOS lays that bar over the page and reports no safe area (Kyle's screenshot, 2026-10-20).
   The writing screens lock the page in place, so dragging a text selection down on the iPad scrolls the writing, not the

@@ -1,15 +1,17 @@
 // The Pomodoro timer. Outside the writing screen it floats at the bottom right; in the writing screen it sits in the top
 // bar (and beside Leave focus in Focus mode), so it never covers the words being typed or the toolbar. Pressing it opens
-// a small panel: start, pause, stop, the lengths, and today's Pomodoros and words.
+// a small panel: start, pause, stop, the lengths, and today's Pomodoros and words typed. It also sends the words typed,
+// counted with or without a Pomodoro, to the day's Writing Log note.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  advance, clock, flushLog, loadLog, loadTimer, msLeft, pause, resume, saveLog, saveTimer,
+  advance, clock, flushLog, flushTyped, loadLog, loadTimer, loadTyped, msLeft, pause, resume, saveLog, saveTimer, typedDue,
   pomodoroCount, startWork, stop, stoppedRecord, today, wordsSoFar, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 
 let flushing = false;
+let sendingTyped = false;
 
 /** A short two-note chime, made on the device; silent where the browser has no sound. */
 function chime(): void {
@@ -66,6 +68,19 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
     }
   };
 
+  /** Send the words typed to the day's note when they are due (or now, when the page is put away). */
+  const sendTyped = async (force = false) => {
+    if (sendingTyped || !source.write || !navigator.onLine) return;
+    const t = loadTyped();
+    if (!Object.keys(t.days).length || (!force && !typedDue(t, Date.now()))) return;
+    sendingTyped = true;
+    try {
+      const saved = await flushTyped(source, new Date());
+      if (saved.length && onLoggedRef.current) onLoggedRef.current(saved);
+    } catch { /* they stay on this device and go next time */ }
+    finally { sendingTyped = false; }
+  };
+
   /** Read the stored timer, move it on if its time is up, and show it. */
   const refresh = () => {
     const t = Date.now();
@@ -88,11 +103,19 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
     refresh();
     flush();
     const sync = () => { setS(loadTimer()); setNow(Date.now()); };
-    const back = () => { flush(); };
+    const back = () => { flush(); sendTyped(true); };
+    const away = () => { if (document.visibilityState === 'hidden') sendTyped(true); };
+    const tick = setInterval(() => { sendTyped(); }, 30000);
+    sendTyped(true);
     window.addEventListener('sf-pomodoro', sync);
     window.addEventListener('storage', sync);
     window.addEventListener('online', back);
-    return () => { window.removeEventListener('sf-pomodoro', sync); window.removeEventListener('storage', sync); window.removeEventListener('online', back); };
+    document.addEventListener('visibilitychange', away);
+    return () => {
+      clearInterval(tick);
+      window.removeEventListener('sf-pomodoro', sync); window.removeEventListener('storage', sync); window.removeEventListener('online', back);
+      document.removeEventListener('visibilitychange', away);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
 
@@ -134,7 +157,7 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
 
   const left = msLeft(s, now);
   const paused = s.pausedLeft != null;
-  const day = today(index, waiting, new Date(now));
+  const day = today(index, waiting, new Date(now), loadTyped());
   const done = pomodoroCount(day.minutes);
   const words = s.phase === 'work' ? wordsSoFar(s) : 0;
   // While it runs the button only changes colour; the time shows when Kyle opens the panel (Kyle, 2026-10-20).
@@ -168,9 +191,10 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
           {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
-          <p class="pomodoro-today"><strong>Today:</strong> {done} {done === '1' ? 'Pomodoro' : 'Pomodoros'} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}), {num(day.words)} words.</p>
+          <p class="pomodoro-today"><strong>Today:</strong> {num(day.typed)} {day.typed === 1 ? 'word' : 'words'} typed, {done} {done === '1' ? 'Pomodoro' : 'Pomodoros'} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}).</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
           <p class="hint">If you stop early, the minutes still count: 15 minutes is 0.6 of a Pomodoro.</p>
+          <p class="hint">Words typed count all day, with or without the timer. Words the team writes are not counted, and deleting them takes nothing off.</p>
           {error && <p class="error">{error}</p>}
         </div>
       )}
