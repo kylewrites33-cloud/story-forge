@@ -1,35 +1,25 @@
-// The app's frame, like Sudowrite's and Novelcrafter's: a sidebar on the left with the book open on screen (its cover
-// and title, then its boards grouped as Write, Plan, Codex, Review and Publish) and the app's own places at the foot
-// (Chat, Jobs, To-do, sync, Settings). From 1100 px wide the sidebar shows names beside the icons; from 700 px it is a
-// narrow strip of icons with short names, and the menu button opens it in full over the page; narrower still, a slim
-// bar with the menu button sits at the top. Every size has every place. Below the foot, at the bottom of the scroll,
-// "AI team" and "Skills", each with its count, open the Team page (with the team's history) and the Skills page. On the right, the team chat sits beside the page from 1200 px wide and
-// slides over it narrower; a round Chat button at the bottom right opens it, and its arrow hides it (per device).
+// The app's frame (redesigned with Kyle, 2026-10-21): a sidebar on the left with the book open on screen (its cover and
+// title, the Workflow | Writing switch, then six rooms: Home, Manuscript, Plan, Codex, Review and Publish, whose boards
+// show as tabs at the top of each room) and at the foot Team (Chat, Jobs, Agents, Skills, Recipes and the Workflow
+// table, as tabs), To-do, Settings and a small sync line. In Workflow mode the stages come first and the rooms follow.
+// From 1100 px wide the sidebar shows names beside the icons; from 700 px it is a narrow strip of icons with short
+// names, and the menu button opens it in full over the page; narrower still, a slim bar with the menu button sits at
+// the top. Every size has every place. On the right, the team chat sits beside the page from 1200 px wide and slides
+// over it narrower; a round Chat button at the bottom right opens it, and its arrow hides it (per device).
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { loadRecent } from '../lib/home.ts';
 import { loadSideOpen, saveSideOpen } from '../lib/chat.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
-import { boardLinks, type BoardLink } from './StoryBoards.tsx';
 import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
-import { useTeam } from './Team.tsx';
+import { ROOMS, roomOf, isTeamPlace } from '../lib/rooms.ts';
+import { jobNotes } from '../lib/jobs.ts';
+import { taskNotes } from '../lib/tasks.ts';
+import { roomLinks } from './Rooms.tsx';
 import { loadMode } from '../lib/flow.ts';
 import { ModeSwitch, stageIcon, useFlow } from './Flow.tsx';
-
-const GROUPS: [string, string[]][] = [
-  ['Write', ['chapter-grid']],
-  ['Plan', ['ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'notes']],
-  ['Codex', ['characters', 'matrix']],
-  ['Review', ['edit-queue', 'sessions', 'taste']],
-  ['Publish', ['market']]
-];
-// The "seeing the book" pages: Promises, Plot Grid and Timeline plan the book; Themes and Cast web review it.
-GROUPS[1][1].push('promises', 'plot-grid', 'timeline');
-GROUPS[3][1].push('themes', 'cast-web');
-// Writers Room charts: Character Arcs under Plan, Tension and Pacing under Review.
-GROUPS.forEach(([name, keys]) => { if (name === 'Plan') keys.push('arcs'); if (name === 'Review') keys.push('tension'); });
 
 /** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {
@@ -73,7 +63,6 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   const [sideOpen, setSideOpenState] = useState(() => loadSideOpen(typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches));
   const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
   const showSide = Boolean(side) && sideOpen;
-  const team = useTeam(index);
   const flow = useFlow(index, book);
   const mode = book && index ? loadMode(source.key, index, book) : 'writing';
   const hash = typeof location === 'undefined' ? '' : location.hash;
@@ -90,13 +79,13 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
     return () => { window.removeEventListener('hashchange', close); window.removeEventListener('keydown', key); };
   }, []);
 
-  const links = book && schema ? boardLinks(schema, book.folder) : [];
-  const byKey: Record<string, BoardLink> = {};
-  links.forEach((l) => { byKey[l.key] = l; });
-  const resume = book && index ? keepWriting(index, book, source.key) : null;
+  const links = book && schema ? roomLinks(schema, book.folder, mode === 'workflow') : {};
+  const running = index ? jobNotes(index).some((n) => n.data.status === 'running') : false;
+  const openTodos = index ? taskNotes(index).filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length : 0;
+  const inRoom = roomOf(board);
   const item = (to: string, icon: string, label: string, current: boolean, extra?: string, count?: number) => (
     <a key={to + label} class={'rail-item' + (extra ? ' ' + extra : '')} href={to} aria-current={current ? 'page' : undefined} title={count == null ? label : label + ' (' + count + ')'}>
-      <Icon name={icon} size={20} /><span class="rail-label">{label}</span>{count != null && <span class="rail-count rail-label">{count}</span>}
+      <Icon name={icon} size={20} /><span class="rail-label">{label}</span>{extra && extra.indexOf('rail-busy') >= 0 && <span class="job-dot" aria-hidden="true" />}{count != null && <span class="rail-count rail-label">{count}</span>}
     </a>
   );
 
@@ -110,73 +99,54 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
           </button>
         </div>
         <nav class="rail-scroll" aria-label="Places">
-          {item(href.home(), 'home', 'Books', place === 'home')}
-          {item(href.allSeries(), 'shelf', 'Series', place === 'series')}
+          {!(book && index) && (
+            <>
+              {item(href.home(), 'books', 'Books', place === 'home')}
+              {item(href.allSeries(), 'shelf', 'Series', place === 'series')}
+            </>
+          )}
           {book && index && (() => {
-            const tools = (
-              <>
-                {resume && item(href.write(resume), 'pen', 'Keep writing', false, 'rail-write')}
-                {item(href.board('details', book.folder), 'image', 'Book details', board === 'details', 'rail-details')}
-                {item(href.board('overview', book.folder), 'gauge', 'Overview', board === 'overview')}
-                {GROUPS.map(([name, keys]) => {
-                  const here = keys.map((k) => byKey[k]).filter(Boolean);
-                  if (!here.length) return null;
-                  return (
-                    <div class="rail-group" key={name}>
-                      <p class="rail-heading">{name}</p>
-                      {here.map((l) => item(mode === 'workflow' && l.key === 'chapter-grid' ? href.board('chapter-grid', book.folder) : l.to, l.icon, l.title, l.key === board))}
-                    </div>
-                  );
-                })}
-              </>
-            );
+            const rooms = ROOMS.map((r) => {
+              const first = r.boards.map((k) => links[k]).find(Boolean);
+              if (!first) return null;
+              return item(first.to, r.icon, r.title, Boolean(inRoom && inRoom.key === r.key), 'rail-room');
+            });
             return (
               <>
-                <a class="rail-book" href={mode === 'workflow' ? href.flow(book.folder) : href.book(book.folder)} title={book.title}>
-                  <Cover source={source} book={book} small />
-                  <span class="rail-book-text rail-label">
-                    <span class="rail-book-title">{book.title}</span>
-                    <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
-                  </span>
-                </a>
+                <div class="rail-book">
+                  <a class="rail-book-link" href={mode === 'workflow' ? href.flow(book.folder) : href.board('overview', book.folder)} title={book.title}>
+                    <Cover source={source} book={book} small />
+                    <span class="rail-book-text rail-label">
+                      <span class="rail-book-title">{book.title}</span>
+                      <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
+                    </span>
+                  </a>
+                  <a class="rail-book-switch rail-label" href={href.home()} title="All books and series" aria-label="All books and series"><Icon name="books" size={18} /></a>
+                </div>
                 <ModeSwitch sourceKey={source.key} index={index} book={book} waiting={mode === 'workflow' ? 0 : flow.waiting} compact />
-                {mode === 'workflow' ? (
+                {mode === 'workflow' && (
                   <>
                     {item(href.flow(book.folder), 'outline', 'All stages', hash === href.flow(book.folder), undefined, flow.waiting || undefined)}
-                    {flow.stages.length > 0 && (
-                      <div class="rail-group">
-                        <p class="rail-heading">Stages</p>
-                        {flow.stages.map((st) => {
-                          const n = st.tasks.filter((t) => flow.statuses[t.key] && (flow.statuses[t.key].state === 'judge' || flow.statuses[t.key].state === 'check')).length;
-                          const here = hash === href.flowStage(book.folder, st.index + 1) || st.tasks.some((t) => hash === href.flowStep(book.folder, t.key));
-                          return item(href.flowStage(book.folder, st.index + 1), stageIcon(st.index), shortStage(st.title), here, 'rail-stage', n || undefined);
-                        })}
-                      </div>
-                    )}
-                    <details class="rail-more" open={Boolean(board)}>
-                      <summary class="rail-item"><Icon name="more" size={20} /><span class="rail-label">Writing tools</span></summary>
-                      {tools}
-                    </details>
+                    {flow.stages.map((st) => {
+                      const n = st.tasks.filter((t) => flow.statuses[t.key] && (flow.statuses[t.key].state === 'judge' || flow.statuses[t.key].state === 'check')).length;
+                      const here = hash === href.flowStage(book.folder, st.index + 1) || st.tasks.some((t) => hash === href.flowStep(book.folder, t.key));
+                      return item(href.flowStage(book.folder, st.index + 1), stageIcon(st.index), shortStage(st.title), here, 'rail-stage', n || undefined);
+                    })}
+                    <p class="rail-heading">The book</p>
                   </>
-                ) : tools}
+                )}
+                {rooms}
               </>
             );
           })()}
           <div class="rail-foot">
-            {item(href.chat(), 'chat', 'Chat', place === 'chat')}
-            {item(href.jobs(), 'team', 'Jobs', place === 'jobs')}
-            {item(href.todo(), 'todo', 'To-do', place === 'todo')}
-            {item(href.workflow(), 'list', 'Workflow table', place === 'workflow')}
-            {item(href.recipes(), 'recipe', 'Recipes', place === 'recipes')}
-            {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
-            <button type="button" class={'rail-item rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>
-              <Icon name={sync.good ? 'check' : 'sync'} size={20} /><span class="rail-label">{sync.label}</span>
-            </button>
+            {item(href.chat(), 'team', 'Team', isTeamPlace(place), running ? 'rail-busy' : undefined)}
+            {item(href.todo(), 'todo', 'To-do', place === 'todo', undefined, openTodos || undefined)}
             {item(href.settings(), 'gear', 'Settings', place === 'settings')}
-          </div>
-          <div class="rail-team">
-            {item(href.team(), 'team', 'AI team', place === 'team' || place === 'history', undefined, team.members.length)}
-            {item(href.skills(), 'idea', 'Skills', place === 'skills', undefined, team.skills.length)}
+            {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
+            <button type="button" class={'rail-sync-line' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>
+              <span class="sync-dot" aria-hidden="true" /><span class="rail-label">{sync.label}</span>
+            </button>
           </div>
         </nav>
       </aside>

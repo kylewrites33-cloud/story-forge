@@ -55,7 +55,9 @@ src/lib/workflow.ts      the workflow from System/Workflow.md: stages, steps, wh
 src/ui/Workflow.tsx      the Workflow page: each stage's table, filters, notes
 src/lib/flow.ts          Workflow mode: steps paired into tasks, where each stands (Check too), the mode per book, results as idea notes, the step job's ask
 src/ui/Flow.tsx          Workflow mode's screens (home, stage, step), the Workflow | Writing switch, the writing screen's Workflow tab, From the workflow on character pages
-src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
+src/lib/rooms.ts         the book's six rooms and which boards each holds; the Team room's places
+src/ui/Rooms.tsx         the tabs across the top of a room and of the Team room
+src/ui/Shell.tsx         the sidebar (book card, mode switch, rooms, Team, To-do, Settings, sync line) and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/lib/taste.ts         the Taste page's numbers: keeps and drops by kind, agent and round, top reasons
 src/ui/Taste.tsx         the Taste page: Taste Profile, Style Fingerprint and the bars

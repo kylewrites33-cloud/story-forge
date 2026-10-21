@@ -71,7 +71,10 @@ function saveSide(key: string, open: boolean) {
 }
 type Tab = 'flow' | 'chat' | 'plan' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
 const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
-  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team'], ['check', 'Check'], ['options', 'Options']];
+  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Split and join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
+// The column's tabs in four groups (Kyle, 2026-10-21): the group first, then its tabs as small chips.
+const TAB_GROUPS: [string, Tab[]][] = [['Team', ['chat', 'options', 'team']], ['Chapter', ['plan', 'beats', 'flow', 'todos']],
+  ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools']], ['Tools', ['page', 'check']]];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
 function loadTab(): Tab {
@@ -666,36 +669,26 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         {beatsMode
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>}
-        {group && group.scenes.length > 1 && (
-          <button type="button" class="bar-button compact" onClick={() => go(href.chapter(note.path))} aria-label="Whole chapter" title="The whole chapter on one page">
-            <Icon name="page" /><span class="bar-label">Whole chapter</span>
-          </button>
-        )}
-        {group && group.num != null && (beatsMode
-          ? <button type="button" class="bar-button compact" onClick={() => go(href.write(note.path))} aria-label="Page" title="Back to the page">
-              <Icon name="page" /><span class="bar-label">Page</span>
+        {group && (group.num != null || group.scenes.length > 1) && (
+          <div class="view-seg" role="group" aria-label="How to see this chapter">
+            <button type="button" aria-pressed={!beatsMode} onClick={() => { if (beatsMode) go(href.write(note.path)); }} title="The page">
+              <Icon name="pen" size={18} /><span class="bar-label">Page</span>
             </button>
-          : <button type="button" class="bar-button compact" onClick={() => go(href.beats(note.path))} aria-label="Beats" title="This chapter by its beats">
-              <Icon name="beats" /><span class="bar-label">Beats</span>
-            </button>)}
-        {book && (
-          <button type="button" class="bar-button compact" onClick={() => (right && tab === 'todos' ? toggleRight() : openTab('todos'))} aria-expanded={right && tab === 'todos'}
-            aria-label={'To-dos for this chapter: ' + openTodos + ' open'} title="This chapter's to-dos">
-            <Icon name="todo" /><span class="bar-label">To-dos</span>{openTodos > 0 && <span class="count-badge">{openTodos}</span>}
-          </button>
-        )}
-        {flow && (
-          <button type="button" class="bar-button compact" onClick={() => go(flow.href)} aria-label="Workflow mode" title="Switch to Workflow mode">
-            <Icon name="outline" /><span class="bar-label">Workflow</span>
-          </button>
+            {group.num != null && (
+              <button type="button" aria-pressed={beatsMode} onClick={() => { if (!beatsMode) go(href.beats(note.path)); }} title="This chapter by its beats">
+                <Icon name="beats" size={18} /><span class="bar-label">Beats</span>
+              </button>
+            )}
+            {group.scenes.length > 1 && (
+              <button type="button" aria-pressed={false} onClick={() => go(href.chapter(note.path))} title="The whole chapter on one page">
+                <Icon name="page" size={18} /><span class="bar-label">Whole chapter</span>
+              </button>
+            )}
+          </div>
         )}
         {timer && timer('bar')}
         <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
           <Icon name="focus" /><span class="bar-label">Focus</span>
-        </button>
-        <button type="button" class="bar-button compact" onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right && tab === 'chat'}
-          aria-label="Chat with the team" title="Chat with the team beside the page">
-          <Icon name="chat" /><span class="bar-label">Chat</span>{convo && convo.pending && <span class="job-dot" aria-hidden="true" />}
         </button>
         <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
           title={right ? 'Hide the right-hand column' : 'Show the right-hand column: chat, plan, card and more'}>
@@ -859,11 +852,28 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : tab === 'flow' ? 'From the workflow' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
-            <div class="panel-tabs" role="tablist">
-              {TABS.map(([k, l]) => (
-                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
-              ))}
-            </div>
+            {(() => {
+              const label = (k: Tab) => (TABS.find(([x]) => x === k) || [k, k])[1];
+              const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
+                : k === 'chat' && convo && convo.pending ? <span class="job-dot" aria-hidden="true" /> : null);
+              const groupOn = TAB_GROUPS.find(([, ks]) => ks.indexOf(tab) >= 0) || TAB_GROUPS[0];
+              return (
+                <>
+                  <div class="panel-groups" role="tablist" aria-label="Groups">
+                    {TAB_GROUPS.map(([g, ks]) => (
+                      <button key={g} type="button" role="tab" aria-selected={groupOn[0] === g} onClick={() => setTab(ks[0])}>
+                        {g}{ks.map((k) => <span key={k}>{groupOn[0] !== g && mark(k)}</span>)}
+                      </button>
+                    ))}
+                  </div>
+                  <div class="panel-tabs" role="tablist" aria-label={groupOn[0]}>
+                    {groupOn[1].map((k) => (
+                      <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label(k)}{mark(k)}</button>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
             {tab === 'chat' && (
               <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined}
                 fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />

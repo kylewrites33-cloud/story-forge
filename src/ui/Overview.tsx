@@ -126,8 +126,10 @@ function NumberSetting({ label, value, unit, onSave }: { label: string; value: n
   );
 }
 
-export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide }: {
+export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, keep }: {
   schema: Schema; index: VaultIndex; book: BookEntry; sourceKey: string; onJob?: OnJob; onDecide?: OnDecide;
+  /** The scene to keep writing, shown as the big button at the top of Home. */
+  keep?: { to: string; title: string; where: string } | null;
 }) {
   const [seen, setSeen] = useState(() => loadSeenJobs(sourceKey));
   const nums = bookNumbers(schema, index, book);
@@ -139,8 +141,18 @@ export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide }
   const jobs = finishedJobs(index, book).filter((j) => seen.indexOf(j.path) < 0);
   return (
     <section class="overview">
-      <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Overview</p>
+      <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Home</p>
       <h1>{book.title}</h1>
+      {keep && (
+        <a class="hero-card" href={keep.to}>
+          <span class="hero-text">
+            <small>Keep writing</small>
+            <b>{keep.title}</b>
+            <span>{keep.where}</span>
+          </span>
+          <span class="hero-go"><Icon name="pen" size={20} /> Open</span>
+        </a>
+      )}
       <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
       <NextStepCard schema={schema} index={index} book={book} onJob={onJob} onDecide={onDecide} />
       <div class="ov-grid">
