@@ -41,7 +41,7 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   source: VaultSource;
   index: VaultIndex | null;
   /** float: bottom right of the page; bar: in the writing screen's top bar; focus: beside Leave focus. */
-  variant: 'float' | 'bar' | 'focus';
+  variant: 'float' | 'bar' | 'focus' | 'rail';
   onLogged?: (notes: NoteRecord[]) => void;
 }) {
   const [s, setS] = useState<TimerState>(loadTimer);
@@ -167,10 +167,11 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
 
   return (
     <div ref={box} class={'pomodoro pomodoro-' + variant + (s.phase !== 'idle' ? ' is-' + s.phase : '') + (paused ? ' is-paused' : '')}>
-      <button type="button" class={variant === 'float' ? 'pomodoro-chip' : 'bar-button pomodoro-chip'} aria-expanded={open} aria-label={label} title={label}
+      <button type="button" class={variant === 'float' ? 'pomodoro-chip' : variant === 'rail' ? 'rail-item pomodoro-chip' : 'bar-button pomodoro-chip'} aria-expanded={open} aria-label={label} title={label}
         onClick={() => setOpen(!open)}>
         <Icon name="timer" size={variant === 'float' ? 22 : 20} />
-        {chipText && <span class="pomodoro-time">{chipText}</span>}
+        {variant === 'rail' && <span class="rail-label">{s.phase === 'work' ? (paused ? 'Paused' : 'Writing') : s.phase === 'break' ? 'Break' : 'Timer'}</span>}
+        {chipText && <span class="pomodoro-time rail-count">{chipText}</span>}
       </button>
       {open && (
         <div class="pomodoro-panel" role="dialog" aria-label="Pomodoro timer">

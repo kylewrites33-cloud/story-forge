@@ -46,6 +46,8 @@ export interface ShellProps {
   title: string;
   /** The team chat column for this page, given a way to hide it; none on pages that are themselves the chat. */
   side?: ((close: () => void) => ComponentChildren) | null;
+  /** The Pomodoro timer, given where it sits: the sidebar's foot, or the slim top bar on a phone. One timer at a time. */
+  timer?: (where: 'rail' | 'bar') => ComponentChildren;
   children: ComponentChildren;
 }
 
@@ -58,7 +60,17 @@ export function shortStage(title: string): string {
   return t ? t[0].toUpperCase() + t.slice(1) : title;
 }
 
-export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, children }: ShellProps) {
+const SLIM = '(max-width: 699px)';
+
+export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, timer, children }: ShellProps) {
+  const [slim, setSlim] = useState(() => typeof matchMedia === 'function' && matchMedia(SLIM).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const m = matchMedia(SLIM);
+    const on = () => setSlim(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
   const [open, setOpen] = useState(false);
   const [sideOpen, setSideOpenState] = useState(() => loadSideOpen(typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches));
   const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
@@ -142,6 +154,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
           <div class="rail-foot">
             {item(href.chat(), 'team', 'Team', isTeamPlace(place), running ? 'rail-busy' : undefined)}
             {item(href.todo(), 'todo', 'To-do', place === 'todo', undefined, openTodos || undefined)}
+            {timer && !slim && timer('rail')}
             {item(href.settings(), 'gear', 'Settings', place === 'settings')}
             {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
             <button type="button" class={'rail-sync-line' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>
@@ -155,6 +168,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
         <header class="slim-bar">
           <button type="button" class="icon-button" aria-label="Open the menu" aria-expanded={open} onClick={() => setOpen(true)}><Icon name="panel" /></button>
           <span class="slim-title">{title}</span>
+          {timer && slim && timer('bar')}
           <button type="button" class={'icon-button rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title} aria-label={sync.label}>
             <Icon name={sync.good ? 'check' : 'sync'} />
           </button>

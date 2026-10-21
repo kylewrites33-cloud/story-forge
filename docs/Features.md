@@ -319,3 +319,9 @@ add a dated line here when you add or change one.
   fifteen tabs are now four groups (Team: Chat, Options, Ask the team; Chapter: Plan, Beats, Workflow, To-dos; Scene:
   Card, Notes, Marks, Copies, Target, Split and join; Tools: Page look, Check), with the to-do count and the chat's dot on
   them. Rounder cards, a 44 px sidebar row and theme colours only, so all ten themes still work.
+- The rest of the new look (Kyle, 2026-10-21: "seems good. bring over whatever else."). The Pomodoro timer sits in the
+  sidebar's foot as Timer (Writing, Paused or Break while it runs, coloured as before), its panel opening beside the
+  sidebar; on a phone, where the sidebar is hidden, it sits in the slim top bar. Only one timer is on screen at a time.
+  The writing screen keeps its own timer in its top bar. Below 900 px wide (an iPad held upright, a phone) the writing
+  screen's right-hand column is a sheet pulled up from the bottom over the lower part of the page; its arrow or a press
+  on the page above puts it away.

@@ -736,6 +736,7 @@ export function App() {
 
   return (
     <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
+      timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLogged={foldNotes} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || notice || (!online && (queue.length > 0 || drafts > 0))) && (
         <div class="banner" role="status">
@@ -745,7 +746,6 @@ export function App() {
         </div>
       )}
       <main>{body}</main>
-      <PomodoroTimer source={source} index={view} variant="float" onLogged={foldNotes} />
     </Shell>
   );
 }
