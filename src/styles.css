@@ -441,10 +441,11 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
   padding-top: 14px; padding-bottom: 16px; border-top: 1px solid var(--line);
 }
 .writer-done a.button { gap: 6px; }
-/* Previous and next section: a quiet arrow at each side, no colour, pinned to the bottom of the page so it is always in
+/* Previous and next section: two quiet arrows side by side on the left (Kyle, 2026-10-21), no colour, pinned to the bottom of the page so it is always in
    sight, under a faint line (Kyle, 2026-10-21). At the ends the arrow is left out. */
 .writer-done.side-arrows {
   position: sticky; bottom: 0; z-index: 1; max-width: none; padding: 2px 8px; border-top: 1px solid var(--line);
+  justify-content: flex-start; gap: 4px;
   background: var(--surface); border-radius: 0 0 var(--radius) var(--radius);
 }
 .writer-page { scroll-padding-bottom: calc(56px + var(--kb-gap, 0px)); }
