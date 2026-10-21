@@ -157,6 +157,25 @@ add a dated line here when you add or change one.
   Below 600 px of page each step is a card. Add a note on the workflow, or Note on a step, saves a dated
   line under "## Kyle's notes" at the end of the note (`addWorkflowNote`), so the next version answers it; the team chat
   beside the page knows it is on the workflow. Note views now show Markdown tables too.
+  Workflow mode (Kyle, 2026-10-21: "put in the AI mode with all these workflows... databases for all these AI-created
+  elements in the AI mode, so that what's created in AI mode can naturally show up in the writing mode too"; nothing
+  removed). A Workflow | Writing switch sits under the book in the sidebar and on every Workflow page, kept per book on
+  the device; a book with no prose starts in Workflow mode (Kyle agreed new books start there), one with prose in Writing
+  mode, and in Workflow mode the book's link opens Workflow. `#/flow/<book>` is its home: Pick up here (the first step
+  with nothing kept), the six stages as a road with steps kept and waiting, Waiting on you, The team is working on, and
+  Your own steps. `#/flow/<book>/stage/<n>` lists a stage's steps with where each stands (Not started, The team is on it,
+  Waiting on you, Check, Kept); a step and the "Judge…" step after it are one row ("18–19"). `#/flow/<book>/step/<key>`
+  has Judge (Keep, Later, Drop, with the panel's 1-to-5 score and line; Ask the team to judge), Kept, Make (Ask the team,
+  Bring in results pasted from elsewhere, one per paragraph or list line, and Write your own, kept at once) and Change
+  (the team makes new results from Kyle's words). Check shows when an earlier step in the same or the stage before kept
+  something after this step's results were kept; Still fine sets `checked` on them. The store is the book's Ideas folder:
+  every result is an idea note with `step`, `origin` (team, brought-in, kyle), `target` (a character or "Chapter N") and,
+  once judged, `panel_score` and `panel_note`, so results also show on the Ideas board. Asking writes a `workflow-step`
+  job (target "Step N") that the runner answers from the step's row. In Writing mode the writing screen has a Workflow tab
+  (what was kept about the chapter and the people named on the page) and a Workflow button in the top bar, and a
+  character's page ends with From the workflow (kept results about them, and Add a part of your own). In the sidebar, in
+  Workflow mode, All stages and the six stages come first and every other place sits under Writing tools; the foot's
+  link to the table is now called Workflow table.
   Beats (Kyle, 2026-10-18, modelled on the Writer's chapter 31 page): `#/beats/<scene path>` is the writing screen with
   its page area showing the scene's chapter by its beats (chapter list, right column and top bar stay; the top bar's Beats
   button becomes Page to switch back, Kyle 2026-10-18), each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under

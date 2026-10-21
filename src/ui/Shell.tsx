@@ -142,7 +142,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
                 <ModeSwitch sourceKey={source.key} index={index} book={book} waiting={mode === 'workflow' ? 0 : flow.waiting} compact />
                 {mode === 'workflow' ? (
                   <>
-                    {item(href.flow(book.folder), 'outline', 'Workflow home', hash === href.flow(book.folder), undefined, flow.waiting || undefined)}
+                    {item(href.flow(book.folder), 'outline', 'All stages', hash === href.flow(book.folder), undefined, flow.waiting || undefined)}
                     {flow.stages.length > 0 && (
                       <div class="rail-group">
                         <p class="rail-heading">Stages</p>
@@ -166,7 +166,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
             {item(href.chat(), 'chat', 'Chat', place === 'chat')}
             {item(href.jobs(), 'team', 'Jobs', place === 'jobs')}
             {item(href.todo(), 'todo', 'To-do', place === 'todo')}
-            {item(href.workflow(), 'outline', 'Workflow', place === 'workflow')}
+            {item(href.workflow(), 'list', 'Workflow table', place === 'workflow')}
             {item(href.recipes(), 'recipe', 'Recipes', place === 'recipes')}
             {demo && item(href.settings(), 'demo', 'Demo vault', false, 'rail-demo')}
             <button type="button" class={'rail-item rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title}>

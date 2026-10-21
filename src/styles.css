@@ -1745,7 +1745,7 @@ button, [role="button"] { -webkit-touch-callout: none; }
 .flow-prevnext { display: flex; justify-content: space-between; gap: 10px; margin: 24px 0 8px; }
 .flow-prevnext a.button { display: inline-flex; align-items: center; gap: 6px; }
 .flow-own-add { margin-top: 10px; }
-.flow-about { margin: 18px var(--gutter) 0; padding: 16px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); max-width: 52rem; }
+.flow-about { margin: 18px 0 0; padding: 16px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); max-width: 52rem; }
 .flow-about h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1.1rem; }
 .flow-about h2 .icon { color: var(--accent); }
 .flow-kept-list { list-style: none; padding: 0; margin: 6px 0 10px; display: grid; gap: 8px; }
@@ -1754,3 +1754,5 @@ button, [role="button"] { -webkit-touch-callout: none; }
 .flow-tab { padding: 4px 14px 14px; }
 .flow-tab h3 { margin: 14px 0 4px; font-size: 1rem; }
 .flow-tab a.button { display: inline-flex; align-items: center; gap: 6px; }
+.ov-list a > span.flow-chip { flex: none !important; }
+.flow button, .flow-about button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }

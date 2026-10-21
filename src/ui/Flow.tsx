@@ -137,7 +137,7 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
                 <span class="flow-road-num"><Icon name={stageIcon(s.index)} size={20} /></span>
                 <span class="flow-road-title">{s.title}</span>
                 <span class="flow-bar" aria-hidden="true"><span style={{ width: (p.total ? Math.round((100 * p.done) / p.total) : 0) + '%' }} /></span>
-                <span class="meta">{p.done} of {p.total} steps kept{p.waiting ? ' · ' + p.waiting + ' waiting on you' : ''}</span>
+                <span class="meta">{p.done} of {p.total} {p.total === 1 ? 'step' : 'steps'} kept{p.waiting ? ' · ' + p.waiting + ' waiting on you' : ''}</span>
               </a>
             </li>
           );

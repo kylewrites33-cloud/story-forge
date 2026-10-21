@@ -53,6 +53,8 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/lib/workflow.ts      the workflow from System/Workflow.md: stages, steps, who does each, Kyle's dated notes
 src/ui/Workflow.tsx      the Workflow page: each stage's table, filters, notes
+src/lib/flow.ts          Workflow mode: steps paired into tasks, where each stands (Check too), the mode per book, results as idea notes, the step job's ask
+src/ui/Flow.tsx          Workflow mode's screens (home, stage, step), the Workflow | Writing switch, the writing screen's Workflow tab, From the workflow on character pages
 src/ui/Shell.tsx         the sidebar and slim top bar around every screen but the writing ones
 src/ui/Icon.tsx          the small line icons, drawn inline
 src/lib/taste.ts         the Taste page's numbers: keeps and drops by kind, agent and round, top reasons
