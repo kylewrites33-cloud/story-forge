@@ -2,6 +2,7 @@
 // straight away; it goes to the vault when Kyle presses Done, after two quiet minutes, or (if he is offline) when the connection is back.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useLockedPage } from './viewport.ts';
+import { beatStart, parseBeats } from '../lib/beats.ts';
 import {
   bodyWords, holdOpen, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead,
   type Draft, type SnapshotEntry
@@ -67,8 +68,8 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'chat' | 'plan' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
-const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+type Tab = 'chat' | 'plan' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
+const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['beats', 'Beats'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page'], ['tools', 'Split and join'], ['team', 'Team'], ['check', 'Check'], ['options', 'Options']];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
@@ -86,7 +87,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, optionJobs, checkOpts, recipes = [] }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, chapterBeats, optionJobs, checkOpts, recipes = [] }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -130,6 +131,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   plan?: NoteRecord | null;
   /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
   beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
+  /** The open scene's chapter beats note, listed in the right column's Beats tab. */
+  chapterBeats?: NoteRecord | null;
   /** This scene's options jobs (Options for a passage), newest first. */
   optionJobs?: NoteRecord[];
   /** The book's settings for Check (its Style Guide and the vault's Config). */
@@ -845,7 +848,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : 'Scene'}</strong>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             <div class="panel-tabs" role="tablist">
@@ -859,6 +862,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             )}
             {tab === 'plan' && (
               <PlanPanel key={(bookFolder || '') + '#' + chapterNum} source={source} bookFolder={bookFolder} chapter={chapterNum} plan={plan || null} canSave={canSave} />
+            )}
+            {tab === 'beats' && (
+              <BeatsList note={chapterBeats || null} chapter={chapterNum} sceneId={String(note.data.id || '')} text={beatsMode ? null : text}
+                lastId={group && group.scenes.length ? String(group.scenes[group.scenes.length - 1].data.id || '') : ''}
+                onGo={(at) => { const c = cmd(); if (c) c.select(at, at); closeOver(); }} beatsLink={link(href.beats(note.path))} />
             )}
             {tab === 'todos' && (
               <TodosPanel todos={chapterList} chapter={chapterNum} sceneId={String(note.data.id || '')} onTodo={onTodo} onAdd={onAddTodo}
@@ -1030,6 +1038,35 @@ function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd, onClo
 }
 
 /** Highlighter marks in this scene, to jump to. */
+/** The chapter's beats as a plain list in the right column (Kyle, 2026-10-21): titles and summaries, no prose.
+ * A beat in the open scene jumps the page to where it starts. */
+function BeatsList({ note, chapter, sceneId, text, lastId, onGo, beatsLink }: {
+  note: NoteRecord | null; chapter: number | null; sceneId: string; text: string | null; lastId: string;
+  onGo: (at: number) => void; beatsLink: Record<string, unknown>;
+}) {
+  if (chapter == null) return <div class="writer-panel"><p class="hint">Beats belong to a chapter; this scene is not in one.</p></div>;
+  const list = note ? parseBeats(note.body) : [];
+  if (!list.length) return <div class="writer-panel"><p class="hint">Chapter {chapter} has no beats yet. <a {...beatsLink}>Open Beats</a> to make them.</p></div>;
+  return (
+    <div class="writer-panel">
+      <ol class="beat-list">
+        {list.map((b, i) => {
+          const here = (b.scene || lastId) === sceneId;
+          const at = here && text != null ? beatStart(text, b.words) : -1;
+          const name = b.title || 'Untitled beat';
+          return (
+            <li key={i} class={here ? 'here' : undefined}>
+              {at >= 0 ? <button type="button" class="link" onClick={() => onGo(at)}><strong>{name}</strong></button> : <strong>{name}</strong>}
+              {b.summary && <span class="hint">{b.summary}</span>}
+            </li>
+          );
+        })}
+      </ol>
+      {text != null && <p class="hint">Press a beat in this scene to go to where it starts.</p>}
+    </div>
+  );
+}
+
 function MarksPanel({ text, onGo }: { text: string; onGo: (start: number, end: number) => void }) {
   const list = markList(text);
   return (

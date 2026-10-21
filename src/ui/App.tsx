@@ -545,6 +545,7 @@ export function App() {
           checkOpts={book ? checkOptionsFor(view, book.folder) : undefined}
           convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
           plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
+          chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           recipes={recipeNotes(view).map(recipeName)}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );

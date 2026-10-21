@@ -176,6 +176,9 @@ add a dated line here when you add or change one.
   Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's
   opening words show as a numbered beat with no name yet, and move like any other; once they are not first in their
   scene they are saved in the beats note as "Untitled beat", which reads back with no name.
+  The writing screen's right column has a Beats tab (Kyle, 2026-10-21: "a button for seeing the beats laid out there as
+  well. no need for the dropdown for the actual text within the beat"): the open scene's chapter beats as a plain list,
+  title and one-line summary, no prose. A beat in the open scene is a link that puts the cursor where it starts.
   The writing screen's top bar stays on one line with icons only below 1300 px (Kyle, 2026-10-19, after trying short
   names under the icons: "bring it back to what it was before for now. i like them all on one line").
   Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
