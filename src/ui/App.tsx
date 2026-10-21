@@ -519,6 +519,7 @@ export function App() {
       const book = view.books.find((b) => route.path.startsWith(b.folder + '/')) || null;
       const at = book ? book.scenes.indexOf(route.path) : -1;
       const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
+      const prev = book && at > 0 ? view.notes[book.scenes[at - 1]] || null : null;
       const groups = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)) : [];
       // Beats mode: the chapter by its beats in the page's place.
       const chapter = typeof note.data.chapter === 'number' ? note.data.chapter : null;
@@ -528,7 +529,7 @@ export function App() {
           && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null
       } : null;
       return (
-        <Editor key={route.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next}
+        <Editor key={route.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}

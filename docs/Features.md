@@ -32,8 +32,12 @@ add a dated line here when you add or change one.
   `Book Backups/<series>/<book>/` (same day replaces that day's file); New series and New book make their backup folders.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
-  a chapter heading; "Done with this scene?" with Next at the bottom), and the scene panel on the right (Card, Copies,
-  Target, Split and join). The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
+  a chapter heading; Previous section and Next section at the bottom), and the scene panel on the right (Card, Copies,
+  Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
+  section and next section") has two buttons that open the scene before and after in reading order, crossing chapters;
+  each names where it goes (the chapter when it is another chapter or a one-scene chapter), and each greys out at the
+  start or end of the book. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
+  Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
   holds Books and Series, the open book's cover and title, Keep writing, the book's boards grouped as Write, Plan, Codex,
   Review and Publish, and at its foot Chat, Jobs, To-do, sync and Settings. From 1100 px it shows names; from 700 px it is
