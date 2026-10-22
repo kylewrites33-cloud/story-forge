@@ -486,3 +486,12 @@ its still possible to go through the workflow mode from somewhere, please apply 
 - **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
   small shape beside the colour on Chapter Grid cards (empty circle planned, half drafted, three quarters revised, full
   final), so colour is never the only sign; nothing smaller than 15 px except small capital headings.
+
+## Dark themes (2026-10-22)
+
+Kyle: "the dark mode with purple accents is my favorite dark mode. especially with the dark tones. id like the other dark
+modes to have different colors, but tone the dark portions similarly." Violet Night is unchanged. The other four dark
+themes now use its greys at the same lightness, tinted faintly toward their own accent, with a new accent each: Blue
+Night, Green Night, Amber Night and Rose Night (they were Midnight, Forest, Ember and Ink, and keep those ids in
+`src/lib/theme.ts` so a saved choice still works; Ink's true black and teal are gone). Every accent reads at 7:1 or
+better on the cards and on its own soft panel's text. The light themes did not change.
