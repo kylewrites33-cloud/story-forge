@@ -507,3 +507,10 @@ differently"). From six calmer options (Sea Glass, Sage, Slate, Copper, Plum, Br
 Same evening, Kyle: "take note of claude's dark mode. see how it's kind of subtle?" Blue, Sea Glass, Amber and Copper
 Night became quieter: greys at Violet Night's lightness with almost no tint, softer accents and fainter soft panels.
 Violet Night is unchanged.
+
+Later still, after research on quiet dark modes (project files app/dark-themes/), Kyle chose six dark themes: Violet
+Night (unchanged), Graphite and Warm Clay (Ink's near-black greys; quiet buttons: grey with the accent in their words),
+Ink (white buttons, a touch of indigo), Claude ("a color scheme thats basically the claude app", from his screenshot:
+#151515, white buttons, a little green) and True Black (for OLED screens, white buttons). How loud the buttons are is
+set per theme by CSS variables (`--fill`, `--on-fill`, `--hero-bg` and friends, falling back to the accent), so
+Violet Night and the light themes look as before. Ids: midnight is Graphite, ember Warm Clay, forest Claude, black new.

@@ -1,6 +1,6 @@
-// The app's colours: five light themes and five dark ones, or Match this device (Violet by day, Violet Night by night).
+// The app's colours: five light themes and six dark ones, or Match this device (Violet by day, Violet Night by night).
 // The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
-// The dark ones keep their old ids (a saved choice still works) but since 2026-10-22 share Violet Night's lightness in quieter greys.
+// Some dark ids are older than their names (midnight is Graphite, ember Warm Clay, forest Claude) so a saved choice still works.
 
 export interface Theme {
   id: string;
@@ -19,10 +19,11 @@ export const THEMES: Theme[] = [
   { id: 'sky', name: 'Sky', mode: 'light', line: 'Cool white with blue', bar: '#f2f6fa' },
   { id: 'rose', name: 'Rose', mode: 'light', line: 'Blush with deep rose', bar: '#faf4f5' },
   { id: 'violet-night', name: 'Violet Night', mode: 'dark', line: 'The original dark: charcoal with violet', bar: '#16151b' },
-  { id: 'midnight', name: 'Blue Night', mode: 'dark', line: 'Quiet charcoal with soft blue', bar: '#141618' },
-  { id: 'forest', name: 'Sea Glass Night', mode: 'dark', line: 'Quiet charcoal with sea-glass teal', bar: '#141716' },
-  { id: 'ember', name: 'Amber Night', mode: 'dark', line: 'Quiet charcoal with amber', bar: '#171614' },
-  { id: 'ink', name: 'Copper Night', mode: 'dark', line: 'Quiet charcoal with copper, like the icon', bar: '#181514' }
+  { id: 'midnight', name: 'Graphite', mode: 'dark', line: 'Near-black with soft blue in the words', bar: '#0f1011' },
+  { id: 'ember', name: 'Warm Clay', mode: 'dark', line: 'Near-black with clay in the words', bar: '#0f1011' },
+  { id: 'ink', name: 'Ink', mode: 'dark', line: 'Near-black, white buttons, a touch of indigo', bar: '#0f1011' },
+  { id: 'forest', name: 'Claude', mode: 'dark', line: 'Like the Claude app: soft black, white buttons, a little green', bar: '#151515' },
+  { id: 'black', name: 'True Black', mode: 'dark', line: 'Black for OLED screens, white buttons', bar: '#000000' }
 ];
 
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */
