@@ -1,6 +1,6 @@
 // The app's colours: five light themes and five dark ones, or Match this device (Violet by day, Violet Night by night).
 // The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
-// The dark ones keep their old ids (a saved choice still works) but since 2026-10-22 all wear Violet Night's greys.
+// The dark ones keep their old ids (a saved choice still works) but since 2026-10-22 share Violet Night's lightness in quieter greys.
 
 export interface Theme {
   id: string;
@@ -19,10 +19,10 @@ export const THEMES: Theme[] = [
   { id: 'sky', name: 'Sky', mode: 'light', line: 'Cool white with blue', bar: '#f2f6fa' },
   { id: 'rose', name: 'Rose', mode: 'light', line: 'Blush with deep rose', bar: '#faf4f5' },
   { id: 'violet-night', name: 'Violet Night', mode: 'dark', line: 'The original dark: charcoal with violet', bar: '#16151b' },
-  { id: 'midnight', name: 'Blue Night', mode: 'dark', line: 'Violet Night\'s charcoal with soft blue', bar: '#12161b' },
-  { id: 'forest', name: 'Sea Glass Night', mode: 'dark', line: 'Violet Night\'s charcoal with sea-glass teal', bar: '#111717' },
-  { id: 'ember', name: 'Amber Night', mode: 'dark', line: 'Violet Night\'s charcoal with amber', bar: '#191510' },
-  { id: 'ink', name: 'Copper Night', mode: 'dark', line: 'Violet Night\'s charcoal with copper, like the icon', bar: '#1a1512' }
+  { id: 'midnight', name: 'Blue Night', mode: 'dark', line: 'Quiet charcoal with soft blue', bar: '#141618' },
+  { id: 'forest', name: 'Sea Glass Night', mode: 'dark', line: 'Quiet charcoal with sea-glass teal', bar: '#141716' },
+  { id: 'ember', name: 'Amber Night', mode: 'dark', line: 'Quiet charcoal with amber', bar: '#171614' },
+  { id: 'ink', name: 'Copper Night', mode: 'dark', line: 'Quiet charcoal with copper, like the icon', bar: '#181514' }
 ];
 
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */

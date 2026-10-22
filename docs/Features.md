@@ -503,3 +503,7 @@ better on the cards and on its own soft panel's text. The light themes did not c
 Same day, later: Kyle could not see himself using the green or the rose ("think about the button colors a little bit
 differently"). From six calmer options (Sea Glass, Sage, Slate, Copper, Plum, Brass) Green Night became Sea Glass Night
 (soft teal) and Rose Night became Copper Night (the icon's terracotta); ids `forest` and `ink` kept.
+
+Same evening, Kyle: "take note of claude's dark mode. see how it's kind of subtle?" Blue, Sea Glass, Amber and Copper
+Night became quieter: greys at Violet Night's lightness with almost no tint, softer accents and fainter soft panels.
+Violet Night is unchanged.
