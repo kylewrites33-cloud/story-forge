@@ -415,8 +415,9 @@ its still possible to go through the workflow mode from somewhere, please apply 
   a window the iPad puts its window button (•••) on the app's top left corner, so the sidebar starts below it and the
   writing bar (and the narrow top bar) starts to its right (`ios-window` in `main.tsx`).
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
-  today's words, timer, Team, •••). The ••• menu holds Normal, Split here, Join, Names, Check, Listen, Fill brackets, Ask
-  the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Page | Beats | Whole chapter sits
+  today's words, timer, Team, •••). The ••• menu holds Split here, Join, Names, Check, Listen, Fill brackets, Ask
+  the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Normal left the ••• menu on 2026-10-22 (Kyle: "i dont think we need
+  it"); pressing B, I or Highlight again on picked words takes that style off. Page | Beats | Whole chapter sits
   above the chapter title. Picking words brings a menu under them: Rewrite, Describe, Options, Ask about this (opens the
   chat with the words quoted), and ••• for Brainstorm, Write on and Fill brackets. On the iPad with the on-screen keyboard
   up, a format row (the two arrows, Undo, Redo, B, I, Highlight) sits just above the keyboard. The side column's groups are

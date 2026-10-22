@@ -731,7 +731,6 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             <>
               <button type="button" class="more-backdrop" aria-label="Close" tabIndex={-1} onClick={() => setMoreOpen(false)} />
               <div class="more-menu" role="menu">
-                {moreItem('clear', 'Normal: take bold, italic and highlighting off', () => { const c = cmd(); if (c) c.plain(); })}
                 {!beatsMode && moreItem('split', 'Split here', () => openTab('tools'))}
                 {next && !beatsMode && moreItem('join', 'Join the next scene', () => openTab('tools'))}
                 {(codex || []).length > 0 && moreItem('people', look.names === 'on' ? 'Names: underlined (turn off)' : 'Names: underline them', () => { const l: PageLook = { ...look, names: look.names === 'on' ? 'off' : 'on' }; setLook(l); saveLook(l); })}
@@ -1159,7 +1158,7 @@ function MarksPanel({ text, onGo }: { text: string; onGo: (start: number, end: n
   const list = markList(text);
   return (
     <div class="writer-panel">
-      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Normal takes the mark off.</p>
+      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Select marked words and press it again to take the mark off.</p>
       {list.length ? (
         <ul class="mark-list">
           {list.map((m) => (
