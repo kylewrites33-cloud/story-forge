@@ -411,26 +411,30 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); if (v && right && shared()) setRight(false); };
   const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide('scene-panel', v); if (v && left && shared()) setLeft(false); };
   const toggleRight = () => showRight(!right);
-  // The chapter list opens at the chapter Kyle is in, not at chapter 1 (Kyle, 2026-10-21). While it stays open, moving
-  // to another scene scrolls only when that scene is out of sight, so a scene picked in the list does not jump.
+  // The chapter list keeps where Kyle left it scrolled, per book, across scenes and visits to other screens (Kyle,
+  // 2026-10-22: "rather than moving the left side chapter bar as i select through ... simply remember its position when
+  // i leave and re-enter"). Only the very first time, with nothing remembered, does it open at the chapter he is in.
   const sideRef = useRef<HTMLElement | null>(null);
   const sideShown = Boolean(book && left && !focus);
-  const sideWasShown = useRef(false);
+  const sideKey = 'story-forge.chapter-list-scroll.' + (book ? book.folder : '');
   useLayoutEffect(() => {
-    const opened = sideShown && !sideWasShown.current;
-    sideWasShown.current = sideShown;
     const side = sideRef.current;
     if (!sideShown || !side) return;
-    const here = side.querySelector<HTMLElement>('.side-scene[aria-current="page"]');
-    if (!here) return;
-    const box = side.getBoundingClientRect();
-    const r = here.getBoundingClientRect();
-    if (!opened && r.top >= box.top && r.bottom <= box.bottom) return;
-    // The chapter's heading sits a quarter of the way down, with the chapters before it above.
-    const head = here.parentElement && here.parentElement.querySelector<HTMLElement>('.side-chapter');
-    const top = (head || here).getBoundingClientRect().top - box.top + side.scrollTop;
-    side.scrollTop = Math.max(0, top - side.clientHeight / 4);
-  }, [sideShown, note.path]);
+    let saved: number | null = null;
+    try { const v = localStorage.getItem(sideKey); saved = v == null ? null : Number(v); } catch { /* no storage: open at the chapter */ }
+    if (saved != null && isFinite(saved)) { side.scrollTop = saved; }
+    else {
+      const here = side.querySelector<HTMLElement>('.side-scene[aria-current="page"]');
+      if (here) {
+        const head = here.parentElement && here.parentElement.querySelector<HTMLElement>('.side-chapter');
+        const top = (head || here).getBoundingClientRect().top - side.getBoundingClientRect().top + side.scrollTop;
+        side.scrollTop = Math.max(0, top - side.clientHeight / 4);
+      }
+    }
+    const keep = () => { try { localStorage.setItem(sideKey, String(Math.round(side.scrollTop))); } catch { /* lasts until reload */ } };
+    side.addEventListener('scroll', keep, { passive: true });
+    return () => side.removeEventListener('scroll', keep);
+  }, [sideShown, sideKey]);
   const openTab = (t: Tab) => { setTab(t); if (!right) showRight(true); };
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
   const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
