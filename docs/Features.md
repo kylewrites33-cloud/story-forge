@@ -54,7 +54,18 @@ add a dated line here when you add or change one.
   leaving the writing screen and coming back all find it where it was (Kyle, 2026-10-22: "rather than moving the left side
   chapter bar as i select through ... simply remember its position when i leave and re-enter the mode"). Only the first
   time, with nothing remembered, does it open at the chapter he is in (Kyle, 2026-10-21: "right now im regularly having
-  to scroll down from chapter 1"). Under the chapters, the book's boards and the archive sit folded behind one
+  to scroll down from chapter 1"). Chapters first, scenes inside (Kyle, 2026-10-22: "i dont like how the chapters with
+  scenes look different from the chapters without scenes ... by default the left hand view will just show the chapters
+  ... within the chapter, the default is to present it with all scenes, with a divider between them. there can be an
+  add scene button in the '...'"): the list shows one row per chapter, every chapter alike, with all its scenes' words;
+  pressing it opens the chapter at its first scene (or the scene Kyle is in). Show scenes in the hold menu lists that
+  chapter's scenes under it, indented, the chapter's row unchanged (remembered per book on the device). A chapter of
+  several scenes is one page: the other scenes sit above and below the open one with a line between (`src/ui/SceneSection.tsx`),
+  each still its own file with its own draft on the device and its own saves (quiet, steady typing, iPad put down,
+  leaving the page; anything left unsaved goes with the next sync). The writing bar's B, I, highlight, undo and redo work
+  in whichever scene the cursor is in; the scene's card, Split and Join stay with the scene that was opened (Join saves
+  the next scene's words first). The arrows at the foot go chapter to chapter. "Add a scene to this chapter" is in the
+  ••• menu. Under the chapters, the book's boards and the archive sit folded behind one
   "Book tools" button (a grid icon) and open only when Kyle presses it; the app remembers open or closed (Kyle,
   2026-10-22: "i dont anticipate using those frequently and would prefer them not to take visual space all the time"). Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
   this view ... the + 'add a scene to chapter 33' at the bottom should probably be add a chapter. then possibly if we long

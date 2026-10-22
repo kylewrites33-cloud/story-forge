@@ -2112,3 +2112,7 @@ button, .button { border-radius: 12px; }
 .side-move .side-move-to { display: flex; gap: 8px; margin-top: 4px; }
 .side-move .side-move-to input { width: 5em; flex: 0 0 auto; }
 .side-move .buttons button { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }
+/* Scenes shown under a chapter (hold it, Show scenes): indented, lighter, the open one in the accent colour. */
+.side-scene.side-sub { font-size: 0.9rem; color: var(--muted); min-height: 36px; }
+.side-scene.side-sub[aria-current="page"] { background: none; color: var(--accent); font-weight: 600; }
+.main-section.has-below .writer-text { min-height: 4em; padding-bottom: 1em; }

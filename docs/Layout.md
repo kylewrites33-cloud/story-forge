@@ -107,3 +107,4 @@ public/sw.js             service worker for the app shell only; never caches Git
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
 tests/                   Node test runner tests
 ```
+src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
