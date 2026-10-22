@@ -339,3 +339,9 @@ add a dated line here when you add or change one.
   cards, two across or three when the page is wide enough, the bar at the bottom of each; Waiting on you and The team
   sit side by side, Your own steps across the full width; the page's own Workflow | Writing switch hides wherever the
   sidebar shows one.
+- Scrap (Kyle, 2026-10-22: "can you please give me a scrap section in the right hand chapter column pullout?"). The
+  writing screen's right-hand column has a Scrap tab in its Chapter group, after Plan: one scrap per chapter for words he
+  cut and notes he wants to keep out of the story, saved as a `chapter-scrap` note in the book's `Chapter Scraps/`
+  folder and kept on the device as he types, the way the Plan tab is. "Move picked words here" cuts the words picked on
+  the page (one step to undo there) and adds them to the end of the scrap. The team leaves the scrap alone unless he
+  asks, and sf packet does not include it.

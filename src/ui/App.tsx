@@ -45,7 +45,7 @@ import { beatsNoteFor } from '../lib/beats.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { optionJobsFor } from '../lib/options.ts';
 import { checkOptions } from '../lib/lintcheck.ts';
-import { planFor } from '../lib/plans.ts';
+import { planFor, scrapFor } from '../lib/plans.ts';
 import { MatrixBoard } from './Matrix.tsx';
 import { TensionBoard } from './TensionPage.tsx';
 import { ArcsBoard } from './ArcsPage.tsx';
@@ -557,6 +557,7 @@ export function App() {
           checkOpts={book ? checkOptionsFor(view, book.folder) : undefined}
           convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
           plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
+          scrap={book ? scrapFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}

@@ -1072,6 +1072,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   width: 100%; min-height: 240px; resize: none; overflow: hidden; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--bg); color: var(--text); font: inherit; font-size: 1rem; line-height: 1.55;
 }
+.scrap-move { display: grid; gap: 4px; margin-bottom: 10px; }
+.scrap-move button { justify-self: start; min-height: 44px; }
 .check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text); font-size: 0.9rem; cursor: pointer; }
 .check-row input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
 .tool-said.unplaced { display: grid; gap: 6px; }
