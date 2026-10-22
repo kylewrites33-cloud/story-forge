@@ -13,11 +13,21 @@ const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform 
 const homeScreen = (navigator as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 // Some iPads put the app below the bar instead (Kyle's screenshot, 2026-10-22): then the window is shorter than the
 // screen and no room is kept for it.
-function underStatusBar(): boolean {
-  const tall = window.innerWidth > window.innerHeight ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-  return window.innerHeight >= tall - 2;
+// In split view or a window, the iPad puts its window button (•••) over the app's top left corner and reports no safe
+// area for it either (Kyle's screenshot, 2026-10-22): mark that case so the CSS moves the sidebar down below it.
+function screenSize(): { w: number; h: number } {
+  const turn = (screen as { orientation?: { type?: string } }).orientation;
+  const wide = turn && turn.type ? turn.type.indexOf('landscape') === 0 : Math.abs(Number((window as { orientation?: number }).orientation) || 0) === 90;
+  const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+  return wide ? { w: long, h: short } : { w: short, h: long };
 }
-function markIosApp(): void { document.documentElement.classList.toggle('ios-app', ios && homeScreen && underStatusBar()); }
+function markIosApp(): void {
+  const s = screenSize();
+  const app = ios && homeScreen;
+  const full = window.innerWidth >= s.w - 2;
+  document.documentElement.classList.toggle('ios-app', app && full && window.innerHeight >= s.h - 2);
+  document.documentElement.classList.toggle('ios-window', app && (!full || window.innerHeight < s.h - 48));
+}
 markIosApp();
 window.addEventListener('resize', markIosApp);
 

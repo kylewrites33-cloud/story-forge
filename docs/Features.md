@@ -411,6 +411,9 @@ its still possible to go through the workflow mode from somewhere, please apply 
   top bar, and a newly picked entry opens at its top. The note view says "To change this, ask the team" (Kyle never
   opens Obsidian; error messages say the same). On the iPad home-screen app the top bar fills the strip above it, and
   room for the clock bar is kept only when the app really sits under it (window as tall as the screen).
+  2026-10-22 (Kyle: "something about how the app behaves with the top horizontal apple bar is weird"): in split view or
+  a window the iPad puts its window button (•••) on the app's top left corner, so the sidebar starts below it and the
+  writing bar (and the narrow top bar) starts to its right (`ios-window` in `main.tsx`).
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
   today's words, timer, Team, •••). The ••• menu holds Normal, Split here, Join, Names, Check, Listen, Fill brackets, Ask
   the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Page | Beats | Whole chapter sits
