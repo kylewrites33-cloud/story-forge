@@ -51,7 +51,6 @@ import { MatrixBoard } from './Matrix.tsx';
 import { TensionBoard } from './TensionPage.tsx';
 import { ArcsBoard } from './ArcsPage.tsx';
 import { codexNow } from '../lib/codexnow.ts';
-import { EditQueue } from './EditQueue.tsx';
 import { SEEING_BOARDS, SeeingBoard } from './Seeing.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
@@ -592,7 +591,8 @@ export function App() {
     body = <ChatScreen index={view} thread={route.thread} book={route.book} onChat={source.write ? onChat : undefined}
       onDecide={source.write ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
   } else if (route.name === 'todo') {
-    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined} />;
+    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined}
+      schema={schema} book={activeBook(view)} onRewrite={source.write ? onRewrite : undefined} />;
   } else if (route.name === 'team') {
     body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.write)} />
       : <TeamScreen source={source} index={view} schema={schema} canTalk={Boolean(source.write)}
@@ -636,7 +636,6 @@ export function App() {
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
       else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
         const resume = keepWriting(view, book, source.key);
@@ -709,7 +708,6 @@ export function App() {
       else if (boardKey === 'matrix') v.notes = castFor(view, navBook).map((c) => c.note);
       else if (boardKey === 'tension') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
       else if (boardKey === 'arcs') v.notes = castFor(view, navBook).map((c) => c.note);
-      else if (boardKey === 'edit-queue') v.notes = bookTodos(view, navBook);
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) v.notes = boardNotes(view, navBook, boardKey as StoryBoard);
     } else if (route.name === 'note') {
       const n = view.notes[route.path];

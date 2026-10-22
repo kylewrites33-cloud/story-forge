@@ -16,7 +16,8 @@ export const at = {
   ideas: (folder: string) => '#/ideas/' + encodeURIComponent(folder),
   write: (path: string) => '#/write/' + encodeURIComponent(path),
   note: (path: string) => '#/note/' + encodeURIComponent(path),
-  jobs: () => '#/jobs'
+  jobs: () => '#/jobs',
+  todo: () => '#/todo'
 };
 
 /** The book's own note (Book.md), with any waiting choice already applied. */
@@ -113,7 +114,7 @@ export function waitingOnKyle(index: VaultIndex, book: BookEntry, seenJobs: stri
   const conflicts = piles(notesOf(book.conflicts)).decide.length;
   if (conflicts) out.push({ key: 'conflicts', count: conflicts, label: plural(conflicts, 'conflict to decide', 'conflicts to decide'), href: at.board('conflict-matrix', book.folder) });
   const todos = bookTodos(index, book).filter(isOpen).length;
-  if (todos) out.push({ key: 'todos', count: todos, label: plural(todos, 'open chapter to-do', 'open chapter to-dos'), href: at.board('edit-queue', book.folder) });
+  if (todos) out.push({ key: 'todos', count: todos, label: plural(todos, 'open chapter to-do', 'open chapter to-dos'), href: at.todo() });
   const notes = bookNotesToTeam(index, book).filter((n) => str(n.data.status || 'open') !== 'done').length;
   if (notes) out.push({ key: 'notes', count: notes, label: plural(notes, 'open Note to the Team', 'open Notes to the Team'), href: at.board('notes', book.folder) });
   // Questions live in each scene's notes (Scene Notes/S-012 ...md); the link opens the first scene that has one.
