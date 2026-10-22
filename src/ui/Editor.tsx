@@ -983,6 +983,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             )}
           </aside>
         )}
+        {/* With the right-hand column put away, a tab on the page's right edge brings it back on the page it showed
+            (Kyle, 2026-10-22: "once i pull away the right hand column, theres no way to bring it back"). */}
+        {!right && !focus && (
+          <button type="button" class="right-handle" onClick={() => showRight(true)} aria-label="Show the side column" title="Show the side column">
+            <Icon name="left" size={20} />
+          </button>
+        )}
         {(left || right) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
       </div>
     </div>
