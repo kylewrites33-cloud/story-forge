@@ -160,6 +160,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [chMenu, setChMenu] = useState<string | null>(null);
   const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' | 'move' } | null>(null);
   const [naming, setNaming] = useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(() => { try { return localStorage.getItem('story-forge.side-tools') === '1'; } catch { return false; } });
   const namingDone = useRef(false);
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
@@ -883,12 +884,23 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 return onAdd(group ? group.num : null, group ? group.title : '', t);
               }} />}
             </nav>
-            {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
-            <nav class="side-boards" aria-label="Boards">
-              {boardLinks(schema, book.folder).map((l) => (
-                <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
-              ))}
-            </nav>
+            {/* The boards and the archive stay folded behind one button, so the column is only chapters (Kyle,
+                2026-10-22: "i dont anticipate using those frequently and would prefer them not to take visual space"). */}
+            <div class="side-tools">
+              <button type="button" class="side-tools-toggle" aria-expanded={toolsOpen} onClick={() => { const v = !toolsOpen; setToolsOpen(v); try { localStorage.setItem('story-forge.side-tools', v ? '1' : ''); } catch { /* lasts until reload */ } }}>
+                <Icon name="grid" size={18} />Book tools<Icon name={toolsOpen ? 'up' : 'down'} size={16} />
+              </button>
+              {toolsOpen && (
+                <>
+                  {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
+                  <nav class="side-boards" aria-label="Boards">
+                    {boardLinks(schema, book.folder).map((l) => (
+                      <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
+                    ))}
+                  </nav>
+                </>
+              )}
+            </div>
           </aside>
         )}
         <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>

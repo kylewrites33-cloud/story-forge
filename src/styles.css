@@ -401,7 +401,11 @@ html.page-locked body { padding-bottom: 0; }
 .side-words { font-size: 0.94rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
 button.side-add { border: none; background: none; color: var(--muted); display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 0.94rem; }
 .side-add-form { display: grid; gap: 8px; padding: 6px; }
-.side-boards { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); display: grid; }
+.side-boards { display: grid; }
+.side-tools { margin-top: auto; padding-top: 6px; border-top: 1px solid var(--line); display: grid; }
+.side-tools-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: none; border-radius: 10px; background: none; color: var(--muted); font-size: 0.95rem; text-align: left; }
+.side-tools-toggle > :last-child { margin-left: auto; }
+.side-tools-toggle:hover { background: var(--bg); }
 .side-boards a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; color: var(--text); text-decoration: none; font-size: 0.95rem; }
 .side-boards a .icon { color: var(--muted); }
 .side-boards a:hover { background: var(--bg); }
