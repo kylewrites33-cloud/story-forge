@@ -167,7 +167,7 @@ export function ChatScreen({ index, thread, book, onChat, onDecide, waiting, dem
 
 /** A scene's conversation in the writing screen's right-hand column: the same messages as the Chat screen, narrower,
  * with the newest at the bottom and the box to write in under them. */
-export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro }: {
+export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro, seed }: {
   convo: Conversation | null; thread: string; book: string; onChat?: OnChat;
   /** The Chat screen's page for this conversation, opened with the page saved first. */
   fullHref?: { href: string; onClick?: (e: MouseEvent) => void };
@@ -177,8 +177,11 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
   onSent?: (thread: string) => void;
   /** The line shown before the first message. */
   intro?: string;
+  /** Words to start the message with (Ask about this, in the writing screen). */
+  seed?: string;
 }) {
   const [words, setWords] = useState('');
+  useEffect(() => { if (seed) setWords(seed); }, [seed]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const end = useRef<HTMLDivElement>(null);

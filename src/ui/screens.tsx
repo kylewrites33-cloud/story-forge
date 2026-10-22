@@ -16,7 +16,6 @@ import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { appearances, codexFor, matcher } from '../lib/codex.ts';
-import { StageStrip } from './Overview.tsx';
 import { askAboutScene } from './Team.tsx';
 import { nowForNote } from '../lib/codexnow.ts';
 import { activeBook } from '../lib/vault-index.ts';
@@ -144,8 +143,9 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
     <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
       <a class={'card status-' + (status || 'none').replace(/[^a-z-]/gi, '')} href={onDecide ? href.write(note.path) : href.note(note.path)}>
         <span class="card-top">
-          {/* No scene ID or status word on the grid; the coloured edge shows the status (Kyle, 2026-10-18, an experiment). */}
-          <span class="card-id">{note.data.kind === 'test' ? 'Test drive' : ''}</span>
+          {/* No scene ID or status word on the grid; the coloured edge shows the status (Kyle, 2026-10-18, an experiment),
+              with a small shape beside it so colour is never the only sign (design review, 2026-10-22). */}
+          <span class="card-id">{status && <span class={'status-mark status-' + status.replace(/[^a-z-]/gi, '')} title={status} aria-label={'Status: ' + status} />} {note.data.kind === 'test' ? 'Test drive' : ''}</span>
           <span class="pills">
             {accepted && <span class="pill pill-accepted">Accepted</span>}
           </span>
@@ -471,7 +471,6 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
     drag && drag.moved && drag.path === path ? 'dragging' : drag && drag.at && drag.at.key === g.key && drag.at.before === path ? 'drop-before' + (drag.at.side ? ' side' : '') : '';
   return (
     <section>
-      <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
       <div class="grid-head">
         {source && <GridCover source={source} book={book} />}
         <div>

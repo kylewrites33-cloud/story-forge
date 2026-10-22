@@ -26,8 +26,9 @@ import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { keepWriting, Shell } from './Shell.tsx';
-import { RoomTabs, TeamTabs } from './Rooms.tsx';
-import { isTeamPlace } from '../lib/rooms.ts';
+import { CodexBoard } from './Codex.tsx';
+import { DecideQueue } from './Decide.tsx';
+import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, Home, SeriesPage } from './Home.tsx';
@@ -68,7 +69,7 @@ import { WorkflowScreen } from './Workflow.tsx';
 import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
 import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
-import { createResults, flowResults, loadMode, saveMode, type NewResult } from '../lib/flow.ts';
+import { createResults, flowResults, type NewResult } from '../lib/flow.ts';
 import { nameList } from '../lib/links.ts';
 
 function makeSource(s: Settings): VaultSource {
@@ -608,7 +609,6 @@ export function App() {
     const book = view.books.find((b) => b.folder === route.folder);
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
-      saveMode(source.key, book.folder, 'workflow');
       body = <FlowScreen index={view} book={book} stage={route.stage} step={route.step} sourceKey={source.key} waiting={waiting}
         onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} onResults={source.write ? onResults : undefined} />;
     }
@@ -633,10 +633,9 @@ export function App() {
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       let screen;
-      if (route.name === 'book' && loadMode(source.key, view, book) === 'workflow') {
-        screen = <FlowScreen index={view} book={book} stage={0} step="" sourceKey={source.key} waiting={waiting}
-          onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} onResults={source.write ? onResults : undefined} />;
-      } else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
+      if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
@@ -662,8 +661,7 @@ export function App() {
           onRename={source.remove ? onRename : undefined} onImport={source.write ? onImport : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
-      const flowHome = route.name === 'book' && loadMode(source.key, view, book) === 'workflow';
-      body = flowHome ? screen : <><RoomTabs schema={schema} book={book} board={boardKey} workflow={loadMode(source.key, view, book) === 'workflow'} />{screen}</>;
+      body = screen;
     }
   } else {
     body = <Home source={source} index={view} series={false} onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
@@ -677,7 +675,7 @@ export function App() {
     : null;
   const at = route.name === 'team' ? href.team(route.slug) : route.name === 'skills' ? href.skills(route.skill) : route.name === 'history' ? href.history(route.who) : '';
   const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
-    : route.name === 'book' ? (view && navBook && loadMode(source.key, view, navBook) === 'workflow' ? '' : 'chapter-grid') : '';
+    : route.name === 'book' ? 'chapter-grid' : '';
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
@@ -690,7 +688,6 @@ export function App() {
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
     : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
       || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' || route.name === 'workflow' ? route.name : '';
-  if (view && isTeamPlace(place)) body = <><TeamTabs place={place} />{body}</>;
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
     team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
