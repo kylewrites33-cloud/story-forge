@@ -22,7 +22,7 @@ export const THEMES: Theme[] = [
   { id: 'midnight', name: 'Graphite', mode: 'dark', line: 'Near-black with soft blue in the words', bar: '#0f1011' },
   { id: 'ember', name: 'Warm Clay', mode: 'dark', line: 'Near-black with clay in the words', bar: '#0f1011' },
   { id: 'ink', name: 'Ink', mode: 'dark', line: 'Near-black, white buttons, a touch of indigo', bar: '#0f1011' },
-  { id: 'forest', name: 'Claude', mode: 'dark', line: 'Like the Claude app: soft black, white buttons, a little green', bar: '#151515' },
+  { id: 'forest', name: 'Claude', mode: 'dark', line: 'Like the Claude app: dark green and blue shapes, orange touches, white buttons', bar: '#151515' },
   { id: 'black', name: 'True Black', mode: 'dark', line: 'Black for OLED screens, white buttons', bar: '#000000' }
 ];
 
