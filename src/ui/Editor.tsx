@@ -72,8 +72,9 @@ type Tab = 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'no
 const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Split and join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
 // The column's tabs in four groups (Kyle, 2026-10-21): the group first, then its tabs as small chips.
-const TAB_GROUPS: [string, Tab[]][] = [['Team', ['chat', 'options', 'team']], ['Chapter', ['plan', 'scrap', 'beats', 'flow', 'todos']],
-  ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools']], ['Tools', ['page', 'check']]];
+// One row of three since the design review (2026-10-22): Chat, Scene and Chapter; Page look and Check sit under Scene.
+const TAB_GROUPS: [string, Tab[]][] = [['Chat', ['chat', 'options', 'team']], ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools', 'check', 'page']],
+  ['Chapter', ['plan', 'scrap', 'beats', 'flow', 'todos']]];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
 function loadTab(): Tab {
@@ -556,6 +557,49 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const opt = usePassageOptions({ source, note, bookFolder, onJob, jobs: optionJobs || [], canSave, addDots,
     selection: () => { const c = cmd(); return c ? c.selection() : null; }, pageText, body: () => draftRef.current.body, apply: applyText });
 
+  // The ••• menu in the bar, the menu over picked words, and the format row above the iPad's keyboard (design review, 2026-10-22).
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreItem = (icon: string, labelText: string, act: () => void) => (
+    <button type="button" role="menuitem" {...keepFocus} onClick={() => { setMoreOpen(false); act(); }}><Icon name={icon} size={20} /><span>{labelText}</span></button>
+  );
+  const [selBox, setSelBox] = useState<{ top: number; left: number } | null>(null);
+  const [selMore, setSelMore] = useState(false);
+  useEffect(() => {
+    const on = () => {
+      const sel = window.getSelection();
+      const root = document.querySelector('.writer-page .writer-text.styled');
+      if (!sel || sel.isCollapsed || !sel.rangeCount || !root || !root.contains(sel.anchorNode)) { setSelBox(null); setSelMore(false); return; }
+      const r = sel.getRangeAt(0).getBoundingClientRect();
+      if (!r.width && !r.height) { setSelBox(null); return; }
+      // Under the words, so the iPad's own Copy and Paste menu above them stays clear.
+      const w = Math.min(460, window.innerWidth - 32);
+      setSelBox({ top: Math.min(r.bottom + 10, window.innerHeight - 70), left: Math.max(16, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 16)) });
+    };
+    document.addEventListener('selectionchange', on);
+    window.addEventListener('scroll', on, true);
+    return () => { document.removeEventListener('selectionchange', on); window.removeEventListener('scroll', on, true); };
+  }, []);
+  const [seed, setSeed] = useState('');
+  const askAbout = () => {
+    const c = cmd();
+    const s2 = c ? c.selection() : null;
+    const picked = s2 && s2.end > s2.start ? pageText().slice(s2.start, s2.end).trim() : '';
+    setSeed(picked ? 'About these words: “' + (picked.length > 400 ? picked.slice(0, 397) + '…' : picked) + '”\n\n' : '');
+    openTab('chat');
+  };
+  const [kb, setKb] = useState<{ top: number } | null>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches) return;
+    const on = () => {
+      const up = window.innerHeight - vv.height > 150 && document.activeElement && document.activeElement.closest && document.activeElement.closest('.writer-page');
+      setKb(up ? { top: vv.offsetTop + vv.height - 56 } : null);
+    };
+    vv.addEventListener('resize', on); vv.addEventListener('scroll', on);
+    document.addEventListener('focusin', on); document.addEventListener('focusout', on);
+    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); document.removeEventListener('focusin', on); document.removeEventListener('focusout', on); };
+  }, []);
+
   const { text } = splitLead(draft.body);
   const [beatWords, setBeatWords] = useState<Record<string, number>>({});
   // In beats mode the beats hold the live words (Kyle, 2026-10-19: the target bar and the rest show there too).
@@ -647,52 +691,64 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-    <div class={'writer paper-' + look.paper + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
+    <div class={'writer paper-' + look.paper + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
           <button type="button" class="leave-focus" onClick={leaveFocus} aria-label="Leave focus mode" title="Leave focus mode (Esc)"><Icon name="focus" /><span class="bar-label">Leave focus</span></button>
         </div>
       )}
+      {/* One slim bar (design review, 2026-10-22): Chapters, where you are, Undo, Redo, B, I, Highlight, Find, then
+          Saved, the timer, Team and •••. With the iPad's on-screen keyboard up, the formatting moves to a row above it. */}
       <header class="writer-bar">
-        <button type="button" class="primary" onClick={done}>Done</button>
-        {book && (
-          <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters">
-            <Icon name="list" /><span class="bar-label">Chapters</span>
-          </button>
-        )}
-        <span class="writer-title">{book ? book.title : title}</span>
-        <span class="writer-words">
-          {num(words)}{target ? ' / ' + num(target) : ''} words{sitting ? ' · ' + (sitting > 0 ? '+' : '') + num(sitting) : ''}
+        {book
+          ? <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters"><Icon name="menu" /><span class="bar-label">Chapters</span></button>
+          : <button type="button" class="bar-button" onClick={done} aria-label="Back"><Icon name="left" /><span class="bar-label">Back</span></button>}
+        <span class="writer-where">
+          <span class="writer-title">{group && group.num != null ? group.num + ' · ' + (group.title || title) : title}</span>
+          {book && <span class="writer-book">{book.title}</span>}
         </span>
+        <span class="bar-format" role="toolbar" aria-label="Formatting">
+          <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+          <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+          <span class="bar-sep" aria-hidden="true" />
+          <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={typing.b} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
+          <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={typing.i} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
+          <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
+          <span class="bar-sep" aria-hidden="true" />
+          <button type="button" class="tool" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /></button>
+        </span>
+        <span class="bar-gap" />
         {beatsMode
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
-          : <span class={'save-chip ' + chip.cls} title={status} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}</span>}
-        {group && (group.num != null || group.scenes.length > 1) && (
-          <div class="view-seg" role="group" aria-label="How to see this chapter">
-            <button type="button" aria-pressed={!beatsMode} onClick={() => { if (beatsMode) go(href.write(note.path)); }} title="The page">
-              <Icon name="pen" size={18} /><span class="bar-label">Page</span>
-            </button>
-            {group.num != null && (
-              <button type="button" aria-pressed={beatsMode} onClick={() => { if (!beatsMode) go(href.beats(note.path)); }} title="This chapter by its beats">
-                <Icon name="beats" size={18} /><span class="bar-label">Beats</span>
-              </button>
-            )}
-            {group.scenes.length > 1 && (
-              <button type="button" aria-pressed={false} onClick={() => go(href.chapter(note.path))} title="The whole chapter on one page">
-                <Icon name="page" size={18} /><span class="bar-label">Whole chapter</span>
-              </button>
-            )}
-          </div>
-        )}
+          : <span class={'save-chip ' + chip.cls} title={status + ' · ' + num(words) + (target ? ' of ' + num(target) : '') + ' words'} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}{sitting ? <span class="bar-label"> · {(sitting > 0 ? '+' : '') + num(sitting)} today</span> : null}</span>}
         {timer && timer('bar')}
-        <button type="button" class="bar-button compact" onClick={enterFocus} aria-label="Focus mode" title="Focus mode: only the page">
-          <Icon name="focus" /><span class="bar-label">Focus</span>
-        </button>
-        <button type="button" class="bar-button" onClick={toggleRight} aria-expanded={right} aria-label={right ? 'Hide the right-hand column' : 'Show the right-hand column'}
-          title={right ? 'Hide the right-hand column' : 'Show the right-hand column: chat, plan, card and more'}>
-          <Icon name="panel" />
-        </button>
+        <button type="button" class={'bar-team' + (right ? ' on' : '')} onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right}
+          title="The team: chat, the scene's card and the chapter's plan"><Icon name="spark" size={20} /><span class="bar-label always">Team</span></button>
+        <div class="more-wrap">
+          <button type="button" class="bar-button compact" aria-label="More" aria-expanded={moreOpen} {...keepFocus} onClick={() => setMoreOpen(!moreOpen)}><Icon name="more" /></button>
+          {moreOpen && (
+            <>
+              <button type="button" class="more-backdrop" aria-label="Close" tabIndex={-1} onClick={() => setMoreOpen(false)} />
+              <div class="more-menu" role="menu">
+                {moreItem('clear', 'Normal: take bold, italic and highlighting off', () => { const c = cmd(); if (c) c.plain(); })}
+                {!beatsMode && moreItem('split', 'Split here', () => openTab('tools'))}
+                {next && !beatsMode && moreItem('join', 'Join the next scene', () => openTab('tools'))}
+                {(codex || []).length > 0 && moreItem('people', look.names === 'on' ? 'Names: underlined (turn off)' : 'Names: underline them', () => { const l: PageLook = { ...look, names: look.names === 'on' ? 'off' : 'on' }; setLook(l); saveLook(l); })}
+                {moreItem('scan', 'Check for AI-sounding phrases', () => openTab('check'))}
+                {listen.supported && moreItem('speaker', listen.state !== 'idle' ? 'Stop reading aloud' : 'Listen: read it aloud', () => (listen.state !== 'idle' && listen.reader ? listen.reader.stop() : listen.start()))}
+                {!beatsMode && moreItem('bracket', filling && filling.busy ? 'Filling brackets…' : 'Fill the [brackets]' + (newBrackets ? ' (' + newBrackets + ')' : ''), () => fill())}
+                {moreItem('team', 'Ask the team for a job', () => openTab('team'))}
+                {moreItem('focus', 'Focus: only the page', enterFocus)}
+                {moreItem('type', 'Page look', () => openTab('page'))}
+                {moreItem('history', 'Copies', () => openTab('copies'))}
+                {moreItem('check', 'Mark as drafted', () => openTab('tools'))}
+                {group && group.scenes.length > 1 && moreItem('page', 'Whole chapter on one page', () => go(href.chapter(note.path)))}
+                {moreItem('grid', 'Done: back to the Chapter Grid', done)}
+              </div>
+            </>
+          )}
+        </div>
       </header>
       <div class="writer-cols">
         {book && left && !focus && (
@@ -735,59 +791,42 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           </aside>
         )}
         <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>
-          <div class="writer-tools" role="toolbar" aria-label="Writing tools">
-            <div class="tool-group" role="group" aria-label="Undo and redo">
-              <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
-            </div>
-            <div class="tool-group" role="group" aria-label="Formatting">
-              <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={typing.b} {...keepFocus}
-                onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
-              <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={typing.i} {...keepFocus}
-                onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
-              <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={typing.h} {...keepFocus}
-                onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
-              <button type="button" class="tool wide" aria-label="Normal" title="Normal: take bold, italic and highlighting off the words" {...keepFocus}
-                onClick={() => { const c = cmd(); if (c) c.plain(); }}><Icon name="clear" /><span class="tool-label">Normal</span></button>
-            </div>
-            <div class="tool-group" role="group" aria-label="Find and scenes">
-              <button type="button" class="tool wide" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /><span class="tool-label">Find</span></button>
-              {!beatsMode && <button type="button" class="tool wide" title="Split this scene at the cursor" {...keepFocus} onClick={() => openTab('tools')}><Icon name="split" /><span class="tool-label">Split</span></button>}
-              {next && !beatsMode && <button type="button" class="tool wide" title="Join the next scene onto this one" {...keepFocus} onClick={() => openTab('tools')}><Icon name="join" /><span class="tool-label">Join</span></button>}
-              {(codex || []).length > 0 && (
-                <button type="button" class="tool wide" aria-pressed={look.names === 'on'} {...keepFocus}
-                  title={look.names === 'on' ? 'Names of characters, places and items are underlined. Press to turn it off.' : 'Underline the names of characters, places and items'}
-                  onClick={() => { const l: PageLook = { ...look, names: look.names === 'on' ? 'off' : 'on' }; setLook(l); saveLook(l); }}>
-                  <Icon name="people" /><span class="tool-label">Names</span>
-                </button>
+          <ListenBar l={listen} />
+          {selBox && !beatsMode && (
+            <div class="sel-menu" role="toolbar" aria-label="For the words you picked" style={{ top: selBox.top + 'px', left: selBox.left + 'px' }}>
+              <button type="button" {...keepFocus} disabled={Boolean(asked && asked.busy)} onClick={() => askTeam('rewrite')}><Icon name="swap" size={18} />{asked && asked.busy === 'rewrite' ? 'Sending…' : 'Rewrite'}</button>
+              <button type="button" {...keepFocus} disabled={Boolean(asked && asked.busy)} onClick={() => askTeam('describe')}><Icon name="eye" size={18} />{asked && asked.busy === 'describe' ? 'Sending…' : 'Describe'}</button>
+              <button type="button" {...keepFocus} onClick={() => { setOptionsOpen(true); opt.setSaid(null); }}>Options{opt.ready > 0 && <span class="count-badge">{opt.ready}</span>}</button>
+              <button type="button" {...keepFocus} onClick={askAbout}><Icon name="chat" size={18} />Ask about this</button>
+              <button type="button" class="sel-more" aria-label="More for these words" aria-expanded={selMore} {...keepFocus} onClick={() => setSelMore(!selMore)}><Icon name="more" size={18} /></button>
+              {selMore && (
+                <div class="sel-more-menu">
+                  <button type="button" {...keepFocus} onClick={() => { setSelMore(false); askTeam('brainstorm'); }}><Icon name="idea" size={18} />Brainstorm what comes next</button>
+                  <button type="button" {...keepFocus} onClick={() => { setSelMore(false); askTeam('write-on'); }}><Icon name="pen" size={18} />Write on from here</button>
+                  <button type="button" {...keepFocus} onClick={() => { setSelMore(false); fill(); }}><Icon name="bracket" size={18} />Fill the [brackets]</button>
+                </div>
               )}
             </div>
-            <div class="tool-group check-tools" role="group" aria-label="Check and listen">
-              <button type="button" class="tool wide" aria-pressed={right && tab === 'check'} {...keepFocus} onClick={() => (right && tab === 'check' ? toggleRight() : openTab('check'))}
-                title="Check for AI-sounding phrases: free, on this device, with the score and rhythm"><Icon name="scan" /><span class="tool-label">Check</span></button>
-              <ListenButton l={listen} keep={keepFocus} />
+          )}
+          {kb && (
+            <div class="kb-row" role="toolbar" aria-label="Formatting" style={{ top: kb.top + 'px' }}>
+              {prev ? <a class="tool" {...link(href.write(prev.path))} aria-label={'Previous section: ' + sideName(prev)}><Icon name="left" /></a> : <span class="tool" aria-hidden="true" />}
+              {next ? <a class="tool" {...link(href.write(next.path))} aria-label={'Next section: ' + sideName(next)}><Icon name="right" /></a> : <span class="tool" aria-hidden="true" />}
+              <span class="bar-sep" aria-hidden="true" />
+              <button type="button" class="tool" aria-label="Undo" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+              <button type="button" class="tool" aria-label="Bold" aria-pressed={typing.b} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
+              <button type="button" class="tool" aria-label="Italic" aria-pressed={typing.i} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
+              <button type="button" class="tool" aria-label="Highlight" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
             </div>
-            <div class="tool-group team-tools" role="group" aria-label="Ask the team">
-              <span class="tool-heading" aria-hidden="true">Ask the team</span>
-              {PASSAGE_TOOLS.map((t) => (
-                <button key={t.key} type="button" class="tool wide team-tool" title={t.hint + '. The answer comes in this scene\'s conversation.'} {...keepFocus}
-                  disabled={Boolean(asked && asked.busy)} onClick={() => askTeam(t.key)}>
-                  <Icon name={TOOL_ICON[t.key]} /><span class="tool-label">{asked && asked.busy === t.key ? 'Sending…' : t.label}</span>
-                </button>
-              ))}
-              {!beatsMode && <button type="button" class="tool wide team-tool" aria-pressed={optionsOpen} {...keepFocus} onClick={() => { setOptionsOpen(!optionsOpen); opt.setSaid(null); }}
-                title="Two or three versions of the words you picked to choose from: Expand, Describe, Tighten or More like my voice">
-                <Icon name="swap" /><span class="tool-label">Options</span>{opt.ready > 0 && <span class="count-badge">{opt.ready}</span>}
-              </button>}
-              {!beatsMode && <button type="button" class="tool wide team-tool" {...keepFocus} disabled={Boolean(filling && filling.busy)} onClick={() => fill()}
-                title="Fill the [brackets] on this page: [...] is a gap the team fills in place, [a question] gets an answer as a paragraph under it. Keep writing while they work.">
-                <Icon name="bracket" /><span class="tool-label">{filling && filling.busy ? 'Sending…' : 'Fill brackets'}</span>
-                {newBrackets > 0 && <span class="count-badge">{newBrackets}</span>}
-              </button>}
-              <button type="button" class="tool wide" title="Everything you can ask the team for" {...keepFocus} onClick={() => openTab('team')}><Icon name="team" /><span class="tool-label">Team</span></button>
+          )}
+          {group && (group.num != null || group.scenes.length > 1) && (
+            <div class="view-seg page-switch" role="group" aria-label="How to see this chapter">
+              <button type="button" aria-pressed={!beatsMode} onClick={() => { if (beatsMode) go(href.write(note.path)); }}>Page</button>
+              {group.num != null && <button type="button" aria-pressed={beatsMode} onClick={() => { if (!beatsMode) go(href.beats(note.path)); }}>Beats</button>}
+              {group.scenes.length > 1 && <button type="button" aria-pressed={false} onClick={() => go(href.chapter(note.path))}>Whole chapter</button>}
             </div>
-            <ListenBar l={listen} />
-          </div>
+          )}
           {optionsOpen && <OptionsAsk busy={opt.busy} keep={keepFocus} onClose={() => setOptionsOpen(false)}
             onAsk={async (m) => { if (await opt.ask(m)) setOptionsOpen(false); }} />}
           {opt.said && !opt.busy && (
@@ -882,7 +921,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               );
             })()}
             {tab === 'chat' && (
-              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined}
+              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed}
                 fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />
             )}
             {tab === 'plan' && (
