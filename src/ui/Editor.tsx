@@ -91,7 +91,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -108,6 +108,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
   /** Add a chapter of one scene after chapter `after` (null: after the last), later chapters moving up one, and open it. */
   onAddChapter?: (after: number | null, chapterTitle: string) => Promise<string | null>;
+  /** Give a chapter a new name (its scenes' chapter_title), saved through the queue. */
+  onRenameChapter?: (scenes: NoteRecord[], title: string) => void;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -154,7 +156,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const beatsMode = Boolean(beats);
   // The chapter list's long press (or right-click): a small menu under the chapter, then a form in the same place.
   const [chMenu, setChMenu] = useState<string | null>(null);
-  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' } | null>(null);
+  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' } | null>(null);
+  const [naming, setNaming] = useState<string | null>(null);
+  const namingDone = useRef(false);
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
   // In beats mode the tool row works on the beat Kyle is in (Kyle, 2026-10-19: "the full word processor tool set too").
@@ -672,7 +676,21 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // The page's heading: the chapter, the scene line, the chapter strip and the target bar. Beats mode shows it too.
   const headParts = (
     <>
-      <h1>{heading}</h1>
+      {group && group.num != null && onRenameChapter && !beatsMode
+        ? naming != null
+          ? (
+            <form class="chapter-name-edit" onSubmit={(e) => { e.preventDefault(); namingDone.current = true; onRenameChapter(group.scenes, naming); setNaming(null); }}>
+              <label><span class="chapter-name-num">Chapter {group.num}:</span>
+                <input type="text" value={naming} aria-label={'Name of chapter ' + group.num} placeholder="Chapter name" enterKeyHint="done" autoFocus
+                  onInput={(e) => setNaming((e.currentTarget as HTMLInputElement).value)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); namingDone.current = true; setNaming(null); } }}
+                  onBlur={() => { if (!namingDone.current && naming.trim() !== group.title) onRenameChapter(group.scenes, naming); setNaming(null); }} />
+              </label>
+            </form>
+          )
+          // Tap the chapter's name to change it (Kyle, 2026-10-22).
+          : <h1><button type="button" class="chapter-name" title="Rename the chapter" onClick={() => { namingDone.current = false; setNaming(group.title); }}>{heading}</button></h1>
+        : <h1>{heading}</h1>}
       {subtitle && <p class="page-subtitle">{subtitle}</p>}
       {sub && <p class="meta">{sub}</p>}
       {strip.length > 0 && (
@@ -764,7 +782,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
             <nav class="scene-list">
               {book.groups.map((g) => {
-                const canHold = g.num != null && Boolean(onAdd || onAddChapter);
+                const canHold = g.num != null && Boolean(onAdd || onAddChapter || onRenameChapter);
                 const openMenu = () => { setChAdd(null); setChMenu(g.key); };
                 const stop = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
                 // Hold a finger on a chapter (or right-click it) for Add a chapter below and Add another scene (Kyle,
@@ -793,6 +811,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       <div class="side-menu" role="menu" aria-label={'Chapter ' + g.num}>
                         {onAddChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'chapter' }); }}><Icon name="plus" size={18} />Add a chapter below</button>}
                         {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
+                        {onRenameChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'rename' }); }}><Icon name="pen" size={18} />Rename the chapter</button>}
                         <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setChMenu(null)}>Cancel</button>
                       </div>
                     )}
@@ -803,6 +822,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                           if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
                           return onAddChapter(g.num, t);
                         }} />
+                    )}
+                    {chAdd && chAdd.key === g.key && chAdd.kind === 'rename' && onRenameChapter && (
+                      <SideAddForm label={'Name of chapter ' + g.num} button="Rename" allowEmpty initial={g.title}
+                        onCancel={() => setChAdd(null)} onAdd={async (t) => { onRenameChapter(g.scenes, t); setChAdd(null); return null; }} />
                     )}
                     {chAdd && chAdd.key === g.key && chAdd.kind === 'scene' && onAdd && (
                       <SideAddForm label={'Title of the new scene in chapter ' + g.num} button="Add and start writing"
@@ -1380,10 +1403,10 @@ function AddChapterAtEnd({ onAdd, scene }: { onAdd: (title: string) => Promise<s
 }
 
 /** A title box and Add, in the chapter list. */
-function SideAddForm({ label, button, hint, allowEmpty, onAdd, onCancel }: {
-  label: string; button: string; hint?: string; allowEmpty?: boolean; onAdd: (title: string) => Promise<string | null>; onCancel: () => void;
+function SideAddForm({ label, button, hint, allowEmpty, initial, onAdd, onCancel }: {
+  label: string; button: string; hint?: string; allowEmpty?: boolean; initial?: string; onAdd: (title: string) => Promise<string | null>; onCancel: () => void;
 }) {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initial || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const go = async () => {

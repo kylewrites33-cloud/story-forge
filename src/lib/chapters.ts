@@ -75,3 +75,14 @@ export async function makeRoom(source: VaultSource, shifts: Shift[], newChapter:
     }
   }
 }
+
+/** Renaming a chapter (Kyle, 2026-10-22: tap the chapter's name on the page, or hold it in the list). A chapter's name is
+ * the `chapter_title` of its scenes: the new name goes on the chapter's first scene and on every scene that already
+ * carries one, so no older name is left to show. An empty name takes the line off them. */
+export function chapterTitleEdits(scenes: NoteRecord[], title: string): string[] {
+  const clean = title.replace(/\s+/g, ' ').trim();
+  return scenes.filter((n, i) => {
+    const had = typeof n.data.chapter_title === 'string' && n.data.chapter_title !== '';
+    return clean ? (i === 0 || had) && n.data.chapter_title !== clean : had;
+  }).map((n) => n.path);
+}

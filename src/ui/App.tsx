@@ -12,7 +12,7 @@ import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
-import { chapterShifts, makeRoom } from '../lib/chapters.ts';
+import { chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts } from '../lib/drafts.ts';
@@ -471,6 +471,16 @@ export function App() {
     runFlush();
   }, [setQueue, runFlush]);
 
+  /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
+  const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
+    const clean = title.replace(/\s+/g, ' ').trim();
+    const at = new Date().toISOString();
+    let list = queueRef.current;
+    chapterTitleEdits(scenes, clean).forEach((path) => { list = enqueue(list, { path, decision: 'edit', reason: '', at, fields: { chapter_title: clean } }); });
+    setQueue(list);
+    runFlush();
+  }, [setQueue, runFlush]);
+
   // Show the saved copy at once, then refresh it.
   useEffect(() => {
     let live = true;
@@ -574,6 +584,7 @@ export function App() {
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
           onAddChapter={book && source.write && source.readFresh ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
+          onRenameChapter={book && source.write ? onRenameChapter : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}

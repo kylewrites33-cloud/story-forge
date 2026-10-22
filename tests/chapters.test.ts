@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { chapterShifts, makeRoom, shiftedText } from '../src/lib/chapters.ts';
+import { chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { MemSource } from './helpers.ts';
 
@@ -53,4 +53,13 @@ test('making room saves every note and renames the named ones', async () => {
   assert.match(src.files.get(BOOK + '/Tasks/T-001 Fix the bell.md')!, /^chapter: 3$/m);
   assert.match(src.files.get('Series/Ember Road/Books/2 Other/Scenes/S-001 Elsewhere.md')!, /^chapter: 5$/m);
   assert.ok(src.writes.every((w) => !/Agent:/.test(w.message)));
+});
+
+test('a chapter name goes on its first scene and on any scene that already has one', () => {
+  const a = makeNote('a.md', 'x', scene('S-010', 7));
+  const b = makeNote('b.md', 'x', scene('S-011', 7, 'Old'));
+  const c = makeNote('c.md', 'x', scene('S-012', 7));
+  assert.deepEqual(chapterTitleEdits([a, b, c], '  The  Vow '), ['a.md', 'b.md']);
+  assert.deepEqual(chapterTitleEdits([a, b, c], 'Old'), ['a.md']);
+  assert.deepEqual(chapterTitleEdits([a, b, c], ''), ['b.md']);
 });
