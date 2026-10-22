@@ -38,6 +38,7 @@ src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send
 src/ui/Pomodoro.tsx      the timer's button and panel: in the sidebar's foot, the slim top bar, the writing screen's top bar, or beside Leave focus
+src/ui/chirp.ts        the Pomodoro's two chirps (sound files made on the device, unlocked by the first press) and keeping the screen on while it runs
 src/ui/hold.ts         names on a long press: a finger held on a button with a title shows the title (touch only)
 src/ui/viewport.ts       useLockedPage: the writing screens lock the document so the iPad cannot scroll it under them
 src/ui/ChapterPage.tsx   the whole chapter as one page
