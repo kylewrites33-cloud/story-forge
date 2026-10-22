@@ -249,14 +249,8 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'break' && <button type="button" class="primary" onClick={() => { act((c, t) => startWork(c, t)); setOpen(false); }}>Skip the break</button>}
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
-          {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
-          {s.phase === 'idle' && <p class="hint">A chirp when the writing ends, another when the break ends.{' '}
-            <button type="button" class="link" onClick={workDoneChirp}>Hear the first</button>{' '}
-            <button type="button" class="link" onClick={breakDoneChirp}>Hear the second</button></p>}
           <p class="pomodoro-today"><strong>Today:</strong> {num(day.typed)} {day.typed === 1 ? 'word' : 'words'} typed, {done} {done === '1' ? 'Pomodoro' : 'Pomodoros'} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}).</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
-          <p class="hint">If you stop early, the minutes still count: 15 minutes is 0.6 of a Pomodoro.</p>
-          <p class="hint">Words typed count all day, with or without the timer. Words the team writes are not counted, and deleting them takes nothing off.</p>
           {error && <p class="error">{error}</p>}
         </div>
       )}
