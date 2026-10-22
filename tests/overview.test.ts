@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bookNumbers, bookStage, bookStages, finishedJobs, loadSeenJobs, markJobsSeen, openQuestions, runway, waitingOnKyle } from '../src/lib/overview.ts';
+import { bookNumbers, chaptersDone, bookStage, bookStages, finishedJobs, loadSeenJobs, markJobsSeen, openQuestions, runway, waitingOnKyle } from '../src/lib/overview.ts';
 import { BOOK, demoIndex, MemStorage, withNote } from './wr-helpers.ts';
 
 test('the demo book\'s numbers: words against its target and scenes per status', async () => {
@@ -8,7 +8,10 @@ test('the demo book\'s numbers: words against its target and scenes per status',
   const n = bookNumbers(schema, index, book);
   assert.equal(n.target, 3000);
   assert.equal(n.words, 61);
-  assert.equal(n.percent, 2);
+  assert.equal(n.chapters, 4);
+  assert.equal(n.chaptersDone, 1, 'chapter 2 has both scenes final; chapter 1 still has a planned scene');
+  assert.equal(n.doneWords, 0, 'chapter 1\'s 61 words wait until the whole chapter is done');
+  assert.equal(n.percent, 0);
   assert.equal(n.scenes, 7, 'the test drive is left out');
   assert.deepEqual(n.counts, [{ status: 'planned', count: 4 }, { status: 'drafted', count: 0 }, { status: 'revised', count: 0 }, { status: 'final', count: 3 }]);
   assert.equal(bookStage(index, book), 'draft');
@@ -75,4 +78,13 @@ test('the word target and the posting pace are written as numbers', async () => 
   assert.equal(applyToText(text, editChange({ cadence: '3', target_words: '80000' })), '---\ntype: book\ntitle: Ash Bell\nstage: draft\ntarget_words: 80000\ncadence: 3\n---\n');
   assert.equal(applyToText(text, editChange({ stage: 'revise' })), text.replace('stage: draft', 'stage: revise'));
   assert.deepEqual(applyToData({ cadence: 2 }, editChange({ cadence: '4' })), { cadence: 4 });
+});
+
+test('book progress counts only chapters whose scenes are all revised or final, whoever wrote them first', () => {
+  const sc = (path: string, chapter: number | null, status: string, words: number) =>
+    ({ path, type: 'scene', sha: '', body: '', data: { chapter, status, words } }) as unknown as Parameters<typeof chaptersDone>[0][number];
+  const r = chaptersDone([
+    sc('a', 1, 'revised', 2000), sc('b', 2, 'drafted', 5000), sc('c', 3, 'final', 1500), sc('d', 3, 'revised', 500), sc('e', 4, 'final', 900), sc('f', 4, 'drafted', 100), sc('g', null, 'revised', 300)
+  ]);
+  assert.deepEqual(r, { chapters: 5, done: 3, words: 4300 });
 });

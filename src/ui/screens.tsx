@@ -9,6 +9,7 @@ import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schem
 import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
+import { chaptersDone } from '../lib/overview.ts';
 import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, type OutlineScene, type ReadRates } from '../lib/home.ts';
 import { Cover } from './Home.tsx';
 import type { Choice } from '../lib/write-queue.ts';
@@ -316,6 +317,7 @@ function BookSummary({ stage, chapters, scenes, words, rates, order, counts }: {
       <div class="stats">
         {stat(stage ? stage[0].toUpperCase() + stage.slice(1) : '—', 'Stage')}
         {stat(chapters, chapters === 1 ? 'Chapter' : 'Chapters')}
+        {stat(chaptersDone(scenes.filter((n) => n.data.kind !== 'test')).done, 'Chapters done', 'done')}
         {stat(scenes.length, scenes.length === 1 ? 'Scene' : 'Scenes')}
         {stat(words.toLocaleString('en-US'), 'Words')}
         {stat('~' + pages, pages === 1 ? 'Page' : 'Pages')}

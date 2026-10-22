@@ -42,11 +42,24 @@ export function storyScenes(index: VaultIndex, book: BookEntry): NoteRecord[] {
   return book.scenes.map((p) => index.notes[p]).filter((n) => Boolean(n) && n.data.kind !== 'test');
 }
 
+/** Scene statuses that mean Kyle has gone through the scene and called it done (the Writer and the team only ever set
+ * drafted), so a chapter counts toward the book's progress once every scene in it is one of these (Kyle, 2026-10-22). */
+export const DONE_STATUSES = ['revised', 'final'];
+
+export const isDoneScene = (n: NoteRecord) => DONE_STATUSES.indexOf(str(n.data.status)) >= 0;
+
 export interface BookNumbers {
+  /** Every word on the page, the team's first drafts included. */
   words: number;
   /** The book's target_words, or null when it has none. */
   target: number | null;
-  /** Words as a share of the target, 0 to 100 (100 once past it). */
+  /** Chapters in the book (a scene with no chapter counts as one of its own). */
+  chapters: number;
+  /** Chapters whose scenes are all revised or final. */
+  chaptersDone: number;
+  /** Words in those chapters: the book's progress toward the target, whoever wrote them first. */
+  doneWords: number;
+  /** doneWords as a share of the target, 0 to 100 (100 once past it). */
   percent: number;
   scenes: number;
   /** Scenes per status, in the schema's order (planned, drafted, revised, final). */
@@ -63,10 +76,31 @@ export function bookNumbers(schema: Schema, index: VaultIndex, book: BookEntry):
   const counts: Record<string, number> = {};
   scenes.forEach((s) => { const st = str(s.data.status) || 'planned'; counts[st] = (counts[st] || 0) + 1; });
   Object.keys(counts).forEach((k) => { if (order.indexOf(k) < 0) order.push(k); });
+  const ch = chaptersDone(scenes);
   return {
-    words, target, percent: target ? Math.min(100, Math.round((words / target) * 100)) : 0,
+    words, target, chapters: ch.chapters, chaptersDone: ch.done, doneWords: ch.words,
+    percent: target ? Math.min(100, Math.round((ch.words / target) * 100)) : 0,
     scenes: scenes.length, counts: order.map((status) => ({ status, count: counts[status] || 0 }))
   };
+}
+
+/** The book's progress in chapters (Kyle, 2026-10-22): a chapter is done when every scene in it is revised or final,
+ * and only done chapters' words count toward the target, so a burst of text from the team moves nothing until Kyle has
+ * edited the chapter and marked it done. */
+export function chaptersDone(scenes: NoteRecord[]): { chapters: number; done: number; words: number } {
+  const groups = new Map<string, NoteRecord[]>();
+  scenes.forEach((s) => {
+    const c = toNumber(s.data.chapter);
+    const key = c != null ? 'c' + c : 'p' + s.path;
+    groups.set(key, (groups.get(key) || []).concat(s));
+  });
+  let done = 0, words = 0;
+  groups.forEach((list) => {
+    if (!list.every(isDoneScene)) return;
+    done++;
+    words += list.reduce((n, s) => n + (toNumber(s.data.words) || 0), 0);
+  });
+  return { chapters: groups.size, done, words };
 }
 
 /** How many questions for Kyle a scene's notes hold: the bullets of its "> [!question]" callouts (one if it has words but no bullets). */
