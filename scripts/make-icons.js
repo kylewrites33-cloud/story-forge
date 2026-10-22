@@ -1,4 +1,5 @@
-// Draws the app icons (Sparrow: a pale sparrow on a perch, on the accent colour) as PNG files and an SVG, with no image library.
+// Draws the app icons (Sparrow: a cream sparrow over a dark line, on terracotta; Kyle's pick, 2026-10-22) as PNG files and
+// an SVG, with no image library.
 // Run with `npm run icons`; the output in public/icons is committed.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,10 +7,9 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
-const ACCENT = [0x63, 0x44, 0xd4];
-const PALE = [0xf4, 0xf1, 0xfe];
-const SOFT = [0xb9, 0xa8, 0xf5];
-const DARK = [0x2f, 0x1d, 0x7a];
+const ACCENT = [0xb5, 0x53, 0x2f];
+const CREAM = [0xfb, 0xf3, 0xe6];
+const INK = [0x2b, 0x25, 0x22];
 
 const CRC = new Int32Array(256).map((_, n) => {
   let c = n;
@@ -40,16 +40,15 @@ function png(size, rgba) {
 }
 
 // The sparrow in a 512 square, drawn in this order. Paths use absolute M, L, C and Z only, so the same list gives the
-// SVG and the PNGs. src/ui/Shell.tsx draws the same bird in the sidebar.
+// SVG and the PNGs; the eye and the wing line are cut back to the background colour. src/ui/Shell.tsx draws the same
+// bird in the sidebar.
+const BIRD_PATH = 'M378 156 L432 170 L380 184 C384 250 346 310 276 326 C242 336 208 328 190 310 L82 358 L68 340 L166 272 C176 210 216 146 266 124 C316 102 366 116 378 156 Z';
+const WING_PATH = 'M200 286 C256 290 312 260 328 212';
 const BIRD = [
-  { line: [[300, 360], [292, 404]], width: 12, colour: DARK },
-  { line: [[334, 352], [330, 404]], width: 12, colour: DARK },
-  { line: [[120, 406], [400, 406]], width: 20, colour: SOFT },
-  { path: 'M378 172 C360 126 282 120 254 166 C230 204 216 232 194 256 L84 312 C80 318 82 326 90 328 L110 334 L100 352 C98 360 104 364 112 362 L196 320 C220 376 290 392 340 366 C398 334 414 262 396 218 C392 200 388 186 378 172 Z', colour: PALE },
-  { path: 'M378 172 C360 126 282 120 254 166 C276 150 330 150 356 186 C362 180 370 176 378 172 Z', colour: SOFT },
-  { path: 'M222 226 C262 196 334 206 352 262 C334 312 268 330 186 316 L238 300 L204 294 L246 280 L216 270 Z', colour: SOFT },
-  { path: 'M378 174 L436 194 L384 212 Z', colour: DARK },
-  { circle: [352, 190, 12], colour: DARK },
+  { line: [[120, 384], [392, 384]], width: 10, colour: INK },
+  { path: BIRD_PATH, colour: CREAM },
+  { curve: WING_PATH, width: 12, colour: ACCENT },
+  { circle: [342, 160, 11], colour: ACCENT },
 ];
 
 // Each shape as one or more closed polygons in the 512 square.
@@ -83,6 +82,11 @@ function arc(cx, cy, r, from, to, steps) {
 function polygons(s) {
   if (s.path) return pathPolys(s.path);
   if (s.circle) return [arc(s.circle[0], s.circle[1], s.circle[2], 0, 2 * Math.PI, 48)];
+  if (s.curve) {
+    const pts = pathPolys(s.curve)[0], out = [];
+    for (let k = 0; k < pts.length - 1; k++) out.push(...polygons({ line: [pts[k], pts[k + 1]], width: s.width }));
+    return out;
+  }
   const [[x0, y0], [x1, y1]] = s.line, r = s.width / 2, a = Math.atan2(y1 - y0, x1 - x0);
   return [[...arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2, 16), ...arc(x0, y0, r, a + Math.PI / 2, a + Math.PI * 1.5, 16)]];
 }
@@ -141,6 +145,7 @@ function draw(size, { inset = 0, corner = 0 } = {}) {
 function svg() {
   const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
   const parts = BIRD.map((s) => s.path ? `<path d="${s.path}" fill="${hex(s.colour)}"/>`
+    : s.curve ? `<path d="${s.curve}" stroke="${hex(s.colour)}" stroke-width="${s.width}" fill="none" stroke-linecap="round"/>`
     : s.circle ? `<circle cx="${s.circle[0]}" cy="${s.circle[1]}" r="${s.circle[2]}" fill="${hex(s.colour)}"/>`
     : `<path d="M${s.line[0].join(' ')} L${s.line[1].join(' ')}" stroke="${hex(s.colour)}" stroke-width="${s.width}" stroke-linecap="round"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${hex(ACCENT)}"/>${parts}</svg>\n`;

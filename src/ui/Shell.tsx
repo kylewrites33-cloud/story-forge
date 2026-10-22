@@ -64,15 +64,16 @@ export function shortStage(title: string): string {
 
 const SLIM = '(max-width: 699px)';
 
-// The app's sparrow (the same bird as the icons drawn by scripts/make-icons.js), in the theme's colours.
+// The app's sparrow: the same bird and colours as the icons drawn by scripts/make-icons.js (Kyle's pick, 2026-10-22).
+// Its colours stay the same in every theme, like the home-screen icon.
 function SparrowMark() {
   return (
-    <svg viewBox="70 110 380 310" width="26" height="26">
-      <path d="M300 360 L292 404 M334 352 L330 404" stroke="currentColor" stroke-width="16" stroke-linecap="round" />
-      <path d="M378 172 C360 126 282 120 254 166 C230 204 216 232 194 256 L84 312 C80 318 82 326 90 328 L110 334 L100 352 C98 360 104 364 112 362 L196 320 C220 376 290 392 340 366 C398 334 414 262 396 218 C392 200 388 186 378 172 Z" fill="currentColor" />
-      <path d="M222 226 C262 196 334 206 352 262 C334 312 268 330 186 316 L238 300 L204 294 L246 280 L216 270 Z" fill="var(--accent)" opacity="0.35" />
-      <path d="M378 174 L436 194 L384 212 Z" fill="currentColor" />
-      <circle cx="352" cy="190" r="14" fill="var(--accent)" />
+    <svg viewBox="0 0 512 512" width="32" height="32">
+      <rect width="512" height="512" rx="112" fill="#b5532f" />
+      <path d="M120 384 L392 384" stroke="#2b2522" stroke-width="10" stroke-linecap="round" />
+      <path d="M378 156 L432 170 L380 184 C384 250 346 310 276 326 C242 336 208 328 190 310 L82 358 L68 340 L166 272 C176 210 216 146 266 124 C316 102 366 116 378 156 Z" fill="#fbf3e6" />
+      <path d="M200 286 C256 290 312 260 328 212" stroke="#b5532f" stroke-width="12" fill="none" stroke-linecap="round" />
+      <circle cx="342" cy="160" r="11" fill="#b5532f" />
     </svg>
   );
 }
