@@ -118,6 +118,10 @@ add a dated line here when you add or change one.
   whole app (Kyle's screenshot, 2026-10-20).
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
   (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
+  Pressing the timer when nothing runs starts a Pomodoro straight away, with no panel first (Kyle, 2026-10-22: "the
+  pomodoro timer still drops down when you first tap it, instead of starting immediately"). Pressing it again while one
+  runs opens the panel (time left, Pause, Stop, today); holding it, or a right-click with a mouse, opens the panel at any
+  time without starting one, so today's words and Pomodoros are still in reach.
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
   Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
   per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.

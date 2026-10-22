@@ -1,6 +1,7 @@
 // The Pomodoro timer. Outside the writing screen it floats at the bottom right; in the writing screen it sits in the top
-// bar (and beside Leave focus in Focus mode), so it never covers the words being typed or the toolbar. Pressing it opens
-// a small panel: start, pause, stop, the lengths, and today's Pomodoros and words typed. It also sends the words typed,
+// bar (and beside Leave focus in Focus mode), so it never covers the words being typed or the toolbar. Pressing it when
+// nothing runs starts a Pomodoro at once (Kyle, 2026-10-22); pressing it while one runs, or holding it at any time, opens
+// a small panel: start, pause, stop, and today's Pomodoros and words typed. It also sends the words typed,
 // counted with or without a Pomodoro, to the day's Writing Log note.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
@@ -50,6 +51,8 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   const [error, setError] = useState('');
   const [waiting, setWaiting] = useState(() => loadLog(source.key));
   const box = useRef<HTMLDivElement>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
   const onLoggedRef = useRef(onLogged);
   onLoggedRef.current = onLogged;
 
@@ -155,6 +158,21 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
     setNow(t);
   };
 
+  // A hold (finger or mouse) or a right-click opens the panel without starting anything.
+  const endHold = () => { if (holdTimer.current) clearTimeout(holdTimer.current); holdTimer.current = null; };
+  const onDown = () => {
+    held.current = false;
+    endHold();
+    holdTimer.current = setTimeout(() => { holdTimer.current = null; held.current = true; setOpen(true); }, 450);
+  };
+  const onPress = () => {
+    endHold();
+    if (held.current) { held.current = false; return; }
+    if (open) { setOpen(false); return; }
+    if (s.phase === 'idle') act((c, t) => startWork(c, t));
+    else setOpen(true);
+  };
+
   const left = msLeft(s, now);
   const paused = s.pausedLeft != null;
   const day = today(index, waiting, new Date(now), loadTyped());
@@ -163,12 +181,13 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   // While it runs the button only changes colour; the time shows when Kyle opens the panel (Kyle, 2026-10-20).
   const chipText = s.phase === 'idle' && day.minutes ? done : '';
   const label = s.phase === 'work' ? 'Pomodoro: ' + clock(left) + ' left' + (paused ? ', paused' : '')
-    : s.phase === 'break' ? 'Break: ' + clock(left) + ' left' : 'Pomodoro timer. ' + done + ' today.';
+    : s.phase === 'break' ? 'Break: ' + clock(left) + ' left' : 'Start a Pomodoro (' + done + ' today). Hold for more.';
 
   return (
     <div ref={box} class={'pomodoro pomodoro-' + variant + (s.phase !== 'idle' ? ' is-' + s.phase : '') + (paused ? ' is-paused' : '')}>
       <button type="button" class={variant === 'float' ? 'pomodoro-chip' : variant === 'rail' ? 'rail-item pomodoro-chip' : 'bar-button pomodoro-chip'} aria-expanded={open} aria-label={label} title={label}
-        onClick={() => setOpen(!open)}>
+        data-own-hold onClick={onPress} onPointerDown={onDown} onPointerUp={endHold} onPointerCancel={endHold} onPointerLeave={endHold}
+        onContextMenu={(e) => { e.preventDefault(); endHold(); held.current = false; setOpen(true); }}>
         <Icon name="timer" size={variant === 'float' ? 22 : 20} />
         {variant === 'rail' && <span class="rail-label">{s.phase === 'work' ? (paused ? 'Paused' : 'Writing') : s.phase === 'break' ? 'Break' : 'Timer'}</span>}
         {chipText && <span class="pomodoro-time rail-count">{chipText}</span>}
