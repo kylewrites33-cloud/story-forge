@@ -269,9 +269,15 @@ add a dated line here when you add or change one.
   square, the team's guess from `card_draft`, is confirmed first) and Timeline (`timeline`: scenes against story `day`,
   flashbacks and time jumps drawn and said in words, scenes with no day listed). Review group: Themes (`themes`: theme
   notes by chapter, shaded by how often their `keywords` appear in the prose as whole words, a diamond where a card links
-  the theme; press a cell for the lines) and Cast web (`cast-web`: an SVG map, circles sized by scenes on stage, lines
+  the theme; press a cell for the lines) and Cast web (`cast-web`: lines
   from `relationships`, as wide as the words after the link or the character note's sentences about the other say it is
-  tense, else even; a small fixed force layout; press a circle for the character). Wide grids scroll in their own box
+  tense, else even). Since 2026-10-22 (Kyle: "the cast web needs to be altered to be useful"; the whole-cast picture piled
+  circles and names on top of each other) it shows one character at a time: a row of names to pick from (on stage the
+  most first, each with its number of ties; those on stage in no scene are tucked under "Not on stage in any scene yet"),
+  the picked one in the middle with initials, and everyone tied to them in two columns, tensest at the top, each name
+  with how tense and how many scenes. Press a name in the picture to move to them; "Open" or the middle circle opens the
+  character. Below: that character's ties in words, then "Every tie in the book" folded away. Starts on the character on
+  stage the most and remembers the last one picked on that device. Wide grids scroll in their own box
   with sticky side labels. `promiseWarnings` and `plotGapWarnings` are WarningChecks for the Overview.
   Check, Options and Listen in the writing screen (Kyle, 2026-10-18, from Writers Room): Check (tool row, and the Check
   tab) runs the vault tool's own linter on the device, free and offline (`src/lib/lint.js` is sf.js's lint section,

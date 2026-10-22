@@ -70,7 +70,7 @@ src/lib/promises.ts      Promises board: lanes of planted, reinforced and paid s
 src/lib/plotgrid.ts      Plot Grid: threads or cast by scene, gaps, the threads toggle; plotGapWarnings
 src/lib/timeline.ts      Timeline: scenes by story day, flashbacks, time jumps, scenes with no day
 src/lib/themes.ts        Themes heatmap: keyword counts per chapter, cards that link a theme, the matching lines
-src/lib/castweb.ts       Cast web: presence, relationships and how tense they are, a small fixed force layout
+src/lib/castweb.ts       Cast web: presence, relationships and how tense they are, one character's ties in two columns
 src/ui/Seeing.tsx        the five pages' links (sidebar Plan and Review) and which one to show
 src/ui/SeeingParts.tsx   their shared head, scene header rows by chapter and warning list
 src/ui/Promises.tsx, PlotGrid.tsx, Timeline.tsx, Themes.tsx, CastWeb.tsx   the five pages

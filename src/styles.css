@@ -1310,15 +1310,31 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .theme-lines-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .theme-lines-head .seeing-h2 { margin: 0.4rem 0; }
 /* Cast web */
-.cw-wrap { margin-top: 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; }
-.cw { display: block; width: 100%; height: auto; max-height: 70vh; }
-.cw-line { stroke: var(--muted); stroke-linecap: round; opacity: 0.7; }
-.cw-line.hot { stroke: var(--danger); opacity: 0.8; }
+.cw-pick { margin: 12px 0 0; }
+.cw-pick > button { min-height: 44px; }
+.cw-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.cw-ties { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.cw-pick > [aria-pressed="true"] .cw-ties { color: inherit; opacity: 0.8; }
+.cw-off, .cw-all { margin-top: 10px; }
+.cw-off > summary, .cw-all > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--muted); font-weight: 600; }
+.cw-all > summary { color: var(--text); }
+.cw-wrap { margin-top: 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; scroll-margin-top: 80px; }
+.cw { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; }
+.cw-line { stroke: var(--muted); stroke-linecap: round; opacity: 0.55; }
+.cw-line.hot { stroke: var(--danger); opacity: 0.75; }
 .cw-hit { fill: transparent; }
+.cw-node { cursor: pointer; outline: none; }
 .cw-circle { stroke: var(--surface); stroke-width: 3; }
 .cw-node:hover .cw-circle, .cw-node:focus-visible .cw-circle { stroke: var(--text); }
-.cw-name { fill: var(--text); font-size: 14px; font-weight: 600; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
-.cw-count { fill: var(--muted); font-size: 12px; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.cw-node:hover .cw-name, .cw-node:focus-visible .cw-name { fill: var(--accent); }
+.cw-name { fill: var(--text); font-size: 18px; font-weight: 600; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.cw-initials { fill: #fff; font-size: 20px; font-weight: 700; font-family: inherit; pointer-events: none; }
+.cw-who { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 8px 0; font-size: 1.1rem; }
+.cw-who .meta { margin: 0; }
+.cw-open { margin-left: auto; min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; }
+.cw-count { fill: var(--muted); font-size: 15px; font-family: inherit; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.cw-count.hot { fill: var(--danger); }
+.linklike { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; }
 .cw-said { color: var(--muted); }
 /* Check, Listen and Options for a passage in the writing screen (Writers Room, Kyle 2026-10-18). The tool row measures
    its own width, so the names of the new tools and the Ask the team heading go when the page beside the panels is narrow. */

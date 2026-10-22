@@ -9,7 +9,7 @@ import { lastFifthStart, promiseLane, promiseLanes, promiseWarnings, sceneRef } 
 import { gapsOf, plotGapWarnings, plotGrid, threadToggle, tooLong } from '../src/lib/plotgrid.ts';
 import { isJump, timeline } from '../src/lib/timeline.ts';
 import { cardLinks, chapterCols, heatLevel, keywordPattern, themeGrid } from '../src/lib/themes.ts';
-import { aboutIn, castWeb, layout, lineWidth, parseRelationship, tensionOf } from '../src/lib/castweb.ts';
+import { aboutIn, castWeb, defaultFocus, hubFor, lineWidth, parseRelationship, tensionOf } from '../src/lib/castweb.ts';
 import type { NoteRecord } from '../src/lib/types.ts';
 import { DEMO, FsSource } from './helpers.ts';
 
@@ -142,15 +142,17 @@ test('the cast web sizes circles by presence and draws relationship lines as ten
   const names = w.nodes.map((n) => n.name);
   assert.deepEqual(names, ['Mara Quill', 'The Warden', 'Tobin Quill']);
   const mara = w.nodes[0], warden = w.nodes[1];
-  assert.ok(mara.scenes > warden.scenes && mara.r > warden.r);
+  assert.ok(mara.scenes > warden.scenes);
   const edge = (a: string, b: string) => w.edges.find((e) => [names[e.a], names[e.b]].sort().join('|') === [a, b].sort().join('|'));
   assert.equal(edge('Mara Quill', 'The Warden')!.tension, 9);
   assert.equal(edge('Tobin Quill', 'The Warden')!.tension, 6);
   assert.equal(edge('Mara Quill', 'Tobin Quill')!.tension, 2);
   assert.equal(w.edges.length, 3);
-  w.nodes.forEach((n) => { assert.ok(n.x >= 0 && n.x <= w.width && n.y >= 0 && n.y <= w.height, n.name); });
-  // The same book draws the same picture.
-  assert.deepEqual(castWeb(index, book).nodes.map((n) => [n.x, n.y]), w.nodes.map((n) => [n.x, n.y]));
+  // The picture starts on the character on stage the most, with everyone tied to them, tensest first.
+  assert.equal(defaultFocus(w), 0);
+  const hub = hubFor(w, 0);
+  assert.deepEqual(hub.spokes.map((s) => names[s.node]), ['The Warden', 'Tobin Quill']);
+  hub.spokes.forEach((s) => { assert.ok(s.x > 0 && s.x < hub.width && s.y > 0 && s.y < hub.height); });
 });
 
 test('relationship items and the words that say how tense they are', () => {
@@ -164,7 +166,16 @@ test('relationship items and the words that say how tense they are', () => {
   assert.equal(lineWidth(null), 3);
   assert.ok(lineWidth(10) > lineWidth(2));
   assert.equal(aboutIn('Tobin rows. Mara sings.\n> [!secret]\n> Tobin knows.', ['Tobin']), 'Tobin rows.');
-  const pos = layout(5, [{ a: 0, b: 1 }], 400, 300, [20, 20, 20, 20, 20]);
-  assert.equal(pos.length, 5);
-  assert.ok(pos.every((p) => p.x > 0 && p.x < 400 && p.y > 0 && p.y < 300));
+});
+
+test('a character with many ties gets two columns with no two names on the same row', () => {
+  const nodes = Array.from({ length: 31 }, (_, i) => ({ name: 'C' + i, note: {} as never, color: 'red', scenes: i }));
+  const edges = nodes.slice(1).map((_, i) => ({ a: 0, b: i + 1, tension: i % 11, texts: [] }));
+  const hub = hubFor({ nodes, edges, unknown: [], anyTension: true }, 0);
+  assert.equal(hub.spokes.length, 30);
+  (['left', 'right'] as const).forEach((side) => {
+    const ys = hub.spokes.filter((s) => s.side === side).map((s) => s.y);
+    ys.slice(1).forEach((y, i) => assert.ok(y - ys[i] >= 60, side + ' rows too close'));
+  });
+  hub.spokes.forEach((s) => assert.ok(s.y - 24 >= 0 && s.y + 24 <= hub.height && s.x - 160 > 0 && s.x + 160 < hub.width));
 });
