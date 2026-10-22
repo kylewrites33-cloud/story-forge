@@ -103,6 +103,11 @@ add a dated line here when you add or change one.
   count of whole ones.
   While a Pomodoro runs, its button only changes colour (no ticking clock); the time shows when Kyle taps it, and
   starting one leaves the panel closed (Kyle, 2026-10-20).
+  Two chirps (Kyle, 2026-10-22: "the pomodoro should chirp at the end of 25. and a different chirp after 5"): two quick
+  rising chirps when the writing ends, three lower falling ones when the break ends. The iPad only lets a page play sound
+  after a touch or key press, so the first one anywhere in the app unlocks the sound; a time that ran out more than a
+  minute before the app was opened plays nothing. With no timer running, the panel has "Hear the first" and "Hear the
+  second" to try them.
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
   not taken away, so rewriting a passage counts its new words (Kyle, 2026-10-20: a rewrite in Beats logged 0 words).
   Words typed count all the time, with or without a Pomodoro (Kyle, 2026-10-21: "sometimes ill write in the app but forget
