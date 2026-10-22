@@ -192,8 +192,9 @@ add a dated line here when you add or change one.
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
   processor tool set too"): Undo, Redo, Bold, Italic, Highlight, Normal, Find, Names, Check, Listen and the Ask the team
   buttons work on the open beat the cursor is in. Split, Join, Options and Fill brackets stay on the page only.
-  Beats mode also shows the page's heading: the scene line, reading time, the chapter strip and the target bar, all
-  counting the words as Kyle types in the beats (Kyle, 2026-10-19). A beat's prose looks like the page while it is edited
+  Beats mode also shows the page's heading: the scene line, the chapter strip and the target bar, all
+  counting the words as Kyle types in the beats (Kyle, 2026-10-19). The writing screen no longer shows pages and minutes to read
+  (Kyle, 2026-10-22: "the minutes to read area in a section isn't needed"); the Chapter Grid and home page still do. A beat's prose looks like the page while it is edited
   (no tinted box). Each beat with a heading has a Move handle: hold and drag it up or down (finger or mouse), or press
   Move up / Move down on an open beat; its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
   Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's
