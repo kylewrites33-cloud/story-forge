@@ -348,7 +348,8 @@ add a dated line here when you add or change one.
   sidebar; on a phone, where the sidebar is hidden, it sits in the slim top bar. Only one timer is on screen at a time.
   The writing screen keeps its own timer in its top bar. Below 900 px wide (an iPad held upright, a phone) the writing
   screen's right-hand column is a sheet pulled up from the bottom over the lower part of the page; its arrow or a press
-  on the page above puts it away.
+  on the page above puts it away. Once it is put away (any width), a tab on the page's right edge brings it back on the
+  page it last showed (Kyle, 2026-10-22: "once i pull away the right hand column, theres no way to bring it back").
 - Chapter names and a tidier Workflow page (Kyle, 2026-10-21: "maybe you invent and store in your database a chapter
   name for each of these scenes, and then the chapter title is just presented there"; "i dont see number order, and these
   rounded rectangles are not presented cleanly"). The writing screen's chapter list shows each chapter's number and
