@@ -588,7 +588,7 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
       {book && <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a></p>}
       <h1>{title}</h1>
       <p class="meta">
-        {book && DECIDED_ON[note.type] ? <><a href={DECIDED_ON[note.type].to(book.folder)}>Decide it on the {DECIDED_ON[note.type].name}</a>, or edit it in Obsidian. </> : 'Read only here. Edit in Obsidian. '}
+        {book && DECIDED_ON[note.type] ? <><a href={DECIDED_ON[note.type].to(book.folder)}>Decide it on the {DECIDED_ON[note.type].name}</a>, or ask the team to change it. </> : 'To change this, ask the team. '}
         <span class="path">{path}</span>
       </p>
       {note.error && <p class="error">The frontmatter cannot be read: {note.error}</p>}

@@ -1152,7 +1152,7 @@ function MarksPanel({ text, onGo }: { text: string; onGo: (start: number, end: n
   const list = markList(text);
   return (
     <div class="writer-panel">
-      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Normal takes the mark off. In the file a mark is ==like this==, which Obsidian shows as a highlight too.</p>
+      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Normal takes the mark off.</p>
       {list.length ? (
         <ul class="mark-list">
           {list.map((m) => (

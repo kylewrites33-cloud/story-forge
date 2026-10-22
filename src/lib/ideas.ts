@@ -161,7 +161,7 @@ const keyRe = (key: string) => new RegExp('^' + key.replace(/[.*+?^${}()|[\]\\]/
 /** Replace a property's lines (its own line and any indented or list lines under it), add them, or remove them (null). */
 function setLines(text: string, key: string, replacement: string[] | null): string {
   const s = Frontmatter.split(text);
-  if (!s.hasFm) throw new Error('This note has no properties, so the app cannot change it. Fix it in Obsidian.');
+  if (!s.hasFm) throw new Error('This note has no properties, so the app cannot change it. Ask the team to fix it.');
   const eol = s.yaml && s.yaml.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
   const lines = s.yaml ? s.yaml.split(/\r?\n/) : [];
   const re = keyRe(key);
@@ -181,7 +181,7 @@ function setLines(text: string, key: string, replacement: string[] | null): stri
 /** The note's text after a change. Refuses frontmatter it cannot read, so a typo never costs a note its properties. */
 export function applyToText(text: string, c: Change): string {
   const p = Frontmatter.parse(text);
-  if (p.error) throw new Error('This note\'s properties cannot be read (' + p.error + '). Fix it in Obsidian, then try again.');
+  if (p.error) throw new Error('This note\'s properties cannot be read (' + p.error + '). Ask the team to fix it, then try again.');
   let out = c.status ? Frontmatter.setScalar(text, 'status', c.status) : text;
   if (c.accepted === '') out = setLines(out, 'accepted', null);
   else if (c.accepted) out = Frontmatter.setScalar(out, 'accepted', c.accepted);

@@ -103,7 +103,7 @@ export function isUnsaved(d: Draft): boolean {
 /** The note's text with a new body. The property block is kept byte for byte, apart from the lines named in `set`. */
 export function withBody(text: string, body: string, set: Record<string, unknown> = {}): string {
   const p = Frontmatter.parse(text);
-  if (p.error) throw new Error('This scene\'s properties cannot be read (' + p.error + '). Fix it in Obsidian, then try again.');
+  if (p.error) throw new Error('This scene\'s properties cannot be read (' + p.error + '). Ask the team to fix it, then try again.');
   const s = Frontmatter.split(text);
   let out = s.hasFm ? s.open + (s.yaml || '') + s.close + body : body;
   Object.keys(set).forEach((k) => { out = Frontmatter.setScalar(out, k, set[k]); });
@@ -216,7 +216,7 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
   for (let attempt = 0; ; attempt++) {
     const { text, sha } = await source.readFresh(d.path);
     const cur = makeNote(d.path, sha, text);
-    if (cur.error) throw new Error('This scene\'s properties cannot be read (' + cur.error + '). Fix it in Obsidian, then try again.');
+    if (cur.error) throw new Error('This scene\'s properties cannot be read (' + cur.error + '). Ask the team to fix it, then try again.');
     let body = d.body;
     if (cur.body !== d.baseBody && cur.body !== d.body) {
       const m = merge3(d.baseBody, d.body, cur.body);
