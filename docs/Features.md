@@ -1,8 +1,9 @@
 # What the app does, feature by feature
 
 The app is called Sparrow (Kyle, 2026-10-22: "lets change the name of the app to sparrow. and change the app immage"). Its
-name shows in the sidebar, the browser tab and on the home screen; its icon is a pale sparrow on a perch on the violet
-accent (drawn by `scripts/make-icons.js`, the same bird inline in `src/ui/Shell.tsx`), replacing the SF badge. The
+name shows in the sidebar, the browser tab and on the home screen; its icon is a cream sparrow over a dark line on
+terracotta (Kyle picked it from ten colours on 2026-10-22, after turning down violet versions: "it really doesn't need to
+be purple. make it look professional"; drawn by `scripts/make-icons.js`, the same bird in fixed colours in `src/ui/Shell.tsx`), replacing the SF badge. The
 repository, the web address and the app's saved settings keep the story-forge name, so keys and home-screen links still
 work. Kyle renamed the studio and the vault to Sparrow the same day ("i want the name changed in the studio and all over the
 vault"); notes and commits the app writes say "in the Sparrow app". The To-do list's second tab is Sparrow to-dos.
