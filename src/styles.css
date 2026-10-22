@@ -399,6 +399,8 @@ html.page-locked body { padding-bottom: 0; }
 .side-scene:hover { background: var(--bg); }
 .side-scene[aria-current="page"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .side-words { font-size: 0.94rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.side-done { display: inline-flex; color: var(--ok); }
+.side-scene[aria-current="page"] .side-done { color: inherit; }
 button.side-add { border: none; background: none; color: var(--muted); display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 0.94rem; }
 .side-add-form { display: grid; gap: 8px; padding: 6px; }
 .side-boards { display: grid; }
@@ -2120,3 +2122,4 @@ button, .button { border-radius: 12px; }
 .side-scene.side-sub { font-size: 0.9rem; color: var(--muted); min-height: 36px; }
 .side-scene.side-sub[aria-current="page"] { background: none; color: var(--accent); font-weight: 600; }
 .main-section.has-below .writer-text { min-height: 4em; padding-bottom: 1em; }
+.ov-done-words { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }

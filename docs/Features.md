@@ -41,7 +41,7 @@ add a dated line here when you add or change one.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; an arrow to the previous and next section at the bottom), and the scene panel on the right (Card, Copies,
-  Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
+  Target, Done, split, join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
   section and next section"; then "really subtle ... just an arrow to the left on the left side, and an arrow to the right
   on the right side. no colored text"; then "stay fixed at the bottom ... i just always see it" with "a subtle visible
   horizontal divider") is two faint arrows side by side on the left (Kyle, 2026-10-21: "right next to each other on the left side"), pinned to the bottom of the screen under a faint line (also while typing with a hardware keyboard: the screen
@@ -49,7 +49,7 @@ add a dated line here when you add or change one.
   the way down, even when im tapped in the word processor"), opening the scene before and
   after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
   shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
-  Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
+  Done, split, join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. The chapter list keeps where Kyle left it scrolled, per book, on this device: picking a scene,
   leaving the writing screen and coming back all find it where it was (Kyle, 2026-10-22: "rather than moving the left side
   chapter bar as i select through ... simply remember its position when i leave and re-enter the mode"). Only the first
@@ -337,12 +337,22 @@ add a dated line here when you add or change one.
   out (`src/lib/listen.ts`): Pause, Resume, Back, Next, Stop, speed and voice (kept per device), the sentence being read
   highlighted and scrolled into view. On a narrow page the new tools show icons only and the Ask the team heading goes.
   Running the book (Kyle, 2026-10-18, from Writers Room): Overview (`#/board/overview/<book>`, the sidebar's item under
-  Book details) shows words against `target_words`, scenes per status, what is waiting on Kyle (proposals to decide, open
+  Book details) shows the book's progress, scenes per status, what is waiting on Kyle (proposals to decide, open
   chapter to-dos, open Notes to the Team, questions in the scene notes, finished jobs not marked seen on this device), the
   warnings of every check (`bookWarnings`), and the Release runway: chapters posted (a scene has `published`), chapters
   ready (all final, none posted) and weeks of buffer at `cadence` (chapters a week; red under two). Target and pace are
   changed in place (written as numbers). A stage strip (the schema's `book_stage` list) tops the Overview and the Chapter
-  Grid; pressing a stage asks first, then changes only the book's `stage`. The guided next step (`src/lib/nextstep.ts`) is
+  Grid; pressing a stage asks first, then changes only the book's `stage`.
+  Book progress counts done chapters (Kyle, 2026-10-22: "please set up the pomodoro and progress the way you described"):
+  a chapter is done when every scene in it is revised or final, and only done chapters' words count toward
+  `target_words`, whoever wrote them first, so a burst of team text moves nothing until Kyle has edited the chapter and
+  marked it done (the Writer and the team only ever set drafted). Home's Progress card leads with "N of M chapters
+  done", then words in done chapters against the target with its bar, then all words on the page; the Books page's
+  cards say "N of M chapters done" and fill their bar from done chapters; the Chapter Grid adds a Chapters done number;
+  the writing screen's chapter list ticks done chapters. Kyle marks it in the writing screen (••• menu, Mark as done,
+  or the Done, split, join tab): "Mark this chapter done" sets the scene to revised ("Mark this scene done" when the
+  chapter has several scenes), and "Not done yet" puts it back to drafted. The Pomodoro and Writing Log stay Kyle's own
+  typing, as below. `chaptersDone` in `src/lib/overview.ts`. The guided next step (`src/lib/nextstep.ts`) is
   one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
   `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
   one waits). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
@@ -382,7 +392,7 @@ add a dated line here when you add or change one.
   in Manuscript and To-do stayed its own link (Claude's defaults; Kyle did not choose). The writing screen's top bar has
   one switch for Page, Beats and Whole chapter; its To-dos, Workflow and Chat buttons moved into the side column, whose
   fifteen tabs are now four groups (Team: Chat, Options, Ask the team; Chapter: Plan, Beats, Workflow, To-dos; Scene:
-  Card, Notes, Marks, Copies, Target, Split and join; Tools: Page look, Check), with the to-do count and the chat's dot on
+  Card, Notes, Marks, Copies, Target, Done, split, join; Tools: Page look, Check), with the to-do count and the chat's dot on
   them. Rounder cards, a 44 px sidebar row and theme colours only, so all ten themes still work.
 - The rest of the new look (Kyle, 2026-10-21: "seems good. bring over whatever else."). The Pomodoro timer sits in the
   sidebar's foot as Timer (Writing, Paused or Break while it runs, coloured as before), its panel opening beside the
