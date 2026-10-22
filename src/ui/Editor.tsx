@@ -51,6 +51,7 @@ import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
 import { ListenBar, ListenButton, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
+import { SceneSection, type SectionApi } from './SceneSection.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
@@ -162,6 +163,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [naming, setNaming] = useState<string | null>(null);
   const [toolsOpen, setToolsOpen] = useState(() => { try { return localStorage.getItem('story-forge.side-tools') === '1'; } catch { return false; } });
   const namingDone = useRef(false);
+  // Chapters whose scenes Kyle asked to see in the list (hold a chapter, Show scenes), kept per book on the device.
+  const shownKey = 'story-forge.shown-scenes.' + (book ? book.folder : '');
+  const [shownScenes, setShownScenes] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(shownKey) || '[]'); } catch { return []; } });
+  const toggleScenes = (k: string) => {
+    const next = shownScenes.indexOf(k) >= 0 ? shownScenes.filter((x) => x !== k) : shownScenes.concat(k);
+    setShownScenes(next);
+    try { localStorage.setItem(shownKey, JSON.stringify(next)); } catch { /* lasts until reload */ }
+  };
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
   // In beats mode the tool row works on the beat Kyle is in (Kyle, 2026-10-19: "the full word processor tool set too").
@@ -223,6 +232,23 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const findQ = findOpen ? query : '';
   const styleOpts = useMemo(() => ({ names, find: findQ, asks: true, asking: askingMarkers, added: dotSet }), [names, findQ, askingMarkers, dotSet]);
   const beatOpts = useMemo(() => ({ names, find: findQ, asks: true }), [names, findQ]);
+  const sibOpts = useMemo(() => ({ names }), [names]);
+  // The chapter's other scenes on the same page (Kyle, 2026-10-22). Each saves itself; these are their handles.
+  const sibs = useRef(new Map<string, SectionApi>());
+  const [sibFocus, setSibFocus] = useState<string | null>(null);
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  // Opened at a scene further down its chapter: the page starts at that scene.
+  useEffect(() => {
+    const el = mainRef.current;
+    const first = el && el.parentElement ? el.parentElement.querySelector('[data-section]') : null;
+    if (el && first && first.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) el.scrollIntoView({ block: 'start' });
+  }, [note.path]);
+  const registerSib = useCallback((path: string, api: SectionApi | null) => { if (api) sibs.current.set(path, api); else sibs.current.delete(path); }, []);
+  const saveSiblings = async (closing: boolean): Promise<boolean> => {
+    let ok = true;
+    for (const api of Array.from(sibs.current.values())) if (!(await api.save(closing))) ok = false;
+    return ok;
+  };
   const saving = useRef(false);
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingSince = useRef<number | null>(null);
@@ -315,6 +341,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const split = async (newTitle: string): Promise<string | null> => {
     if (!bookFolder || !canSave) return 'Splitting needs your own vault, not the demo.';
     if (!navigator.onLine) return 'Connect to the internet to split a scene.';
+    if (!(await saveSiblings(false))) return 'Another scene of this chapter did not save yet. Try again in a moment.';
     const d = draftRef.current;
     const { lead, text: words } = splitLead(d.body);
     const at = caret.current == null ? words.length : Math.min(caret.current, words.length);
@@ -339,6 +366,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const join = async (): Promise<string | null> => {
     if (!next || !canSave || !source.remove) return 'Joining needs your own vault, not the demo.';
     if (!navigator.onLine) return 'Connect to the internet to join scenes.';
+    // The next scene may be on this page with words typed into it: they reach the vault before it is joined.
+    if (!(await saveSiblings(true))) return 'The next scene did not save yet, so it was not joined. Try again in a moment.';
     try {
       const taken = await archiveForJoin(source, note, next, new Date());
       const joined = joinedBody(draftRef.current.body, taken.body);
@@ -402,6 +431,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (quiet.current) clearTimeout(quiet.current);
     if (beatsSaver.current && !(await beatsSaver.current(true))) return;
     const ok = await save(true);
+    // The chapter's other scenes: a scene that cannot save now waits on the device for the next sync.
+    await saveSiblings(true);
     if (ok) location.hash = to;
   };
   const done = () => go(backTo);
@@ -440,7 +471,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
   const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
 
-  const cmd = (): EditorCommands | null => (beatsMode ? (beatsApi.current ? beatsApi.current.cmd() : null) : commands.current);
+  const cmd = (): EditorCommands | null => {
+    if (beatsMode) return beatsApi.current ? beatsApi.current.cmd() : null;
+    const sib = sibFocus ? sibs.current.get(sibFocus) : null;
+    return sib && sib.commands.current ? sib.commands.current : commands.current;
+  };
   /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
   const applyText = (next: string, map: (n: number) => number) => {
     // These words are not Kyle's typing: they count in neither the Pomodoro nor the day's words typed.
@@ -670,6 +705,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const g = book ? book.groups.find((x) => x.scenes.some((y) => y.path === n.path)) : null;
     return g && g.num != null && (g !== group || g.scenes.length === 1) ? chapterHeading(g) : sceneHeader(n.data, String(n.data.id || ''));
   };
+  // A chapter of several scenes is one page: the scenes before this one above it, the rest below, a line between each.
+  const together = Boolean(group && group.num != null && group.scenes.length > 1 && !beatsMode);
+  const above = together && group ? group.scenes.slice(0, group.scenes.findIndex((n) => n.path === note.path)) : [];
+  const below = together && group ? group.scenes.slice(group.scenes.findIndex((n) => n.path === note.path) + 1) : [];
+  // The arrows at the foot go chapter to chapter once a chapter is one page.
+  const gi = book && group ? book.groups.indexOf(group) : -1;
+  const prevGo = gi > 0 && group && group.num != null && book ? book.groups[gi - 1].scenes[0] || prev : prev;
+  const nextGo = gi >= 0 && group && group.num != null && book && book.groups[gi + 1] ? book.groups[gi + 1].scenes[0] || next : together ? null : next;
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
   const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : beatsMode && beatWords[n.path] != null ? beatWords[n.path] : toNumber(n.data.words) || 0 })) : [];
@@ -699,7 +742,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           : <h1><button type="button" class="chapter-name" title="Rename the chapter" onClick={() => { namingDone.current = false; setNaming(group.title); }}>{heading}</button></h1>
         : <h1>{heading}</h1>}
       {subtitle && <p class="page-subtitle">{subtitle}</p>}
-      {sub && <p class="meta">{sub}</p>}
+      {sub && !together && <p class="meta">{sub}</p>}
       {strip.length > 0 && (
         <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
           {strip.map(({ note: n, words: w }) => (
@@ -742,8 +785,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {book && <span class="writer-book">{book.title}</span>}
         </span>
         <span class="bar-format" role="toolbar" aria-label="Formatting">
-          <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-          <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+          <button type="button" class="tool" aria-label="Undo" title="Undo (Ctrl or Cmd+Z)" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.undo(); }}><Icon name="undo" /></button>
+          <button type="button" class="tool" aria-label="Redo" title="Redo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.redo(); }}><Icon name="redo" /></button>
           <span class="bar-sep" aria-hidden="true" />
           <button type="button" class="tool" aria-label="Bold" title="Bold (Ctrl or Cmd+B)" aria-pressed={typing.b} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
           <button type="button" class="tool" aria-label="Italic" title="Italic (Ctrl or Cmd+I)" aria-pressed={typing.i} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
@@ -775,7 +818,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 {moreItem('type', 'Page look', () => openTab('page'))}
                 {moreItem('history', 'Copies', () => openTab('copies'))}
                 {moreItem('check', 'Mark as drafted', () => openTab('tools'))}
-                {group && group.scenes.length > 1 && moreItem('page', 'Whole chapter on one page', () => go(href.chapter(note.path)))}
+                {onAdd && group && group.num != null && moreItem('plus', 'Add a scene to this chapter', () => { if (!left) toggleLeft(); setChMenu(null); setChAdd({ key: group.scenes[0].path, kind: 'scene' }); })}
                 {moreItem('grid', 'Done: back to the Chapter Grid', done)}
               </div>
             </>
@@ -820,6 +863,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                   <>
                     {chMenu === gk && (
                       <div class="side-menu" role="menu" aria-label={'Chapter ' + g.num}>
+                        <button type="button" role="menuitem" onClick={() => { setChMenu(null); toggleScenes(gk); }}><Icon name="list" size={18} />{shownScenes.indexOf(gk) >= 0 ? 'Hide scenes' : 'Show scenes'}</button>
                         {onAddChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'chapter' }); }}><Icon name="plus" size={18} />Add a chapter below</button>}
                         {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
                         {onMoveChapter && book.groups.filter((x) => x.num != null).length > 1 && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'move' }); }}><Icon name="move" size={18} />Move chapter</button>}
@@ -855,21 +899,34 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                     )}
                   </>
                 );
-                // A chapter's name shows on one line (Kyle, 2026-10-21); a chapter of one scene is one row, and the
-                // scenes of a longer chapter sit under its name, each on one line. The full summary is in the row's title.
-                const row = (n: NoteRecord, label: string, numText: string) => (
-                  <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class={'side-scene' + (numText ? ' side-chapter-row' : '')}
+                // Chapters only, every chapter alike (Kyle, 2026-10-22: "by default the left hand view will just show the
+                // chapters"). A chapter opens at its first scene, or at the scene Kyle is in; its words are all its scenes'.
+                // Show scenes in the hold menu lists them under it, indented, the chapter's row staying as it was.
+                const row = (n: NoteRecord, label: string) => (
+                  <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene side-sub"
                     aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data, n.path)}>
-                    {numText && <span class="side-num">{numText}</span>}
                     <span class="side-name">{label}</span>
                     <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
                   </a>
                 );
-                if (g.num != null && g.scenes.length === 1) return <div key={g.key} class="side-group" {...holdProps}>{row(g.scenes[0], g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path), String(g.num))}{extra}</div>;
+                if (g.num == null) return (
+                  <div key={g.key} class="side-group">
+                    <p class="side-chapter">{chapterHeading(g)}</p>
+                    {g.scenes.map((n) => row(n, sceneHeader(n.data, n.path)))}
+                  </div>
+                );
+                const inHere = g.scenes.some((n) => n.path === note.path);
+                const to = inHere ? note : g.scenes[0];
+                const gWords = g.scenes.reduce((t, n) => t + (n.path === note.path ? words : toNumber(n.data.words) || 0), 0);
                 return (
                   <div key={g.key} class="side-group" {...holdProps}>
-                    <p class="side-chapter">{g.num != null ? <><span class="side-num">{g.num}</span>{g.title || chapterHeading(g)}</> : chapterHeading(g)}</p>
-                    {g.scenes.map((n) => row(n, sceneHeader(n.data, n.path), ''))}
+                    <a {...link(beatsMode ? href.beats(to.path) : href.write(to.path))} class="side-scene side-chapter-row"
+                      aria-current={inHere ? 'page' : undefined} title={chapterHeading(g)}>
+                      <span class="side-num">{g.num}</span>
+                      <span class="side-name">{g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path)}</span>
+                      <span class="side-words">{num(gWords)}</span>
+                    </a>
+                    {shownScenes.indexOf(gk) >= 0 && g.scenes.map((n) => row(n, sceneHeader(n.data, n.path)))}
                     {extra}
                   </div>
                 );
@@ -926,8 +983,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               {prev ? <a class="tool" {...link(href.write(prev.path))} aria-label={'Previous section: ' + sideName(prev)}><Icon name="left" /></a> : <span class="tool" aria-hidden="true" />}
               {next ? <a class="tool" {...link(href.write(next.path))} aria-label={'Next section: ' + sideName(next)}><Icon name="right" /></a> : <span class="tool" aria-hidden="true" />}
               <span class="bar-sep" aria-hidden="true" />
-              <button type="button" class="tool" aria-label="Undo" {...keepFocus} onClick={() => commands.current && commands.current.undo()}><Icon name="undo" /></button>
-              <button type="button" class="tool" aria-label="Redo" {...keepFocus} onClick={() => commands.current && commands.current.redo()}><Icon name="redo" /></button>
+              <button type="button" class="tool" aria-label="Undo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.undo(); }}><Icon name="undo" /></button>
+              <button type="button" class="tool" aria-label="Redo" {...keepFocus} onClick={() => { const c = cmd(); if (c) c.redo(); }}><Icon name="redo" /></button>
               <button type="button" class="tool" aria-label="Bold" aria-pressed={typing.b} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
               <button type="button" class="tool" aria-label="Italic" aria-pressed={typing.i} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
               <button type="button" class="tool" aria-label="Highlight" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
@@ -993,14 +1050,28 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               head={headParts} onWords={setBeatWords} />
           ) : <>
           {pageHead}
+          {above.map((n) => (
+            <div key={n.path}>
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
+              <div class="scene-break" aria-hidden="true" />
+            </div>
+          ))}
+          <div class={"main-section" + (below.length ? " has-below" : "")} ref={mainRef} onFocusCapture={() => setSibFocus(null)}>
           <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
+          </div>
+          {below.map((n) => (
+            <div key={n.path}>
+              <div class="scene-break" aria-hidden="true" />
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
+            </div>
+          ))}
           <nav class="writer-done side-arrows" aria-label="Previous and next section">
-            {prev
-              ? <a class="side-go" {...link(href.write(prev.path))} aria-label={'Previous section: ' + sideName(prev)} title={'Previous: ' + sideName(prev)}><Icon name="left" size={22} /></a>
+            {prevGo
+              ? <a class="side-go" {...link(href.write(prevGo.path))} aria-label={'Previous section: ' + sideName(prevGo)} title={'Previous: ' + sideName(prevGo)}><Icon name="left" size={22} /></a>
               : <span class="side-go" aria-hidden="true" />}
-            {next
-              ? <a class="side-go" {...link(href.write(next.path))} aria-label={'Next section: ' + sideName(next)} title={'Next: ' + sideName(next)}><Icon name="right" size={22} /></a>
+            {nextGo
+              ? <a class="side-go" {...link(href.write(nextGo.path))} aria-label={'Next section: ' + sideName(nextGo)} title={'Next: ' + sideName(nextGo)}><Icon name="right" size={22} /></a>
               : <span class="side-go" aria-hidden="true" />}
           </nav>
           </>}
