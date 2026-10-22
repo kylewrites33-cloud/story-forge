@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
+import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { MemSource } from './helpers.ts';
 
@@ -62,4 +62,38 @@ test('a chapter name goes on its first scene and on any scene that already has o
   assert.deepEqual(chapterTitleEdits([a, b, c], '  The  Vow '), ['a.md', 'b.md']);
   assert.deepEqual(chapterTitleEdits([a, b, c], 'Old'), ['a.md']);
   assert.deepEqual(chapterTitleEdits([a, b, c], ''), ['b.md']);
+});
+
+test('moving chapter 3 up to 1: chapters 1 and 2 close up, beats pass through a moving name, reading order follows', async () => {
+  const src = new MemSource();
+  Object.entries(files).forEach(([p, t]) => src.files.set(p, t));
+  const book = [BOOK + '/Scenes/S-001 One.md', BOOK + '/Scenes/S-002 Two.md', BOOK + '/Scenes/S-003 Three.md'].map((p) => notes[p]);
+  const s = chapterMove(notes, BOOK, book, 3, 1);
+  assert.equal(s[0].from, 3);
+  const beats3 = s.find((x) => x.path.endsWith('Chapter 3 beats.md'))!;
+  assert.equal(beats3.via, BOOK + '/Chapter Beats/Chapter 1 beats (moving).md');
+  await applyShifts(src, s, 'test');
+  const ch = (p: string) => Number(/^chapter: (\d+)$/m.exec(src.files.get(BOOK + '/Scenes/' + p)!)![1]);
+  const ord = (p: string) => Number(/^order: ([\d.]+)$/m.exec(src.files.get(BOOK + '/Scenes/' + p)!)![1]);
+  assert.deepEqual([ch('S-003 Three.md'), ch('S-001 One.md'), ch('S-002 Two.md')], [1, 2, 3]);
+  assert.ok(ord('S-003 Three.md') < ord('S-001 One.md'));
+  assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 1 beats.md')!, /Rue leaves/);
+  assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 3 beats.md')!, /Grey wakes/);
+  assert.ok(!src.files.has(BOOK + '/Chapter Beats/Chapter 2 beats.md'));
+  assert.ok(![...src.files.keys()].some((p) => /moving/.test(p)));
+  assert.match(src.files.get(BOOK + '/Chapter Plans/Chapter 1 plan.md')!, /^chapter: 1$/m);
+  assert.match(src.files.get(BOOK + '/Tasks/T-001 Fix the bell.md')!, /^chapter: 3$/m);
+});
+
+test('moving chapter 1 down to 2 swaps it with chapter 2 and puts it after it in reading order', async () => {
+  const src = new MemSource();
+  Object.entries(files).forEach(([p, t]) => src.files.set(p, t));
+  const book = [BOOK + '/Scenes/S-001 One.md', BOOK + '/Scenes/S-002 Two.md', BOOK + '/Scenes/S-003 Three.md'].map((p) => notes[p]);
+  await applyShifts(src, chapterMove(notes, BOOK, book, 1, 2), 'test');
+  const text = (p: string) => src.files.get(BOOK + '/Scenes/' + p)!;
+  assert.match(text('S-001 One.md'), /^chapter: 2$/m);
+  assert.match(text('S-002 Two.md'), /^chapter: 1$/m);
+  const o1 = Number(/^order: ([\d.]+)$/m.exec(text('S-001 One.md'))![1]);
+  assert.ok(o1 > 2 && o1 < 3);
+  assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 1 beats.md')!, /Grey wakes/);
 });

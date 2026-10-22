@@ -91,7 +91,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -110,6 +110,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onAddChapter?: (after: number | null, chapterTitle: string) => Promise<string | null>;
   /** Give a chapter a new name (its scenes' chapter_title), saved through the queue. */
   onRenameChapter?: (scenes: NoteRecord[], title: string) => void;
+  /** Move a chapter to another number, the ones between closing up. */
+  onMoveChapter?: (from: number, to: number) => Promise<string | null>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -156,7 +158,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const beatsMode = Boolean(beats);
   // The chapter list's long press (or right-click): a small menu under the chapter, then a form in the same place.
   const [chMenu, setChMenu] = useState<string | null>(null);
-  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' } | null>(null);
+  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' | 'move' } | null>(null);
   const [naming, setNaming] = useState<string | null>(null);
   const namingDone = useRef(false);
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
@@ -782,8 +784,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
             <nav class="scene-list">
               {book.groups.map((g) => {
-                const canHold = g.num != null && Boolean(onAdd || onAddChapter || onRenameChapter);
-                const openMenu = () => { setChAdd(null); setChMenu(g.key); };
+                const canHold = g.num != null && Boolean(onAdd || onAddChapter || onRenameChapter || onMoveChapter);
+                // Menus follow the chapter by its first scene, so Move up keeps its panel open under the moved chapter.
+                const gk = g.scenes.length ? g.scenes[0].path : g.key;
+                const openMenu = () => { setChAdd(null); setChMenu(gk); };
                 const stop = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
                 // Hold a finger on a chapter (or right-click it) for Add a chapter below and Add another scene (Kyle,
                 // 2026-10-22). A short press still opens the scene; moving the finger scrolls the list as before.
@@ -807,15 +811,16 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 } : {};
                 const extra = canHold && (
                   <>
-                    {chMenu === g.key && (
+                    {chMenu === gk && (
                       <div class="side-menu" role="menu" aria-label={'Chapter ' + g.num}>
-                        {onAddChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'chapter' }); }}><Icon name="plus" size={18} />Add a chapter below</button>}
-                        {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
-                        {onRenameChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'rename' }); }}><Icon name="pen" size={18} />Rename the chapter</button>}
+                        {onAddChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'chapter' }); }}><Icon name="plus" size={18} />Add a chapter below</button>}
+                        {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
+                        {onMoveChapter && book.groups.filter((x) => x.num != null).length > 1 && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'move' }); }}><Icon name="move" size={18} />Move chapter</button>}
+                        {onRenameChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'rename' }); }}><Icon name="pen" size={18} />Rename the chapter</button>}
                         <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setChMenu(null)}>Cancel</button>
                       </div>
                     )}
-                    {chAdd && chAdd.key === g.key && chAdd.kind === 'chapter' && onAddChapter && (
+                    {chAdd && chAdd.key === gk && chAdd.kind === 'chapter' && onAddChapter && (
                       <SideAddForm label={'Title of the new chapter ' + ((g.num as number) + 1) + ' (you can leave it empty)'} button="Add and start writing" allowEmpty
                         hint={g === book.groups[book.groups.length - 1] ? '' : 'The chapters after it move up one.'}
                         onCancel={() => setChAdd(null)} onAdd={async (t) => {
@@ -823,11 +828,18 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                           return onAddChapter(g.num, t);
                         }} />
                     )}
-                    {chAdd && chAdd.key === g.key && chAdd.kind === 'rename' && onRenameChapter && (
+                    {chAdd && chAdd.key === gk && chAdd.kind === 'move' && onMoveChapter && (
+                      <MoveChapter num={g.num as number} last={book.groups.reduce((m, x) => Math.max(m, x.num == null ? 0 : x.num), 0)}
+                        onMove={async (to) => {
+                          if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+                          return onMoveChapter(g.num as number, to);
+                        }} onClose={() => setChAdd(null)} />
+                    )}
+                    {chAdd && chAdd.key === gk && chAdd.kind === 'rename' && onRenameChapter && (
                       <SideAddForm label={'Name of chapter ' + g.num} button="Rename" allowEmpty initial={g.title}
                         onCancel={() => setChAdd(null)} onAdd={async (t) => { onRenameChapter(g.scenes, t); setChAdd(null); return null; }} />
                     )}
-                    {chAdd && chAdd.key === g.key && chAdd.kind === 'scene' && onAdd && (
+                    {chAdd && chAdd.key === gk && chAdd.kind === 'scene' && onAdd && (
                       <SideAddForm label={'Title of the new scene in chapter ' + g.num} button="Add and start writing"
                         onCancel={() => setChAdd(null)} onAdd={async (t) => {
                           if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
@@ -1400,6 +1412,41 @@ function AddChapterAtEnd({ onAdd, scene }: { onAdd: (title: string) => Promise<s
   return scene
     ? <SideAddForm label="Title of the new scene" button="Add" onAdd={onAdd} onCancel={() => setOpen(false)} />
     : <SideAddForm label="Title of the new chapter (you can leave it empty)" button="Add and start writing" allowEmpty onAdd={onAdd} onCancel={() => setOpen(false)} />;
+}
+
+/** Move a chapter: up or down one place, or straight to a number. Stays open so Kyle can press Up again. */
+function MoveChapter({ num, last, onMove, onClose }: { num: number; last: number; onMove: (to: number) => Promise<string | null>; onClose: () => void }) {
+  const [to, setTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async (n: number) => {
+    setBusy(true);
+    setError(null);
+    const err = await onMove(n);
+    setBusy(false);
+    setError(err);
+    if (!err) setTo('');
+  };
+  const typed = Number(to);
+  return (
+    <div class="side-add-form side-move">
+      <p class="hint">{busy ? 'Moving chapter ' + num + '… every note of the chapters it passes gets its new number.' : 'Move chapter ' + num + ':'}</p>
+      <div class="buttons">
+        <button type="button" disabled={busy || num <= 1} onClick={() => go(num - 1)}><Icon name="up" size={18} />Up one</button>
+        <button type="button" disabled={busy || num >= last} onClick={() => go(num + 1)}><Icon name="down" size={18} />Down one</button>
+      </div>
+      <label class="reason">
+        Or make it chapter number
+        <span class="side-move-to">
+          <input type="number" inputMode="numeric" min={1} max={last} value={to} enterKeyHint="go" onInput={(e) => setTo((e.currentTarget as HTMLInputElement).value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && to && !busy) { e.preventDefault(); go(typed); } }} />
+          <button type="button" class="primary" disabled={busy || !to || typed === num} onClick={() => go(typed)}>Move</button>
+        </span>
+      </label>
+      <div class="buttons"><button type="button" disabled={busy} onClick={onClose}>Done</button></div>
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
 }
 
 /** A title box and Add, in the chapter list. */

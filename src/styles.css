@@ -2107,3 +2107,6 @@ button, .button { border-radius: 12px; }
 .chapter-name-edit label { display: flex; align-items: baseline; gap: 8px; font-size: 1.8rem; font-weight: 700; }
 .chapter-name-edit .chapter-name-num { white-space: nowrap; }
 .chapter-name-edit input { flex: 1 1 auto; min-width: 0; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; }
+.side-move .side-move-to { display: flex; gap: 8px; margin-top: 4px; }
+.side-move .side-move-to input { width: 5em; flex: 0 0 auto; }
+.side-move .buttons button { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }

@@ -42,7 +42,7 @@ src/ui/viewport.ts       useLockedPage: the writing screens lock the document so
 src/ui/ChapterPage.tsx   the whole chapter as one page
 src/lib/brackets.ts      [brackets]: finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
-src/lib/chapters.ts      making room for a chapter in the middle: later chapters' notes move up one (beats, plans, scraps renamed)
+src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps renamed)
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back

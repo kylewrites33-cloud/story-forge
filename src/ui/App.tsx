@@ -12,7 +12,7 @@ import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
-import { chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
+import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts } from '../lib/drafts.ts';
@@ -471,6 +471,25 @@ export function App() {
     runFlush();
   }, [setQueue, runFlush]);
 
+  /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
+  const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to move a chapter.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
+    const last = nums.length ? Math.max(...nums) : 0;
+    if (!Number.isInteger(to) || to < 1 || to > last) return 'Choose a chapter number from 1 to ' + last + '.';
+    try {
+      await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
+      await runSync();
+      return null;
+    } catch (e) {
+      await runSync().catch(() => undefined);
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
   /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
     const clean = title.replace(/\s+/g, ' ').trim();
@@ -585,6 +604,7 @@ export function App() {
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
           onAddChapter={book && source.write && source.readFresh ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
           onRenameChapter={book && source.write ? onRenameChapter : undefined}
+          onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
