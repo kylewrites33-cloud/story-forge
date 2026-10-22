@@ -12,6 +12,7 @@ import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
+import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts } from '../lib/drafts.ts';
@@ -69,7 +70,7 @@ import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
 import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
 import { createResults, flowResults, type NewResult } from '../lib/flow.ts';
-import { nameList } from '../lib/links.ts';
+import { nameList, toNumber } from '../lib/links.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -175,6 +176,33 @@ export function App() {
       location.hash = href.write(made.path);
       return null;
     } catch (e) {
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
+  /** Add a chapter of one scene after chapter `after` (null: after the book's last chapter) and open it for writing.
+   * In the middle of the book, the later chapters move up one first (Kyle, 2026-10-22). */
+  const onAddChapter = useCallback(async (book: BookEntry, after: number | null, chapterTitle: string): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to add a chapter.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
+    const last = nums.length ? Math.max(...nums) : 0;
+    const at = after == null || after >= last ? last + 1 : after + 1;
+    const inCh = scenes.filter((n) => toNumber(n.data.chapter) === at - 1);
+    const prev = inCh.length ? inCh[inCh.length - 1] : scenes[scenes.length - 1] || null;
+    const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
+    const title = chapterTitle.trim();
+    try {
+      if (at <= last) await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
+      const made = await createScene(source, { bookFolder: book.folder, title: title || 'Chapter ' + at, chapter: at, chapterTitle: title, order: orderBetween(prev, next), status: 'drafted', body: '' },
+        new Date(), 'Added in the Sparrow app.');
+      await runSync();
+      location.hash = href.write(made.path);
+      return null;
+    } catch (e) {
+      await runSync().catch(() => undefined);
       return (e as Error).message;
     }
   }, [source, runSync]);
@@ -443,6 +471,35 @@ export function App() {
     runFlush();
   }, [setQueue, runFlush]);
 
+  /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
+  const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to move a chapter.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
+    const last = nums.length ? Math.max(...nums) : 0;
+    if (!Number.isInteger(to) || to < 1 || to > last) return 'Choose a chapter number from 1 to ' + last + '.';
+    try {
+      await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
+      await runSync();
+      return null;
+    } catch (e) {
+      await runSync().catch(() => undefined);
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
+  /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
+  const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
+    const clean = title.replace(/\s+/g, ' ').trim();
+    const at = new Date().toISOString();
+    let list = queueRef.current;
+    chapterTitleEdits(scenes, clean).forEach((path) => { list = enqueue(list, { path, decision: 'edit', reason: '', at, fields: { chapter_title: clean } }); });
+    setQueue(list);
+    runFlush();
+  }, [setQueue, runFlush]);
+
   // Show the saved copy at once, then refresh it.
   useEffect(() => {
     let live = true;
@@ -545,6 +602,9 @@ export function App() {
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
           onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
+          onAddChapter={book && source.write && source.readFresh ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
+          onRenameChapter={book && source.write ? onRenameChapter : undefined}
+          onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}

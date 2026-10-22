@@ -52,7 +52,23 @@ add a dated line here when you add or change one.
   Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. The chapter list opens at the chapter Kyle is in, its scene highlighted, on every size (Kyle,
   2026-10-21: "right now im regularly having to scroll down from chapter 1"); while it stays open it scrolls only when
-  the open scene is out of sight. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
+  the open scene is out of sight. Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
+  this view ... the + 'add a scene to chapter 33' at the bottom should probably be add a chapter. then possibly if we long
+  press on a chapter in the list, we get an option to add a chapter below, or add another scene"): the list ends with
+  "+ Add a chapter" (a title, which may be left empty, then the new chapter's one scene opens ready to write). Holding a
+  finger on a chapter, or right-clicking it, opens a small menu under it: Add a chapter below and Add another scene. A
+  chapter added in the middle moves every later chapter up one first (`src/lib/chapters.ts`): their scenes, to-dos,
+  scene notes, and the beats, plan and scrap notes, renamed to their new number; one save each, Kyle's (no Agent line).
+  A short press still opens the scene. Renaming a chapter (Kyle, 2026-10-22: "i should be able to change the chapter name
+  by tapping in the field in the word processor, or long pressing on the chapter in the left pane"): tap the chapter's
+  name at the top of the page and type (Enter or tapping away saves, Esc cancels), or choose Rename the chapter in the
+  hold menu. The name is saved as `chapter_title` on the chapter's first scene and on any of its scenes that already
+  carry one, through the write queue (so it works offline). Moving a chapter (Kyle, 2026-10-22: "there should be a move
+  chapters option when you long press on the chapter, so I can reorder them"): Move chapter in the hold menu opens Up
+  one, Down one, or a chapter number to jump to; the panel stays under the chapter so Up can be pressed again. The
+  chapters in between close up by one; every note with a chapter number changes, the moving chapter's scenes take new
+  reading-order numbers, and its beats, plan and scrap pass through a "(moving)" name so no two files clash. Needs a
+  connection. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
   holds Books and Series, the open book's cover and title, Keep writing, the book's boards grouped as Write, Plan, Codex,
   Review and Publish, and at its foot Chat, Jobs, To-do, sync and Settings. From 1100 px it shows names; from 700 px it is
   a strip of icons with short names that the menu button opens in full; narrower, a slim top bar opens it over the page. A Chapter Grid
