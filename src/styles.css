@@ -1141,6 +1141,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow-lift);
 }
 .team-side-head { display: flex; align-items: flex-start; gap: 4px; }
+/* The heading and its Hide button stay in sight while the chat scrolls (Kyle's screenshot, 2026-10-22). */
+.team-side-head { position: sticky; top: calc(-1 * max(10px, var(--safe-top))); z-index: 1; margin: calc(-1 * max(10px, var(--safe-top))) -14px 0; padding: max(10px, var(--safe-top)) 14px 6px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .team-side-title { flex: 1 1 auto; min-width: 0; }
 .team-side-title h2 { margin: 6px 0 2px; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-side-title .meta { margin: 0; font-size: 0.94rem; }

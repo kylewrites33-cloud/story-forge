@@ -286,6 +286,11 @@ add a dated line here when you add or change one.
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  2026-10-22 (Kyle's screenshot in split view: "something weird happened here when i backed out of the writing screen"):
+  narrower than 1200 px the column lies over the page, so it opens only when Kyle presses Team and closes on leaving the
+  page or when the window narrows; its open or shut state is remembered only beside the page. Its heading and Hide arrow
+  stay in sight while the chat scrolls. The Keep writing card on Home shows the words typed in the scene even while it is
+  still planned (the book's totals still count a planned scene as none, as `sf words` does).
   Deciding faster (Kyle, 2026-10-18, from Writers Room): after Keep, Later or Drop on any proposal board the toast offers
   one-press reasons (Love it, Surprising, Specific, Raises the stakes; Not now, Needs work, Could combine; Cliché, Wrong
   tone, Already have this, Too clever) written to the note's `reasons` list as a separate edit, so skipping costs nothing
