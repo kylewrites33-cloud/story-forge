@@ -14,27 +14,65 @@ import { Icon } from './Icon.tsx';
 let flushing = false;
 let sendingTyped = false;
 
-/** A short two-note chime, made on the device; silent where the browser has no sound. */
-function chime(): void {
+// Two bird-like chirps, made on the device (Kyle, 2026-10-22: "chirp at the end of 25, and a different chirp after 5"):
+// two quick rising chirps when the writing ends, three falling ones when the break ends. iPad browsers only let a page
+// play sound after a touch or key press, so the first one anywhere unlocks one shared sound player; silent where the
+// browser has no sound.
+type Ctx = AudioContext;
+let audio: Ctx | null = null;
+
+function player(): Ctx | null {
+  if (audio) return audio;
+  const w = window as unknown as { AudioContext?: { new(): Ctx }; webkitAudioContext?: { new(): Ctx } };
+  const C = w.AudioContext || w.webkitAudioContext;
+  if (!C) return null;
+  try { audio = new C(); } catch { return null; }
+  return audio;
+}
+
+function unlockSound(): void {
+  const ctx = player();
+  if (!ctx) return;
   try {
-    const Ctx = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
-      || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    [0, 0.25].forEach((t, i) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.frequency.value = i ? 880 : 660;
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
-      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.6);
-      o.connect(g).connect(ctx.destination);
-      o.start(ctx.currentTime + t);
-      o.stop(ctx.currentTime + t + 0.7);
-    });
-    setTimeout(() => { ctx.close().catch(() => undefined); }, 1500);
+    if (ctx.state !== 'running') ctx.resume().catch(() => undefined);
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
   } catch { /* no sound */ }
 }
+
+if (typeof window !== 'undefined') {
+  for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, unlockSound, { capture: true, passive: true });
+}
+
+/** Play chirps: each is [start s, from Hz, to Hz]. */
+function chirps(notes: [number, number, number][]): void {
+  const ctx = player();
+  if (!ctx) return;
+  try {
+    if (ctx.state !== 'running') ctx.resume().catch(() => undefined);
+    const at = ctx.currentTime + 0.05;
+    for (const [t, from, to] of notes) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(from, at + t);
+      o.frequency.exponentialRampToValueAtTime(to, at + t + 0.09);
+      g.gain.setValueAtTime(0.0001, at + t);
+      g.gain.exponentialRampToValueAtTime(0.3, at + t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + t + 0.12);
+      o.connect(g).connect(ctx.destination);
+      o.start(at + t);
+      o.stop(at + t + 0.14);
+    }
+  } catch { /* no sound */ }
+}
+
+/** The writing block is over: two quick rising chirps. */
+const workDoneChirp = () => chirps([[0, 2200, 3600], [0.16, 2200, 3600]]);
+/** The break is over: three falling chirps, lower. */
+const breakDoneChirp = () => chirps([[0, 2600, 1500], [0.2, 2400, 1400], [0.4, 2200, 1300]]);
 
 const num = (n: number) => n.toLocaleString('en-US');
 
@@ -96,7 +134,8 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
         setWaiting(loadLog(source.key));
         flush();
       }
-      chime();
+      // Only when the time ran out just now, not when the app is opened long after.
+      if (cur.endsAt != null && t - cur.endsAt < 60000) (cur.phase === 'work' ? workDoneChirp : breakDoneChirp)();
     }
     setS(state);
     setNow(t);
@@ -211,6 +250,9 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
             {s.phase === 'break' && <button type="button" onClick={() => act((c) => stop(c))}>Stop</button>}
           </div>
           {s.phase === 'idle' && <p class="hint">{s.workMin} minutes of writing, then a {s.breakMin} minute break.</p>}
+          {s.phase === 'idle' && <p class="hint">A chirp when the writing ends, another when the break ends.{' '}
+            <button type="button" class="link" onClick={workDoneChirp}>Hear the first</button>{' '}
+            <button type="button" class="link" onClick={breakDoneChirp}>Hear the second</button></p>}
           <p class="pomodoro-today"><strong>Today:</strong> {num(day.typed)} {day.typed === 1 ? 'word' : 'words'} typed, {done} {done === '1' ? 'Pomodoro' : 'Pomodoros'} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}).</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
           <p class="hint">If you stop early, the minutes still count: 15 minutes is 0.6 of a Pomodoro.</p>
