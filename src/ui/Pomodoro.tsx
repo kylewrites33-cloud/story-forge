@@ -9,70 +9,11 @@ import {
   pomodoroCount, startWork, stop, stoppedRecord, today, wordsSoFar, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
+import { chirp, keepAwake } from './chirp.ts';
 import { Icon } from './Icon.tsx';
 
 let flushing = false;
 let sendingTyped = false;
-
-// Two bird-like chirps, made on the device (Kyle, 2026-10-22: "chirp at the end of 25, and a different chirp after 5"):
-// two quick rising chirps when the writing ends, three falling ones when the break ends. iPad browsers only let a page
-// play sound after a touch or key press, so the first one anywhere unlocks one shared sound player; silent where the
-// browser has no sound.
-type Ctx = AudioContext;
-let audio: Ctx | null = null;
-
-function player(): Ctx | null {
-  if (audio) return audio;
-  const w = window as unknown as { AudioContext?: { new(): Ctx }; webkitAudioContext?: { new(): Ctx } };
-  const C = w.AudioContext || w.webkitAudioContext;
-  if (!C) return null;
-  try { audio = new C(); } catch { return null; }
-  return audio;
-}
-
-function unlockSound(): void {
-  const ctx = player();
-  if (!ctx) return;
-  try {
-    if (ctx.state !== 'running') ctx.resume().catch(() => undefined);
-    const src = ctx.createBufferSource();
-    src.buffer = ctx.createBuffer(1, 1, 22050);
-    src.connect(ctx.destination);
-    src.start(0);
-  } catch { /* no sound */ }
-}
-
-if (typeof window !== 'undefined') {
-  for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, unlockSound, { capture: true, passive: true });
-}
-
-/** Play chirps: each is [start s, from Hz, to Hz]. */
-function chirps(notes: [number, number, number][]): void {
-  const ctx = player();
-  if (!ctx) return;
-  try {
-    if (ctx.state !== 'running') ctx.resume().catch(() => undefined);
-    const at = ctx.currentTime + 0.05;
-    for (const [t, from, to] of notes) {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(from, at + t);
-      o.frequency.exponentialRampToValueAtTime(to, at + t + 0.09);
-      g.gain.setValueAtTime(0.0001, at + t);
-      g.gain.exponentialRampToValueAtTime(0.3, at + t + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, at + t + 0.12);
-      o.connect(g).connect(ctx.destination);
-      o.start(at + t);
-      o.stop(at + t + 0.14);
-    }
-  } catch { /* no sound */ }
-}
-
-/** The writing block is over: two quick rising chirps. */
-const workDoneChirp = () => chirps([[0, 2200, 3600], [0.16, 2200, 3600]]);
-/** The break is over: three falling chirps, lower. */
-const breakDoneChirp = () => chirps([[0, 2600, 1500], [0.2, 2400, 1400], [0.4, 2200, 1300]]);
 
 const num = (n: number) => n.toLocaleString('en-US');
 
@@ -134,8 +75,8 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
         setWaiting(loadLog(source.key));
         flush();
       }
-      // Only when the time ran out just now, not when the app is opened long after.
-      if (cur.endsAt != null && t - cur.endsAt < 60000) (cur.phase === 'work' ? workDoneChirp : breakDoneChirp)();
+      // When the time ran out in the last ten minutes (the iPad may have paused the page), not when the app is opened long after.
+      if (cur.endsAt != null && t - cur.endsAt < 600000) chirp(cur.phase === 'work' ? 'work' : 'break');
     }
     setS(state);
     setNow(t);
@@ -162,6 +103,7 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   }, [source]);
 
   const running = s.phase !== 'idle' && s.endsAt != null;
+  useEffect(() => { keepAwake(running); }, [running]);
   useEffect(() => {
     if (!running) return;
     const id = setInterval(refresh, 1000);

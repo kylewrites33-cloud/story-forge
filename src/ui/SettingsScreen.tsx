@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { GitHubSource } from '../lib/github.ts';
 import { normalise, type Settings } from '../lib/settings.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
+import { chirp } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
@@ -37,6 +38,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
     <section>
       <h1>Settings</h1>
       <Colours />
+      <TimerSound />
       <h2>Vault</h2>
       <form class="settings" onSubmit={save}>
         <label>
@@ -107,6 +109,20 @@ function ReadingRates() {
         </p>
         <p class="hint">{ok ? 'A 90,000-word book is ' + readingLine(90000, { wordsPerPage: p, wordsPerMinute: s }) + '.' : 'Use numbers between 50 and 1,000.'}{rates.wordsPerPage !== p || rates.wordsPerMinute !== s ? ' Press Save to use these.' : ''}</p>
       </div>
+    </>
+  );
+}
+
+/** Try the Pomodoro's two chirps, to check this device's sound. */
+function TimerSound() {
+  return (
+    <>
+      <h2>Timer sound</h2>
+      <p class="hint">The Pomodoro chirps when the writing ends and again when the break ends. Press to hear them on this device. While a timer runs, the screen stays on so the chirp can play.</p>
+      <p class="buttons">
+        <button type="button" onClick={() => chirp('work')}>End of writing</button>
+        <button type="button" onClick={() => chirp('break')}>End of break</button>
+      </p>
     </>
   );
 }
