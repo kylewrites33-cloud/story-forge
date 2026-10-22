@@ -103,8 +103,11 @@ main { max-width: 1180px; margin: 0 auto; padding-top: 20px; padding-bottom: 3re
 .rail {
   position: fixed; z-index: 6; top: 0; bottom: 0; left: 0; width: var(--rail-wide);
   display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line);
-  padding-top: var(--safe-top); padding-left: env(safe-area-inset-left);
+  padding-top: calc(var(--safe-top) + var(--window-button, 0px)); padding-left: env(safe-area-inset-left);
 }
+/* In split view or a window the iPad's window button (•••) sits on the top left corner: the sidebar starts below it. */
+.ios-window { --window-button: 36px; }
+.ios-window .writer-bar { padding-left: 84px; }
 .shell-main { margin-left: calc(var(--rail-wide) + env(safe-area-inset-left)); }
 .rail-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px 10px 6px 14px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 700; font-size: 1.05rem; color: var(--text); text-decoration: none; white-space: nowrap; }
@@ -1976,6 +1979,7 @@ button, .button { border-radius: 12px; }
 .top-team { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid transparent; background: var(--accent-soft); color: var(--accent); font-weight: 650; text-decoration: none; font-size: 0.95rem; }
 .top-team.on { background: var(--accent); color: var(--on-accent); }
 @media (max-width: 1099px) { .top-find-label { display: none; } .top-find { padding: 8px 10px; } }
+@media (max-width: 699px) { .ios-window .top-bar { padding-left: 84px; } }
 @media (max-width: 699px) { .top-menu { display: inline-flex; } .top-team-label { display: none; } .top-team { padding: 8px 10px; } .slim-bar { display: none !important; } }
 .rail-subs { display: grid; gap: 1px; margin: 2px 0 6px 22px; padding-left: 12px; border-left: 2px solid var(--line); }
 .rail-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 6px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 0.94rem; }
