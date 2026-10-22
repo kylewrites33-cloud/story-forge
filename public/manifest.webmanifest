@@ -1,7 +1,7 @@
 {
-  "name": "Story Forge",
-  "short_name": "Story Forge",
-  "description": "Boards for the Story Forge vault.",
+  "name": "Sparrow",
+  "short_name": "Sparrow",
+  "description": "Sparrow, the writing app for the Story Forge vault.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

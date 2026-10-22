@@ -11,7 +11,7 @@ const book: BookEntry = { path: 'Series/Q/Books/2 B/Book.md', folder: 'Series/Q/
 test('a chat from a board says where Kyle is and what is on screen', () => {
   const idea = makeNote('Series/Q/Books/2 B/Ideas/I-004 Grey keeps the farm.md', 'x', '---\ntype: idea\nid: I-004\ntitle: Grey keeps the farm\nstatus: inbox\n---\n');
   const page = pageContext({ name: 'the Ideas board', book, notes: [idea] });
-  assert.match(page, /^Kyle sent this from the Ideas board in the Story Forge app\./);
+  assert.match(page, /^Kyle sent this from the Ideas board in the Sparrow app\./);
   assert.match(page, /Book: The Village \(Quest Declined, Book 2\), `Series\/Q\/Books\/2 B`/);
   assert.match(page, /- I-004 Grey keeps the farm \(inbox\): `Series\/Q\/Books\/2 B\/Ideas\/I-004 Grey keeps the farm.md`/);
   // A long board is cut short, with a count of the rest.
@@ -22,7 +22,7 @@ test('a chat from a board says where Kyle is and what is on screen', () => {
 });
 
 test('the page goes into the chat job under its own heading, and Kyle\'s words stay his', () => {
-  const j = chatJob('chat-003', 'Which of these should I keep?', book.folder, 'Kyle sent this from the Ideas board in the Story Forge app.');
+  const j = chatJob('chat-003', 'Which of these should I keep?', book.folder, 'Kyle sent this from the Ideas board in the Sparrow app.');
   const text = jobText('J-020', j, new Date('2026-10-18T12:00:00'));
   assert.match(text, /## Ask\nWhich of these should I keep\?\n\n## Page\nKyle sent this from the Ideas board/);
   assert.equal(askBody(makeNote('Jobs/J-020 x.md', 'x', text).body), 'Which of these should I keep?');

@@ -1183,7 +1183,7 @@ function NotesPanel({ source, bookFolder, note, canSave, onChanged }: {
       let sha = '', base = Frontmatter.join({ type: 'braindump' }, '\n');
       try { const f = await source.readFresh(path); sha = f.sha; base = f.text; } catch (e) { if ((e as { status?: number }).status !== 404 && !/has no/.test((e as Error).message)) throw e; }
       const next = withBody(base, '\n' + text.replace(/^\n+/, '').replace(/\s*$/, '\n'));
-      await source.write(path, next, sha, 'braindump: notes from the writing screen\n\nWritten in the Story Forge app.');
+      await source.write(path, next, sha, 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.');
       await onChanged();
       setSaid({ error: false, text: 'Saved in the book\'s Braindump note.' });
     } catch (e) {

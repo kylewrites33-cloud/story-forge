@@ -70,7 +70,7 @@ export function taskText(id: string, t: NewTask, now: Date): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(t.due)) data.due = t.due;
   data.status = 'open';
   data.created = ymd(now);
-  const body = t.body.trim() || 'Kyle added this to-do in the Story Forge app.';
+  const body = t.body.trim() || 'Kyle added this to-do in the Sparrow app.';
   return Frontmatter.join(data, '\n' + body + '\n');
 }
 
@@ -87,7 +87,7 @@ export async function createTask(source: VaultSource, t: NewTask, now: Date): Pr
     const path = 'Tasks/' + id + ' ' + name + '.md';
     const text = taskText(id, { ...t, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded on the To-do list in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded on the To-do list in the Sparrow app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;

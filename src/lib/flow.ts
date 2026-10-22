@@ -305,7 +305,7 @@ export async function createResults(source: VaultSource, bookFolder: string, lis
       const path = bookFolder + '/Ideas/' + id + ' ' + title + '.md';
       try {
         const how = r.origin === 'kyle' ? 'written in' : 'brought into';
-        const sha = await source.write(path, text, '', 'ideas: add ' + id + ' ' + title + '\n\nA result for workflow step ' + r.step + ', ' + how + ' the Story Forge app.');
+        const sha = await source.write(path, text, '', 'ideas: add ' + id + ' ' + title + '\n\nA result for workflow step ' + r.step + ', ' + how + ' the Sparrow app.');
         made.push(makeNote(path, sha, text));
         next++;
         break;

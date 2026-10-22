@@ -241,7 +241,7 @@ export async function flushTyped(source: VaultSource, now: Date): Promise<NoteRe
       const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
       const text = addTypedToDay(cur.text, date, n, now);
       try {
-        const sha = await source.write(path, text, cur.sha, 'log: ' + n + (n === 1 ? ' word' : ' words') + ' typed on ' + date + '\n\nKept by the Story Forge app.');
+        const sha = await source.write(path, text, cur.sha, 'log: ' + n + (n === 1 ? ' word' : ' words') + ' typed on ' + date + '\n\nKept by the Sparrow app.');
         saved.push(makeNote(path, sha, text));
         break;
       } catch (e) {
@@ -337,7 +337,7 @@ export async function flushLog(source: VaultSource, now: Date): Promise<NoteReco
       const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
       const text = addToDay(cur.text, r, now);
       try {
-        const sha = await source.write(path, text, cur.sha, 'log: ' + (r.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + r.time + ' on ' + r.date + ', ' + r.words + ' words\n\nKept by the Story Forge app\'s timer.');
+        const sha = await source.write(path, text, cur.sha, 'log: ' + (r.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + r.time + ' on ' + r.date + ', ' + r.words + ' words\n\nKept by the Sparrow app\'s timer.');
         saved.push(makeNote(path, sha, text));
         break;
       } catch (e) {

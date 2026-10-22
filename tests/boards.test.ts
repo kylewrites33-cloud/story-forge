@@ -84,7 +84,7 @@ test('accept sets the accepted time and leaves the status; needs work removes it
 });
 
 test('commit messages name the board and carry no Agent trailer', () => {
-  assert.equal(commitMessage({ type: 'beat', id: 'B-002', title: 'Catalyst' }, 'keep'), 'beats: keep B-002 Catalyst\n\nChosen on the Beat Sheet in the Story Forge app.');
+  assert.equal(commitMessage({ type: 'beat', id: 'B-002', title: 'Catalyst' }, 'keep'), 'beats: keep B-002 Catalyst\n\nChosen on the Beat Sheet in the Sparrow app.');
   assert.match(commitMessage({ type: 'scene', id: 'S-008', title: 'The Last Ring' }, 'accept'), /^scenes: accept card S-008 The Last Ring\n\nChosen on the Chapter Grid/);
   assert.match(commitMessage({ type: 'conflict', id: 'C-001' }, 'drop'), /^conflicts: drop C-001/);
   assert.match(commitMessage({ id: 'I-001', title: 'Tobin Lies' }, 'keep'), /^ideas: keep I-001 Tobin Lies/);

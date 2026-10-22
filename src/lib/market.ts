@@ -42,7 +42,7 @@ export async function addRocketFile(source: VaultSource, seriesFolder: string, t
     const file = rocketName(name, used);
     const path = rocketFolder(seriesFolder) + '/' + file;
     try {
-      await source.write(path, text.replace(/^\uFEFF/, ''), '', 'market: add Rocket file ' + file + '\n\nAdded on the Market board in the Story Forge app.');
+      await source.write(path, text.replace(/^\uFEFF/, ''), '', 'market: add Rocket file ' + file + '\n\nAdded on the Market board in the Sparrow app.');
       return path;
     } catch (e) {
       const err = e as Error & { conflict?: boolean; status?: number };

@@ -62,7 +62,7 @@ export async function createRecipe(source: VaultSource, r: RecipeFields, now: Da
     const path = freePath(RECIPES_FOLDER, title, files.map((f) => f.path));
     const text = recipeText({ ...r, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'recipes: add ' + title + '\n\nWritten in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'recipes: add ' + title + '\n\nWritten in the Sparrow app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
@@ -98,14 +98,14 @@ export async function saveRecipe(source: VaultSource, note: NoteRecord, r: Recip
   let next = editRecipeText(text, r.use_for, r.body);
   if (title === recipeName(note)) {
     if (next === text) return makeNote(note.path, sha, text);
-    const newSha = await source.write(note.path, next, sha, 'recipes: edit ' + title + '\n\nEdited in the Story Forge app.');
+    const newSha = await source.write(note.path, next, sha, 'recipes: edit ' + title + '\n\nEdited in the Sparrow app.');
     return makeNote(note.path, newSha, next);
   }
   if (!source.remove) throw new Error('This vault cannot rename notes from the app. Keep the old name, or rename it in Obsidian.');
   next = Frontmatter.setScalar(next, 'title', title);
   const { files } = await source.tree();
   const path = freePath(RECIPES_FOLDER, title, files.map((f) => f.path).filter((p) => p !== note.path));
-  const newSha = await source.write(path, next, '', 'recipes: rename ' + recipeName(note) + ' to ' + title + '\n\nRenamed in the Story Forge app.');
+  const newSha = await source.write(path, next, '', 'recipes: rename ' + recipeName(note) + ' to ' + title + '\n\nRenamed in the Sparrow app.');
   await source.remove(note.path, sha, 'recipes: rename ' + recipeName(note) + ' to ' + title + '\n\nThe recipe now lives in ' + path + '.');
   return makeNote(path, newSha, next);
 }

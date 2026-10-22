@@ -92,7 +92,7 @@ test('split and join keep every word: text helpers', () => {
 test('add, split and join scenes in the demo vault; it still passes sf validate', { skip: !hasVault && 'author-business is not checked out beside this repository' }, async () => {
   const src = demoCopy();
   // Add a scene at the end of chapter 1.
-  const made = await createScene(src, { bookFolder: BOOK, title: 'Night: the bell / rope', chapter: 1, chapterTitle: 'Frost', order: 2.5, status: 'drafted', body: '' }, NOW, 'Added in the Story Forge app.');
+  const made = await createScene(src, { bookFolder: BOOK, title: 'Night: the bell / rope', chapter: 1, chapterTitle: 'Frost', order: 2.5, status: 'drafted', body: '' }, NOW, 'Added in the Sparrow app.');
   assert.match(made.path, /\/Scenes\/S-009 Night the bell rope\.md$/);
   assert.equal(made.data.id, 'S-009');
   assert.equal(made.data.order, 2.5);
