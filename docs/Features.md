@@ -367,6 +367,10 @@ its still possible to go through the workflow mode from somewhere, please apply 
   change) and Drop, stars, and Undo for ten seconds. Keys K, M, D and U are extras.
 - **Codex**: Characters, Places, Items and Lore each have a page: a list with a filter on the left, the entry on the
   right with its "now" and where it appears (`Codex.tsx`). Narrower than 900 px the list comes first.
+  2026-10-22 (Kyle: "there's some weird scrolling here"): the list and the entry each scroll on their own, under the
+  top bar, and a newly picked entry opens at its top. The note view says "To change this, ask the team" (Kyle never
+  opens Obsidian; error messages say the same). On the iPad home-screen app the top bar fills the strip above it, and
+  room for the clock bar is kept only when the app really sits under it (window as tall as the screen).
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
   today's words, timer, Team, •••). The ••• menu holds Normal, Split here, Join, Names, Check, Listen, Fill brackets, Ask
   the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Page | Beats | Whole chapter sits

@@ -113,7 +113,7 @@ export class GitHubSource implements VaultSource {
     const res = await this.get(this.contentsUrl(path) + '?ref=' + encodeURIComponent(this.s.branch), path, undefined, true);
     const body = (await res.json()) as { sha?: string; content?: string; encoding?: string };
     if (!body.sha || body.encoding !== 'base64' || typeof body.content !== 'string') {
-      throw new GitHubError(path + ' is too large for the app to change. Change it in Obsidian.', 413);
+      throw new GitHubError(path + ' is too large for the app to change. Ask the team to change it.', 413);
     }
     return { text: fromBase64(body.content), sha: body.sha };
   }

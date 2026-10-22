@@ -74,7 +74,7 @@ export async function createRecipe(source: VaultSource, r: RecipeFields, now: Da
 /** The recipe's text with a new use_for and instruction. Only those change: every other line Kyle wrote stays. */
 export function editRecipeText(text: string, useFor: string, body: string): string {
   const p = Frontmatter.parse(text);
-  if (p.error) throw new Error('This recipe\'s properties cannot be read (' + p.error + '). Fix it in Obsidian, then try again.');
+  if (p.error) throw new Error('This recipe\'s properties cannot be read (' + p.error + '). Ask the team to fix it, then try again.');
   const u = str(useFor).replace(/\s+/g, ' ');
   let out = text;
   if (u) out = Frontmatter.setScalar(out, 'use_for', u);
@@ -101,7 +101,7 @@ export async function saveRecipe(source: VaultSource, note: NoteRecord, r: Recip
     const newSha = await source.write(note.path, next, sha, 'recipes: edit ' + title + '\n\nEdited in the Story Forge app.');
     return makeNote(note.path, newSha, next);
   }
-  if (!source.remove) throw new Error('This vault cannot rename notes from the app. Keep the old name, or rename it in Obsidian.');
+  if (!source.remove) throw new Error('This vault cannot rename notes from the app. Keep the old name, or ask the team to rename it.');
   next = Frontmatter.setScalar(next, 'title', title);
   const { files } = await source.tree();
   const path = freePath(RECIPES_FOLDER, title, files.map((f) => f.path).filter((p) => p !== note.path));

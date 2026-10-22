@@ -11,7 +11,15 @@ startHoldNames();
 // safe area for it (Kyle's screenshot, 2026-10-20). Mark that case so the CSS moves the app down below the bar.
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const homeScreen = (navigator as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-if (ios && homeScreen) document.documentElement.classList.add('ios-app');
+// Some iPads put the app below the bar instead (Kyle's screenshot, 2026-10-22): then the window is shorter than the
+// screen and no room is kept for it.
+function underStatusBar(): boolean {
+  const tall = window.innerWidth > window.innerHeight ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+  return window.innerHeight >= tall - 2;
+}
+function markIosApp(): void { document.documentElement.classList.toggle('ios-app', ios && homeScreen && underStatusBar()); }
+markIosApp();
+window.addEventListener('resize', markIosApp);
 
 render(<App />, document.getElementById('app')!);
 

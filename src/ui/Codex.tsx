@@ -1,7 +1,7 @@
 // The Codex as a list and a detail side by side (design review, 2026-10-22): Characters, Places, Items and Lore each
 // have a page. The list on the left has a filter; the entry opens on the right with its "now" and where it appears.
 // Narrower than 900 px the list comes first and the entry opens under a back button.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { codexFor } from '../lib/codex.ts';
 import { ideasAbout } from '../lib/boards.ts';
 import { pileOf } from '../lib/ideas.ts';
@@ -21,6 +21,12 @@ export function CodexBoard({ schema, index, book, board }: { schema: Schema; ind
   const [open, setOpen] = useState<string>(() => (all[0] ? all[0].note.path : ''));
   const [picked, setPicked] = useState(false);
   useEffect(() => { setOpen(all[0] ? all[0].note.path : ''); setPicked(false); setQ(''); }, [board, book.folder]);
+  // A newly picked entry opens at its top, not where the last one was scrolled to.
+  const detail = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (detail.current) detail.current.scrollTop = 0;
+    if (picked && window.innerWidth < 900) window.scrollTo(0, 0);
+  }, [open, picked]);
   const shown = q.trim() ? all.filter((e) => (e.name + ' ' + String(e.note.data.kind || e.note.data.role || '')).toLowerCase().indexOf(q.trim().toLowerCase()) >= 0) : all;
   const title = TITLES[board] || 'Codex';
   if (!all.length) {
@@ -54,7 +60,7 @@ export function CodexBoard({ schema, index, book, board }: { schema: Schema; ind
           })}
         </ul>
       </div>
-      <div class="codex-detail">
+      <div class="codex-detail" ref={detail}>
         <button type="button" class="codex-back" onClick={() => setPicked(false)}><Icon name="left" size={18} /> All {title.toLowerCase()}</button>
         {open && index.notes[open] ? <NoteView schema={schema} index={index} path={open} /> : <p class="empty">Pick one on the left.</p>}
         {open && <p class="meta"><a href={href.note(open)}>Open the full page</a></p>}

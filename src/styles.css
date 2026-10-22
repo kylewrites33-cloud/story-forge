@@ -1931,7 +1931,11 @@ button, .button { border-radius: 12px; }
   padding: max(8px, var(--safe-top)) max(var(--gutter), env(safe-area-inset-right)) 8px max(var(--gutter), env(safe-area-inset-left));
   background: var(--surface); border-bottom: 1px solid var(--line);
 }
-.ios-app .top-bar { top: var(--safe-top); padding-top: 8px; }
+/* Under the iPad's status bar the top bar fills the strip above itself, so the page never shows through it (Kyle, 2026-10-22). */
+:root { --top-h: 60px; }
+.ios-app { --top-h: calc(60px + var(--safe-top)); }
+.ios-app .top-bar { top: 0; padding-top: calc(var(--safe-top) + 8px); }
+.ios-app .shell-main:has(> .top-bar) { padding-top: 0; }
 .top-bar .icon-button { border: none; background: none; }
 .top-menu { display: none; }
 .top-title { position: relative; flex: 1 1 auto; min-width: 0; }
@@ -1966,8 +1970,14 @@ button, .button { border-radius: 12px; }
 .find-hits a:hover, .find-hits a:focus { background: var(--hover); }
 .find-sub { color: var(--muted); font-size: 0.94rem; flex: none; }
 .find-none { margin: 0; padding: 16px; color: var(--muted); }
+/* The list and the entry each scroll on their own, both starting just under the top bar (Kyle, 2026-10-22). */
 .codex { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 24px; align-items: start; }
-.codex-list { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; }
+.shell-main main:has(> .codex) { padding-bottom: 0; }
+.codex-list, .codex-detail {
+  position: sticky; top: calc(var(--top-h) + 16px); max-height: calc(100vh - var(--top-h) - 36px); max-height: calc(100dvh - var(--top-h) - 36px);
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.codex-list { padding-right: 4px; }
 .codex-list h1 { font-size: 1.5rem; }
 .codex-filter { width: 100%; min-height: 44px; margin: 6px 0 10px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.95rem; }
 .codex-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -1978,12 +1988,14 @@ button, .button { border-radius: 12px; }
 .codex-text { flex: 1 1 auto; min-width: 0; display: grid; }
 .codex-name { font-weight: 600; }
 .codex-line { color: var(--muted); font-size: 0.94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.codex-detail { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 20px 16px; }
+.codex-detail { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 20px 5rem; }
 .codex-detail .crumb { display: none; }
 .codex-back { display: none; }
 @media (max-width: 899px) {
   .codex { grid-template-columns: 1fr; }
-  .codex-list { position: static; max-height: none; }
+  .codex-list, .codex-detail { position: static; max-height: none; overflow: visible; }
+  .shell-main main:has(> .codex) { padding-bottom: 6rem; }
+  .codex-detail { padding-bottom: 16px; }
   .codex.picked .codex-list, .codex:not(.picked) .codex-detail { display: none; }
   .codex-back { display: inline-flex; align-items: center; gap: 4px; margin: 10px 0 0; border: none; background: none; color: var(--accent); padding-left: 0; }
 }
