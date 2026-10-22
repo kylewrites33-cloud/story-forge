@@ -56,7 +56,7 @@ const STEPS: Record<OptionMode, string> = {
 /** The job's ## Ask: what to do, step by step (the runner's coordinator follows it), then the mode and the passage. */
 export function optionsAsk(mode: OptionMode, scene: string, p: Passage): string {
   return [
-    'Kyle picked a passage in ' + scene + ' in the Story Forge app and asked for options: ' + modeLabel(mode) + '.',
+    'Kyle picked a passage in ' + scene + ' in the Sparrow app and asked for options: ' + modeLabel(mode) + '.',
     '',
     '1. Read the scene for context, the book\'s Style Guide and the prose rules in CLAUDE.md. Never change the scene or any other note: the app swaps in the option Kyle picks.',
     '2. ' + STEPS[mode],

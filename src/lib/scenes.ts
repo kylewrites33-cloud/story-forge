@@ -121,7 +121,7 @@ export async function splitOff(source: VaultSource, note: NoteRecord, next: Note
   return createScene(source, {
     bookFolder, title, chapter: num(note.data.chapter), chapterTitle: typeof note.data.chapter_title === 'string' ? note.data.chapter_title : '',
     order: orderBetween(note, next), status, from: note, body: after
-  }, now, 'Split from ' + [note.data.id, note.data.title].filter(Boolean).join(' ') + ' in the Story Forge app.');
+  }, now, 'Split from ' + [note.data.id, note.data.title].filter(Boolean).join(' ') + ' in the Sparrow app.');
 }
 
 /** Take the next scene's words for joining: move its note to the Archive (with a note saying why), and return its body.
@@ -131,7 +131,7 @@ export async function archiveForJoin(source: VaultSource, into: NoteRecord, next
   const fresh = await source.readFresh(next.path);
   const cur = makeNote(next.path, fresh.sha, fresh.text);
   const intoName = [into.data.id, into.data.title].filter(Boolean).join(' ');
-  const why = 'Joined onto the end of ' + intoName + ' in the Story Forge app on ' + today(now) + '. Its words are there now; this is the note as it was.';
+  const why = 'Joined onto the end of ' + intoName + ' in the Sparrow app on ' + today(now) + '. Its words are there now; this is the note as it was.';
   const dest = archivePath(next.path);
   let destSha = '';
   try {
@@ -148,7 +148,7 @@ export async function archiveForJoin(source: VaultSource, into: NoteRecord, next
 export async function removeJoined(source: VaultSource, next: NoteRecord, sha: string, intoName: string): Promise<void> {
   if (!source.remove) throw new Error('This vault cannot be changed from the app.');
   await source.remove(next.path, sha, 'scenes: join ' + [next.data.id, next.data.title].filter(Boolean).join(' ') + ' into ' + intoName +
-    '\n\nJoined in the Story Forge app. The note as it was is in the book\'s Archive folder.');
+    '\n\nJoined in the Sparrow app. The note as it was is in the book\'s Archive folder.');
 }
 
 /** Notes in a book whose properties name a scene ID (progressions at it, beats and promises listing it). */
@@ -165,12 +165,12 @@ export async function noteJoinForTeam(source: VaultSource, bookFolder: string, f
   const title = 'Joined ' + fromId + ' into ' + intoId + ' ' + now.toISOString().slice(0, 10);
   const path = bookFolder + '/Notes to the Team/' + title + '.md';
   const body = '\nKyle joined ' + [fromId, from.data.title].filter(Boolean).join(' ') + ' onto the end of ' + [intoId, into.data.title].filter(Boolean).join(' ') +
-    ' in the Story Forge app. ' + fromId + ' no longer exists (its old note is in the Archive). Point every note that still names ' + fromId +
+    ' in the Sparrow app. ' + fromId + ' no longer exists (its old note is in the Archive). Point every note that still names ' + fromId +
     ' (progressions, promises, beats, Story So Far) at ' + intoId + ' or wherever fits now. `sf validate` lists them.\n' +
     (mentions.length ? '\nThe app saw these:\n\n' + mentions.map((n) => '- [[' + n.path.slice(n.path.lastIndexOf('/') + 1).replace(/\.md$/, '') + ']]').join('\n') + '\n' : '');
   const text = Frontmatter.join({ type: 'note', title, to: 'Continuity Keeper', status: 'open', created: today(now) }, body);
   try {
-    await source.write(path, text, '', 'notes: ' + title + '\n\nWritten by the Story Forge app after a join.');
+    await source.write(path, text, '', 'notes: ' + title + '\n\nWritten by the Sparrow app after a join.');
     return path;
   } catch (e) {
     if ((e as { conflict?: boolean }).conflict) return null;
@@ -201,7 +201,7 @@ export async function restoreArchived(source: VaultSource, entry: FileEntry, boo
   const back = unarchivedText(text);
   let sha: string;
   try {
-    sha = await source.write(dest, back, '', 'scenes: restore ' + name.replace(/\.md$/, '') + '\n\nRestored from the book\'s Archive in the Story Forge app.');
+    sha = await source.write(dest, back, '', 'scenes: restore ' + name.replace(/\.md$/, '') + '\n\nRestored from the book\'s Archive in the Sparrow app.');
   } catch (e) {
     if ((e as { conflict?: boolean }).conflict) throw new Error('A scene called ' + name.replace(/\.md$/, '') + ' is already in Scenes, so this one stays in the Archive.');
     throw e;
@@ -222,7 +222,7 @@ export async function renameScene(source: VaultSource, note: NoteRecord, title: 
   const dir = note.path.slice(0, note.path.lastIndexOf('/'));
   const dest = dir + '/' + (id ? id + ' ' : '') + clean + '.md';
   const text = applyToText(fresh.text, editChange({ title: clean }));
-  const why = 'Renamed in the Story Forge app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
+  const why = 'Renamed in the Sparrow app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
   if (dest === note.path) {
     const sha = await source.write(note.path, text, fresh.sha, 'scenes: retitle ' + id + '\n\n' + why);
     return makeNote(note.path, sha, text);

@@ -1,6 +1,6 @@
-# Story Forge app
+# Sparrow
 
-The web app for Story Forge, Kyle Heath's writing studio. It shows the vault (the `author-business` repository) as boards, reading it through the GitHub API. It runs in the browser on the iPad, the Mac and a phone, installs to the home screen, and keeps working offline with the last copy it saved.
+Sparrow is the web app for Story Forge, Kyle Heath's writing studio. It shows the vault (the `author-business` repository) as boards, reading it through the GitHub API. It runs in the browser on the iPad, the Mac and a phone, installs to the home screen, and keeps working offline with the last copy it saved.
 
 Phase 1 has one board: the **Chapter Grid**, read only. It shows a book's scenes grouped by chapter, in order. Tap a card to see the scene's properties and text.
 

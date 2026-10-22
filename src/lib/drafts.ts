@@ -179,7 +179,7 @@ export async function saveSnapshot(source: VaultSource, note: { path: string; da
     const dest = snapshotFolder(note.path) + '/' + stem + ' v' + version + ' (' + clean + ').md';
     const text = Frontmatter.join({ type: 'snapshot', of: note.path, version, label: clean, taken: nowStamp(now), words: bodyWords(body) }, body);
     try {
-      await source.write(dest, text, '', 'snapshot: ' + stem + ' v' + version + ' (' + clean + ')\n\nSaved in the Story Forge app.');
+      await source.write(dest, text, '', 'snapshot: ' + stem + ' v' + version + ' (' + clean + ')\n\nSaved in the Sparrow app.');
       return dest;
     } catch (e) {
       // Another copy took that number a moment ago: count again once.
@@ -206,7 +206,7 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
     const text = d.create + d.body;
     const data = makeNote(d.path, '', text).data;
     try {
-      const sha = await source.write(d.path, text, '', verbFor(String(data.type || ''), true) + (data.title || d.path) + '\n\nWritten in the Story Forge app.');
+      const sha = await source.write(d.path, text, '', verbFor(String(data.type || ''), true) + (data.title || d.path) + '\n\nWritten in the Sparrow app.');
       return { note: makeNote(d.path, sha, text), clash, merged: false };
     } catch (e) {
       // Made somewhere else a moment ago: save over it the usual way, keeping the other version as a copy.
@@ -236,7 +236,7 @@ export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promi
     if (next === text) return { note: cur, clash, merged };
     const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || d.path;
     try {
-      const newSha = await source.write(d.path, next, sha, verbFor(cur.type, false) + name + '\n\nWritten in the Story Forge app.');
+      const newSha = await source.write(d.path, next, sha, verbFor(cur.type, false) + name + '\n\nWritten in the Sparrow app.');
       return { note: makeNote(d.path, newSha, next), clash, merged };
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;

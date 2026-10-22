@@ -82,7 +82,7 @@ test('saving writes the body and word count as one commit with no Agent trailer'
   assert.match(saved, /^words: 7$/m);
   assert.match(saved, /cast:\n {2}- "\[\[Mara Quill\]\]"/);
   assert.equal(src.writes.length, 1);
-  assert.equal(src.writes[0].message, 'scenes: edit S-002 The Ferry\n\nWritten in the Story Forge app.');
+  assert.equal(src.writes[0].message, 'scenes: edit S-002 The Ferry\n\nWritten in the Sparrow app.');
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
   assert.equal(r.note.body, '\nMara cut the rope at 6:14.\n');
 });

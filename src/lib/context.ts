@@ -29,7 +29,7 @@ export function noteLine(n: NoteRecord): string {
 
 /** The ## Page text for a chat sent from this page. */
 export function pageContext(v: PageView): string {
-  const L = ['Kyle sent this from ' + v.name + ' in the Story Forge app. Guess from it what he most likely wants to talk about.'];
+  const L = ['Kyle sent this from ' + v.name + ' in the Sparrow app. Guess from it what he most likely wants to talk about.'];
   if (v.book) L.push('Book: ' + v.book.title + ' (' + v.book.seriesName + (v.book.number != null ? ', Book ' + v.book.number : '') + '), `' + v.book.folder + '`');
   (v.lines || []).filter(Boolean).forEach((l) => L.push(l));
   const notes = v.notes || [];

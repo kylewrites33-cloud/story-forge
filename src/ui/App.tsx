@@ -171,7 +171,7 @@ export function App() {
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
     try {
       const made = await createScene(source, { bookFolder: book.folder, title, chapter, chapterTitle, order: orderBetween(prev, next), status: 'drafted', body: '' },
-        new Date(), 'Added in the Story Forge app.');
+        new Date(), 'Added in the Sparrow app.');
       await runSync();
       location.hash = href.write(made.path);
       return null;
@@ -335,7 +335,7 @@ export function App() {
     try {
       for (const s of list) {
         const n = await createScene(source, { bookFolder: book.folder, title: s.title, chapter: s.chapter, chapterTitle: s.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' },
-          new Date(), 'Added from an outline in the Story Forge app.');
+          new Date(), 'Added from an outline in the Sparrow app.');
         made.push(n);
         prev = n;
       }
@@ -372,7 +372,7 @@ export function App() {
     try {
       const { files } = await source.tree();
       const path = manuscriptPath(book.folder, file.name, files.map((f) => f.path));
-      const why = 'manuscripts: add ' + path.slice(path.lastIndexOf('/') + 1) + '\n\nAdded in the Story Forge app to bring in as scenes.';
+      const why = 'manuscripts: add ' + path.slice(path.lastIndexOf('/') + 1) + '\n\nAdded in the Sparrow app to bring in as scenes.';
       if (/\.docx$/i.test(path)) {
         if (!source.writeBytes) return { error: true, text: 'This vault cannot take Word files from the app.' };
         await source.writeBytes(path, await fileBase64(file), '', why);
@@ -691,7 +691,7 @@ export function App() {
   const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
     team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
-  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : route.name === 'flow' ? ' · Workflow' : '') : 'Story Forge');
+  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : route.name === 'flow' ? ' · Workflow' : '') : 'Sparrow');
   const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
 
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.

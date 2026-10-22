@@ -235,7 +235,7 @@ export function commitMessage(data: Record<string, unknown>, decision: Decision,
   const only = decision === 'edit' && fields && Object.keys(fields).length === 1 ? Object.keys(fields)[0] : '';
   const verb = only === 'status' && fields!.status ? cleanField(fields!.status)
     : only === 'reasons' ? 'reasons' : only === 'rating' ? (fields!.rating ? 'rate ' + cleanField(fields!.rating) + ' stars' : 'clear stars') : VERBS[decision];
-  return k.prefix + ': ' + verb + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Story Forge app.';
+  return k.prefix + ': ' + verb + ' ' + (name || k.noun) + '\n\n' + (decision === 'edit' ? 'Edited' : 'Chosen') + ' on the ' + k.board + ' in the Sparrow app.';
 }
 
 /** One-press reasons, by the choice they go with. Their keys are the schema's `reasons` values. */

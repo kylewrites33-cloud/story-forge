@@ -60,7 +60,7 @@ export function todoText(id: string, t: NewTodo, now: Date): string {
   if (t.chapter != null) data.chapter = t.chapter;
   if (/^S-\d{3}$/.test(t.scene)) data.scene = t.scene;
   data.created = ymd(now);
-  return Frontmatter.join(data, '\nKyle added this beside the page in the Story Forge app.\n');
+  return Frontmatter.join(data, '\nKyle added this beside the page in the Sparrow app.\n');
 }
 
 /** A to-do's title as Kyle typed it, on one line, at any length. */
@@ -81,7 +81,7 @@ export async function createTodo(source: VaultSource, bookFolder: string, t: New
     const path = bookFolder + '/Tasks/' + id + ' ' + name + '.md';
     const text = todoText(id, { ...t, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded beside the page in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded beside the page in the Sparrow app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;

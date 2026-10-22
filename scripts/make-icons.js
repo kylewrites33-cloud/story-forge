@@ -1,4 +1,4 @@
-// Draws the app icons (a chapter grid of cards on the accent colour) as PNG files, with no image library.
+// Draws the app icons (Sparrow: a pale sparrow on a perch, on the accent colour) as PNG files and an SVG, with no image library.
 // Run with `npm run icons`; the output in public/icons is committed.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
 const ACCENT = [0x63, 0x44, 0xd4];
-const CARD = [0xf4, 0xf1, 0xfe];
-const DONE = [0xb9, 0xa8, 0xf5];
+const PALE = [0xf4, 0xf1, 0xfe];
+const SOFT = [0xb9, 0xa8, 0xf5];
+const DARK = [0x2f, 0x1d, 0x7a];
 
 const CRC = new Int32Array(256).map((_, n) => {
   let c = n;
@@ -38,45 +39,100 @@ function png(size, rgba) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-// Shapes in a 0..1 square: [x, y, w, h, radius, colour]
-function shapes(inset) {
-  const s = (v) => inset + v * (1 - 2 * inset);
-  const list = [];
-  const cols = 2, rows = 3, gap = 0.07, x0 = 0.2, y0 = 0.17, w = (0.6 - gap) / cols, h = (0.66 - gap * 2) / rows;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const colour = r === 0 ? DONE : CARD;
-      list.push([s(x0 + c * (w + gap)), s(y0 + r * (h + gap)), w * (1 - 2 * inset), h * (1 - 2 * inset), 0.035, colour]);
+// The sparrow in a 512 square, drawn in this order. Paths use absolute M, L, C and Z only, so the same list gives the
+// SVG and the PNGs. src/ui/Shell.tsx draws the same bird in the sidebar.
+const BIRD = [
+  { line: [[300, 360], [292, 404]], width: 12, colour: DARK },
+  { line: [[334, 352], [330, 404]], width: 12, colour: DARK },
+  { line: [[120, 406], [400, 406]], width: 20, colour: SOFT },
+  { path: 'M378 172 C360 126 282 120 254 166 C230 204 216 232 194 256 L84 312 C80 318 82 326 90 328 L110 334 L100 352 C98 360 104 364 112 362 L196 320 C220 376 290 392 340 366 C398 334 414 262 396 218 C392 200 388 186 378 172 Z', colour: PALE },
+  { path: 'M378 172 C360 126 282 120 254 166 C276 150 330 150 356 186 C362 180 370 176 378 172 Z', colour: SOFT },
+  { path: 'M222 226 C262 196 334 206 352 262 C334 312 268 330 186 316 L238 300 L204 294 L246 280 L216 270 Z', colour: SOFT },
+  { path: 'M378 174 L436 194 L384 212 Z', colour: DARK },
+  { circle: [352, 190, 12], colour: DARK },
+];
+
+// Each shape as one or more closed polygons in the 512 square.
+function bezier(p0, p1, p2, p3, steps = 24) {
+  const out = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps, u = 1 - t;
+    out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+      u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+  }
+  return out;
+}
+function pathPolys(d) {
+  const nums = d.match(/[MLCZ]|-?[\d.]+/g);
+  const polys = [];
+  let cur = null, i = 0;
+  const pt = () => [Number(nums[i++]), Number(nums[i++])];
+  while (i < nums.length) {
+    const cmd = nums[i++];
+    if (cmd === 'M') { cur = [pt()]; polys.push(cur); }
+    else if (cmd === 'L') cur.push(pt());
+    else if (cmd === 'C') { const a = pt(), b = pt(), c = pt(); cur.push(...bezier(cur[cur.length - 1], a, b, c)); }
+  }
+  return polys;
+}
+function arc(cx, cy, r, from, to, steps) {
+  const out = [];
+  for (let i = 0; i <= steps; i++) { const a = from + (to - from) * i / steps; out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+  return out;
+}
+function polygons(s) {
+  if (s.path) return pathPolys(s.path);
+  if (s.circle) return [arc(s.circle[0], s.circle[1], s.circle[2], 0, 2 * Math.PI, 48)];
+  const [[x0, y0], [x1, y1]] = s.line, r = s.width / 2, a = Math.atan2(y1 - y0, x1 - x0);
+  return [[...arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2, 16), ...arc(x0, y0, r, a + Math.PI / 2, a + Math.PI * 1.5, 16)]];
+}
+function roundedSquare(r) {
+  return [[...arc(512 - r, r, r, -Math.PI / 2, 0, 16), ...arc(512 - r, 512 - r, r, 0, Math.PI / 2, 16),
+    ...arc(r, 512 - r, r, Math.PI / 2, Math.PI, 16), ...arc(r, r, r, Math.PI, Math.PI * 1.5, 16)]];
+}
+
+// Fill polygons (nonzero winding) into a supersampled colour buffer, one sample row at a time.
+function fill(buf, n, polys, colour, scale, shift) {
+  const edges = [];
+  for (const poly of polys) {
+    for (let k = 0; k < poly.length; k++) {
+      const p = poly[k], q = poly[(k + 1) % poly.length];
+      const a = [p[0] * scale + shift, p[1] * scale + shift], b = [q[0] * scale + shift, q[1] * scale + shift];
+      if (a[1] !== b[1]) edges.push(a[1] < b[1] ? [a, b, 1] : [b, a, -1]);
     }
   }
-  return list;
+  for (let y = 0; y < n; y++) {
+    const sy = y + 0.5, hits = [];
+    for (const [a, b, w] of edges) if (sy >= a[1] && sy < b[1]) hits.push([a[0] + (sy - a[1]) * (b[0] - a[0]) / (b[1] - a[1]), w]);
+    hits.sort((p, q) => p[0] - q[0]);
+    let wind = 0;
+    for (let k = 0; k < hits.length - 1; k++) {
+      wind += hits[k][1];
+      if (!wind) continue;
+      const from = Math.max(0, Math.ceil(hits[k][0] - 0.5)), to = Math.min(n - 1, Math.floor(hits[k + 1][0] - 0.5));
+      for (let x = from; x <= to; x++) { const i = (y * n + x) * 4; buf[i] = colour[0]; buf[i + 1] = colour[1]; buf[i + 2] = colour[2]; buf[i + 3] = 255; }
+    }
+  }
 }
 
-function inRounded(px, py, x, y, w, h, r) {
-  if (px < x || py < y || px > x + w || py > y + h) return false;
-  const cx = Math.min(Math.max(px, x + r), x + w - r), cy = Math.min(Math.max(py, y + r), y + h - r);
-  return (px - cx) ** 2 + (py - cy) ** 2 <= r * r;
-}
-
+// corner: rounded background (0 = square). inset: share of each side kept clear, for maskable icons.
 function draw(size, { inset = 0, corner = 0 } = {}) {
+  const SS = 4, n = size * SS, big = Buffer.alloc(n * n * 4);
+  fill(big, n, corner ? roundedSquare(corner * 512) : [[[0, 0], [512, 0], [512, 512], [0, 512]]], ACCENT, n / 512, 0);
+  const scale = n / 512 * (1 - 2 * inset);
+  for (const s of BIRD) fill(big, n, polygons(s), s.colour, scale, inset * n);
   const buf = Buffer.alloc(size * size * 4);
-  const list = shapes(inset);
-  const SS = 4;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       let r = 0, g = 0, b = 0, a = 0;
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
-          const px = (x + (sx + 0.5) / SS) / size, py = (y + (sy + 0.5) / SS) / size;
-          if (corner && !inRounded(px, py, 0, 0, 1, 1, corner)) continue;
-          let col = ACCENT;
-          for (const [qx, qy, qw, qh, qr, qc] of list) if (inRounded(px, py, qx, qy, qw, qh, qr)) col = qc;
-          r += col[0]; g += col[1]; b += col[2]; a += 255;
+          const i = ((y * SS + sy) * n + x * SS + sx) * 4, w = big[i + 3];
+          r += big[i] * w; g += big[i + 1] * w; b += big[i + 2] * w; a += w;
         }
       }
-      const n = SS * SS, i = (y * size + x) * 4;
-      const cov = a / 255;
-      buf[i] = cov ? r / cov : 0; buf[i + 1] = cov ? g / cov : 0; buf[i + 2] = cov ? b / cov : 0; buf[i + 3] = a / n;
+      const i = (y * size + x) * 4;
+      buf[i] = a ? r / a : 0; buf[i + 1] = a ? g / a : 0; buf[i + 2] = a ? b / a : 0; buf[i + 3] = a / (SS * SS);
     }
   }
   return png(size, buf);
@@ -84,8 +140,10 @@ function draw(size, { inset = 0, corner = 0 } = {}) {
 
 function svg() {
   const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
-  const rects = shapes(0).map(([x, y, w, h, r, c]) => `<rect x="${(x * 512).toFixed(1)}" y="${(y * 512).toFixed(1)}" width="${(w * 512).toFixed(1)}" height="${(h * 512).toFixed(1)}" rx="${(r * 512).toFixed(1)}" fill="${hex(c)}"/>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${hex(ACCENT)}"/>${rects}</svg>\n`;
+  const parts = BIRD.map((s) => s.path ? `<path d="${s.path}" fill="${hex(s.colour)}"/>`
+    : s.circle ? `<circle cx="${s.circle[0]}" cy="${s.circle[1]}" r="${s.circle[2]}" fill="${hex(s.colour)}"/>`
+    : `<path d="M${s.line[0].join(' ')} L${s.line[1].join(' ')}" stroke="${hex(s.colour)}" stroke-width="${s.width}" stroke-linecap="round"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${hex(ACCENT)}"/>${parts}</svg>\n`;
 }
 
 fs.mkdirSync(out, { recursive: true });

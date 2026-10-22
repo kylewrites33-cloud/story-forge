@@ -62,6 +62,19 @@ export function shortStage(title: string): string {
 
 const SLIM = '(max-width: 699px)';
 
+// The app's sparrow (the same bird as the icons drawn by scripts/make-icons.js), in the theme's colours.
+function SparrowMark() {
+  return (
+    <svg viewBox="70 110 380 310" width="26" height="26">
+      <path d="M300 360 L292 404 M334 352 L330 404" stroke="currentColor" stroke-width="16" stroke-linecap="round" />
+      <path d="M378 172 C360 126 282 120 254 166 C230 204 216 232 194 256 L84 312 C80 318 82 326 90 328 L110 334 L100 352 C98 360 104 364 112 362 L196 320 C220 376 290 392 340 366 C398 334 414 262 396 218 C392 200 388 186 378 172 Z" fill="currentColor" />
+      <path d="M222 226 C262 196 334 206 352 262 C334 312 268 330 186 316 L238 300 L204 294 L246 280 L216 270 Z" fill="var(--accent)" opacity="0.35" />
+      <path d="M378 174 L436 194 L384 212 Z" fill="currentColor" />
+      <circle cx="352" cy="190" r="14" fill="var(--accent)" />
+    </svg>
+  );
+}
+
 export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, timer, children }: ShellProps) {
   const [slim, setSlim] = useState(() => typeof matchMedia === 'function' && matchMedia(SLIM).matches);
   useEffect(() => {
@@ -123,9 +136,9 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
 
   return (
     <div class={'shell' + (open ? ' rail-open' : '') + (side ? ' has-side' : '') + (showSide ? ' side-open' : '')}>
-      <aside class="rail" aria-label="Story Forge">
+      <aside class="rail" aria-label="Sparrow">
         <div class="rail-head">
-          <a class="brand" href="#/" title="Story Forge home"><span class="brand-mark" aria-hidden="true">SF</span><span class="rail-label brand-name">Story Forge</span></a>
+          <a class="brand" href="#/" title="Sparrow home"><span class="brand-mark" aria-hidden="true"><SparrowMark /></span><span class="rail-label brand-name">Sparrow</span></a>
           <button type="button" class="rail-toggle" aria-label={open ? 'Close the menu' : 'Open the menu'} aria-expanded={open} onClick={() => setOpen(!open)}>
             <Icon name={open ? 'close' : 'panel'} size={20} />
           </button>

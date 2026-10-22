@@ -23,18 +23,18 @@ async function add(source: VaultSource, path: string, text: string, message: str
 
 export function seriesText(name: string, genre: string, now: Date): string {
   const data: Record<string, unknown> = { type: 'series', name, genre: genre.trim(), status: 'active', created: today(now) };
-  return Frontmatter.join(data, '\n' + name + ' was started in the Story Forge app.\n');
+  return Frontmatter.join(data, '\n' + name + ' was started in the Sparrow app.\n');
 }
 
 export async function createSeries(source: VaultSource, name: string, genre: string, now: Date): Promise<NoteRecord> {
   const clean = safeTitle(name);
   if (!clean) throw new Error('Give the series a name first.');
-  return add(source, 'Series/' + clean + '/Series.md', seriesText(clean, genre, now), 'vault: new series ' + clean + '\n\nStarted in the Story Forge app.', 'A series called ' + clean);
+  return add(source, 'Series/' + clean + '/Series.md', seriesText(clean, genre, now), 'vault: new series ' + clean + '\n\nStarted in the Sparrow app.', 'A series called ' + clean);
 }
 
 export function bookText(title: string, seriesName: string, number: number, now: Date): string {
   const data: Record<string, unknown> = { type: 'book', title, series: '[[' + seriesName + ']]', number, stage: 'spark', created: today(now) };
-  return Frontmatter.join(data, '\n' + title + ' was started in the Story Forge app.\n');
+  return Frontmatter.join(data, '\n' + title + ' was started in the Sparrow app.\n');
 }
 
 /** The next book number in a series, from its books' folders. */
@@ -47,7 +47,7 @@ export async function createBook(source: VaultSource, seriesFolder: string, seri
   if (!clean) throw new Error('Give the book a title first.');
   if (!(number > 0)) throw new Error('Give the book a number, such as 1.');
   return add(source, seriesFolder + '/Books/' + number + ' ' + clean + '/Book.md', bookText(clean, seriesName, number, now),
-    'vault: new book ' + clean + '\n\nStarted in the Story Forge app.', 'A book called ' + number + ' ' + clean);
+    'vault: new book ' + clean + '\n\nStarted in the Sparrow app.', 'A book called ' + number + ' ' + clean);
 }
 
 /** Manuscript files the app can bring in: Word, plain text and Markdown, up to 20 MB. */

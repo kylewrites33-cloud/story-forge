@@ -58,7 +58,7 @@ test('saving a move writes Kyle\'s commit with no Agent line', async () => {
   src.files.set(p, NOTE);
   await saveChoice(src, { path: p, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } });
   assert.match(src.files.get(p)!, /^order: 1\.5$/m);
-  assert.equal(src.writes[0].message, 'scenes: move S-006 Thaw Market\n\nChosen on the Chapter Grid in the Story Forge app.');
+  assert.equal(src.writes[0].message, 'scenes: move S-006 Thaw Market\n\nChosen on the Chapter Grid in the Sparrow app.');
   assert.ok(!/Agent:/.test(src.writes[0].message));
 });
 

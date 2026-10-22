@@ -88,7 +88,7 @@ export async function createNote(source: VaultSource, bookFolder: string, n: New
     const path = freePath(bookFolder + '/' + NOTES_FOLDER, title, files.map((f) => f.path));
     const text = noteText({ title, to: n.to, body }, now);
     try {
-      const sha = await source.write(path, text, '', 'notes: add ' + title + '\n\nA Note to the Team, written in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'notes: add ' + title + '\n\nA Note to the Team, written in the Sparrow app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;

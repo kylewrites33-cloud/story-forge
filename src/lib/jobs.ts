@@ -158,7 +158,7 @@ export function jobText(id: string, j: NewJob, now: Date): string {
   data.status = 'requested';
   data.requested_by = 'Kyle';
   data.created = ymd(now);
-  const ask = j.ask.trim() || 'Kyle asked for this from the Story Forge app.';
+  const ask = j.ask.trim() || 'Kyle asked for this from the Sparrow app.';
   const page = (j.page || '').trim();
   return Frontmatter.join(data, '## Ask\n' + ask + '\n' + (page ? '\n## Page\n' + page + '\n' : ''));
 }
@@ -205,7 +205,7 @@ export async function createJob(source: VaultSource, j: NewJob, now: Date): Prom
     const path = 'Jobs/' + id + ' ' + title + '.md';
     const text = jobText(id, { ...j, title }, now);
     try {
-      const sha = await source.write(path, text, '', 'jobs: add ' + id + ' ' + title + '\n\nAsked for in the Story Forge app.');
+      const sha = await source.write(path, text, '', 'jobs: add ' + id + ' ' + title + '\n\nAsked for in the Sparrow app.');
       return makeNote(path, sha, text);
     } catch (e) {
       if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;

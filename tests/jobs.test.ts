@@ -61,8 +61,8 @@ test('a job note reads back through the vault parser with the properties the run
     type: 'job', id: 'J-001', title: "Draft S-045 Grey at the barn: Ines's turn", kind: 'draft', target: 'S-045',
     book: 'Series/Quest Declined/Books/2 Quest Declined 2', status: 'requested', requested_by: 'Kyle', created: '2026-10-18'
   });
-  assert.equal(p.body, '## Ask\nKyle asked for this from the Story Forge app.\n');
-  assert.equal(askBody(p.body), 'Kyle asked for this from the Story Forge app.');
+  assert.equal(p.body, '## Ask\nKyle asked for this from the Sparrow app.\n');
+  assert.equal(askBody(p.body), 'Kyle asked for this from the Sparrow app.');
   assert.equal(resultBody(p.body), '');
   // Learn and custom jobs have no target, and Kyle's words go under ## Ask.
   const custom = Frontmatter.parse(jobText('J-002', { title: 'Ask the team', kind: 'custom', target: '', book: 'Series/Ember Road/Books/1 Ash Bell', ask: '  Is the ferryman too nice?  ' }, now));
@@ -93,7 +93,7 @@ test('createJob writes Jobs/J-NNN as a commit without an Agent trailer, and retr
   const made = await createJob(src, { title: 'Check S-002 for AI-sounding phrases', kind: 'check', target: 'S-002', book: 'Series/Ember Road/Books/1 Ash Bell', ask: '' }, new Date('2026-10-18T10:00:00'));
   assert.equal(made.path, 'Jobs/J-005 Check S-002 for AI-sounding phrases.md');
   assert.equal(made.data.status, 'requested');
-  assert.equal(src.writes[0].message, 'jobs: add J-005 Check S-002 for AI-sounding phrases\n\nAsked for in the Story Forge app.');
+  assert.equal(src.writes[0].message, 'jobs: add J-005 Check S-002 for AI-sounding phrases\n\nAsked for in the Sparrow app.');
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
   await assert.rejects(createJob(src, { title: '   ', kind: 'custom', target: '', book: '', ask: '' }, new Date()), /Give the job a title first\./);
 });
