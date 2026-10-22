@@ -1886,15 +1886,6 @@ button, .button { border-radius: 12px; }
 .slim-bar .pomodoro-bar .pomodoro-chip { border: none; background: none; min-width: 44px; }
 .slim-bar .pomodoro.is-work .pomodoro-chip { background: var(--accent); }
 
-/* The tab that brings the writing screen's right-hand column back once it is put away. */
-.right-handle {
-  position: absolute; z-index: 2; right: 0; top: 50%; transform: translateY(-50%);
-  width: 44px; min-height: 64px; padding: 0; display: grid; place-items: center;
-  border: 1px solid var(--line); border-right: none; border-radius: 12px 0 0 12px;
-  background: var(--surface); color: var(--muted); box-shadow: var(--shadow);
-}
-.right-handle:hover, .right-handle:focus-visible { color: var(--accent); }
-
 /* iPad held upright and phones: the writing screen's right-hand column is a sheet pulled up from the bottom, so the page
    keeps its full width (Kyle, 2026-10-21). Its arrow, or a press on the page above it, puts it away. */
 @media (max-width: 899px) {

@@ -755,8 +755,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status + ' · ' + num(words) + (target ? ' of ' + num(target) : '') + ' words'} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}{sitting ? <span class="bar-label"> · {(sitting > 0 ? '+' : '') + num(sitting)} today</span> : null}</span>}
         {timer && timer('bar')}
-        <button type="button" class={'bar-team' + (right ? ' on' : '')} onClick={() => (right && tab === 'chat' ? toggleRight() : openTab('chat'))} aria-expanded={right}
-          title="The team: chat, the scene's card and the chapter's plan"><Icon name="spark" size={20} /><span class="bar-label always">Team</span></button>
+        <button type="button" class={'bar-team' + (right ? ' on' : '')} onClick={toggleRight} aria-expanded={right}
+          title="Show or hide the side column: chat, the scene's card and the chapter's plan"><Icon name="spark" size={20} /><span class="bar-label always">Team</span></button>
         <div class="more-wrap">
           <button type="button" class="bar-button compact" aria-label="More" aria-expanded={moreOpen} {...keepFocus} onClick={() => setMoreOpen(!moreOpen)}><Icon name="more" /></button>
           {moreOpen && (
@@ -1083,13 +1083,6 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 onSplit={split} onJoin={join} />
             )}
           </aside>
-        )}
-        {/* With the right-hand column put away, a tab on the page's right edge brings it back on the page it showed
-            (Kyle, 2026-10-22: "once i pull away the right hand column, theres no way to bring it back"). */}
-        {!right && !focus && (
-          <button type="button" class="right-handle" onClick={() => showRight(true)} aria-label="Show the side column" title="Show the side column">
-            <Icon name="left" size={20} />
-          </button>
         )}
         {(left || right) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
       </div>
