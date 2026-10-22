@@ -27,6 +27,7 @@ import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/board
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { keepWriting, Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
+import { DecideQueue } from './Decide.tsx';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
@@ -633,7 +634,8 @@ export function App() {
     else {
       let screen;
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'edit-queue') screen = <EditQueue schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onRewrite={source.write ? onRewrite : undefined} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {

@@ -5,7 +5,7 @@
 export interface Room { key: string; title: string; icon: string; boards: string[] }
 
 export const ROOMS: Room[] = [
-  { key: 'home', title: 'Home', icon: 'home', boards: ['overview'] },
+  { key: 'home', title: 'Home', icon: 'home', boards: ['overview', 'decide'] },
   { key: 'manuscript', title: 'Manuscript', icon: 'page', boards: ['chapter-grid', 'edit-queue'] },
   { key: 'plan', title: 'Plan', icon: 'threads', boards: ['steps', 'ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'promises', 'plot-grid', 'timeline', 'arcs', 'notes'] },
   { key: 'codex', title: 'Codex', icon: 'people', boards: ['characters', 'places', 'items', 'lore', 'matrix', 'cast-web'] },

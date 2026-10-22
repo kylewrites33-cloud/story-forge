@@ -13,6 +13,8 @@ import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { IdeasLink, Warnings } from './screens.tsx';
+import { StageStrip } from './Overview.tsx';
+import type { Decision } from '../lib/ideas.ts';
 import { nextBookNumber } from '../lib/books.ts';
 import { safeTitle } from '../lib/scenes.ts';
 
@@ -106,8 +108,10 @@ export function Cover({ source, book, small }: { source: VaultSource; book: Book
 
 /** Book details, like Novelcrafter's novel settings (the cog by the novel's name): the cover, added or changed from the
  * device, with the book's name, series and stage. */
-export function BookDetails({ source, book, onCover, schema, index }: {
+export function BookDetails({ source, book, onCover, schema, index, onDecide }: {
   source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null>; schema: Schema; index: VaultIndex;
+  /** Changes the book's stage (the stage pills moved here from Home and the Chapter Grid, design review 2026-10-22). */
+  onDecide?: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +119,8 @@ export function BookDetails({ source, book, onCover, schema, index }: {
     <section class="book-details">
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · <a href={href.book(book.folder)}>{book.title}</a></p>
       <h1>Book details</h1>
+      <h2 class="details-stage">The book's stage</h2>
+      <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
       <div class="details-body">
         <div class="details-cover">
           <Cover source={source} book={book} />

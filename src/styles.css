@@ -978,7 +978,7 @@ a.button.team-talk { gap: 6px; width: 100%; }
 .team-talk-cell { justify-self: end; }
 a.button.talk { gap: 6px; padding: 6px 14px; }
 .team-stats-line { display: none; font-size: 0.94rem; color: var(--muted); }
-@container (max-width: 860px) {
+@container (max-width: 1000px) {
   .team-head, .team-row > .num, .team-row > .team-model, .team-used { display: none; }
   .team-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
   .team-role, .team-stats-line { grid-column: 1 / -1; }
@@ -2021,3 +2021,35 @@ button, .button { border-radius: 12px; }
 @media (max-width: 1099px) { .writer-book { display: none; } }
 @media (max-width: 899px) { .bar-format { margin-left: 0; padding-left: 0; border-left: none; } .writer-bar .bar-label:not(.always) { display: none; } }
 @media (max-width: 699px) { .bar-format { display: none; } .bar-team .bar-label { display: none; } }
+
+/* Where the book is, and Decide one at a time (design review, 2026-10-22). */
+.book-path { margin: 16px 0; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.book-path-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.book-path-head h2 { margin: 0; font-size: 1.05rem; }
+.book-path-head .meta { flex: 1 1 260px; margin: 0; }
+.book-path-head a { display: inline-flex; align-items: center; gap: 2px; text-decoration: none; min-height: 44px; }
+.book-path-row { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.book-path-row a { display: grid; gap: 6px; min-height: 44px; padding: 4px 0; color: var(--muted); text-decoration: none; }
+.book-path-bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.book-path-bar span { display: block; height: 100%; background: var(--accent); }
+.book-path-name { display: inline-flex; align-items: center; gap: 4px; font-size: 0.94rem; line-height: 1.2; }
+.book-path-row li.done a { color: var(--text); }
+.book-path-row li.current a { color: var(--accent); font-weight: 650; }
+.decide-go { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; margin: 4px 0 10px; text-decoration: none; }
+.decide { max-width: 760px; margin: 0 auto; }
+.decide-card { margin: 12px 0 16px; padding: 22px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.decide-card h2 { margin: 4px 0 10px; font-size: 1.5rem; }
+.decide-kind { margin: 0; color: var(--muted); font-size: 0.94rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.decide-panel { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; }
+.decide-pitch { font-size: 1.1rem; }
+.decide-card .stars button.star { min-width: 44px; min-height: 44px; }
+.decide-buttons { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); background: var(--bg); }
+.decide-buttons button { min-height: 58px; font-size: 1.05rem; font-weight: 650; }
+.decide-why { display: grid; gap: 8px; }
+.decide-why textarea { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
+.decide-toast { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%); bottom: max(20px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; padding: 6px 8px 6px 16px; border-radius: 12px; background: #1f1d26; color: #fff; box-shadow: var(--shadow-lift); }
+.decide-toast .link { color: #c9bbff; min-height: 44px; }
+.decide-empty { display: grid; justify-items: start; gap: 8px; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; color: var(--ok); }
+.decide-empty p { color: var(--text); margin: 0; }
+.details-stage { font-size: 1.05rem; margin: 0.8em 0 0.2em; }
+@media (max-width: 599px) { .decide-buttons { grid-template-columns: repeat(2, 1fr); } }

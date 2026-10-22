@@ -16,7 +16,6 @@ import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { appearances, codexFor, matcher } from '../lib/codex.ts';
-import { StageStrip } from './Overview.tsx';
 import { askAboutScene } from './Team.tsx';
 import { nowForNote } from '../lib/codexnow.ts';
 import { activeBook } from '../lib/vault-index.ts';
@@ -472,7 +471,6 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
     drag && drag.moved && drag.path === path ? 'dragging' : drag && drag.at && drag.at.key === g.key && drag.at.before === path ? 'drop-before' + (drag.at.side ? ' side' : '') : '';
   return (
     <section>
-      <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
       <div class="grid-head">
         {source && <GridCover source={source} book={book} />}
         <div>

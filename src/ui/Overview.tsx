@@ -11,6 +11,7 @@ import {
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { bookWarnings } from '../lib/warnings.ts';
 import { Icon } from './Icon.tsx';
+import { BookPath } from './Flow.tsx';
 import { href } from './route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
@@ -153,7 +154,7 @@ export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, 
           <span class="hero-go"><Icon name="pen" size={20} /> Open</span>
         </a>
       )}
-      <StageStrip schema={schema} index={index} book={book} onDecide={onDecide} />
+      <BookPath index={index} book={book} />
       <NextStepCard schema={schema} index={index} book={book} onJob={onJob} onDecide={onDecide} />
       <div class="ov-grid">
         <section class="ov-panel" aria-labelledby="ov-words">
@@ -175,6 +176,9 @@ export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, 
 
         <section class="ov-panel" aria-labelledby="ov-wait">
           <h2 id="ov-wait"><Icon name="todo" size={20} /> Waiting on you</h2>
+          {waiting.some((w) => w.key === 'ideas' || w.key === 'beats' || w.key === 'conflicts') && (
+            <a class="button primary decide-go" href={href.board('decide', book.folder)}>Decide one at a time</a>
+          )}
           {!waiting.length ? <p class="ov-clear"><Icon name="check" size={20} /> Nothing is waiting on you.</p> : (
             <ul class="ov-list">
               {waiting.map((w) => (

@@ -11,6 +11,8 @@ export function roomLinks(schema: Schema, folder: string, workflow: boolean): Re
   boardLinks(schema, folder).forEach((l) => { out[l.key] = l; });
   out.details = { key: 'details', title: 'Book details', to: href.board('details', folder), icon: 'image' };
   if (workflow && out['chapter-grid']) out['chapter-grid'] = { ...out['chapter-grid'], to: href.board('chapter-grid', folder) };
+  if (out.overview) out.overview = { ...out.overview, title: 'Overview' };
+  out.decide = { key: 'decide', title: 'Decide one at a time', to: href.board('decide', folder), icon: 'cards' };
   out.steps = { key: 'steps', title: 'Steps', to: href.flow(folder), icon: 'outline' };
   if (out.characters) {
     out.places = { key: 'places', title: 'Places', to: href.board('places', folder), icon: 'map' };

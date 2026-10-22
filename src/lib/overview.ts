@@ -193,3 +193,10 @@ export function markJobsSeen(sourceKey: string, paths: string[], storage: Storag
   try { if (storage) storage.setItem(SEEN + sourceKey, JSON.stringify(list)); } catch { /* this visit only */ }
   return list;
 }
+
+/** Every card waiting on Kyle's choice in a book, for "Decide one at a time" (design review, 2026-10-22): ideas (with
+ * the workflow's results), then beats, then conflicts, each in ID order. */
+export function decideQueue(index: VaultIndex, book: BookEntry): NoteRecord[] {
+  const notesOf = (paths?: string[]) => (paths || []).map((p) => index.notes[p]).filter(Boolean);
+  return piles(notesOf(book.ideas)).decide.concat(piles(notesOf(book.beats)).decide, piles(notesOf(book.conflicts)).decide);
+}
