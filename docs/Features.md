@@ -118,6 +118,10 @@ add a dated line here when you add or change one.
   whole app (Kyle's screenshot, 2026-10-20).
   Pressing Start (or Carry on, or Skip the break) closes the panel; it opens again only when Kyle presses the timer
   (Kyle, 2026-10-19: "when i start the pomodoro, dont show the dropdown by default. only show it when i tap the button again").
+  Pressing the timer when nothing runs starts a Pomodoro straight away, with no panel first (Kyle, 2026-10-22: "the
+  pomodoro timer still drops down when you first tap it, instead of starting immediately"). Pressing it again while one
+  runs opens the panel (time left, Pause, Stop, today); holding it, or a right-click with a mouse, opens the panel at any
+  time without starting one, so today's words and Pomodoros are still in reach.
   Scene notes (Kyle, 2026-10-18, "i want to see the word processor clean"): a scene's planning notes (Kyle's outline,
   Team notes, Open for Kyle questions, Source lines) live in the book's `Scene Notes/` folder as a `scene-notes` note
   per scene, never in the prose; the writing screen's Card tab shows them under the card, read only.
@@ -188,8 +192,9 @@ add a dated line here when you add or change one.
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
   processor tool set too"): Undo, Redo, Bold, Italic, Highlight, Normal, Find, Names, Check, Listen and the Ask the team
   buttons work on the open beat the cursor is in. Split, Join, Options and Fill brackets stay on the page only.
-  Beats mode also shows the page's heading: the scene line, reading time, the chapter strip and the target bar, all
-  counting the words as Kyle types in the beats (Kyle, 2026-10-19). A beat's prose looks like the page while it is edited
+  Beats mode also shows the page's heading: the scene line, the chapter strip and the target bar, all
+  counting the words as Kyle types in the beats (Kyle, 2026-10-19). The writing screen no longer shows pages and minutes to read
+  (Kyle, 2026-10-22: "the minutes to read area in a section isn't needed"); the Chapter Grid and home page still do. A beat's prose looks like the page while it is edited
   (no tinted box). Each beat with a heading has a Move handle: hold and drag it up or down (finger or mouse), or press
   Move up / Move down on an open beat; its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
   Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's

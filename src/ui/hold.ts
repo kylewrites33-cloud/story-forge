@@ -37,7 +37,8 @@ export function startHoldNames(doc: Document = document): void {
     if (e.pointerType === 'mouse') return;
     const el = (e.target as Element | null)?.closest?.('button[title], a[title], [role="button"][title]');
     const name = el && el.getAttribute('title');
-    if (!el || !name) return;
+    // A button that does its own thing on a hold (the Pomodoro timer) is left to it.
+    if (!el || !name || el.closest('[data-own-hold]')) return;
     start = { x: e.clientX, y: e.clientY };
     timer = setTimeout(() => { timer = null; swallowUntil = Date.now() + 800; show(el, name); }, HOLD_MS);
   }, { passive: true });
