@@ -2093,3 +2093,11 @@ button, .button { border-radius: 12px; }
 .decide-empty p { color: var(--text); margin: 0; }
 .details-stage { font-size: 1.05rem; margin: 0.8em 0 0.2em; }
 @media (max-width: 599px) { .decide-buttons { grid-template-columns: repeat(2, 1fr); } }
+
+/* The chapter list's long-press menu (Kyle, 2026-10-22): hold a chapter, or right-click it, for Add a chapter below and
+   Add another scene. No iPad link preview or text selection on a held row. */
+.scene-list .side-group { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.side-menu { display: grid; gap: 2px; margin: 4px 6px 8px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+.side-menu button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: none; background: none; color: var(--text); text-align: left; border-radius: 8px; font-size: 0.97rem; }
+.side-menu button:hover { background: var(--bg); }
+.side-menu .side-menu-cancel { color: var(--muted); }

@@ -91,7 +91,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -106,6 +106,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onChanged: () => Promise<void>;
   /** Add a scene to a chapter and open it. */
   onAdd?: (chapter: number | null, chapterTitle: string, title: string) => Promise<string | null>;
+  /** Add a chapter of one scene after chapter `after` (null: after the last), later chapters moving up one, and open it. */
+  onAddChapter?: (after: number | null, chapterTitle: string) => Promise<string | null>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -150,6 +152,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
 }) {
   useLockedPage();
   const beatsMode = Boolean(beats);
+  // The chapter list's long press (or right-click): a small menu under the chapter, then a form in the same place.
+  const [chMenu, setChMenu] = useState<string | null>(null);
+  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' } | null>(null);
+  const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
   // In beats mode the tool row works on the beat Kyle is in (Kyle, 2026-10-19: "the full word processor tool set too").
   const beatsApi = useRef<BeatsApi | null>(null);
@@ -758,6 +764,55 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
             <nav class="scene-list">
               {book.groups.map((g) => {
+                const canHold = g.num != null && Boolean(onAdd || onAddChapter);
+                const openMenu = () => { setChAdd(null); setChMenu(g.key); };
+                const stop = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
+                // Hold a finger on a chapter (or right-click it) for Add a chapter below and Add another scene (Kyle,
+                // 2026-10-22). A short press still opens the scene; moving the finger scrolls the list as before.
+                const holdProps = canHold ? {
+                  'data-own-hold': '',
+                  onPointerDown: (e: PointerEvent) => {
+                    if (e.pointerType === 'mouse') return;
+                    stop();
+                    const h = hold.current;
+                    h.x = e.clientX; h.y = e.clientY;
+                    h.t = setTimeout(() => { h.t = null; h.fired = Date.now(); openMenu(); }, 500);
+                  },
+                  onPointerMove: (e: PointerEvent) => { const h = hold.current; if (h.t && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) stop(); },
+                  onPointerUp: stop,
+                  onPointerCancel: stop,
+                  onContextMenu: (e: MouseEvent) => { e.preventDefault(); if (Date.now() - hold.current.fired > 800) openMenu(); },
+                  onClickCapture: (e: MouseEvent) => {
+                    // The finger lifting after the hold is not a press of the scene under it.
+                    if (Date.now() - hold.current.fired < 800 && !(e.target as Element).closest('.side-menu, .side-add-form')) { hold.current.fired = 0; e.preventDefault(); e.stopPropagation(); }
+                  }
+                } : {};
+                const extra = canHold && (
+                  <>
+                    {chMenu === g.key && (
+                      <div class="side-menu" role="menu" aria-label={'Chapter ' + g.num}>
+                        {onAddChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'chapter' }); }}><Icon name="plus" size={18} />Add a chapter below</button>}
+                        {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: g.key, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
+                        <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setChMenu(null)}>Cancel</button>
+                      </div>
+                    )}
+                    {chAdd && chAdd.key === g.key && chAdd.kind === 'chapter' && onAddChapter && (
+                      <SideAddForm label={'Title of the new chapter ' + ((g.num as number) + 1) + ' (you can leave it empty)'} button="Add and start writing" allowEmpty
+                        hint={g === book.groups[book.groups.length - 1] ? '' : 'The chapters after it move up one.'}
+                        onCancel={() => setChAdd(null)} onAdd={async (t) => {
+                          if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+                          return onAddChapter(g.num, t);
+                        }} />
+                    )}
+                    {chAdd && chAdd.key === g.key && chAdd.kind === 'scene' && onAdd && (
+                      <SideAddForm label={'Title of the new scene in chapter ' + g.num} button="Add and start writing"
+                        onCancel={() => setChAdd(null)} onAdd={async (t) => {
+                          if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+                          return onAdd(g.num, g.title, t);
+                        }} />
+                    )}
+                  </>
+                );
                 // A chapter's name shows on one line (Kyle, 2026-10-21); a chapter of one scene is one row, and the
                 // scenes of a longer chapter sit under its name, each on one line. The full summary is in the row's title.
                 const row = (n: NoteRecord, label: string, numText: string) => (
@@ -768,18 +823,24 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                     <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
                   </a>
                 );
-                if (g.num != null && g.scenes.length === 1) return <div key={g.key}>{row(g.scenes[0], g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path), String(g.num))}</div>;
+                if (g.num != null && g.scenes.length === 1) return <div key={g.key} class="side-group" {...holdProps}>{row(g.scenes[0], g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path), String(g.num))}{extra}</div>;
                 return (
-                  <div key={g.key}>
+                  <div key={g.key} class="side-group" {...holdProps}>
                     <p class="side-chapter">{g.num != null ? <><span class="side-num">{g.num}</span>{g.title || chapterHeading(g)}</> : chapterHeading(g)}</p>
                     {g.scenes.map((n) => row(n, sceneHeader(n.data, n.path), ''))}
+                    {extra}
                   </div>
                 );
               })}
-              {onAdd && <AddInList onAdd={async (t) => {
+              {/* One scene per chapter is Kyle's way, so the list ends with Add a chapter (Kyle, 2026-10-22). */}
+              {onAddChapter && <AddChapterAtEnd onAdd={async (t) => {
+                if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+                return onAddChapter(null, t);
+              }} />}
+              {!onAddChapter && onAdd && <AddChapterAtEnd scene onAdd={async (t) => {
                 if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
                 return onAdd(group ? group.num : null, group ? group.title : '', t);
-              }} chapter={group && group.num != null ? group.num : null} />}
+              }} />}
             </nav>
             {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
             <nav class="side-boards" aria-label="Boards">
@@ -1309,13 +1370,22 @@ function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
   );
 }
 
-/** Add a scene from the chapter list: a title, then it opens for writing. */
-function AddInList({ onAdd, chapter }: { onAdd: (title: string) => Promise<string | null>; chapter: number | null }) {
+/** The chapter list's last line: "Add a chapter", then a title (or none) and it opens for writing. */
+function AddChapterAtEnd({ onAdd, scene }: { onAdd: (title: string) => Promise<string | null>; scene?: boolean }) {
   const [open, setOpen] = useState(false);
+  if (!open) return <button type="button" class="side-add" onClick={() => setOpen(true)}><Icon name="plus" size={18} />{scene ? 'Add a scene' : 'Add a chapter'}</button>;
+  return scene
+    ? <SideAddForm label="Title of the new scene" button="Add" onAdd={onAdd} onCancel={() => setOpen(false)} />
+    : <SideAddForm label="Title of the new chapter (you can leave it empty)" button="Add and start writing" allowEmpty onAdd={onAdd} onCancel={() => setOpen(false)} />;
+}
+
+/** A title box and Add, in the chapter list. */
+function SideAddForm({ label, button, hint, allowEmpty, onAdd, onCancel }: {
+  label: string; button: string; hint?: string; allowEmpty?: boolean; onAdd: (title: string) => Promise<string | null>; onCancel: () => void;
+}) {
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!open) return <button type="button" class="side-add" onClick={() => setOpen(true)}><Icon name="plus" size={18} />Add a scene{chapter != null ? ' to chapter ' + chapter : ''}</button>;
   const go = async () => {
     setBusy(true);
     const err = await onAdd(title.trim());
@@ -1325,12 +1395,14 @@ function AddInList({ onAdd, chapter }: { onAdd: (title: string) => Promise<strin
   return (
     <div class="side-add-form">
       <label class="reason">
-        Title of the new scene
-        <input type="text" value={title} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} />
+        {label}
+        <input type="text" value={title} enterKeyHint="go" autoFocus onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !busy && (allowEmpty || title.trim())) { e.preventDefault(); go(); } }} />
       </label>
+      {hint && <p class="hint">{hint}</p>}
       <div class="buttons">
-        <button type="button" class="primary" disabled={busy || !title.trim()} onClick={go}>{busy ? 'Adding…' : 'Add'}</button>
-        <button type="button" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+        <button type="button" class="primary" disabled={busy || (!allowEmpty && !title.trim())} onClick={go}>{busy ? 'Adding…' : button}</button>
+        <button type="button" disabled={busy} onClick={() => { setError(null); onCancel(); }}>Cancel</button>
       </div>
       {error && <p class="error">{error}</p>}
     </div>
