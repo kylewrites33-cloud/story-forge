@@ -88,14 +88,24 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
     return () => m.removeEventListener('change', on);
   }, []);
   const [open, setOpen] = useState(false);
-  const [sideOpen, setSideOpenState] = useState(() => loadSideOpen(typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches));
-  const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
+  // Beside the page (1200 px and wider) the team column stays as Kyle left it. Narrower it lies over the page, so it
+  // opens only when Kyle presses Team, and leaving a page or the window narrowing closes it (Kyle's screenshot,
+  // 2026-10-22: after leaving the writing screen in split view it covered half of Home).
+  const [sideOpen, setSideOpenState] = useState(() => typeof matchMedia === 'function' && matchMedia(WIDE_SIDE).matches && loadSideOpen(true));
+  const setSideOpen = (v: boolean) => { setSideOpenState(v); if (matchMedia(WIDE_SIDE).matches) saveSideOpen(v); };
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const m = matchMedia(WIDE_SIDE);
+    const on = () => setSideOpenState(m.matches && loadSideOpen(true));
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
   const showSide = Boolean(side) && sideOpen;
   const flow = useFlow(index, book);
   const hash = typeof location === 'undefined' ? '' : location.hash;
   const [pagesOpen, setPagesOpen] = useState(false);
   useEffect(() => {
-    const close = () => { setOpen(false); setPagesOpen(false); };
+    const close = () => { setOpen(false); setPagesOpen(false); if (!matchMedia(WIDE_SIDE).matches) setSideOpenState(false); };
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setOpen(false); setPagesOpen(false);
