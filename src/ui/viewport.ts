@@ -25,16 +25,35 @@ export function useLockedPage(): void {
       full = Math.max(full, seen, root.clientHeight);
       const gap = full - seen;
       const bar = gap > 0 && gap < SHORTCUT_BAR;
-      root.style.setProperty('--app-height', Math.round(bar ? full : seen) + 'px');
-      root.style.setProperty('--kb-gap', Math.round(bar ? gap : 0) + 'px');
+      const height = Math.round(bar ? full : seen) + 'px', kbGap = Math.round(bar ? gap : 0) + 'px';
+      if (root.style.getPropertyValue('--app-height') !== height) root.style.setProperty('--app-height', height);
+      if (root.style.getPropertyValue('--kb-gap') !== kbGap) root.style.setProperty('--kb-gap', kbGap);
       if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
     };
+    // The iPad does not always say when its keyboard goes away: switching to a Bluetooth keyboard left the screen at the
+    // old keyboard's height (Kyle's screenshot, 2026-10-22). So each event looks again a little later, and a quiet check
+    // every second catches what no event reports.
+    let later: ReturnType<typeof setTimeout>[] = [];
+    const check = () => {
+      fit();
+      later.forEach(clearTimeout);
+      later = [150, 500, 1200].map((ms) => setTimeout(fit, ms));
+    };
     fit();
-    if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
-    window.addEventListener('scroll', fit);
+    const every = setInterval(fit, 1000);
+    if (vv) { vv.addEventListener('resize', check); vv.addEventListener('scroll', check); }
+    window.addEventListener('scroll', check);
+    window.addEventListener('resize', check);
+    document.addEventListener('focusin', check);
+    document.addEventListener('focusout', check);
     return () => {
-      if (vv) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
-      window.removeEventListener('scroll', fit);
+      clearInterval(every);
+      later.forEach(clearTimeout);
+      if (vv) { vv.removeEventListener('resize', check); vv.removeEventListener('scroll', check); }
+      window.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+      document.removeEventListener('focusin', check);
+      document.removeEventListener('focusout', check);
       root.classList.remove('page-locked');
       root.style.removeProperty('--app-height');
       root.style.removeProperty('--kb-gap');
