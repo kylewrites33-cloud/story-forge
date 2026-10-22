@@ -1,11 +1,11 @@
-// The app's frame (redesigned with Kyle, 2026-10-21): a sidebar on the left with the book open on screen (its cover and
-// title, the Workflow | Writing switch, then six rooms: Home, Manuscript, Plan, Codex, Review and Publish, whose boards
-// show as tabs at the top of each room) and at the foot Team (Chat, Jobs, Agents, Skills, Recipes and the Workflow
-// table, as tabs), To-do, Settings and a small sync line. In Workflow mode the stages come first and the rooms follow.
-// From 1100 px wide the sidebar shows names beside the icons; from 700 px it is a narrow strip of icons with short
-// names, and the menu button opens it in full over the page; narrower still, a slim bar with the menu button sits at
-// the top. Every size has every place. On the right, the team chat sits beside the page from 1200 px wide and slides
-// over it narrower; a round Chat button at the bottom right opens it, and its arrow hides it (per device).
+// The app's frame (redesigned with Kyle, 2026-10-21; design review, 2026-10-22): a sidebar on the left with the book
+// open on screen (its cover and title, then six rooms: Home, Manuscript, Plan, Codex, Review and Publish; the room on
+// screen lists its pages beneath it, one level down) and at the foot Team (its pages open beneath it the same way),
+// To-do, the Timer, Settings and a small sync line. Plan's first page, Steps, is the old Workflow mode.
+// A top bar on every page holds the room and page (a menu of the room's pages), Find, and Team, which opens the team
+// panel on the right of any page; the floating chat button is gone. From 1100 px wide the sidebar shows names beside
+// the icons; from 700 px it is a narrow strip of icons, and the menu button opens it in full over the page; narrower
+// still, the menu button sits in the top bar. Every size has every place.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { loadRecent } from '../lib/home.ts';
@@ -14,12 +14,12 @@ import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts
 import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
-import { ROOMS, roomOf, isTeamPlace } from '../lib/rooms.ts';
+import { ROOMS, roomOf, isTeamPlace, TEAM_PLACES } from '../lib/rooms.ts';
 import { jobNotes } from '../lib/jobs.ts';
 import { taskNotes } from '../lib/tasks.ts';
 import { roomLinks } from './Rooms.tsx';
-import { loadMode } from '../lib/flow.ts';
-import { ModeSwitch, stageIcon, useFlow } from './Flow.tsx';
+import { useFlow } from './Flow.tsx';
+import { FindButton } from './Find.tsx';
 
 /** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {
@@ -76,14 +76,14 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   const setSideOpen = (v: boolean) => { setSideOpenState(v); saveSideOpen(v); };
   const showSide = Boolean(side) && sideOpen;
   const flow = useFlow(index, book);
-  const mode = book && index ? loadMode(source.key, index, book) : 'writing';
   const hash = typeof location === 'undefined' ? '' : location.hash;
+  const [pagesOpen, setPagesOpen] = useState(false);
   useEffect(() => {
-    const close = () => setOpen(false);
+    const close = () => { setOpen(false); setPagesOpen(false); };
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      setOpen(false);
-      // Over the page (narrow screens), Escape hides the chat too; beside it, the chat stays.
+      setOpen(false); setPagesOpen(false);
+      // Over the page (narrow screens), Escape hides the team panel too; beside it, the panel stays.
       if (!matchMedia(WIDE_SIDE).matches && document.querySelector('.shell.side-open')) setSideOpen(false);
     };
     window.addEventListener('hashchange', close);
@@ -91,15 +91,35 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
     return () => { window.removeEventListener('hashchange', close); window.removeEventListener('keydown', key); };
   }, []);
 
-  const links = book && schema ? roomLinks(schema, book.folder, mode === 'workflow') : {};
+  const links = book && schema ? roomLinks(schema, book.folder, false) : {};
   const running = index ? jobNotes(index).some((n) => n.data.status === 'running') : false;
   const openTodos = index ? taskNotes(index).filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length : 0;
-  const inRoom = roomOf(board);
+  const onSteps = Boolean(book) && hash.indexOf(href.flow(book ? book.folder : '')) === 0;
+  const inRoom = onSteps ? roomOf('steps') : roomOf(board);
+  const pageKey = onSteps ? 'steps' : board;
+  const teamTo: Record<string, string> = { chat: href.chat(), jobs: href.jobs(), team: href.team(), skills: href.skills(), recipes: href.recipes(), workflow: href.workflow() };
+  const teamOn = place === 'history' ? 'team' : place;
+  const inTeam = isTeamPlace(place);
   const item = (to: string, icon: string, label: string, current: boolean, extra?: string, count?: number) => (
     <a key={to + label} class={'rail-item' + (extra ? ' ' + extra : '')} href={to} aria-current={current ? 'page' : undefined} title={count == null ? label : label + ' (' + count + ')'}>
       <Icon name={icon} size={20} /><span class="rail-label">{label}</span>{extra && extra.indexOf('rail-busy') >= 0 && <span class="job-dot" aria-hidden="true" />}{count != null && <span class="rail-count rail-label">{count}</span>}
     </a>
   );
+  const sub = (to: string, label: string, current: boolean, count?: number) => (
+    <a key={to + label} class="rail-sub" href={to} aria-current={current ? 'page' : undefined}>
+      <span class="rail-label">{label}</span>{count ? <span class="rail-count">{count}</span> : null}
+    </a>
+  );
+  // The pages of the room (or Team) on screen, for the sidebar and the top bar's menu.
+  const pages: { to: string; title: string; current: boolean; count?: number }[] = inTeam
+    ? TEAM_PLACES.map((p) => ({ to: teamTo[p.key], title: p.title, current: p.key === teamOn }))
+    : inRoom ? inRoom.boards.map((k) => links[k]).filter(Boolean).map((l) => ({ to: l.to, title: l.title, current: l.key === pageKey, count: l.key === 'steps' ? flow.waiting : undefined })) : [];
+  const roomTitle = inTeam ? 'Team' : inRoom ? inRoom.title : '';
+  const pageTitle = (pages.find((p) => p.current) || { title: '' }).title;
+  const barTitle = roomTitle ? (pageTitle && pageTitle !== roomTitle && pages.length > 1 ? roomTitle + ' · ' + pageTitle : roomTitle) : title;
+  const teamButton = side
+    ? <button type="button" class={'top-team' + (showSide ? ' on' : '')} aria-pressed={showSide} onClick={() => setSideOpen(!showSide)}><Icon name="spark" size={20} /><span class="top-team-label">Team</span></button>
+    : <a class="top-team" href={href.chat()}><Icon name="spark" size={20} /><span class="top-team-label">Team</span></a>;
 
   return (
     <div class={'shell' + (open ? ' rail-open' : '') + (side ? ' has-side' : '') + (showSide ? ' side-open' : '')}>
@@ -117,42 +137,35 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
               {item(href.allSeries(), 'shelf', 'Series', place === 'series')}
             </>
           )}
-          {book && index && (() => {
-            const rooms = ROOMS.map((r) => {
-              const first = r.boards.map((k) => links[k]).find(Boolean);
-              if (!first) return null;
-              return item(first.to, r.icon, r.title, Boolean(inRoom && inRoom.key === r.key), 'rail-room');
-            });
-            return (
-              <>
-                <div class="rail-book">
-                  <a class="rail-book-link" href={mode === 'workflow' ? href.flow(book.folder) : href.board('overview', book.folder)} title={book.title}>
-                    <Cover source={source} book={book} small />
-                    <span class="rail-book-text rail-label">
-                      <span class="rail-book-title">{book.title}</span>
-                      <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
-                    </span>
-                  </a>
-                  <a class="rail-book-switch rail-label" href={href.home()} title="All books and series" aria-label="All books and series"><Icon name="books" size={18} /></a>
-                </div>
-                <ModeSwitch sourceKey={source.key} index={index} book={book} waiting={mode === 'workflow' ? 0 : flow.waiting} compact />
-                {mode === 'workflow' && (
-                  <>
-                    {item(href.flow(book.folder), 'outline', 'All stages', hash === href.flow(book.folder), undefined, flow.waiting || undefined)}
-                    {flow.stages.map((st) => {
-                      const n = st.tasks.filter((t) => flow.statuses[t.key] && (flow.statuses[t.key].state === 'judge' || flow.statuses[t.key].state === 'check')).length;
-                      const here = hash === href.flowStage(book.folder, st.index + 1) || st.tasks.some((t) => hash === href.flowStep(book.folder, t.key));
-                      return item(href.flowStage(book.folder, st.index + 1), stageIcon(st.index), shortStage(st.title), here, 'rail-stage', n || undefined);
-                    })}
-                    <p class="rail-heading">The book</p>
-                  </>
-                )}
-                {rooms}
-              </>
-            );
-          })()}
+          {book && index && (
+            <>
+              <div class="rail-book">
+                <a class="rail-book-link" href={href.board('overview', book.folder)} title={book.title}>
+                  <Cover source={source} book={book} small />
+                  <span class="rail-book-text rail-label">
+                    <span class="rail-book-title">{book.title}</span>
+                    <span class="rail-book-series">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}</span>
+                  </span>
+                </a>
+                <a class="rail-book-switch rail-label" href={href.home()} title="All books and series" aria-label="All books and series"><Icon name="books" size={18} /></a>
+              </div>
+              {ROOMS.map((r) => {
+                const first = r.boards.map((k) => links[k]).find(Boolean);
+                if (!first) return null;
+                const here = Boolean(inRoom && inRoom.key === r.key);
+                const to = r.key === 'plan' ? links.ideas ? links.ideas.to : first.to : first.to;
+                return (
+                  <div key={r.key} class={'rail-room-group' + (here ? ' here' : '')}>
+                    {item(to, r.icon, r.title, here && pages.length < 2, 'rail-room' + (here ? ' rail-room-here' : ''), r.key === 'plan' && flow.waiting ? flow.waiting : undefined)}
+                    {here && pages.length > 1 && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current, p.count))}</div>}
+                  </div>
+                );
+              })}
+            </>
+          )}
           <div class="rail-foot">
-            {item(href.chat(), 'team', 'Team', isTeamPlace(place), running ? 'rail-busy' : undefined)}
+            {item(href.chat(), 'spark', 'Team', false, (running ? 'rail-busy' : '') + (inTeam ? ' rail-room-here' : '') || undefined)}
+            {inTeam && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current))}</div>}
             {item(href.todo(), 'todo', 'To-do', place === 'todo', undefined, openTodos || undefined)}
             {timer && !slim && timer('rail')}
             {item(href.settings(), 'gear', 'Settings', place === 'settings')}
@@ -165,26 +178,41 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
       </aside>
       <button type="button" class="rail-backdrop" aria-label="Close the menu" tabIndex={-1} onClick={() => setOpen(false)} />
       <div class="shell-main">
-        <header class="slim-bar">
-          <button type="button" class="icon-button" aria-label="Open the menu" aria-expanded={open} onClick={() => setOpen(true)}><Icon name="panel" /></button>
-          <span class="slim-title">{title}</span>
+        <header class="top-bar">
+          <button type="button" class="icon-button top-menu" aria-label="Open the menu" aria-expanded={open} onClick={() => setOpen(true)}><Icon name="menu" /></button>
+          <div class="top-title">
+            {pages.length > 1 ? (
+              <>
+                <button type="button" class="top-title-button" aria-expanded={pagesOpen} onClick={() => setPagesOpen(!pagesOpen)}>
+                  <span class="top-title-text">{barTitle}</span><Icon name="down" size={18} />
+                </button>
+                {pagesOpen && (
+                  <>
+                    <button type="button" class="top-pages-backdrop" aria-label="Close" tabIndex={-1} onClick={() => setPagesOpen(false)} />
+                    <nav class="top-pages" aria-label={roomTitle}>
+                      {pages.map((p) => <a key={p.to + p.title} href={p.to} aria-current={p.current ? 'page' : undefined}>{p.title}{p.count ? <span class="rail-count">{p.count}</span> : null}</a>)}
+                    </nav>
+                  </>
+                )}
+              </>
+            ) : <span class="top-title-text">{barTitle}</span>}
+          </div>
+          {index && book && <FindButton index={index} book={book} />}
           {timer && slim && timer('bar')}
-          <button type="button" class={'icon-button rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title} aria-label={sync.label}>
-            <Icon name={sync.good ? 'check' : 'sync'} />
-          </button>
+          {slim && (
+            <button type="button" class={'icon-button rail-sync' + (sync.good ? ' good' : '') + (sync.warn ? ' warn' : '')} onClick={sync.onSync} disabled={sync.busy} title={sync.title} aria-label={sync.label}>
+              <Icon name={sync.good ? 'check' : 'sync'} />
+            </button>
+          )}
+          {index && teamButton}
         </header>
         {children}
       </div>
       {side && showSide && (
         <>
-          <button type="button" class="side-backdrop" aria-label="Hide the chat" tabIndex={-1} onClick={() => setSideOpen(false)} />
+          <button type="button" class="side-backdrop" aria-label="Hide the team panel" tabIndex={-1} onClick={() => setSideOpen(false)} />
           {side(() => setSideOpen(false))}
         </>
-      )}
-      {side && !showSide && (
-        <button type="button" class="side-open-button" title="Chat with the team" aria-label="Chat with the team" onClick={() => setSideOpen(true)}>
-          <Icon name="chat" size={24} />
-        </button>
       )}
     </div>
   );

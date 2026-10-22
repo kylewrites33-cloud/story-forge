@@ -48,22 +48,6 @@ export function useFlow(index: VaultIndex | null, book: BookEntry | null): FlowD
   }, [index, book, stages]);
 }
 
-/** The Workflow | Writing switch. The choice is kept per book on this device. */
-export function ModeSwitch({ sourceKey, index, book, waiting, compact }: { sourceKey: string; index: VaultIndex; book: BookEntry; waiting: number; compact?: boolean }) {
-  const mode = loadMode(sourceKey, index, book);
-  const go = (m: Mode, to: string) => (e: MouseEvent) => { e.preventDefault(); saveMode(sourceKey, book.folder, m); location.hash = to; };
-  return (
-    <div class={'mode-switch' + (compact ? ' compact' : '')} role="group" aria-label="Mode">
-      <a href={href.flow(book.folder)} aria-current={mode === 'workflow' ? 'true' : undefined} onClick={go('workflow', href.flow(book.folder))} title="Workflow mode: the book step by step with the team">
-        <Icon name="outline" size={18} /><span class="mode-label">Workflow</span>{waiting > 0 && <span class="count-badge">{waiting}</span>}
-      </a>
-      <a href={href.board('chapter-grid', book.folder)} aria-current={mode === 'writing' ? 'true' : undefined} onClick={go('writing', href.board('chapter-grid', book.folder))} title="Writing mode: your pages, with the team's help">
-        <Icon name="pen" size={18} /><span class="mode-label">Writing</span>
-      </a>
-    </div>
-  );
-}
-
 function StateChip({ s }: { s: TaskStatus | undefined }) {
   const state = s ? s.state : 'none';
   const n = s ? (state === 'judge' ? s.decide.length : state === 'kept' ? s.kept.length : 0) : 0;
@@ -117,9 +101,8 @@ function FlowHome({ index, book, flow, sourceKey, onResults, onDecide, waiting }
   if (!stages.length) return <p class="empty">The team's workflow (System/Workflow.md) is not in the saved copy yet. Press Sync, then try again.</p>;
   return (
     <section class="flow">
-      <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Workflow</p>
+      <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Plan · Steps</p>
       <h1>{book.title}</h1>
-      <ModeSwitch sourceKey={sourceKey} index={index} book={book} waiting={flow.waiting} />
       {next && (
         <a class="flow-next" href={href.flowStep(book.folder, next.key)}>
           <span class="flow-next-kicker">Pick up here · {taskLabel(next)}</span>
@@ -202,9 +185,8 @@ function FlowStageView({ index, book, flow, n, sourceKey, onJob }: { index: Vaul
   };
   return (
     <section class="flow">
-      <p class="crumb"><a href={href.flow(book.folder)}>Workflow</a> · Stage {n} of {flow.stages.length}</p>
+      <p class="crumb"><a href={href.flow(book.folder)}>Steps</a> · Stage {n} of {flow.stages.length}</p>
       <h1>{stage.title}</h1>
-      <ModeSwitch sourceKey={sourceKey} index={index} book={book} waiting={flow.waiting} />
       <ol class="flow-steps">
         {stage.tasks.map((t) => (
           <li key={t.key}>

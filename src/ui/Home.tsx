@@ -209,7 +209,7 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
   ].filter(Boolean).join(' · ');
   return (
     <li class={list ? 'book-row' : 'book-card'}>
-      <a href={href.book(book.folder)}>
+      <a href={href.board('overview', book.folder)}>
         <Cover source={source} book={book} small={list} />
         <span class="book-text">
           <span class="meta">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}{active && active.folder === book.folder ? ' · active book' : ''}</span>
@@ -343,10 +343,10 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
               );
             }) : active && (
               <li>
-                <a href={href.book(active.folder)}>
+                <a href={href.board('overview', active.folder)}>
                   <span class="book-title">{active.title}</span>
                   <span class="meta">The active book · {readingLine(bookWords(index, active), rates) || 'no words yet'}</span>
-                  <span class="go">Open the Chapter Grid <Icon name="right" size={16} /></span>
+                  <span class="go">Open the book <Icon name="right" size={16} /></span>
                 </a>
               </li>
             )}
