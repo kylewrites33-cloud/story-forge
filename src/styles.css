@@ -1118,15 +1118,23 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #0f1011; --surface: #17181a; --rail: #0c0d0e; --hover: #1f2023; --text: #f2f2f3; --muted: #9a9ca2; --line: #26282b; --accent: #8b93ff; --accent-soft: #1c1e2e; --on-accent: #0f1011; }
 :root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #151515; --surface: #1c1c1b; --rail: #111111; --hover: #2a2a29; --text: #f9f9f7; --muted: #a8a79f; --line: #2e2e2c; --accent: #2fb383; --accent-soft: #15221e; --on-accent: #151515; }
 :root[data-theme="black"], .theme-card[data-theme="black"] { --bg: #000000; --surface: #121212; --rail: #000000; --hover: #1f1f1f; --text: #ffffff; --muted: #a7a7a7; --line: #2a2a2a; --accent: #0a84ff; --accent-soft: #0b1a2c; --on-accent: #000000; }
+:root[data-theme="nightshade"], .theme-card[data-theme="nightshade"] { --bg: #151515; --surface: #1c1c1b; --rail: #111111; --hover: #2a2a29; --text: #f9f9f7; --muted: #a8a79f; --line: #2e2e2c; --accent: #c792e0; --accent-soft: #26182e; --on-accent: #151515; }
 /* How loud the buttons are. Filled (Violet Night and the light themes): big cards and buttons in the accent. Quiet: grey
    buttons with the accent in their words. Ink: white buttons. Both keep colour to words and small marks (Kyle, 2026-10-22). */
 :root[data-theme="midnight"], .theme-card[data-theme="midnight"], :root[data-theme="ember"], .theme-card[data-theme="ember"] {
   --fill: var(--hover); --fill-line: var(--line); --on-fill: var(--accent); --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line);
   --hero-kicker: var(--accent); --hero-go: var(--hover); --on-hero-go: var(--text); --next-bg: var(--surface);
 }
-:root[data-theme="ink"], .theme-card[data-theme="ink"], :root[data-theme="forest"], .theme-card[data-theme="forest"], :root[data-theme="black"], .theme-card[data-theme="black"] {
+:root[data-theme="ink"], .theme-card[data-theme="ink"], :root[data-theme="forest"], .theme-card[data-theme="forest"], :root[data-theme="black"], .theme-card[data-theme="black"], :root[data-theme="nightshade"], .theme-card[data-theme="nightshade"] {
   --fill: var(--text); --fill-line: var(--text); --on-fill: var(--bg); --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line);
   --hero-kicker: var(--muted); --hero-go: var(--text); --on-hero-go: var(--bg); --next-bg: var(--surface);
+}
+/* Nightshade (Kyle, 2026-10-22: one more dark set "with the claude color relationship"): plum where Claude has green,
+   teal where it has blue, gold where it has orange, white buttons. */
+:root[data-theme="nightshade"], .theme-card[data-theme="nightshade"] {
+  --hero-bg: #26182e; --hero-line: #3a2546; --hero-kicker: #c792e0;
+  --next-bg: #10262a; --next-go: #24383b; --next-go-line: #24383b; --on-next-go: #f9f9f7; --kicker: #e8b84a;
+  --team-msg: #10262a; --team-msg-line: #10262a; --badge: #e8b84a; --on-badge: #151515;
 }
 /* Claude (Kyle, 2026-10-22: "these dark green and blue button shapes ... green, blue, and orange, with the ocassional white
    pop"): Keep writing is a dark green shape, Next step and the team's chat replies dark blue ones, orange for kickers and
