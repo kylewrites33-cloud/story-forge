@@ -149,12 +149,12 @@ export function TodoList({ index, waiting, onDecide, onAdd, schema, book, onRewr
       )}
       {hasBook && hasStudio && (
         <div class="tabs" role="tablist" aria-label="Which list">
-          {[{ key: '', label: 'Both lists' }, { key: 'book', label: 'Book to-dos' }, { key: 'studio', label: 'Story Forge to-dos' }].map((t) => (
+          {[{ key: '', label: 'Both lists' }, { key: 'book', label: 'Book to-dos' }, { key: 'studio', label: 'Sparrow to-dos' }].map((t) => (
             <button key={t.key} type="button" role="tab" aria-selected={kind === t.key} onClick={() => setKind(t.key)}>{t.label}</button>
           ))}
         </div>
       )}
-      {hasBook && <p class="hint">Book to-dos are fixes to the pages, one list per chapter beside the writing page. Story Forge to-dos are jobs about the app and the setup.</p>}
+      {hasBook && <p class="hint">Book to-dos are fixes to the pages, one list per chapter beside the writing page. Sparrow to-dos are jobs about the app and the setup.</p>}
       {!all.length && <p class="empty">No to-dos yet. They live in the vault's Tasks folder.</p>}
       {groups.map((g) => {
         if (!g.notes.length) return null;

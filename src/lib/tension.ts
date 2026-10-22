@@ -84,7 +84,7 @@ export function scenePoints(scenes: NoteRecord[]): ScenePoint[] {
 
 /** The reference curve: a classic rising curve of tension through the book, with a dip near 75% (Save the Cat's All Is
  * Lost and Dark Night of the Soul) and the peak near 85 to 90% (the Finale's climax), easing off at the end. A rough guide
- * drawn for Story Forge, not a measured standard. Points are [percent of the book, tension 1 to 10]. */
+ * drawn for Sparrow, not a measured standard. Points are [percent of the book, tension 1 to 10]. */
 export const REFERENCE: [number, number][] = [
   [0, 2], [10, 4], [20, 4.5], [35, 5], [50, 6.5], [65, 7.5], [75, 5.5], [80, 7], [88, 9.5], [95, 7], [100, 4]
 ];
