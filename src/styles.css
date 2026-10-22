@@ -2033,7 +2033,7 @@ button, .button { border-radius: 12px; }
 .writer-bar .tool[aria-pressed="true"], .kb-row .tool[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
 .bar-gap { flex: 1 1 auto; }
 .bar-team { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid transparent; background: var(--accent-soft); color: var(--accent); font-weight: 650; white-space: nowrap; }
-.bar-team.on { background: var(--accent); color: var(--on-accent); }
+.bar-team.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .more-wrap { position: relative; }
 .more-backdrop, .sel-backdrop { position: fixed; inset: 0; z-index: 29; min-height: 0; padding: 0; border: none; border-radius: 0; background: transparent; }
 .more-menu { position: absolute; z-index: 30; right: 0; top: calc(100% + 6px); width: min(330px, 90vw); max-height: 75vh; overflow-y: auto; display: grid; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lift); }
