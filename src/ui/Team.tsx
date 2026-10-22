@@ -1,4 +1,4 @@
-// The AI team, its skills and what it has done: the Team page (a table like the first Story Forge's, with Recently
+// The AI team, its skills and what it has done: the Team page (a table like the first Sparrow's, with Recently
 // used, A to Z and By team), one page per agent, the Skills page (every skill and who can use it) and History.
 // Everything comes from the vault's .claude folder, the job notes and the vault's recent saves.
 import { Fragment, type ComponentChildren } from 'preact';

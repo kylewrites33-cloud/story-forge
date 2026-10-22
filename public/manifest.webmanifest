@@ -1,7 +1,7 @@
 {
   "name": "Sparrow",
   "short_name": "Sparrow",
-  "description": "Sparrow, the writing app for the Story Forge vault.",
+  "description": "Sparrow, Kyle Heath's writing studio.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

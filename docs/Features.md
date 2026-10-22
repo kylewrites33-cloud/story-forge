@@ -4,7 +4,8 @@ The app is called Sparrow (Kyle, 2026-10-22: "lets change the name of the app to
 name shows in the sidebar, the browser tab and on the home screen; its icon is a pale sparrow on a perch on the violet
 accent (drawn by `scripts/make-icons.js`, the same bird inline in `src/ui/Shell.tsx`), replacing the SF badge. The
 repository, the web address and the app's saved settings keep the story-forge name, so keys and home-screen links still
-work. Story Forge stays the name of the studio and the vault; notes and commits the app writes say "in the Sparrow app".
+work. Kyle renamed the studio and the vault to Sparrow the same day ("i want the name changed in the studio and all over the
+vault"); notes and commits the app writes say "in the Sparrow app". The To-do list's second tab is Sparrow to-dos.
 
 The full record of every screen and behaviour, with when Kyle asked for it. Moved out of CLAUDE.md on 2026-10-19 so that
 file stays under Anthropic's 200-line guidance; nothing was dropped. Read the part about a feature before changing it, and
@@ -93,7 +94,7 @@ add a dated line here when you add or change one.
   chapter's to-dos beside the page. They are `task` notes in the book's own `Tasks/` folder with `chapter` (and `scene`);
   Kyle adds one in a line and ticks it off; the team's carry `generated: true` and `found_by` and show a Generated label.
   Ask the team to check this chapter (`chapter-check`) and to tick off fixed ones (`todo-review`, which sets `done_note`).
-  The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs. Kyle's "~" notes in Quest Declined became to-dos (Kyle, 2026-10-18).
+  The To-do list shows both lists, with Book to-dos and Story Forge to-dos tabs (Sparrow to-dos since 2026-10-22). Kyle's "~" notes in Quest Declined became to-dos (Kyle, 2026-10-18).
   A to-do keeps every word Kyle types, at any length; only its file name is shortened (Kyle, 2026-10-20: "when I pasted
   it in this to do, it cut it off short").
   The Pomodoro timer (Kyle, 2026-10-18): 25 minutes of writing and a 5 minute break, kept on the device ("just 25 minutes
@@ -386,7 +387,7 @@ the list below home. and codex can move down to the section witht eh team and to
 ## The design review redesign (2026-10-22)
 
 Kyle asked a designer to study usability basics and the leading AI writing tools, critique the app and propose a new
-design (report and mockups in the vault, `Docs/Story Forge/Research/App design 2026-10/`). Kyle, 2026-10-22: "as long as
+design (report and mockups in the vault, `Docs/Sparrow/Research/App design 2026-10/`). Kyle, 2026-10-22: "as long as
 its still possible to go through the workflow mode from somewhere, please apply all changes to the app."
 
 - **Top bar on every page** (`Shell.tsx`): the room and page (a menu of the room's pages), Find (a chapter number, a scene,

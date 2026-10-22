@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Every note type in the Story Forge vault. The sf tool validates against this file, the app renders boards and forms from it, and Templates/ is generated from it. Change a type here and nowhere else.",
+  "description": "Every note type in the Sparrow vault. The sf tool validates against this file, the app renders boards and forms from it, and Templates/ is generated from it. Change a type here and nowhere else.",
   "conventions": {
     "links": "Obsidian wiki links in quotes, \"[[Name]]\". The name must match the target note's title or name exactly.",
     "scopes": {

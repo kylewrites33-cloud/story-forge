@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Story Forge: set up a small Ubuntu computer as the always-on job runner.
+# Sparrow: set up a small Ubuntu computer as the always-on job runner.
 # Run once as root on a fresh Ubuntu 24.04 machine:
 #   curl -fsSL https://raw.githubusercontent.com/kylewrites33-cloud/story-forge/main/server/setup.sh | bash
 # It asks for two keys (GitHub, Claude API), keeps them in /etc/story-forge/env (root only), installs git, Node 22
@@ -15,7 +15,7 @@ ENV_FILE=/etc/story-forge/env
 if [ "$(id -u)" != "0" ]; then echo "Run this as root (on the hosting company's console you already are)."; exit 1; fi
 
 echo
-echo "Story Forge runner setup"
+echo "Sparrow runner setup"
 echo "I need two keys. Paste each one and press Enter; nothing shows while you type."
 echo
 read -r -s -p "1) GitHub key for the vault (starts with github_pat_): " GH_TOKEN < /dev/tty; echo
@@ -51,12 +51,12 @@ else
   sudo -u forge git -C "$VAULT" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/kylewrites33-cloud/author-business"
   sudo -u forge git -C "$VAULT" pull -q --rebase origin main || true
 fi
-sudo -u forge git -C "$VAULT" config user.name "Story Forge server"
+sudo -u forge git -C "$VAULT" config user.name "Sparrow server"
 sudo -u forge git -C "$VAULT" config user.email "server@users.noreply.github.com"
 
 cat > /etc/systemd/system/story-forge-runner.service <<EOF
 [Unit]
-Description=Story Forge job runner
+Description=Sparrow job runner
 After=network-online.target
 Wants=network-online.target
 
@@ -78,9 +78,9 @@ systemctl restart story-forge-runner
 sleep 3
 echo
 if systemctl is-active -q story-forge-runner; then
-  echo "Done. The runner is on. Tell Claude in the Story Forge thread: \"server is up\"."
+  echo "Done. The runner is on. Tell Claude in the Sparrow thread: \"server is up\"."
   echo "To see what it is doing later: journalctl -u story-forge-runner -f"
 else
-  echo "The runner did not start. Copy the lines below into the Story Forge thread:"
+  echo "The runner did not start. Copy the lines below into the Sparrow thread:"
   journalctl -u story-forge-runner -n 20 --no-pager
 fi

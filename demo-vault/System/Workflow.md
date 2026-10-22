@@ -6,7 +6,7 @@ updated: 2026-10-19
 ---
 # Workflow 1.1
 
-How a book gets made, step by step, and who does each step. Kyle wrote version 1 on 2026-10-19 (`Docs/Story Forge/14 Workflow v1.md`); version 1.1 is the same workflow with the team assigned and two order changes he accepted the same day. The reasons for every call are in `Docs/Story Forge/Research/Team structure 2026-10/5 Ideal team for workflow v1 (2026-10-19).md`. Every agent reads this note before working on a book. The app shows it on the Workflow page.
+How a book gets made, step by step, and who does each step. Kyle wrote version 1 on 2026-10-19 (`Docs/Sparrow/14 Workflow v1.md`); version 1.1 is the same workflow with the team assigned and two order changes he accepted the same day. The reasons for every call are in `Docs/Sparrow/Research/Team structure 2026-10/5 Ideal team for workflow v1 (2026-10-19).md`. Every agent reads this note before working on a book. The app shows it on the Workflow page.
 
 **How to read the tables.** *Who* names the agents; a lens is a short fresh brief the Story Specialist runs with one skill, blind to the other lenses. *Minds* says whether the step is one mind or several. A *panel* is two to four judges in separate contexts who see the options with names stripped and in both orders (the `judge-panel` skill). Kyle decides at every judging step.
 
