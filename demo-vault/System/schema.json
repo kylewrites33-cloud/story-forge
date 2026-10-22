@@ -2327,6 +2327,31 @@
       },
       "body": "Kyle's words, free text. Agents read it whenever they work on the chapter (sf packet includes it) and never edit it."
     },
+    "chapter-scrap": {
+      "description": "Words Kyle cut from a chapter and loose notes he wants to keep out of the story, one scrap per chapter. The writing screen shows it in the right-hand column (the Scrap tab); Kyle writes it there or moves picked words into it from the page.",
+      "scope": "book",
+      "folder": "Chapter Scraps",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "chapter"
+      ],
+      "properties": {
+        "type": {
+          "const": "chapter-scrap"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Chapter N scrap\"."
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "The chapter this scrap belongs to."
+        }
+      },
+      "body": "Kyle's words, free text: cut lines and spare notes. Agents leave it alone and do not treat it as canon or as a plan; read it only when Kyle asks."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

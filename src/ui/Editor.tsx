@@ -29,7 +29,7 @@ import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
 import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
 import { lineAt, loadDots, mapFor, merge3, saveDots } from '../lib/live.ts';
-import { planHead, planPath } from '../lib/plans.ts';
+import { addToScrap, planHead, planPath, scrapHead, scrapPath } from '../lib/plans.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
 import { trackWords, wordsNotTyped } from '../lib/pomodoro.ts';
 import type { ComponentChildren } from 'preact';
@@ -69,11 +69,11 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'flow' | 'chat' | 'plan' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
-const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+type Tab = 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
+const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Split and join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
 // The column's tabs in four groups (Kyle, 2026-10-21): the group first, then its tabs as small chips.
-const TAB_GROUPS: [string, Tab[]][] = [['Team', ['chat', 'options', 'team']], ['Chapter', ['plan', 'beats', 'flow', 'todos']],
+const TAB_GROUPS: [string, Tab[]][] = [['Team', ['chat', 'options', 'team']], ['Chapter', ['plan', 'scrap', 'beats', 'flow', 'todos']],
   ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools']], ['Tools', ['page', 'check']]];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
@@ -91,7 +91,7 @@ function offlineError(e: unknown): boolean {
   return (e as { status?: number }).status === 0 || !navigator.onLine;
 }
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -133,6 +133,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   convo?: Conversation | null;
   /** The chapter's plan (Chapter Plans), for the Plan tab; null when the chapter has none yet. */
   plan?: NoteRecord | null;
+  /** The chapter's scrap (Chapter Scraps): words cut from it and loose notes, for the Scrap tab; null when it has none yet. */
+  scrap?: NoteRecord | null;
   /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
   beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
   /** The open scene's chapter beats note, listed in the right column's Beats tab. */
@@ -857,7 +859,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
             <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : tab === 'flow' ? 'From the workflow' : 'Scene'}</strong>
+              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'scrap' ? (chapterNum != null ? 'Scrap for chapter ' + chapterNum : 'Chapter scrap') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : tab === 'flow' ? 'From the workflow' : 'Scene'}</strong>
               <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
             </div>
             {(() => {
@@ -888,6 +890,19 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             )}
             {tab === 'plan' && (
               <PlanPanel key={(bookFolder || '') + '#' + chapterNum} source={source} bookFolder={bookFolder} chapter={chapterNum} plan={plan || null} canSave={canSave} />
+            )}
+            {tab === 'scrap' && (
+              <PlanPanel key={'scrap#' + (bookFolder || '') + '#' + chapterNum} kind="scrap" source={source} bookFolder={bookFolder} chapter={chapterNum} plan={scrap || null} canSave={canSave}
+                keepFocus={keepFocus} take={() => {
+                  // Cut the words picked on the page, as one step to undo there, and hand them to the scrap.
+                  const c = cmd();
+                  const s = c ? c.selection() : null;
+                  if (!c || !s || s.end <= s.start) return null;
+                  const words = pageText().slice(s.start, s.end);
+                  if (!words.trim()) return null;
+                  c.replaceRange(s.start, s.end, '');
+                  return words;
+                }} />
             )}
             {tab === 'beats' && (
               <BeatsList note={chapterBeats || null} chapter={chapterNum} sceneId={String(note.data.id || '')} text={beatsMode ? null : text}
@@ -1600,18 +1615,26 @@ function TodosPanel({ todos, chapter, sceneId, onTodo, onAdd, onJob, bookFolder,
 }
 
 /** The chapter's plan beside the page: Kyle's own paragraphs about what the chapter should do, saved in the book's
- * Chapter Plans folder, never in the prose. Kept on the device as he types and saved a few seconds after he stops. */
-function PlanPanel({ source, bookFolder, chapter, plan, canSave }: {
+ * Chapter Plans folder, never in the prose. Kept on the device as he types and saved a few seconds after he stops.
+ * With kind "scrap" it is the chapter's scrap instead (Chapter Scraps): cut words and loose notes, with a button that
+ * moves the words picked on the page into it. */
+function PlanPanel({ source, bookFolder, chapter, plan, canSave, kind = 'plan', take, keepFocus }: {
   source: VaultSource; bookFolder: string | null; chapter: number | null; plan: NoteRecord | null; canSave: boolean;
+  kind?: 'plan' | 'scrap';
+  /** Scrap only: cut the words picked on the page and return them (null when nothing is picked). */
+  take?: () => string | null;
+  keepFocus?: Record<string, (e: Event) => void>;
 }) {
+  const scrap = kind === 'scrap';
+  const [nothing, setNothing] = useState(false);
   const fresh = (): Draft | null => {
     if (!bookFolder || chapter == null) return null;
     const now = new Date();
-    const path = plan ? plan.path : planPath(bookFolder, chapter);
+    const path = plan ? plan.path : scrap ? scrapPath(bookFolder, chapter) : planPath(bookFolder, chapter);
     const kept = loadDrafts(source.key)[path];
     if (plan) return openDraft(plan, kept, now);
     return kept && kept.create && isUnsaved(kept) ? kept
-      : { path, baseSha: '', baseBody: '', body: '', target: null, startWords: 0, updatedAt: now.toISOString(), pending: false, create: planHead(chapter) };
+      : { path, baseSha: '', baseBody: '', body: '', target: null, startWords: 0, updatedAt: now.toISOString(), pending: false, create: scrap ? scrapHead(chapter) : planHead(chapter) };
   };
   const [d, setD] = useState<Draft | null>(fresh);
   const ref = useRef(d);
@@ -1650,7 +1673,7 @@ function PlanPanel({ source, bookFolder, chapter, plan, canSave }: {
   }, []);
   const fit = () => { const el = box.current; if (el) { el.style.height = 'auto'; el.style.height = Math.max(240, el.scrollHeight) + 'px'; } };
   useEffect(fit, [d && d.body]);
-  if (!d) return <div class="writer-panel"><p class="hint">A plan belongs to a chapter. Give this scene a chapter on the Chapter Grid first.</p></div>;
+  if (!d) return <div class="writer-panel"><p class="hint">{scrap ? 'A scrap' : 'A plan'} belongs to a chapter. Give this scene a chapter on the Chapter Grid first.</p></div>;
   const { lead, text } = splitLead(d.body);
   const onInput = (v: string) => {
     put({ ...(ref.current || d), body: (lead || '\n') + v, updatedAt: new Date().toISOString() });
@@ -1660,15 +1683,29 @@ function PlanPanel({ source, bookFolder, chapter, plan, canSave }: {
   };
   const said = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved: ' + error + ' It is safe on this device.'
     : isUnsaved(d) ? (d.pending || !navigator.onLine ? 'Kept on this device; it saves when you are back online.' : 'Kept on this device.')
-      : state === 'saved' ? 'Saved in the book\'s Chapter Plans folder.' : '';
+      : state === 'saved' ? (scrap ? 'Saved in the book\'s Chapter Scraps folder.' : 'Saved in the book\'s Chapter Plans folder.') : '';
+  const moveIn = () => {
+    const words = take ? take() : null;
+    if (words == null) { setNothing(true); return; }
+    setNothing(false);
+    onInput(addToScrap(splitLead((ref.current || d).body).text, words));
+  };
   return (
     <div class="writer-panel plan-panel">
-      <p class="hint">Your plan for chapter {chapter}, as long as you like. It stays out of the story; the team reads it whenever they work on this chapter.</p>
-      <textarea ref={box} class="plan-text" value={text} placeholder={'What this chapter has to do, who wants what, how it ends…'}
-        aria-label={'Plan for chapter ' + chapter} spellcheck autocapitalize="sentences"
+      {scrap
+        ? <p class="hint">Words you cut from chapter {chapter} and notes you want to keep, as long as you like. It stays out of the story, and the team leaves it alone unless you ask.</p>
+        : <p class="hint">Your plan for chapter {chapter}, as long as you like. It stays out of the story; the team reads it whenever they work on this chapter.</p>}
+      {scrap && take && (
+        <div class="scrap-move">
+          <button type="button" {...(keepFocus || {})} onClick={moveIn}>Move picked words here</button>
+          {nothing && <p class="hint" role="status">Pick some words on the page first, then press this again.</p>}
+        </div>
+      )}
+      <textarea ref={box} class="plan-text" value={text} placeholder={scrap ? 'Cut lines, spare ideas, anything you are not ready to throw away…' : 'What this chapter has to do, who wants what, how it ends…'}
+        aria-label={(scrap ? 'Scrap for chapter ' : 'Plan for chapter ') + chapter} spellcheck autocapitalize="sentences"
         onInput={(e) => { onInput((e.currentTarget as HTMLTextAreaElement).value); fit(); }} onBlur={() => { if (quiet.current) clearTimeout(quiet.current); save(); }} />
       {said && <p class={state === 'error' ? 'error' : 'hint'} role="status">{said}</p>}
-      {!canSave && <p class="hint">The demo vault keeps your plan until the page reloads.</p>}
+      {!canSave && <p class="hint">The demo vault keeps your {scrap ? 'scrap' : 'plan'} until the page reloads.</p>}
     </div>
   );
 }
