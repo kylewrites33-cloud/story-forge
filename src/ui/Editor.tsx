@@ -21,7 +21,6 @@ import { RecipePicker } from './Recipes.tsx';
 import { withRecipe } from '../lib/recipes.ts';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
-import { loadRates, readingLine } from '../lib/home.ts';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 import { askBody, defaultJobTitle, jobAsk, resultBody, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
@@ -609,7 +608,6 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     return g && g.num != null && (g !== group || g.scenes.length === 1) ? chapterHeading(g) : sceneHeader(n.data, String(n.data.id || ''));
   };
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
-  const reading = readingLine(words, loadRates());
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
   const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : beatsMode && beatWords[n.path] != null ? beatWords[n.path] : toNumber(n.data.words) || 0 })) : [];
   // A scene with few or no words still gets a block wide enough to see and press.
@@ -619,13 +617,12 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const chapterList = chapterTodos(todos || [], chapterNum);
   const openTodos = chapterList.filter(isOpen).length;
 
-  // The page's heading: the chapter, the scene line, reading time, the chapter strip and the target bar. Beats mode shows it too.
+  // The page's heading: the chapter, the scene line, the chapter strip and the target bar. Beats mode shows it too.
   const headParts = (
     <>
       <h1>{heading}</h1>
       {subtitle && <p class="page-subtitle">{subtitle}</p>}
       {sub && <p class="meta">{sub}</p>}
-      {reading && <p class="meta">{reading}</p>}
       {strip.length > 0 && (
         <nav class="chapter-strip" aria-label="Scenes in this chapter, sized by length">
           {strip.map(({ note: n, words: w }) => (
