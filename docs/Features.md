@@ -50,9 +50,11 @@ add a dated line here when you add or change one.
   after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
   shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
   Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
-  slides over the page. The chapter list opens at the chapter Kyle is in, its scene highlighted, on every size (Kyle,
-  2026-10-21: "right now im regularly having to scroll down from chapter 1"); while it stays open it scrolls only when
-  the open scene is out of sight. Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
+  slides over the page. The chapter list keeps where Kyle left it scrolled, per book, on this device: picking a scene,
+  leaving the writing screen and coming back all find it where it was (Kyle, 2026-10-22: "rather than moving the left side
+  chapter bar as i select through ... simply remember its position when i leave and re-enter the mode"). Only the first
+  time, with nothing remembered, does it open at the chapter he is in (Kyle, 2026-10-21: "right now im regularly having
+  to scroll down from chapter 1"). Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
   this view ... the + 'add a scene to chapter 33' at the bottom should probably be add a chapter. then possibly if we long
   press on a chapter in the list, we get an option to add a chapter below, or add another scene"): the list ends with
   "+ Add a chapter" (a title, which may be left empty, then the new chapter's one scene opens ready to write). Holding a
