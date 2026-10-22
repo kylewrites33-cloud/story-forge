@@ -646,11 +646,20 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!vv || typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches) return;
     const on = () => {
       const up = window.innerHeight - vv.height > 150 && document.activeElement && document.activeElement.closest && document.activeElement.closest('.writer-page');
-      setKb(up ? { top: vv.offsetTop + vv.height - 56 } : null);
+      const top = up ? Math.round(vv.offsetTop + vv.height - 56) : null;
+      setKb((k) => (k ? k.top : null) === top ? k : top == null ? null : { top });
     };
-    vv.addEventListener('resize', on); vv.addEventListener('scroll', on);
-    document.addEventListener('focusin', on); document.addEventListener('focusout', on);
-    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); document.removeEventListener('focusin', on); document.removeEventListener('focusout', on); };
+    // Looked at again later and every second too: the iPad may not say when its keyboard goes away (src/ui/viewport.ts).
+    let later: ReturnType<typeof setTimeout>[] = [];
+    const check = () => { on(); later.forEach(clearTimeout); later = [150, 500, 1200].map((ms) => setTimeout(on, ms)); };
+    const every = setInterval(on, 1000);
+    vv.addEventListener('resize', check); vv.addEventListener('scroll', check); window.addEventListener('resize', check);
+    document.addEventListener('focusin', check); document.addEventListener('focusout', check);
+    return () => {
+      clearInterval(every); later.forEach(clearTimeout);
+      vv.removeEventListener('resize', check); vv.removeEventListener('scroll', check); window.removeEventListener('resize', check);
+      document.removeEventListener('focusin', check); document.removeEventListener('focusout', check);
+    };
   }, []);
 
   const { text } = splitLead(draft.body);

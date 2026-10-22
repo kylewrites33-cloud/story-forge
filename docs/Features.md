@@ -46,7 +46,9 @@ add a dated line here when you add or change one.
   on the right side. no colored text"; then "stay fixed at the bottom ... i just always see it" with "a subtle visible
   horizontal divider") is two faint arrows side by side on the left (Kyle, 2026-10-21: "right next to each other on the left side"), pinned to the bottom of the screen under a faint line (also while typing with a hardware keyboard: the screen
   keeps its full height and the iPad's small shortcut bar floats between the arrows; Kyle, 2026-10-21, "bring the bar all
-  the way down, even when im tapped in the word processor"), opening the scene before and
+  the way down, even when im tapped in the word processor"; 2026-10-22, "this happened when the keyboard screen lowered
+  with the switch to bluetooth keyboard": the screen now looks again after each keyboard change and every second, so it
+  goes back to full height even when the iPad sends no word), opening the scene before and
   after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
   shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
   Done, split, join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
