@@ -165,3 +165,20 @@ test('beatStart finds the paragraph a beat opens, and -1 when its words are gone
   assert.equal(beatStart(A, 'Words that are not here'), -1);
   assert.equal(beatStart(A, ''), -1);
 });
+
+test('a beat is deleted with its words, and its archived copy keeps them', async () => {
+  const { addBeatAtEnd, deleteBeat, deletedBeatPath, deletedBeatText } = await import('../src/lib/beats.ts');
+  const { beats } = layoutChapter([{ path: 'a.md', id: 'S-001', body: '\nOpening words here.\n\nReed had a theory about videos.\n' }],
+    [{ title: 'Reed\'s theory', summary: 'Reed explains.', scene: 'S-001', words: 'Reed had a theory about videos.' }]);
+  const left = deleteBeat(beats, beats[1].key);
+  assert.equal(left.length, 1);
+  assert.equal(sceneBody({ path: 'a.md', id: 'S-001', lead: '\n', tail: '\n' }, left), '\nOpening words here.\n');
+  const now = new Date(2026, 9, 22, 9, 5, 7);
+  assert.equal(deletedBeatPath('B', 3, 2, 'Reed\'s theory: part #1', now), 'B/Archive/Deleted beats/Chapter 3 beat 2 Reed\'s theory part 1 2026-10-22 090507.md');
+  const text = deletedBeatText(beats[1], 3, 2, now);
+  assert.match(text, /## Reed's theory\nReed explains\.\n\nReed had a theory about videos\./);
+  const added = addBeatAtEnd([], { path: 'a.md', id: 'S-001' });
+  assert.equal(added.length, 1);
+  assert.equal(added[0].scene, 'S-001');
+  assert.equal(addBeatAtEnd(beats, null).length, 3);
+});

@@ -250,3 +250,32 @@ export function moveBeat(beats: BeatView[], key: string, before: string | null):
   const fixed = out.map((x, i) => (x.loose && i > 0 && out[i - 1].path === x.path ? { ...x, loose: false } : x));
   return { beats: fixed, touched: b.path === home.path ? [b.path] : [b.path, home.path] };
 }
+
+/** A new, empty beat at the chapter's end: after its last beat, or as the first beat of its last scene when it has none. */
+export function addBeatAtEnd(beats: BeatView[], last: { path: string; id: string } | null): BeatView[] {
+  if (beats.length) return addBeatAfter(beats, beats[beats.length - 1].key, '');
+  if (!last) return beats;
+  return [{ key: nextKey(), title: '', summary: '', path: last.path, scene: last.id, prose: '', loose: false, lost: false, words: '' }];
+}
+
+/** Take a beat out with its words (Kyle, 2026-10-22). The words are saved to the Archive first (`deletedBeatText`). */
+export function deleteBeat(beats: BeatView[], key: string): BeatView[] {
+  return beats.filter((b) => b.key !== key);
+}
+
+/** Where a deleted beat's words are kept: the book's Archive, one note per beat, named by chapter, beat and time. */
+export function deletedBeatPath(bookFolder: string, chapter: number, n: number, title: string, now: Date): string {
+  const p = (x: number) => String(x).padStart(2, '0');
+  const stamp = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()) + ' ' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
+  const name = oneLine(title).replace(/[\\/:*?"<>|#^[\]]/g, '').slice(0, 60).trim();
+  return bookFolder + '/Archive/Deleted beats/Chapter ' + chapter + ' beat ' + n + (name ? ' ' + name : '') + ' ' + stamp + '.md';
+}
+
+/** The archived copy of a deleted beat: a line saying why, its heading and summary, then its prose as it stood. */
+export function deletedBeatText(b: BeatView, chapter: number, n: number, now: Date): string {
+  const L = ['> [!note] Archived', '> Beat ' + n + ' of chapter ' + chapter + (b.scene ? ' (in ' + b.scene + ')' : '') + ', deleted with its words in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.', ''];
+  L.push('## ' + (oneLine(b.title) || UNTITLED));
+  if (oneLine(b.summary)) L.push(oneLine(b.summary));
+  L.push('', b.prose.replace(/^\s+|\s+$/g, '') || '(No prose.)', '');
+  return L.join('\n');
+}

@@ -1041,7 +1041,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 
 /* A chapter by its beats: closed rows with number, title and summary; open shows a slim title row and the prose under it. */
 .beat-tools { margin-top: 12px; }
-.beat-tools button, .beat-actions button, .writer-done button { display: inline-flex; align-items: center; gap: 6px; }
+.beat-tools button, .writer-done button { display: inline-flex; align-items: center; gap: 6px; }
 .beat-ask { display: grid; gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
 .beat-ask p { margin: 0; }
 .beat-ask textarea { width: 100%; font: inherit; }
@@ -1051,9 +1051,11 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-scene { margin: 6px 0 0; font-size: 0.94rem; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .beat-scene a { color: var(--muted); font-weight: 600; text-decoration: none; text-align: center; }
 .beat-break { color: var(--muted); font-family: var(--serif); letter-spacing: 0.3em; font-size: 1.1rem; }
-.beat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.beat-row { display: grid; grid-template-columns: 52px 1fr; gap: 4px; align-items: start; padding: 6px 12px 6px 4px; }
-.beat.open .beat-row { padding-bottom: 0; }
+.beat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 4px; padding: 6px 12px 6px 4px; }
+/* The number and Move handle run down the beat's left edge, beside its name, summary and prose (Kyle, 2026-10-22). */
+.beat-row { display: contents; }
+.beat-head, .beat-menu, .beat-body { grid-column: 2; }
 .beat-toggle { border: none; background: none; min-height: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; gap: 2px;
   color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 .beat-toggle .icon { color: var(--muted); }
@@ -1063,11 +1065,16 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-summary { color: var(--muted); font-size: 0.95rem; line-height: 1.45; resize: none; overflow: hidden; display: block; }
 .beat-title:focus, .beat-summary:focus { outline: none; background: var(--bg); }
 .beat-lost { margin: 0 6px 6px; font-size: 0.94rem; color: var(--muted); }
-.beat-body { padding: 0 12px 10px 60px; }
+.beat-body { padding: 0 0 4px 6px; }
 .beat-body .writer-text { min-height: 3em; padding: 4px 0 8px; max-width: none; }
-.beat-actions { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
-.beat-actions button { font-size: 0.94rem; border-color: transparent; background: var(--bg); padding: 4px 12px; }
-@media (max-width: 600px) { .beat-body { padding-left: 16px; padding-right: 16px; } }
+/* A beat's left edge: its number, and the Move handle under it (Kyle, 2026-10-22). */
+.beat-left { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; align-self: start; }
+/* Hold a beat's name (or right-click it): Delete beat and its words. */
+.beat-menu { margin: 0 0 8px; max-width: 360px; }
+.beat-menu .beat-menu-delete { color: var(--danger); font-weight: 600; }
+.beat-menu-ask { margin: 6px 10px; }
+.beat-title { -webkit-touch-callout: none; }
+@media (max-width: 600px) { .beat { grid-template-columns: 44px minmax(0, 1fr); padding-right: 8px; } }
 .chapter-beats-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; min-height: 44px; font-size: 0.94rem; font-weight: 600; vertical-align: middle; }
 .writer.paper-dark .beat, .writer.paper-cream .beat { background: transparent; }
 
@@ -1669,8 +1676,7 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .member-steps a { font-weight: 600; }
 @media (max-width: 600px) { .member-facts { grid-template-columns: minmax(0, 1fr); gap: 2px; } .member-facts dd { margin-bottom: 8px; } }
 /* Moving beats (Kyle, 2026-10-19): hold the Move handle and drag. */
-.beat-row:has(.beat-move) { grid-template-columns: 52px 1fr 44px; }
-.beat-move { border: none; background: none; color: var(--muted); min-height: 44px; }
+.beat-move { border: none; background: none; color: var(--muted); min-height: 44px; min-width: 44px; }
 .beat { position: relative; }
 .beat.dragging { z-index: 5; outline: 2px solid var(--accent); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); }
 .beat.dragging .beat-move { cursor: grabbing; }
