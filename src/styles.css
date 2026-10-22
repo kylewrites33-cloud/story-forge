@@ -420,6 +420,7 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .team-tools::-webkit-scrollbar { display: none; }
 .tool-heading { flex: none; margin-right: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .writer-bar .bar-button, .writer-bar > button { white-space: nowrap; }
+.writer-bar a.bar-button { text-decoration: none; color: var(--text); min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 0.95rem; }
 @media (max-width: 899px) { .writer-bar .writer-words { display: none; } }
 .writer-tools .tool { flex: none; white-space: nowrap; border-radius: 8px; }
 .writer-tools .tool:disabled { opacity: 0.35; }

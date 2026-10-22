@@ -701,6 +701,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
       {/* One slim bar (design review, 2026-10-22): Chapters, where you are, Undo, Redo, B, I, Highlight, Find, then
           Saved, the timer, Team and •••. With the iPad's on-screen keyboard up, the formatting moves to a row above it. */}
       <header class="writer-bar">
+        {/* The way out (Kyle, 2026-10-22: "there doesnt seem to be a way to back out of writing mode"): saves, then the book's Home. */}
+        {book && <a class="bar-button" {...link(href.board('overview', book.folder))} aria-label="Back to the book's Home" title="Back to the book's Home"><Icon name="left" /><span class="bar-label">Home</span></a>}
         {book
           ? <button type="button" class="bar-button" onClick={toggleLeft} aria-expanded={left} aria-label="Chapters"><Icon name="menu" /><span class="bar-label">Chapters</span></button>
           : <button type="button" class="bar-button" onClick={done} aria-label="Back"><Icon name="left" /><span class="bar-label">Back</span></button>}
