@@ -1106,17 +1106,17 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .writer-tools .tool .count-badge { margin-left: 2px; }
 
 /* Colour themes (Settings, theme.ts). Each card in Settings carries data-theme too, so it previews its own colours.
-   The dark themes share Violet Night's greys (same lightness, tinted toward their own accent); only the accent changes. */
+   The other dark themes share Violet Night's lightness but are quieter: near-neutral greys, softer accents, faint panels. */
 :root[data-theme="violet"], .theme-card[data-theme="violet"] { --bg: #f6f6f8; --surface: #ffffff; --rail: #fbfbfc; --hover: #f0eff4; --text: #1c1a22; --muted: #646171; --line: #e5e3ea; --accent: #6344d4; --accent-soft: #eeeafd; --on-accent: #ffffff; }
 :root[data-theme="parchment"], .theme-card[data-theme="parchment"] { --bg: #f5f0e6; --surface: #fffdf8; --rail: #f9f5ec; --hover: #efe7d8; --text: #2b241b; --muted: #6b5e4e; --line: #e3d9c6; --accent: #9a4a1c; --accent-soft: #f5e4d4; --on-accent: #ffffff; }
 :root[data-theme="sage"], .theme-card[data-theme="sage"] { --bg: #f2f5f1; --surface: #ffffff; --rail: #f7f9f6; --hover: #e7eee5; --text: #1b231d; --muted: #596a5d; --line: #dae3d8; --accent: #2f7046; --accent-soft: #e0efe3; --on-accent: #ffffff; }
 :root[data-theme="sky"], .theme-card[data-theme="sky"] { --bg: #f2f6fa; --surface: #ffffff; --rail: #f8fafc; --hover: #e7eef6; --text: #17202b; --muted: #56657a; --line: #d9e2ec; --accent: #1f5fa8; --accent-soft: #e1ecf9; --on-accent: #ffffff; }
 :root[data-theme="rose"], .theme-card[data-theme="rose"] { --bg: #faf4f5; --surface: #ffffff; --rail: #fcf8f9; --hover: #f3e7ea; --text: #2a1d21; --muted: #725c64; --line: #ebdde2; --accent: #a8325c; --accent-soft: #f8e2ea; --on-accent: #ffffff; }
 :root[data-theme="violet-night"], .theme-card[data-theme="violet-night"] { --bg: #16151b; --surface: #201f27; --rail: #1b1a21; --hover: #2a2933; --text: #efeef3; --muted: #aaa7b6; --line: #34323d; --accent: #a891ff; --accent-soft: #2f2852; --on-accent: #16151b; }
-:root[data-theme="midnight"], .theme-card[data-theme="midnight"] { --bg: #12161b; --surface: #1b2127; --rail: #161c21; --hover: #232b33; --text: #eceff3; --muted: #a0abb7; --line: #2d353e; --accent: #73b6fa; --accent-soft: #12314f; --on-accent: #12161b; }
-:root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #111717; --surface: #1a2221; --rail: #151d1c; --hover: #222d2c; --text: #ebf0f0; --muted: #9eadac; --line: #2b3636; --accent: #73d1ca; --accent-soft: #053735; --on-accent: #111717; }
-:root[data-theme="ember"], .theme-card[data-theme="ember"] { --bg: #191510; --surface: #251f18; --rail: #1f1a14; --hover: #312921; --text: #f2eeea; --muted: #b2a89b; --line: #3a3229; --accent: #f0ab55; --accent-soft: #432907; --on-accent: #191510; }
-:root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #1a1512; --surface: #251e1c; --rail: #201a17; --hover: #312825; --text: #f2eeec; --muted: #b3a6a0; --line: #3b312d; --accent: #e99169; --accent-soft: #482514; --on-accent: #1a1512; }
+:root[data-theme="midnight"], .theme-card[data-theme="midnight"] { --bg: #141618; --surface: #1e2023; --rail: #191b1d; --hover: #282b2d; --text: #eeeff0; --muted: #a6aaae; --line: #313437; --accent: #7db1dd; --accent-soft: #1d2c38; --on-accent: #141618; }
+:root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #141716; --surface: #1d2121; --rail: #191c1b; --hover: #272b2b; --text: #edefef; --muted: #a4abab; --line: #303535; --accent: #80bfba; --accent-soft: #1b2e2d; --on-accent: #141716; }
+:root[data-theme="ember"], .theme-card[data-theme="ember"] { --bg: #171614; --surface: #22201d; --rail: #1c1b19; --hover: #2c2a27; --text: #f0efed; --muted: #aca9a4; --line: #363330; --accent: #d5a96a; --accent-soft: #332819; --on-accent: #171614; }
+:root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #181514; --surface: #221f1e; --rail: #1d1a19; --hover: #2d2928; --text: #f0eeed; --muted: #aea8a5; --line: #373331; --accent: #d28a69; --accent-soft: #39251b; --on-accent: #181514; }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
 .theme-card {
