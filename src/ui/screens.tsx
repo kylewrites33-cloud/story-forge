@@ -144,8 +144,9 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
     <li class={'scene-item' + (cls ? ' ' + cls : '')} data-scene={note.path} style={shift ? { transform: 'translate(' + shift[0] + 'px, ' + shift[1] + 'px)' } : undefined}>
       <a class={'card status-' + (status || 'none').replace(/[^a-z-]/gi, '')} href={onDecide ? href.write(note.path) : href.note(note.path)}>
         <span class="card-top">
-          {/* No scene ID or status word on the grid; the coloured edge shows the status (Kyle, 2026-10-18, an experiment). */}
-          <span class="card-id">{note.data.kind === 'test' ? 'Test drive' : ''}</span>
+          {/* No scene ID or status word on the grid; the coloured edge shows the status (Kyle, 2026-10-18, an experiment),
+              with a small shape beside it so colour is never the only sign (design review, 2026-10-22). */}
+          <span class="card-id">{status && <span class={'status-mark status-' + status.replace(/[^a-z-]/gi, '')} title={status} aria-label={'Status: ' + status} />} {note.data.kind === 'test' ? 'Test drive' : ''}</span>
           <span class="pills">
             {accepted && <span class="pill pill-accepted">Accepted</span>}
           </span>
