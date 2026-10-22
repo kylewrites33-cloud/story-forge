@@ -1548,8 +1548,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
   const send = async (kind: JobKind, target: string, words = '') => {
     setBusy(kind);
     setSaid(null);
-    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' ? '' : title);
-    const ask = kind === 'table-read' ? jobAsk(kind, target, words) : words;
+    const jobTitle = kind === 'custom' ? (words.trim().length > 60 ? words.trim().slice(0, 57).replace(/\s+\S*$/, '') + '…' : words.trim()) || 'Ask the team' : defaultJobTitle(kind, target, kind === 'notes' || kind === 'table-read' || kind === 'beats' ? '' : title);
+    const ask = kind === 'table-read' || kind === 'beats' ? jobAsk(kind, target, words) : words;
     const r = await onJob({ title: jobTitle, kind, target, book: bookFolder || '', ask: recipe ? withRecipe(ask, recipe) : ask });
     setBusy('');
     setSaid(r);
@@ -1569,6 +1569,8 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
         : <p class="hint">This scene has words in it, so the team won't draft over it.</p>}
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('notes', chapterTarget)}>{busy === 'notes' ? 'Sending…' : 'Notes on this chapter'}</button>
       <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('table-read', chapterTarget, '')}>{busy === 'table-read' ? 'Sending…' : 'Table read of this chapter'}</button>
+      {/* Moved here from Beats mode, whose own Ask the team was redundant (Kyle, 2026-10-22). */}
+      <button type="button" disabled={busy !== '' || !chapterTarget} onClick={() => send('beats', chapterTarget, '')}>{busy === 'beats' ? 'Sending…' : 'Beats for this chapter (find, plan or redo them)'}</button>
       <button type="button" disabled={busy !== '' || !id} onClick={() => send('check', id)}>{busy === 'check' ? 'Sending…' : 'The team\'s deeper check for AI-sounding phrases'}</button>
       <button type="button" disabled={busy !== ''} onClick={() => send('learn', '')}>{busy === 'learn' ? 'Sending…' : 'Learn from my edits'}</button>
       {asking ? (

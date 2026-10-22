@@ -5,7 +5,8 @@
 import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
-  BEATS_TYPE, addBeatAfter, beatDefs, beatsBody, beatsPath, beatsTitle, layoutChapter, moveBeat, nameLoose, parseBeats, removeBeat, sceneBody,
+  BEATS_TYPE, addBeatAfter, addBeatAtEnd, beatDefs, beatsBody, beatsPath, beatsTitle, deleteBeat, deletedBeatPath, deletedBeatText, layoutChapter,
+  moveBeat, nameLoose, parseBeats, removeBeat, sceneBody,
   type BeatView, type SceneShape
 } from '../lib/beats.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
@@ -13,7 +14,7 @@ import { matcher, type CodexEntry } from '../lib/codex.ts';
 import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, saveDraft, type Draft } from '../lib/drafts.ts';
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
-import { jobAsk, defaultJobTitle, type OnJob } from '../lib/jobs.ts';
+import type { OnJob } from '../lib/jobs.ts';
 import { loadLook, lookStyle } from '../lib/page.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
@@ -107,7 +108,7 @@ function beatDropAt(y: number, dragged: string): string | null | undefined {
   return undefined;
 }
 
-export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, onJob, asking, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords }: {
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords }: {
   source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
@@ -115,9 +116,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   /** The scene the beats opened from: its beats come into view. */
   startAt: string;
   onSaved: (n: NoteRecord) => void;
+  /** Not used here any more: Ask the team lives in the side column (Kyle, 2026-10-22: "redundant" in Beats). */
   onJob?: OnJob;
-  /** A beats job for this chapter the team has not finished, if there is one. */
-  asking: NoteRecord | null;
+  asking?: NoteRecord | null;
   saver: { current: ((closing: boolean) => Promise<boolean>) | null };
   /** The save state in Kyle's words, for the top bar's chip. */
   onStatus: (text: string, cls: string) => void;
@@ -313,24 +314,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
 
   saver.current = saveAll;
 
-  // Ask the team for beats.
-  const [asked, setAsked] = useState<{ error: boolean; text: string } | null>(null);
-  const [words, setWords] = useState('');
-  const [sending, setSending] = useState(false);
-  const target = 'Chapter ' + group.num;
-  const askTeam = async () => {
-    if (!onJob) return;
-    setSending(true);
-    const r = await onJob({ title: defaultJobTitle('beats', target), kind: 'beats', target, book: bookFolder, ask: jobAsk('beats', target, words) });
-    setSending(false);
-    setAsked(r);
-    if (!r.error) setWords('');
-  };
-
   const { beats } = st;
-  const hasBeats = beats.some((b) => !b.loose);
-  const hasProse = beats.some((b) => b.prose.trim());
-  const [askOpen, setAskOpen] = useState(!hasBeats);
   const unsaved = unsavedAll(st);
   const chip = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved' : unsaved ? (state === 'device' || !navigator.onLine ? 'On this device' : 'Saved on device') : 'Saved';
   useEffect(() => { onStatus(chip, chip === 'Saved' ? 'good' : state === 'error' ? 'bad' : ''); }, [chip]);
@@ -349,38 +333,89 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     Object.values(st.scenes).forEach((d) => { w[d.path] = bodyWords(d.body); });
     onWords(w);
   }, [st.scenes]);
+  // Add a beat: after the beat Kyle is in, else at the chapter's end; it opens with its name ready to type (Kyle, 2026-10-22).
+  const addBeat = () => {
+    const cur = ref.current.beats;
+    const last = group.scenes[group.scenes.length - 1];
+    const next = focused && cur.some((x) => x.key === focused) ? addBeatAfter(cur, focused, '')
+      : addBeatAtEnd(cur, last ? { path: last.path, id: String(last.data.id || '') } : null);
+    const k = next.find((x) => !cur.some((y) => y.key === x.key));
+    if (!k) return;
+    apply(next, []);
+    keepOpen(new Set([...open, k.key]), next);
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('[data-beat="' + k.key + '"] .beat-title');
+      if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); }
+    }, 0);
+  };
+
+  // Hold a beat's name (or right-click it) for Delete beat and its words (Kyle, 2026-10-22). A short press still types.
+  const [menu, setMenu] = useState<{ key: string; confirm: boolean } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
+  const stopHold = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
+  const openMenu = (key: string) => {
+    hold.current.fired = Date.now();
+    const a = document.activeElement as HTMLElement | null;
+    if (a && a.blur) a.blur();
+    setMenu({ key, confirm: false });
+  };
+  const holdProps = (key: string) => ({
+    onPointerDown: (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      stopHold();
+      const h = hold.current;
+      h.x = e.clientX; h.y = e.clientY;
+      h.t = setTimeout(() => { h.t = null; openMenu(key); }, 500);
+    },
+    onPointerMove: (e: PointerEvent) => { const h = hold.current; if (h.t && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) stopHold(); },
+    onPointerUp: stopHold,
+    onPointerCancel: stopHold,
+    onContextMenu: (e: MouseEvent) => { e.preventDefault(); if (Date.now() - hold.current.fired > 800) openMenu(key); },
+    onFocus: (e: FocusEvent) => { if (Date.now() - hold.current.fired < 800) (e.target as HTMLElement).blur(); }
+  });
+  /** Delete a beat and its words: the words go to the book's Archive first, so nothing of Kyle's is lost. */
+  const remove = async (b: BeatView, at: number) => {
+    const chapter = group.num as number;
+    if (b.prose.trim() && canSave) {
+      if (!navigator.onLine) { setMenu(null); setState('error'); setMessage('Deleting a beat needs the internet, so its words can go to the Archive first. Try again when you are online.'); return; }
+      setDeleting(true);
+      const now = new Date();
+      try {
+        await source.write!(deletedBeatPath(bookFolder, chapter, at, b.title, now), deletedBeatText(b, chapter, at, now), '',
+          'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.');
+      } catch (e) {
+        setDeleting(false);
+        setMenu(null);
+        setState('error');
+        setMessage('The beat was not deleted, because its words could not be copied to the Archive: ' + (e as Error).message);
+        return;
+      }
+      setDeleting(false);
+    }
+    setMenu(null);
+    const next = deleteBeat(ref.current.beats, b.key);
+    const o = new Set(open); o.delete(b.key);
+    apply(next, [b.path], false);
+    keepOpen(o, next);
+    setRev((r) => r + 1);
+    await saveAll(false);
+    setMessage(b.prose.trim() && canSave ? 'Beat ' + at + ' is deleted. Its words are in the book\'s Archive, in Deleted beats.' : 'Beat ' + at + ' is deleted.');
+  };
+
   let n = 0;
 
   return (
     <>
           <div class="page-head">
             {head || <h1>{chapterHeading(group)}</h1>}
-            <p class="meta">The chapter by its beats. Press a number to open or close a beat. Change any words in place; they save like the page. Press Page at the top to go back.</p>
+            <p class="meta">The chapter by its beats. Press a number to open or close a beat. Hold a beat's name to delete it. Change any words in place; they save like the page.</p>
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
             <div class="buttons beat-tools">
               <button type="button" onClick={() => keepOpen(new Set(beats.map((b) => b.key)))}>Open all</button>
               <button type="button" onClick={() => keepOpen(new Set())}>Close all</button>
-              {onJob && <button type="button" aria-expanded={askOpen} onClick={() => setAskOpen(!askOpen)}><Icon name="team" size={18} />Ask the team</button>}
+              <button type="button" onClick={addBeat}><Icon name="plus" size={18} />Add a beat</button>
             </div>
-            {onJob && askOpen && (
-              <div class="beat-ask">
-                {asking ? (
-                  <p class="note-line"><span class="job-dot" aria-hidden="true" /> The team is working on this chapter's beats ({String(asking.data.id || '')}). They show here when they are done.</p>
-                ) : (
-                  <>
-                    <p class="meta">{hasBeats ? 'The team can redo these beats. The old ones go to the book\'s archive.'
-                      : hasProse ? 'This chapter has no beats yet. The team can find them in the prose without changing a word.'
-                      : 'This chapter has no beats yet. Say what the chapter should do, and the team plans its beats.'}</p>
-                    <textarea rows={2} value={words} placeholder="What should this chapter do? (optional)" aria-label="What the chapter should do"
-                      onInput={(e) => setWords((e.target as HTMLTextAreaElement).value)} />
-                    <button type="button" class="primary" disabled={sending || (!hasProse && !words.trim())} onClick={askTeam}>
-                      {hasBeats ? 'Ask the team to redo the beats' : hasProse ? 'Ask the team to find the beats' : 'Ask the team to plan the beats'}
-                    </button>
-                  </>
-                )}
-                {asked && <p class={asked.error ? 'error' : 'ok'}>{asked.text}</p>}
-              </div>
-            )}
           </div>
           <div class={'beats' + (drag && drag.moved && drag.before === null ? ' drop-end' : '')}>
             {beats.map((b, i) => {
@@ -390,11 +425,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
               // Every part of a scene is a beat, named or not (Kyle, 2026-10-19).
               const label = 'Beat ' + (n + 1);
               n++;
+              const shown = n;
               const toggle = () => { const next = new Set(open); if (isOpen) next.delete(b.key); else next.add(b.key); keepOpen(next); };
               const c = commands.current[b.key] || (commands.current[b.key] = { current: null });
               const dragging = Boolean(drag && drag.moved && drag.key === b.key);
-              // Move down: in front of the beat after next (or to the end).
-              const after = beats[i + 2] ? beats[i + 2].key : null;
               return (
                 <Fragment key={b.key}>
                   {newScene && (
@@ -406,19 +440,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                   <section class={'beat' + (isOpen ? ' open' : '') + (b.loose ? ' loose' : '') + (dragging ? ' dragging' : '') + (drag && drag.moved && drag.before === b.key ? ' drop-before' : '')}
                     data-beat={b.key} style={dragging ? { transform: 'translateY(' + (drag!.y - drag!.startY + ((beatsScroller() || { scrollTop: 0 }).scrollTop - drag!.startScroll)) + 'px)' } : undefined}>
                     <div class="beat-row">
-                      <button type="button" class="beat-toggle" aria-expanded={isOpen} aria-label={(isOpen ? 'Close ' : 'Open ') + label} onClick={toggle}>
-                        <span>{n}</span><Icon name={isOpen ? 'down' : 'right'} size={16} />
-                      </button>
-                      <div class="beat-head">
-                        <input class="beat-title" type="text" value={b.title} aria-label={label + ' title'}
-                          placeholder="Name this beat"
-                          onInput={(e) => edit(b.key, { title: (e.target as HTMLInputElement).value })}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }} />
-                        {!isOpen && <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />}
-                        {!isOpen && b.lost && <p class="beat-lost">Its first words changed in the page, so its prose now sits in the beat above.</p>}
-                        {!isOpen && !b.prose.trim() && !b.lost && <p class="beat-lost">No prose yet.</p>}
-                      </div>
-                      {(
+                      <div class="beat-left">
+                        <button type="button" class="beat-toggle" aria-expanded={isOpen} aria-label={(isOpen ? 'Close ' : 'Open ') + label} onClick={toggle}>
+                          <span>{n}</span><Icon name={isOpen ? 'down' : 'right'} size={16} />
+                        </button>
                         <button type="button" class="move-handle beat-move icon-button" title="Move: hold and drag up or down" aria-label={'Move ' + label + ': hold and drag'}
                           onPointerDown={(e) => {
                             e.preventDefault();
@@ -442,28 +467,38 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                           onPointerCancel={() => putDrag(null)}>
                           <Icon name="move" />
                         </button>
-                      )}
+                      </div>
+                      <div class="beat-head">
+                        <input class="beat-title" type="text" value={b.title} aria-label={label + ' title'} data-own-hold=""
+                          placeholder="Name this beat" {...holdProps(b.key)}
+                          onInput={(e) => edit(b.key, { title: (e.target as HTMLInputElement).value })}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }} />
+                        {!isOpen && <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />}
+                        {!isOpen && b.lost && <p class="beat-lost">Its first words changed in the page, so its prose now sits in the beat above.</p>}
+                        {!isOpen && !b.prose.trim() && !b.lost && <p class="beat-lost">No prose yet.</p>}
+                      </div>
                     </div>
+                    {menu && menu.key === b.key && (
+                      <div class="side-menu beat-menu" role="menu" aria-label={label}>
+                        {menu.confirm ? (
+                          <>
+                            <p class="beat-menu-ask">{b.prose.trim() ? 'Delete ' + label.toLowerCase() + ' and its ' + num(bodyWords(b.prose)) + ' words? A copy goes to the book\'s Archive.' : 'Delete ' + label.toLowerCase() + '?'}</p>
+                            <button type="button" role="menuitem" class="beat-menu-delete" disabled={deleting} onClick={() => remove(b, shown)}><Icon name="archive" size={18} />{deleting ? 'Deleting…' : 'Yes, delete it'}</button>
+                            <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setMenu(null)}>Cancel</button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" role="menuitem" class="beat-menu-delete" onClick={() => setMenu({ key: b.key, confirm: true })}><Icon name="archive" size={18} />Delete beat and its words</button>
+                            {!b.loose && <button type="button" role="menuitem" onClick={() => { setMenu(null); apply(removeBeat(ref.current.beats, b.key), [b.path]); setRev((r) => r + 1); }}><Icon name="close" size={18} />Take off the name, keep the words</button>}
+                            <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setMenu(null)}>Cancel</button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {isOpen && (
                       <div class="beat-body" data-active={focused === b.key ? '' : undefined} onFocusCapture={() => setFocused(b.key)}>
                         <StyledEditor key={b.key + ':' + rev} value={b.prose} onChange={(t) => edit(b.key, { prose: t, lost: false })} onCaret={() => {}}
                           label={'Prose of ' + label} commands={c} options={opts} onName={onName} onLook={onLook} />
-                        <div class="beat-actions">
-                          <button type="button" onClick={() => { const next = addBeatAfter(ref.current.beats, b.key, ''); apply(next, []); const k = next[next.indexOf(next.find((x) => x.key === b.key)!) + 1].key; keepOpen(new Set([...open, k]), next); }}>
-                            <Icon name="plus" size={16} />Add a beat after
-                          </button>
-                          {i > 0 && (
-                            <button type="button" onClick={() => move(b.key, beats[i - 1].key)}><Icon name="up" size={16} />Move up</button>
-                          )}
-                          {i < beats.length - 1 && (
-                            <button type="button" onClick={() => move(b.key, after)}><Icon name="down" size={16} />Move down</button>
-                          )}
-                          {!b.loose && (
-                            <button type="button" onClick={() => { apply(removeBeat(ref.current.beats, b.key), [b.path]); setRev((r) => r + 1); }}>
-                              Take off this heading
-                            </button>
-                          )}
-                        </div>
                       </div>
                     )}
                   </section>

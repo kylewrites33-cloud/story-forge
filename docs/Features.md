@@ -218,17 +218,21 @@ add a dated line here when you add or change one.
   it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
   writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
   (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
-  `src/lib/beats.ts`). Prose before a scene's first beat shows as an unnamed beat. Add a beat after, Take off this heading.
-  Ask the team writes a `beats` job (the Story Specialist finds the beats in the prose, plans them from Kyle's words, or
-  redoes them, archiving the old note). Reached from the writing screen's and whole chapter's Beats button and each
+  `src/lib/beats.ts`). Prose before a scene's first beat shows as an unnamed beat.
+  Tidied 2026-10-22 (Kyle: "i dont like the 3 options taking up space in each beat box"): the beat boxes have no buttons
+  of their own. The top row is Open all, Close all and Add a beat (a new beat after the one Kyle is in, else at the
+  chapter's end, opened with its name ready to type). Holding a beat's name, open or closed (right-click on desktop),
+  gives Delete beat and its words (asks once: "Delete beat 2 and its 43 words?"; the words are first saved to the book's
+  `Archive/Deleted beats/`, so the delete needs the internet) and Take off the name, keep the words. The Ask the team
+  button left Beats ("redundant"); a `beats` job is now asked from the side column's Ask the team, "Beats for this chapter" (the old beats note goes to the Archive). Reached from the writing screen's and whole chapter's Beats button and each
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
   processor tool set too"): Undo, Redo, Bold, Italic, Highlight, Normal, Find, Names, Check, Listen and the Ask the team
   buttons work on the open beat the cursor is in. Split, Join, Options and Fill brackets stay on the page only.
   Beats mode also shows the page's heading: the scene line, the chapter strip and the target bar, all
   counting the words as Kyle types in the beats (Kyle, 2026-10-19). The writing screen no longer shows pages and minutes to read
   (Kyle, 2026-10-22: "the minutes to read area in a section isn't needed"); the Chapter Grid and home page still do. A beat's prose looks like the page while it is edited
-  (no tinted box). Each beat with a heading has a Move handle: hold and drag it up or down (finger or mouse), or press
-  Move up / Move down on an open beat; its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
+  (no tinted box). Each beat has a Move handle on its left, under its number (Kyle, 2026-10-22; it was top right): hold and
+  drag it up or down (finger or mouse); its prose moves with it, into the scene it lands in (`moveBeat` in `src/lib/beats.ts`).
   Every part of a scene is a beat (Kyle, 2026-10-19: "the whole scene should be composed of these sections"): a scene's
   opening words show as a numbered beat with no name yet, and move like any other; once they are not first in their
   scene they are saved in the beats note as "Untitled beat", which reads back with no name.
