@@ -16,6 +16,7 @@ import { cardFields, propDef } from '../lib/schema.ts';
 import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
+import { DONE_STATUSES } from '../lib/overview.ts';
 import { boardLinks } from './StoryBoards.tsx';
 import { RecipePicker } from './Recipes.tsx';
 import { withRecipe } from '../lib/recipes.ts';
@@ -71,7 +72,7 @@ function saveSide(key: string, open: boolean) {
 }
 type Tab = 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
 const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
-  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Split and join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
+  ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Done, split, join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
 // The column's tabs in four groups (Kyle, 2026-10-21): the group first, then its tabs as small chips.
 // One row of three since the design review (2026-10-22): Chat, Scene and Chapter; Page look and Check sit under Scene.
 const TAB_GROUPS: [string, Tab[]][] = [['Chat', ['chat', 'options', 'team']], ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools', 'check', 'page']],
@@ -645,11 +646,20 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!vv || typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches) return;
     const on = () => {
       const up = window.innerHeight - vv.height > 150 && document.activeElement && document.activeElement.closest && document.activeElement.closest('.writer-page');
-      setKb(up ? { top: vv.offsetTop + vv.height - 56 } : null);
+      const top = up ? Math.round(vv.offsetTop + vv.height - 56) : null;
+      setKb((k) => (k ? k.top : null) === top ? k : top == null ? null : { top });
     };
-    vv.addEventListener('resize', on); vv.addEventListener('scroll', on);
-    document.addEventListener('focusin', on); document.addEventListener('focusout', on);
-    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); document.removeEventListener('focusin', on); document.removeEventListener('focusout', on); };
+    // Looked at again later and every second too: the iPad may not say when its keyboard goes away (src/ui/viewport.ts).
+    let later: ReturnType<typeof setTimeout>[] = [];
+    const check = () => { on(); later.forEach(clearTimeout); later = [150, 500, 1200].map((ms) => setTimeout(on, ms)); };
+    const every = setInterval(on, 1000);
+    vv.addEventListener('resize', check); vv.addEventListener('scroll', check); window.addEventListener('resize', check);
+    document.addEventListener('focusin', check); document.addEventListener('focusout', check);
+    return () => {
+      clearInterval(every); later.forEach(clearTimeout);
+      vv.removeEventListener('resize', check); vv.removeEventListener('scroll', check); window.removeEventListener('resize', check);
+      document.removeEventListener('focusin', check); document.removeEventListener('focusout', check);
+    };
   }, []);
 
   const { text } = splitLead(draft.body);
@@ -817,7 +827,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 {moreItem('focus', 'Focus: only the page', enterFocus)}
                 {moreItem('type', 'Page look', () => openTab('page'))}
                 {moreItem('history', 'Copies', () => openTab('copies'))}
-                {moreItem('check', 'Mark as drafted', () => openTab('tools'))}
+                {(sceneStatus === 'planned' || sceneStatus === 'drafted' || !sceneStatus) && moreItem('check', sceneStatus === 'drafted' ? 'Mark as done' : 'Mark as drafted', () => openTab('tools'))}
                 {onAdd && group && group.num != null && moreItem('plus', 'Add a scene to this chapter', () => { if (!left) toggleLeft(); setChMenu(null); setChAdd({ key: group.scenes[0].path, kind: 'scene' }); })}
                 {moreItem('grid', 'Done: back to the Chapter Grid', done)}
               </div>
@@ -924,6 +934,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       aria-current={inHere ? 'page' : undefined} title={chapterHeading(g)}>
                       <span class="side-num">{g.num}</span>
                       <span class="side-name">{g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path)}</span>
+                      {g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : String(n.data.status || '')) >= 0) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
                       <span class="side-words">{num(gWords)}</span>
                     </a>
                     {shownScenes.indexOf(gk) >= 0 && g.scenes.map((n) => row(n, sceneHeader(n.data, n.path)))}
@@ -1161,8 +1172,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <OptionsPanel jobs={optionJobs || []} done={opt.done} onPick={opt.pick} onEnd={opt.end} onDone={opt.markDone} />
             )}
             {tab === 'tools' && (
-              <ScenePanel status={sceneStatus} next={next}
-                onDrafted={() => { setDraft({ ...draftRef.current, status: 'drafted' }); }}
+              <ScenePanel status={sceneStatus} next={next} alone={!group || group.scenes.length < 2}
+                onStatus={(st) => { setDraft({ ...draftRef.current, status: st }); }}
                 onSplit={split} onJoin={join} />
             )}
           </aside>
@@ -1561,8 +1572,8 @@ function SideAddForm({ label, button, hint, allowEmpty, initial, onAdd, onCancel
   );
 }
 
-function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
-  status: string; next: NoteRecord | null; onDrafted: () => void;
+function ScenePanel({ status, next, alone, onStatus, onSplit, onJoin }: {
+  status: string; next: NoteRecord | null; alone: boolean; onStatus: (status: string) => void;
   onSplit: (title: string) => Promise<string | null>; onJoin: () => Promise<string | null>;
 }) {
   const [title, setTitle] = useState('');
@@ -1583,7 +1594,19 @@ function ScenePanel({ status, next, onDrafted, onSplit, onJoin }: {
       {status === 'planned' && (
         <div>
           <p class="hint">This scene is still marked planned, so its words do not count on the Chapter Grid yet.</p>
-          <div class="buttons"><button type="button" class="primary" onClick={onDrafted}>Mark as drafted</button></div>
+          <div class="buttons"><button type="button" class="primary" onClick={() => onStatus('drafted')}>Mark as drafted</button></div>
+        </div>
+      )}
+      {status === 'drafted' && (
+        <div>
+          <p class="hint">{alone ? 'When you have been through this chapter and are happy with it, mark it done. Its words then count toward the book.' : 'When you have been through this scene, mark it done. The chapter counts toward the book once all its scenes are done.'}</p>
+          <div class="buttons"><button type="button" class="primary" onClick={() => onStatus('revised')}>{alone ? 'Mark this chapter done' : 'Mark this scene done'}</button></div>
+        </div>
+      )}
+      {status === 'revised' && (
+        <div>
+          <p class="hint">{alone ? 'This chapter is done and counts toward the book.' : 'This scene is done.'}</p>
+          <div class="buttons"><button type="button" onClick={() => onStatus('drafted')}>Not done yet</button></div>
         </div>
       )}
       <label class="reason">

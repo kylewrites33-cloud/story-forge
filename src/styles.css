@@ -399,6 +399,8 @@ html.page-locked body { padding-bottom: 0; }
 .side-scene:hover { background: var(--bg); }
 .side-scene[aria-current="page"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .side-words { font-size: 0.94rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.side-done { display: inline-flex; color: var(--ok); }
+.side-scene[aria-current="page"] .side-done { color: inherit; }
 button.side-add { border: none; background: none; color: var(--muted); display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 0.94rem; }
 .side-add-form { display: grid; gap: 8px; padding: 6px; }
 .side-boards { display: grid; }
@@ -1103,17 +1105,18 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .tool-said .job-dot { display: inline-block; }
 .writer-tools .tool .count-badge { margin-left: 2px; }
 
-/* Colour themes (Settings, theme.ts). Each card in Settings carries data-theme too, so it previews its own colours. */
+/* Colour themes (Settings, theme.ts). Each card in Settings carries data-theme too, so it previews its own colours.
+   The dark themes share Violet Night's greys (same lightness, tinted toward their own accent); only the accent changes. */
 :root[data-theme="violet"], .theme-card[data-theme="violet"] { --bg: #f6f6f8; --surface: #ffffff; --rail: #fbfbfc; --hover: #f0eff4; --text: #1c1a22; --muted: #646171; --line: #e5e3ea; --accent: #6344d4; --accent-soft: #eeeafd; --on-accent: #ffffff; }
 :root[data-theme="parchment"], .theme-card[data-theme="parchment"] { --bg: #f5f0e6; --surface: #fffdf8; --rail: #f9f5ec; --hover: #efe7d8; --text: #2b241b; --muted: #6b5e4e; --line: #e3d9c6; --accent: #9a4a1c; --accent-soft: #f5e4d4; --on-accent: #ffffff; }
 :root[data-theme="sage"], .theme-card[data-theme="sage"] { --bg: #f2f5f1; --surface: #ffffff; --rail: #f7f9f6; --hover: #e7eee5; --text: #1b231d; --muted: #596a5d; --line: #dae3d8; --accent: #2f7046; --accent-soft: #e0efe3; --on-accent: #ffffff; }
 :root[data-theme="sky"], .theme-card[data-theme="sky"] { --bg: #f2f6fa; --surface: #ffffff; --rail: #f8fafc; --hover: #e7eef6; --text: #17202b; --muted: #56657a; --line: #d9e2ec; --accent: #1f5fa8; --accent-soft: #e1ecf9; --on-accent: #ffffff; }
 :root[data-theme="rose"], .theme-card[data-theme="rose"] { --bg: #faf4f5; --surface: #ffffff; --rail: #fcf8f9; --hover: #f3e7ea; --text: #2a1d21; --muted: #725c64; --line: #ebdde2; --accent: #a8325c; --accent-soft: #f8e2ea; --on-accent: #ffffff; }
 :root[data-theme="violet-night"], .theme-card[data-theme="violet-night"] { --bg: #16151b; --surface: #201f27; --rail: #1b1a21; --hover: #2a2933; --text: #efeef3; --muted: #aaa7b6; --line: #34323d; --accent: #a891ff; --accent-soft: #2f2852; --on-accent: #16151b; }
-:root[data-theme="midnight"], .theme-card[data-theme="midnight"] { --bg: #0f1520; --surface: #182131; --rail: #131b28; --hover: #212c3f; --text: #e8edf5; --muted: #9eabbe; --line: #2a3649; --accent: #86b6ff; --accent-soft: #1d3254; --on-accent: #0f1520; }
-:root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #121815; --surface: #1b231f; --rail: #161d19; --hover: #24302a; --text: #e6eee8; --muted: #a0b1a5; --line: #2e3a33; --accent: #82d29c; --accent-soft: #1e3a29; --on-accent: #121815; }
-:root[data-theme="ember"], .theme-card[data-theme="ember"] { --bg: #1a1512; --surface: #241d19; --rail: #1e1815; --hover: #30271f; --text: #f2e9e0; --muted: #b8a899; --line: #3b3129; --accent: #f2aa6b; --accent-soft: #45301e; --on-accent: #1a1512; }
-:root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #000000; --surface: #111111; --rail: #0a0a0a; --hover: #1c1c1c; --text: #f2f2f2; --muted: #a9a9a9; --line: #2b2b2b; --accent: #5fd4cb; --accent-soft: #0f302d; --on-accent: #000000; }
+:root[data-theme="midnight"], .theme-card[data-theme="midnight"] { --bg: #12161b; --surface: #1b2127; --rail: #161c21; --hover: #232b33; --text: #eceff3; --muted: #a0abb7; --line: #2d353e; --accent: #73b6fa; --accent-soft: #12314f; --on-accent: #12161b; }
+:root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #121814; --surface: #1b221d; --rail: #161d18; --hover: #242d26; --text: #ebf0ed; --muted: #9faea4; --line: #2c3730; --accent: #6fd395; --accent-soft: #113822; --on-accent: #121814; }
+:root[data-theme="ember"], .theme-card[data-theme="ember"] { --bg: #191510; --surface: #251f18; --rail: #1f1a14; --hover: #312921; --text: #f2eeea; --muted: #b2a89b; --line: #3a3229; --accent: #f0ab55; --accent-soft: #432907; --on-accent: #191510; }
+:root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #1b1416; --surface: #261d21; --rail: #20191b; --hover: #32272b; --text: #f3edef; --muted: #b6a4a9; --line: #3c3034; --accent: #ee8ab2; --accent-soft: #482031; --on-accent: #1b1416; }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
 .theme-card {
@@ -1141,6 +1144,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow-lift);
 }
 .team-side-head { display: flex; align-items: flex-start; gap: 4px; }
+/* The heading and its Hide button stay in sight while the chat scrolls (Kyle's screenshot, 2026-10-22). */
+.team-side-head { position: sticky; top: calc(-1 * max(10px, var(--safe-top))); z-index: 1; margin: calc(-1 * max(10px, var(--safe-top))) -14px 0; padding: max(10px, var(--safe-top)) 14px 6px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .team-side-title { flex: 1 1 auto; min-width: 0; }
 .team-side-title h2 { margin: 6px 0 2px; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-side-title .meta { margin: 0; font-size: 0.94rem; }
@@ -2118,3 +2123,4 @@ button, .button { border-radius: 12px; }
 .side-scene.side-sub { font-size: 0.9rem; color: var(--muted); min-height: 36px; }
 .side-scene.side-sub[aria-current="page"] { background: none; color: var(--accent); font-weight: 600; }
 .main-section.has-below .writer-text { min-height: 4em; padding-bottom: 1em; }
+.ov-done-words { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }

@@ -10,6 +10,7 @@ import { toNumber } from '../lib/links.ts';
 import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import { buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
 import { activeBook } from '../lib/vault-index.ts';
+import { chaptersDone, storyScenes } from '../lib/overview.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { IdeasLink, Warnings } from './screens.tsx';
@@ -208,9 +209,11 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
   const data = index.notes[book.path] ? index.notes[book.path].data : {};
   const target = toNumber(data.target_words);
   const active = activeBook(index);
+  // Progress counts only chapters Kyle has marked done (Kyle, 2026-10-22).
+  const done = chaptersDone(storyScenes(index, book));
   const line = [
     'stage ' + book.stage,
-    chapters ? chapters + (chapters === 1 ? ' chapter' : ' chapters') : book.scenes.length + (book.scenes.length === 1 ? ' scene' : ' scenes'),
+    chapters ? done.done + ' of ' + chapters + (chapters === 1 ? ' chapter' : ' chapters') + ' done' : book.scenes.length + (book.scenes.length === 1 ? ' scene' : ' scenes'),
     words ? num(words) + ' words' : ''
   ].filter(Boolean).join(' · ');
   return (
@@ -221,7 +224,7 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
           <span class="meta">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}{active && active.folder === book.folder ? ' · active book' : ''}</span>
           <span class="book-title">{book.title}</span>
           <span class="meta"><span class={'dot ' + stageDot(book.stage)} />{line}</span>
-          {target && words ? <span class="book-progress" title={num(words) + ' of ' + num(target) + ' words'}><span style={{ width: Math.min(100, Math.round(words * 100 / target)) + '%' }} /></span> : null}
+          {target && words ? <span class="book-progress" title={num(done.words) + ' of ' + num(target) + ' words in done chapters'}><span style={{ width: Math.min(100, Math.round(done.words * 100 / target)) + '%' }} /></span> : null}
         </span>
       </a>
       <IdeasLink index={index} book={book} />

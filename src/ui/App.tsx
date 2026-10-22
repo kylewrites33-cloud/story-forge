@@ -15,7 +15,7 @@ import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } fro
 import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
-import { loadDrafts } from '../lib/drafts.ts';
+import { bodyWords, loadDrafts } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups } from '../lib/board.ts';
@@ -701,7 +701,7 @@ export function App() {
         const resume = keepWriting(view, book, source.key);
         const rn = resume ? view.notes[resume] : null;
         const keep = rn ? { to: href.write(rn.path), title: String(rn.data.title || rn.data.headline || 'Your scene'),
-          where: [rn.data.chapter != null && rn.data.chapter !== '' ? 'Chapter ' + rn.data.chapter : '', typeof rn.data.words === 'number' ? rn.data.words.toLocaleString('en-US') + ' words' : ''].filter(Boolean).join(' · ') } : null;
+          where: [rn.data.chapter != null && rn.data.chapter !== '' ? 'Chapter ' + rn.data.chapter : '', keepWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
         screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keep={keep} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
       }
       else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;
@@ -811,4 +811,11 @@ function checkOptionsFor(view: VaultIndex, bookFolder: string) {
   const guide = view.notes[bookFolder + '/Style Guide.md'];
   const config = view.notes['System/Config.md'];
   return checkOptions(guide ? guide.data : null, config ? config.data : null);
+}
+
+/** The words on the page of the scene to keep writing. A planned scene counts as none in the book's totals (as `sf words`
+ * does), but the Keep writing card shows what Kyle has typed in it (Kyle's screenshot, 2026-10-22: "0 words"). */
+function keepWords(n: { body?: string; data: Record<string, unknown> }): number {
+  if (typeof n.body === 'string') return bodyWords(n.body);
+  return typeof n.data.words === 'number' ? n.data.words : 0;
 }

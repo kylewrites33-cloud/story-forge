@@ -33,6 +33,7 @@ src/lib/covers.ts        book covers: shrink on the device, save as Cover.jpg, k
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name
 src/lib/theme.ts         colour themes per device: Match this device, five light, five dark (colours in styles.css)
+src/lib/topbar.ts        room at the top for the iPad clock bar and window button (ios-app, ios-window), Settings override
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
 src/ui/Chat.tsx          the Chat screen: the list of conversations and one conversation with Send

@@ -41,15 +41,17 @@ add a dated line here when you add or change one.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; an arrow to the previous and next section at the bottom), and the scene panel on the right (Card, Copies,
-  Target, Split and join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
+  Target, Done, split, join). The bottom bar (Kyle, 2026-10-21: "a more useful function at the bottom would be previous
   section and next section"; then "really subtle ... just an arrow to the left on the left side, and an arrow to the right
   on the right side. no colored text"; then "stay fixed at the bottom ... i just always see it" with "a subtle visible
   horizontal divider") is two faint arrows side by side on the left (Kyle, 2026-10-21: "right next to each other on the left side"), pinned to the bottom of the screen under a faint line (also while typing with a hardware keyboard: the screen
   keeps its full height and the iPad's small shortcut bar floats between the arrows; Kyle, 2026-10-21, "bring the bar all
-  the way down, even when im tapped in the word processor"), opening the scene before and
+  the way down, even when im tapped in the word processor"; 2026-10-22, "this happened when the keyboard screen lowered
+  with the switch to bluetooth keyboard": the screen now looks again after each keyboard change and every second, so it
+  goes back to full height even when the iPad sends no word), opening the scene before and
   after in reading order, crossing chapters. Its name (the chapter when it is another chapter or a one-scene chapter)
   shows on hover. At the start or end of the book that arrow is left out. It replaced "Done with this scene?"; Mark as drafted is now on the Card tab (and still in
-  Split and join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
+  Done, split, join), and Done in the top bar goes back to the Chapter Grid. The list sits beside the page from 900 px wide and the panel from 1200 px; narrower, each
   slides over the page. The chapter list keeps where Kyle left it scrolled, per book, on this device: picking a scene,
   leaving the writing screen and coming back all find it where it was (Kyle, 2026-10-22: "rather than moving the left side
   chapter bar as i select through ... simply remember its position when i leave and re-enter the mode"). Only the first
@@ -290,6 +292,11 @@ add a dated line here when you add or change one.
   left of it. One conversation per book on this device (a `chat-NNN`, until New conversation). Each message carries a
   `## Page` section (`src/lib/context.ts`): the page, the book and the notes on screen, so the team can guess what
   "this one" means; the vault's runner passes it on.
+  2026-10-22 (Kyle's screenshot in split view: "something weird happened here when i backed out of the writing screen"):
+  narrower than 1200 px the column lies over the page, so it opens only when Kyle presses Team and closes on leaving the
+  page or when the window narrows; its open or shut state is remembered only beside the page. Its heading and Hide arrow
+  stay in sight while the chat scrolls. The Keep writing card on Home shows the words typed in the scene even while it is
+  still planned (the book's totals still count a planned scene as none, as `sf words` does).
   Deciding faster (Kyle, 2026-10-18, from Writers Room): after Keep, Later or Drop on any proposal board the toast offers
   one-press reasons (Love it, Surprising, Specific, Raises the stakes; Not now, Needs work, Could combine; Cliché, Wrong
   tone, Already have this, Too clever) written to the note's `reasons` list as a separate edit, so skipping costs nothing
@@ -336,12 +343,22 @@ add a dated line here when you add or change one.
   out (`src/lib/listen.ts`): Pause, Resume, Back, Next, Stop, speed and voice (kept per device), the sentence being read
   highlighted and scrolled into view. On a narrow page the new tools show icons only and the Ask the team heading goes.
   Running the book (Kyle, 2026-10-18, from Writers Room): Overview (`#/board/overview/<book>`, the sidebar's item under
-  Book details) shows words against `target_words`, scenes per status, what is waiting on Kyle (proposals to decide, open
+  Book details) shows the book's progress, scenes per status, what is waiting on Kyle (proposals to decide, open
   chapter to-dos, open Notes to the Team, questions in the scene notes, finished jobs not marked seen on this device), the
   warnings of every check (`bookWarnings`), and the Release runway: chapters posted (a scene has `published`), chapters
   ready (all final, none posted) and weeks of buffer at `cadence` (chapters a week; red under two). Target and pace are
   changed in place (written as numbers). A stage strip (the schema's `book_stage` list) tops the Overview and the Chapter
-  Grid; pressing a stage asks first, then changes only the book's `stage`. The guided next step (`src/lib/nextstep.ts`) is
+  Grid; pressing a stage asks first, then changes only the book's `stage`.
+  Book progress counts done chapters (Kyle, 2026-10-22: "please set up the pomodoro and progress the way you described"):
+  a chapter is done when every scene in it is revised or final, and only done chapters' words count toward
+  `target_words`, whoever wrote them first, so a burst of team text moves nothing until Kyle has edited the chapter and
+  marked it done (the Writer and the team only ever set drafted). Home's Progress card leads with "N of M chapters
+  done", then words in done chapters against the target with its bar, then all words on the page; the Books page's
+  cards say "N of M chapters done" and fill their bar from done chapters; the Chapter Grid adds a Chapters done number;
+  the writing screen's chapter list ticks done chapters. Kyle marks it in the writing screen (••• menu, Mark as done,
+  or the Done, split, join tab): "Mark this chapter done" sets the scene to revised ("Mark this scene done" when the
+  chapter has several scenes), and "Not done yet" puts it back to drafted. The Pomodoro and Writing Log stay Kyle's own
+  typing, as below. `chaptersDone` in `src/lib/overview.ts`. The guided next step (`src/lib/nextstep.ts`) is
   one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
   `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
   one waits). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
@@ -381,7 +398,7 @@ add a dated line here when you add or change one.
   in Manuscript and To-do stayed its own link (Claude's defaults; Kyle did not choose). The writing screen's top bar has
   one switch for Page, Beats and Whole chapter; its To-dos, Workflow and Chat buttons moved into the side column, whose
   fifteen tabs are now four groups (Team: Chat, Options, Ask the team; Chapter: Plan, Beats, Workflow, To-dos; Scene:
-  Card, Notes, Marks, Copies, Target, Split and join; Tools: Page look, Check), with the to-do count and the chat's dot on
+  Card, Notes, Marks, Copies, Target, Done, split, join; Tools: Page look, Check), with the to-do count and the chat's dot on
   them. Rounder cards, a 44 px sidebar row and theme colours only, so all ten themes still work.
 - The rest of the new look (Kyle, 2026-10-21: "seems good. bring over whatever else."). The Pomodoro timer sits in the
   sidebar's foot as Timer (Writing, Paused or Break while it runs, coloured as before), its panel opening beside the
@@ -457,6 +474,11 @@ its still possible to go through the workflow mode from somewhere, please apply 
   2026-10-22 (Kyle: "something about how the app behaves with the top horizontal apple bar is weird"): in split view or
   a window the iPad puts its window button (•••) on the app's top left corner, so the sidebar starts below it and the
   writing bar (and the narrow top bar) starts to its right (`ios-window` in `main.tsx`).
+  2026-10-22 (Kyle's screenshot: "somethings up with the app positioning with the top bar"): the writing bar sat under
+  the clock bar on the full-screen iPad app. The room for the clock bar is now judged from the tallest the window has been
+  at its width, so the keyboard or its shortcut bar can't take it away, and when unsure the room is kept
+  (`src/lib/topbar.ts`). Settings, Top of the screen sets it by hand per device: Let the app decide, Leave room for the
+  clock, No room; it also shows the window and screen size, for a screenshot if it still goes wrong.
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
   today's words, timer, Team, •••). The ••• menu holds Split here, Join, Names, Check, Listen, Fill brackets, Ask
   the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Normal left the ••• menu on 2026-10-22 (Kyle: "i dont think we need
@@ -468,3 +490,12 @@ its still possible to go through the workflow mode from somewhere, please apply 
 - **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
   small shape beside the colour on Chapter Grid cards (empty circle planned, half drafted, three quarters revised, full
   final), so colour is never the only sign; nothing smaller than 15 px except small capital headings.
+
+## Dark themes (2026-10-22)
+
+Kyle: "the dark mode with purple accents is my favorite dark mode. especially with the dark tones. id like the other dark
+modes to have different colors, but tone the dark portions similarly." Violet Night is unchanged. The other four dark
+themes now use its greys at the same lightness, tinted faintly toward their own accent, with a new accent each: Blue
+Night, Green Night, Amber Night and Rose Night (they were Midnight, Forest, Ember and Ink, and keep those ids in
+`src/lib/theme.ts` so a saved choice still works; Ink's true black and teal are gone). Every accent reads at 7:1 or
+better on the cards and on its own soft panel's text. The light themes did not change.

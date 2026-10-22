@@ -158,13 +158,15 @@ export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, 
       <NextStepCard schema={schema} index={index} book={book} onJob={onJob} onDecide={onDecide} />
       <div class="ov-grid">
         <section class="ov-panel" aria-labelledby="ov-words">
-          <h2 id="ov-words"><Icon name="pen" size={20} /> Words</h2>
-          <p class="ov-big">{nums.words.toLocaleString('en-US')}<span class="meta">{nums.target ? ' of ' + nums.target.toLocaleString('en-US') + ' words' : ' words'}</span></p>
+          <h2 id="ov-words"><Icon name="pen" size={20} /> Progress</h2>
+          <p class="ov-big">{nums.chaptersDone}<span class="meta"> of {nums.chapters === 1 ? '1 chapter' : nums.chapters + ' chapters'} done</span></p>
+          <p class="ov-done-words">{nums.doneWords.toLocaleString('en-US')}{nums.target ? ' of ' + nums.target.toLocaleString('en-US') : ''} words in done chapters</p>
           {nums.target != null && (
-            <div class="ov-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={nums.percent} aria-label="Words against the target">
+            <div class="ov-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={nums.percent} aria-label="Words in done chapters against the target">
               <span style={{ width: nums.percent + '%' }} />
             </div>
           )}
+          <p class="meta">{nums.words.toLocaleString('en-US')} words on the page in all, the team's drafts included. Mark a chapter done from the writing screen's ••• menu.</p>
           <NumberSetting label="Target" value={nums.target} unit="words" onSave={save ? save('target_words') : undefined} />
           <ul class="ov-status">
             {nums.counts.map((c) => (
