@@ -345,3 +345,35 @@ add a dated line here when you add or change one.
   folder and kept on the device as he types, the way the Plan tab is. "Move picked words here" cuts the words picked on
   the page (one step to undo there) and adds them to the end of the scrap. The team leaves the scrap alone unless he
   asks, and sf packet does not include it.
+
+## The design review redesign (2026-10-22)
+
+Kyle asked a designer to study usability basics and the leading AI writing tools, critique the app and propose a new
+design (report and mockups in the vault, `Docs/Story Forge/Research/App design 2026-10/`). Kyle, 2026-10-22: "as long as
+its still possible to go through the workflow mode from somewhere, please apply all changes to the app."
+
+- **Top bar on every page** (`Shell.tsx`): the room and page (a menu of the room's pages), Find (a chapter number, a scene,
+  a codex name or an idea in the book on screen; Ctrl or Cmd+K is an extra; `src/lib/find.ts`, `Find.tsx`), and Team,
+  which opens the team panel on the right of any page. The round floating chat button is gone.
+- **Sidebar**: the room on screen lists its pages beneath it, one level down, instead of tabs across the top; Team does
+  the same for Chat, Jobs, Agents, Skills, Recipes and the Workflow table. Narrower than 1100 px the strip of icons stays
+  and the top bar's menu lists the pages. The book card opens Home.
+- **Workflow mode is Plan > Steps.** The Workflow | Writing switch is gone; every stage and step page, Judge, Keep,
+  Bring in results and Check work as before at the same addresses (`#/flow/...`). Home shows "Where the book is": one
+  path of the workflow's six stages plus Publish, each opening its stage. The ten stage pills (Spark to Done) moved to
+  Publish > Book details, where the book's `stage` is still changed.
+- **Decide one at a time** (Home > Decide one at a time, and a button in Waiting on you): every idea (with the workflow's
+  results), beat and conflict waiting on Kyle, one large card at a time, with 58 px Keep, Later, Rewrite (asks what to
+  change) and Drop, stars, and Undo for ten seconds. Keys K, M, D and U are extras.
+- **Codex**: Characters, Places, Items and Lore each have a page: a list with a filter on the left, the entry on the
+  right with its "now" and where it appears (`Codex.tsx`). Narrower than 900 px the list comes first.
+- **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
+  today's words, timer, Team, •••). The ••• menu holds Normal, Split here, Join, Names, Check, Listen, Fill brackets, Ask
+  the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Page | Beats | Whole chapter sits
+  above the chapter title. Picking words brings a menu under them: Rewrite, Describe, Options, Ask about this (opens the
+  chat with the words quoted), and ••• for Brainstorm, Write on and Fill brackets. On the iPad with the on-screen keyboard
+  up, a format row (the two arrows, Undo, Redo, B, I, Highlight) sits just above the keyboard. The side column's groups are
+  one row: Chat, Scene (Page look and Check moved here), Chapter.
+- **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
+  small shape beside the colour on Chapter Grid cards (empty circle planned, half drafted, three quarters revised, full
+  final), so colour is never the only sign; nothing smaller than 15 px except small capital headings.
