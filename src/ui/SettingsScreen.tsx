@@ -3,6 +3,7 @@ import { GitHubSource } from '../lib/github.ts';
 import { normalise, type Settings } from '../lib/settings.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
+import { loadTopRoom, saveTopRoom, type TopRoom } from '../lib/topbar.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
 
@@ -37,6 +38,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
     <section>
       <h1>Settings</h1>
       <Colours />
+      <TopOfScreen />
       <h2>Vault</h2>
       <form class="settings" onSubmit={save}>
         <label>
@@ -137,6 +139,28 @@ function Colours() {
       <div class="theme-grid">{THEMES.filter((t) => t.mode === 'light').map(card)}</div>
       <h3 class="theme-group">Dark</h3>
       <div class="theme-grid">{THEMES.filter((t) => t.mode === 'dark').map(card)}</div>
+    </>
+  );
+}
+
+/** Room above the top bar for the iPad's clock bar, on this device: the app's own judgement, or set by hand (Kyle, 2026-10-22). */
+function TopOfScreen() {
+  const [choice, setChoice] = useState<TopRoom>(loadTopRoom);
+  const pick = (c: TopRoom) => { saveTopRoom(c); setChoice(c); };
+  const button = (c: TopRoom, label: string) => (
+    <button type="button" class={choice === c ? 'primary' : ''} aria-pressed={choice === c} onClick={() => pick(c)}>{choice === c ? '✓ ' : ''}{label}</button>
+  );
+  const now = document.documentElement.classList.contains('ios-app');
+  return (
+    <>
+      <h2>Top of the screen</h2>
+      <p class="hint">On the iPad the clock and battery sit over the top of the app. If the buttons at the top are cut off, pick Leave room. If there is an empty strip above them, pick No room. Each device keeps its own choice.</p>
+      <p class="buttons">
+        {button('auto', 'Let the app decide')}
+        {button('room', 'Leave room for the clock')}
+        {button('none', 'No room')}
+      </p>
+      <p class="hint">{now ? 'Room is kept for the clock now.' : 'No room is kept now.'} Window {window.innerWidth} × {window.innerHeight}, screen {screen.width} × {screen.height}.</p>
     </>
   );
 }

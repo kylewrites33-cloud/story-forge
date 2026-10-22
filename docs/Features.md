@@ -453,6 +453,11 @@ its still possible to go through the workflow mode from somewhere, please apply 
   2026-10-22 (Kyle: "something about how the app behaves with the top horizontal apple bar is weird"): in split view or
   a window the iPad puts its window button (•••) on the app's top left corner, so the sidebar starts below it and the
   writing bar (and the narrow top bar) starts to its right (`ios-window` in `main.tsx`).
+  2026-10-22 (Kyle's screenshot: "somethings up with the app positioning with the top bar"): the writing bar sat under
+  the clock bar on the full-screen iPad app. The room for the clock bar is now judged from the tallest the window has been
+  at its width, so the keyboard or its shortcut bar can't take it away, and when unsure the room is kept
+  (`src/lib/topbar.ts`). Settings, Top of the screen sets it by hand per device: Let the app decide, Leave room for the
+  clock, No room; it also shows the window and screen size, for a screenshot if it still goes wrong.
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
   today's words, timer, Team, •••). The ••• menu holds Split here, Join, Names, Check, Listen, Fill brackets, Ask
   the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Normal left the ••• menu on 2026-10-22 (Kyle: "i dont think we need

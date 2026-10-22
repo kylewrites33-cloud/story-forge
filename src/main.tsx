@@ -3,6 +3,7 @@ import { App } from './ui/App.tsx';
 import './styles.css';
 import { startTheme } from './lib/theme.ts';
 import { startHoldNames } from './ui/hold.ts';
+import { TOP_ROOM_EVENT, loadTopRoom, topRoom } from './lib/topbar.ts';
 
 startTheme();
 startHoldNames();
@@ -11,25 +12,29 @@ startHoldNames();
 // safe area for it (Kyle's screenshot, 2026-10-20). Mark that case so the CSS moves the app down below the bar.
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const homeScreen = (navigator as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-// Some iPads put the app below the bar instead (Kyle's screenshot, 2026-10-22): then the window is shorter than the
-// screen and no room is kept for it.
-// In split view or a window, the iPad puts its window button (•••) over the app's top left corner and reports no safe
-// area for it either (Kyle's screenshot, 2026-10-22): mark that case so the CSS moves the sidebar down below it.
+// How much room the top keeps for the clock bar and the window button is judged in src/lib/topbar.ts.
 function screenSize(): { w: number; h: number } {
   const turn = (screen as { orientation?: { type?: string } }).orientation;
-  const wide = turn && turn.type ? turn.type.indexOf('landscape') === 0 : Math.abs(Number((window as { orientation?: number }).orientation) || 0) === 90;
   const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+  // A window wider than the screen's short side can only be landscape, one taller only portrait; else ask the device.
+  const wide = window.innerWidth > short + 2 ? true : window.innerHeight > short + 2 ? false
+    : turn && turn.type ? turn.type.indexOf('landscape') === 0 : Math.abs(Number((window as { orientation?: number }).orientation) || 0) === 90;
   return wide ? { w: long, h: short } : { w: short, h: long };
 }
+let width = 0;
+let tallest = 0;
 function markIosApp(): void {
   const s = screenSize();
-  const app = ios && homeScreen;
-  const full = window.innerWidth >= s.w - 2;
-  document.documentElement.classList.toggle('ios-app', app && full && window.innerHeight >= s.h - 2);
-  document.documentElement.classList.toggle('ios-window', app && (!full || window.innerHeight < s.h - 48));
+  // A turn or a new split size starts again; the keyboard only ever makes the window shorter.
+  if (window.innerWidth !== width) { width = window.innerWidth; tallest = 0; }
+  tallest = Math.max(tallest, window.innerHeight);
+  const room = topRoom({ app: ios && homeScreen, width, tallest, screenW: s.w, screenH: s.h }, loadTopRoom());
+  document.documentElement.classList.toggle('ios-app', room.clockBar);
+  document.documentElement.classList.toggle('ios-window', room.windowButton);
 }
 markIosApp();
 window.addEventListener('resize', markIosApp);
+window.addEventListener(TOP_ROOM_EVENT, markIosApp);
 
 render(<App />, document.getElementById('app')!);
 
