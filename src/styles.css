@@ -868,7 +868,7 @@ details.group[open] > summary h2::before { content: '▾ '; }
 .chat-msg .prose > :first-child { margin-top: 0; }
 .chat-msg .prose > :last-child { margin-bottom: 0; }
 .chat-msg.kyle { justify-self: end; background: var(--accent-soft); border-bottom-right-radius: 4px; }
-.chat-msg.team { justify-self: start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.chat-msg.team { justify-self: start; background: var(--team-msg, var(--surface)); border: 1px solid var(--team-msg-line, var(--line)); border-bottom-left-radius: 4px; }
 .chat-msg.team.failed { border-color: var(--danger); }
 .chat-msg .error { margin: 0 0 0.4em; }
 .chat-msg p.chat-working { margin: 0; }
@@ -897,7 +897,7 @@ a.button.team-talk { gap: 6px; width: 100%; }
 /* A chapter's to-dos beside the page. */
 .count-badge {
   display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
-  background: var(--accent); color: var(--on-accent); font-size: 0.94rem; font-weight: 700; line-height: 1;
+  background: var(--badge, var(--accent)); color: var(--on-badge, var(--on-accent)); font-size: 0.94rem; font-weight: 700; line-height: 1;
 }
 .todo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .todo-row { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; border-radius: 10px; }
@@ -1127,6 +1127,14 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="ink"], .theme-card[data-theme="ink"], :root[data-theme="forest"], .theme-card[data-theme="forest"], :root[data-theme="black"], .theme-card[data-theme="black"] {
   --fill: var(--text); --fill-line: var(--text); --on-fill: var(--bg); --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line);
   --hero-kicker: var(--muted); --hero-go: var(--text); --on-hero-go: var(--bg); --next-bg: var(--surface);
+}
+/* Claude (Kyle, 2026-10-22: "these dark green and blue button shapes ... green, blue, and orange, with the ocassional white
+   pop"): Keep writing is a dark green shape, Next step and the team's chat replies dark blue ones, orange for kickers and
+   counts, white for the main buttons. Colours taken from Kyle's screenshots of the Claude app. */
+:root[data-theme="forest"], .theme-card[data-theme="forest"] {
+  --hero-bg: #15221e; --hero-line: #1f3a2f; --hero-kicker: #2fb383;
+  --next-bg: #171f28; --next-go: #2e353d; --next-go-line: #2e353d; --on-next-go: #f9f9f7; --kicker: #e0896a;
+  --team-msg: #171f28; --team-msg-line: #171f28; --badge: #e0896a; --on-badge: #151515;
 }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
@@ -1446,7 +1454,8 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
   margin: 8px 0 20px; padding: 18px clamp(16px, 3vw, 24px); border-radius: var(--radius); background: var(--next-bg, var(--accent-soft));
   border: 1px solid var(--line); display: grid; gap: 8px; justify-items: start;
 }
-.next-kicker { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.next-kicker { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kicker, var(--accent)); }
+.next-step .next-button.primary { background: var(--next-go, var(--fill, var(--accent))); border-color: var(--next-go-line, var(--fill-line, var(--accent))); color: var(--on-next-go, var(--on-fill, var(--on-accent))); }
 .next-step .next-button {
   display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 12px 22px; font-size: 1.15rem; font-weight: 650;
   border-radius: 14px; max-width: 100%; text-align: left; text-decoration: none; overflow-wrap: anywhere;
@@ -1729,7 +1738,7 @@ button, [role="button"] { -webkit-touch-callout: none; }
 .rail-more > summary { list-style: none; cursor: pointer; color: var(--muted); }
 .rail-more > summary::-webkit-details-marker { display: none; }
 .rail-more[open] > summary { margin-bottom: 2px; }
-.rail-stage .rail-count, .rail-item .rail-count { color: var(--accent); font-weight: 700; }
+.rail-stage .rail-count, .rail-item .rail-count { color: var(--badge, var(--accent)); font-weight: 700; }
 
 .flow { padding-left: var(--gutter); padding-right: var(--gutter); }
 .flow h1.flow-step-h { font-size: 1.6rem; max-width: 48rem; }

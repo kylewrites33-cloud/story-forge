@@ -514,3 +514,9 @@ Ink (white buttons, a touch of indigo), Claude ("a color scheme thats basically 
 #151515, white buttons, a little green) and True Black (for OLED screens, white buttons). How loud the buttons are is
 set per theme by CSS variables (`--fill`, `--on-fill`, `--hero-bg` and friends, falling back to the accent), so
 Violet Night and the light themes look as before. Ids: midnight is Graphite, ember Warm Clay, forest Claude, black new.
+
+The Claude theme then got the Claude app's colour shapes (Kyle: "these dark green and blue button shapes in the chat
+threads ... green, blue, and orange, with the ocassional white pop"): Keep writing is a dark green card, Next step a dark
+blue one with a blue-grey button, Kyle's chat messages dark green and the team's dark blue, orange for kickers and counts,
+white for the main buttons. Set by `--kicker`, `--next-go`, `--team-msg`, `--badge` and friends, which fall back to the
+accent everywhere else.
