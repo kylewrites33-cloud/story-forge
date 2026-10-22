@@ -395,7 +395,8 @@ the list below home. and codex can move down to the section witht eh team and to
 - **Write** has no pages. Pressing it opens the writing screen straight away at the scene last opened on this device; on
   a device that has not opened one, the last scene with writing in it (any status but planned), or else the first scene;
   in a book with no scenes, the Chapter Grid (`keepWriting` in `Shell.tsx`). The writing screen's Done still goes back to
-  the Chapter Grid.
+  the Chapter Grid. The writing screen's bar starts with Home (Kyle, 2026-10-22: "there doesnt seem to be a wayto back
+  out of writing mode and go back to the main screen"): it saves, then opens the book's Home.
 - **The Chapter Grid is in Plan**, after Steps. The book's own address (`#/book/...`) still opens it.
 - **The Edit Queue is part of To-do.** Its to-dos were already on the To-do page; its other half, the team's notes on the
   draft (ideas of kind note, line, scene or structure that wait to be decided, rewritten or were put off), now sits at the
