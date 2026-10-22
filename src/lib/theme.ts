@@ -20,9 +20,9 @@ export const THEMES: Theme[] = [
   { id: 'rose', name: 'Rose', mode: 'light', line: 'Blush with deep rose', bar: '#faf4f5' },
   { id: 'violet-night', name: 'Violet Night', mode: 'dark', line: 'The original dark: charcoal with violet', bar: '#16151b' },
   { id: 'midnight', name: 'Blue Night', mode: 'dark', line: 'Violet Night\'s charcoal with soft blue', bar: '#12161b' },
-  { id: 'forest', name: 'Green Night', mode: 'dark', line: 'Violet Night\'s charcoal with mint green', bar: '#121814' },
+  { id: 'forest', name: 'Sea Glass Night', mode: 'dark', line: 'Violet Night\'s charcoal with sea-glass teal', bar: '#111717' },
   { id: 'ember', name: 'Amber Night', mode: 'dark', line: 'Violet Night\'s charcoal with amber', bar: '#191510' },
-  { id: 'ink', name: 'Rose Night', mode: 'dark', line: 'Violet Night\'s charcoal with rose', bar: '#1b1416' }
+  { id: 'ink', name: 'Copper Night', mode: 'dark', line: 'Violet Night\'s charcoal with copper, like the icon', bar: '#1a1512' }
 ];
 
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */

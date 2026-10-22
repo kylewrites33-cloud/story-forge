@@ -499,3 +499,7 @@ themes now use its greys at the same lightness, tinted faintly toward their own 
 Night, Green Night, Amber Night and Rose Night (they were Midnight, Forest, Ember and Ink, and keep those ids in
 `src/lib/theme.ts` so a saved choice still works; Ink's true black and teal are gone). Every accent reads at 7:1 or
 better on the cards and on its own soft panel's text. The light themes did not change.
+
+Same day, later: Kyle could not see himself using the green or the rose ("think about the button colors a little bit
+differently"). From six calmer options (Sea Glass, Sage, Slate, Copper, Plum, Brass) Green Night became Sea Glass Night
+(soft teal) and Rose Night became Copper Night (the icon's terracotta); ids `forest` and `ink` kept.
