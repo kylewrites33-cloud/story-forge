@@ -54,7 +54,9 @@ add a dated line here when you add or change one.
   leaving the writing screen and coming back all find it where it was (Kyle, 2026-10-22: "rather than moving the left side
   chapter bar as i select through ... simply remember its position when i leave and re-enter the mode"). Only the first
   time, with nothing remembered, does it open at the chapter he is in (Kyle, 2026-10-21: "right now im regularly having
-  to scroll down from chapter 1"). Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
+  to scroll down from chapter 1"). Under the chapters, the book's boards and the archive sit folded behind one
+  "Book tools" button (a grid icon) and open only when Kyle presses it; the app remembers open or closed (Kyle,
+  2026-10-22: "i dont anticipate using those frequently and would prefer them not to take visual space all the time"). Adding chapters from the list (Kyle, 2026-10-22: "its too cumbersome to add a chapter in
   this view ... the + 'add a scene to chapter 33' at the bottom should probably be add a chapter. then possibly if we long
   press on a chapter in the list, we get an option to add a chapter below, or add another scene"): the list ends with
   "+ Add a chapter" (a title, which may be left empty, then the new chapter's one scene opens ready to write). Holding a
