@@ -40,6 +40,7 @@ src/ui/Pomodoro.tsx      the timer's button and panel: in the sidebar's foot, th
 src/ui/hold.ts         names on a long press: a finger held on a button with a title shows the title (touch only)
 src/ui/viewport.ts       useLockedPage: the writing screens lock the document so the iPad cannot scroll it under them
 src/ui/ChapterPage.tsx   the whole chapter as one page
+src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
 src/lib/brackets.ts      [brackets]: finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
 src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps renamed)
@@ -107,4 +108,3 @@ public/sw.js             service worker for the app shell only; never caches Git
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
 tests/                   Node test runner tests
 ```
-src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
