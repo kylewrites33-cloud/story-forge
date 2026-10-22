@@ -36,6 +36,8 @@ export function parseHash(hash: string): Route {
   if (head === 'series') return { name: 'series', folder: tail };
   if (head === 'book' && tail) return { name: 'book', folder: tail };
   if (head === 'ideas' && tail) return { name: 'ideas', folder: tail };
+  // The Edit Queue became part of To-do (Kyle, 2026-10-22); old links to it open To-do.
+  if (head === 'board' && rest[0] === 'edit-queue') return { name: 'todo' };
   if (head === 'board' && rest.length > 1) return { name: 'board', board: rest[0], folder: decodeURIComponent(rest.slice(1).join('/')) };
   if (head === 'note' && tail) return { name: 'note', path: tail };
   if (head === 'write' && tail) return { name: 'write', path: tail };

@@ -80,7 +80,7 @@ add a dated line here when you add or change one.
   highlighter button and a list to jump through); Normal (takes bold, italic and highlight marks off); Find and replace;
   Every save (the file's commits, with Go back to this version); the book's Archive with Restore; Whole chapter (every
   scene of the chapter as one page, each saving on its own). Boards: Matrix (scenes down, codex across; point of view,
-  on the card, or named), Edit Queue (editorial notes and to-dos), and Appears in on character, place, item and lore notes.
+  on the card, or named), Edit Queue (editorial notes and to-dos; part of To-do since 2026-10-22), and Appears in on character, place, item and lore notes.
   New book and New series on the home page; Bring in a manuscript (file saved unchanged in the book's Research folder,
   then an `import` job); Edit card changes a scene's title (the file is renamed). Rewrite can ask the team to rewrite
   now (a `rewrite` job); Table read of this chapter (`table-read`) and Ask the team for more ideas (`ideas`). These kinds
@@ -362,6 +362,26 @@ add a dated line here when you add or change one.
   folder and kept on the device as he types, the way the Plan tab is. "Move picked words here" cuts the words picked on
   the page (one step to undo there) and adds them to the end of the scrap. The team leaves the scrap alone unless he
   asks, and sf packet does not include it.
+
+## Write, and the rooms in a new order (2026-10-22)
+
+Kyle, 2026-10-22: "maybe chapter grid can move to the plannig section. and i dont know if we need edit queue if it can be
+handled in to do? this could allow us to change manuscript to Write, and get us right in the writing sectio with a push
+of a button. i know scrivener gets you in there with minimal steps", then "then maybe we can do Plan Write Edit Publish for
+the list below home. and codex can move down to the section witht eh team and to dos".
+
+- **The sidebar** (`src/lib/rooms.ts`, `Shell.tsx`): Home, Plan, Write, Edit, Publish under the book; lower down, with Team
+  and To-do, the Codex (its pages open beneath it as before). Edit is the old Review room (Tension and Pacing, Themes,
+  Sessions, Taste) under a new name.
+- **Write** has no pages. Pressing it opens the writing screen straight away at the scene last opened on this device; on
+  a device that has not opened one, the last scene with writing in it (any status but planned), or else the first scene;
+  in a book with no scenes, the Chapter Grid (`keepWriting` in `Shell.tsx`). The writing screen's Done still goes back to
+  the Chapter Grid.
+- **The Chapter Grid is in Plan**, after Steps. The book's own address (`#/book/...`) still opens it.
+- **The Edit Queue is part of To-do.** Its to-dos were already on the To-do page; its other half, the team's notes on the
+  draft (ideas of kind note, line, scene or structure that wait to be decided, rewritten or were put off), now sits at the
+  top of To-do as "Notes on the draft of <book>" for the active book, with Keep, Later, Rewrite and Drop as before. The same
+  notes are still on the Ideas board. Old links to the Edit Queue open To-do; Home's "open chapter to-dos" opens To-do.
 
 ## The design review redesign (2026-10-22)
 

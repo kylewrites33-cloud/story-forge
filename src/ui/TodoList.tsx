@@ -1,12 +1,13 @@
 import { useState } from 'preact/hooks';
-import type { Decision } from '../lib/ideas.ts';
+import { piles, type Decision } from '../lib/ideas.ts';
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
 import { dueLabel, taskBook, taskGroups, taskNotes, type NewTask } from '../lib/tasks.ts';
-import type { NoteRecord, VaultIndex } from '../lib/types.ts';
+import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { isBookTodo, todoPlace } from '../lib/todos.ts';
 import { href } from './route.ts';
+import { ProposalCard } from './IdeasBoard.tsx';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -98,10 +99,23 @@ function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
   );
 }
 
-/** Kyle's and the team's to-dos, from the vault's Tasks folders. */
-export function TodoList({ index, waiting, onDecide, onAdd }: {
+/** Idea kinds that are notes on written pages rather than story proposals (the old Edit Queue's notes). */
+export const EDIT_KINDS = ['note', 'line', 'scene', 'structure'];
+
+/** The team's notes on the book's draft still waiting on Kyle (to decide, sent back for a rewrite, or put off). */
+export function draftNotes(index: VaultIndex, book: BookEntry): { note: NoteRecord; pile: 'decide' | 'rewrite' | 'later' }[] {
+  const notes = (book.ideas || []).map((p) => index.notes[p]).filter((n) => n && EDIT_KINDS.indexOf(String(n.data.kind || '')) >= 0);
+  const by = piles(notes);
+  return (['decide', 'rewrite', 'later'] as const).flatMap((pile) => (by[pile] || []).map((note) => ({ note, pile })));
+}
+
+/** Kyle's and the team's to-dos, from the vault's Tasks folders. Above them, the team's notes on the draft of the book
+ * on screen, which had a page of their own (the Edit Queue) until 2026-10-22. */
+export function TodoList({ index, waiting, onDecide, onAdd, schema, book, onRewrite }: {
   index: VaultIndex; waiting: Record<string, Choice>; onDecide: OnDecide; onAdd?: (t: NewTask) => Promise<string | null>;
+  schema?: Schema; book?: BookEntry | null; onRewrite?: (path: string, reason: string) => void;
 }) {
+  const drafts = schema && book ? draftNotes(index, book) : [];
   const all = taskNotes(index);
   const owners = ['Kyle', 'Claude'].filter((o) => all.some((n) => String(n.data.owner || '') === o));
   const [who, setWho] = useState('');
@@ -119,6 +133,13 @@ export function TodoList({ index, waiting, onDecide, onAdd }: {
         {openCount === 1 ? '1 to-do is' : openCount + ' to-dos are'} open. Press Start when you begin one and Done when it is finished; the team reads the same list.
       </p>
       {onAdd && <div class="add-row"><AddTask onAdd={onAdd} /></div>}
+      {schema && book && drafts.length > 0 && (
+        <section class="group">
+          <h2>Notes on the draft of {book.title} <span class="meta">{drafts.length}</span></h2>
+          <p class="hint">The team's notes on the pages. Keep one to have the team act on it.</p>
+          <ul class="cards ideas">{drafts.map((d) => <ProposalCard key={d.note.path} schema={schema} note={d.note} pile={d.pile} waiting={waiting[d.note.path]} onDecide={onDecide} onRewrite={onRewrite} />)}</ul>
+        </section>
+      )}
       {owners.length > 1 && (
         <div class="tabs" role="tablist">
           {[{ key: '', label: 'Everyone' }].concat(owners.map((o) => ({ key: o, label: o === 'Kyle' ? 'Yours' : 'The team\'s' }))).map((t) => (

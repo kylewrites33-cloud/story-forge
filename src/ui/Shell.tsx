@@ -1,7 +1,7 @@
 // The app's frame (redesigned with Kyle, 2026-10-21; design review, 2026-10-22): a sidebar on the left with the book
-// open on screen (its cover and title, then six rooms: Home, Manuscript, Plan, Codex, Review and Publish; the room on
-// screen lists its pages beneath it, one level down) and at the foot Team (its pages open beneath it the same way),
-// To-do, the Timer, Settings and a small sync line. Plan's first page, Steps, is the old Workflow mode.
+// open on screen (its cover and title, then the rooms Home, Plan, Write, Edit and Publish; the room on screen lists its
+// pages beneath it, one level down; Write opens the writing screen at the last scene) and at the foot the Codex and
+// Team (their pages open beneath them the same way), To-do, the Timer, Settings and a small sync line. Plan's first page, Steps, is the old Workflow mode.
 // A top bar on every page holds the room and page (a menu of the room's pages), Find, and Team, which opens the team
 // panel on the right of any page; the floating chat button is gone. From 1100 px wide the sidebar shows names beside
 // the icons; from 700 px it is a narrow strip of icons, and the menu button opens it in full over the page; narrower
@@ -14,19 +14,21 @@ import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts
 import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
-import { ROOMS, roomOf, isTeamPlace, TEAM_PLACES } from '../lib/rooms.ts';
+import { LOWER_ROOMS, ROOMS, roomOf, isTeamPlace, TEAM_PLACES, type Room } from '../lib/rooms.ts';
 import { jobNotes } from '../lib/jobs.ts';
 import { taskNotes } from '../lib/tasks.ts';
 import { roomLinks } from './Rooms.tsx';
 import { useFlow } from './Flow.tsx';
 import { FindButton } from './Find.tsx';
 
-/** The scene to keep writing in a book: the one last opened on this device, or else the first scene. */
+/** The scene to keep writing in a book: the one last opened on this device, or else the last scene with writing in it,
+ * or else the first scene. */
 export function keepWriting(index: VaultIndex, book: BookEntry, sourceKey: string): string | null {
-  const recent = loadRecent(sourceKey).find((r) => r.path.startsWith(book.folder + '/') && index.notes[r.path]);
+  const recent = loadRecent(sourceKey).find((r) => book.scenes.indexOf(r.path) >= 0 && index.notes[r.path]);
   if (recent) return recent.path;
-  const first = book.scenes.find((p) => index.notes[p] && index.notes[p].data.kind !== 'test');
-  return first || null;
+  const scenes = book.scenes.filter((p) => index.notes[p] && index.notes[p].data.kind !== 'test');
+  const started = scenes.filter((p) => String(index.notes[p].data.status || 'planned') !== 'planned');
+  return started.length ? started[started.length - 1] : scenes[0] || null;
 }
 
 export interface ShellProps {
@@ -127,6 +129,26 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   const pages: { to: string; title: string; current: boolean; count?: number }[] = inTeam
     ? TEAM_PLACES.map((p) => ({ to: teamTo[p.key], title: p.title, current: p.key === teamOn }))
     : inRoom ? inRoom.boards.map((k) => links[k]).filter(Boolean).map((l) => ({ to: l.to, title: l.title, current: l.key === pageKey, count: l.key === 'steps' ? flow.waiting : undefined })) : [];
+  // A room in the sidebar, with its pages beneath it when it is on screen. Write has no pages: it opens the writing
+  // screen at the scene to keep writing, or the Chapter Grid when the book has no scenes yet.
+  const roomItem = (r: Room) => {
+    if (!book || !index) return null;
+    if (r.key === 'write') {
+      const scene = keepWriting(index, book, source.key);
+      const to = scene ? href.write(scene) : links['chapter-grid'] ? links['chapter-grid'].to : '';
+      return to ? <div key={r.key} class="rail-room-group">{item(to, r.icon, r.title, false, 'rail-room')}</div> : null;
+    }
+    const first = r.boards.map((k) => links[k]).find(Boolean);
+    if (!first) return null;
+    const here = Boolean(inRoom && inRoom.key === r.key);
+    const to = r.key === 'plan' ? links.ideas ? links.ideas.to : first.to : first.to;
+    return (
+      <div key={r.key} class={'rail-room-group' + (here ? ' here' : '')}>
+        {item(to, r.icon, r.title, here && pages.length < 2, 'rail-room' + (here ? ' rail-room-here' : ''), r.key === 'plan' && flow.waiting ? flow.waiting : undefined)}
+        {here && pages.length > 1 && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current, p.count))}</div>}
+      </div>
+    );
+  };
   const roomTitle = inTeam ? 'Team' : inRoom ? inRoom.title : '';
   const pageTitle = (pages.find((p) => p.current) || { title: '' }).title;
   const barTitle = roomTitle ? (pageTitle && pageTitle !== roomTitle && pages.length > 1 ? roomTitle + ' · ' + pageTitle : roomTitle) : title;
@@ -162,21 +184,11 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
                 </a>
                 <a class="rail-book-switch rail-label" href={href.home()} title="All books and series" aria-label="All books and series"><Icon name="books" size={18} /></a>
               </div>
-              {ROOMS.map((r) => {
-                const first = r.boards.map((k) => links[k]).find(Boolean);
-                if (!first) return null;
-                const here = Boolean(inRoom && inRoom.key === r.key);
-                const to = r.key === 'plan' ? links.ideas ? links.ideas.to : first.to : first.to;
-                return (
-                  <div key={r.key} class={'rail-room-group' + (here ? ' here' : '')}>
-                    {item(to, r.icon, r.title, here && pages.length < 2, 'rail-room' + (here ? ' rail-room-here' : ''), r.key === 'plan' && flow.waiting ? flow.waiting : undefined)}
-                    {here && pages.length > 1 && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current, p.count))}</div>}
-                  </div>
-                );
-              })}
+              {ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) < 0).map(roomItem)}
             </>
           )}
           <div class="rail-foot">
+            {book && index && ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) >= 0).map(roomItem)}
             {item(href.chat(), 'spark', 'Team', false, (running ? 'rail-busy' : '') + (inTeam ? ' rail-room-here' : '') || undefined)}
             {inTeam && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current))}</div>}
             {item(href.todo(), 'todo', 'To-do', place === 'todo', undefined, openTodos || undefined)}

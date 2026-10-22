@@ -47,7 +47,7 @@ src/lib/context.ts       what is on screen, sent with a chat from the team colum
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene
-src/ui/EditQueue.tsx     editorial notes and to-dos on one page
+src/ui/TodoList.tsx      the To-do page: every to-do, and the team's notes on the draft of the active book (was the Edit Queue)
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/lib/team.ts          the AI team: agents, skills and who loads them, lessons, journals, history, numbers for the Team page
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history

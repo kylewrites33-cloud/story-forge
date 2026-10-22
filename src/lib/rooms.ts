@@ -1,17 +1,23 @@
 // The book's rooms (Kyle, 2026-10-21): the sidebar shows six rooms instead of every board. The room on screen opens its
 // pages beneath it in the sidebar, one level down (design review, 2026-10-22; they were tabs across the top before).
 // Home is the Overview. Plan opens with Steps, the old Workflow mode; the Codex has Places, Items and Lore.
+// Kyle, 2026-10-22: the rooms under Home are Plan, Write, Edit (was Review) and Publish; the Codex sits lower, with
+// Team and To-do. Write (was Manuscript) has no pages: it opens the writing screen at the scene he was last in. The
+// Chapter Grid moved into Plan and the Edit Queue into To-do.
 
 export interface Room { key: string; title: string; icon: string; boards: string[] }
 
 export const ROOMS: Room[] = [
   { key: 'home', title: 'Home', icon: 'home', boards: ['overview', 'decide'] },
-  { key: 'manuscript', title: 'Manuscript', icon: 'page', boards: ['chapter-grid', 'edit-queue'] },
-  { key: 'plan', title: 'Plan', icon: 'threads', boards: ['steps', 'ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'promises', 'plot-grid', 'timeline', 'arcs', 'notes'] },
-  { key: 'codex', title: 'Codex', icon: 'people', boards: ['characters', 'places', 'items', 'lore', 'matrix', 'cast-web'] },
-  { key: 'review', title: 'Review', icon: 'scan', boards: ['tension', 'themes', 'sessions', 'taste'] },
-  { key: 'publish', title: 'Publish', icon: 'upload', boards: ['market', 'details'] }
+  { key: 'plan', title: 'Plan', icon: 'threads', boards: ['steps', 'chapter-grid', 'ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'promises', 'plot-grid', 'timeline', 'arcs', 'notes'] },
+  { key: 'write', title: 'Write', icon: 'pen', boards: [] },
+  { key: 'review', title: 'Edit', icon: 'scan', boards: ['tension', 'themes', 'sessions', 'taste'] },
+  { key: 'publish', title: 'Publish', icon: 'upload', boards: ['market', 'details'] },
+  { key: 'codex', title: 'Codex', icon: 'people', boards: ['characters', 'places', 'items', 'lore', 'matrix', 'cast-web'] }
 ];
+
+/** Rooms the sidebar lists in its lower group, with Team and To-do, instead of under the book (Kyle, 2026-10-22). */
+export const LOWER_ROOMS = ['codex'];
 
 /** The room a board belongs to, or null for a board in no room. */
 export function roomOf(board: string): Room | null {
