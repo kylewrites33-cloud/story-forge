@@ -2,8 +2,8 @@
 // card's cast, or named in the prose: the Matrix's presence), joined by lines from the character notes' `relationships`
 // lists (links, "[[Tobin Quill]]"). A line is as wide as the relationship is tense when the text says: words after the
 // link in a list item ("tension 8", "7/10", "rival"), or else the sentences of the character's note that name the other
-// one ("The Warden is her enemy."); otherwise every line is the same width. The layout is a small force layout that starts from a
-// circle in name order and runs a fixed number of steps, so the same book always draws the same picture.
+// one ("The Warden is her enemy."); otherwise every line is the same width. The picture shows one character at a time in
+// the middle with their ties in two columns (hubFor), so names never pile up however big the cast is.
 import { castFor } from './boards.ts';
 import { codexFor, matcher, presence, present } from './codex.ts';
 import { linkName, nameList } from './links.ts';
@@ -61,7 +61,7 @@ export function aboutIn(body: string, terms: string[]): string {
   return body.replace(/^>.*$/gm, '').split(/(?<=[.!?])\s+|\n+/).map((x) => x.replace(/\s+/g, ' ').trim()).filter((x) => x && re.test(x)).join(' ');
 }
 
-export interface WebNode { name: string; note: NoteRecord; color: string; scenes: number; x: number; y: number; r: number }
+export interface WebNode { name: string; note: NoteRecord; color: string; scenes: number }
 export interface WebEdge { a: number; b: number; tension: number | null; texts: string[] }
 
 export interface CastWeb {
@@ -71,59 +71,6 @@ export interface CastWeb {
   unknown: { from: string; name: string }[];
   /** True when at least one line's words say how tense it is. */
   anyTension: boolean;
-  width: number;
-  height: number;
-}
-
-/** A small force layout over a circle start: the same input always gives the same positions, inside width × height. */
-export function layout(count: number, edges: { a: number; b: number }[], width: number, height: number, radii: number[]): { x: number; y: number }[] {
-  if (!count) return [];
-  const cx = width / 2, cy = height / 2, ring = Math.min(width, height) * 0.38;
-  const pos = Array.from({ length: count }, (_, i) => ({
-    x: cx + (count === 1 ? 0 : ring * Math.cos((2 * Math.PI * i) / count - Math.PI / 2)),
-    y: cy + (count === 1 ? 0 : ring * Math.sin((2 * Math.PI * i) / count - Math.PI / 2))
-  }));
-  if (count < 3) return pos;
-  const k = Math.sqrt((width * height) / count) * 0.75;
-  let temp = Math.min(width, height) / 8;
-  for (let step = 0; step < 240; step++) {
-    const dx = new Array(count).fill(0), dy = new Array(count).fill(0);
-    for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
-      let x = pos[i].x - pos[j].x, y = pos[i].y - pos[j].y;
-      let d = Math.hypot(x, y);
-      if (d < 0.01) { x = 0.01 * (i - j); y = 0.01; d = Math.hypot(x, y); }
-      const f = (k * k) / d;
-      dx[i] += (x / d) * f; dy[i] += (y / d) * f; dx[j] -= (x / d) * f; dy[j] -= (y / d) * f;
-    }
-    edges.forEach((e) => {
-      const x = pos[e.a].x - pos[e.b].x, y = pos[e.a].y - pos[e.b].y;
-      const d = Math.max(0.01, Math.hypot(x, y));
-      const f = (d * d) / k;
-      dx[e.a] -= (x / d) * f; dy[e.a] -= (y / d) * f; dx[e.b] += (x / d) * f; dy[e.b] += (y / d) * f;
-    });
-    for (let i = 0; i < count; i++) {
-      dx[i] += (cx - pos[i].x) * 0.05 * k / 10; dy[i] += (cy - pos[i].y) * 0.05 * k / 10;
-      const d = Math.max(0.01, Math.hypot(dx[i], dy[i]));
-      pos[i].x += (dx[i] / d) * Math.min(d, temp);
-      pos[i].y += (dy[i] / d) * Math.min(d, temp);
-    }
-    temp *= 0.985;
-  }
-  // Fit the picture into the box, leaving room for each circle and its name.
-  const pad = 16;
-  // A name is wider than its circle: keep 64 px either side, and two lines (name, scenes) under it.
-  const half = radii.map((r) => Math.max(r, 64));
-  const minX = Math.min(...pos.map((p, i) => p.x - half[i])), maxX = Math.max(...pos.map((p, i) => p.x + half[i]));
-  const minY = Math.min(...pos.map((p, i) => p.y - radii[i])), maxY = Math.max(...pos.map((p, i) => p.y + radii[i] + 40));
-  const s = Math.min((width - 2 * pad) / Math.max(1, maxX - minX), (height - 2 * pad) / Math.max(1, maxY - minY));
-  const ox = pad + ((width - 2 * pad) - (maxX - minX) * s) / 2, oy = pad + ((height - 2 * pad) - (maxY - minY) * s) / 2;
-  return pos.map((p) => ({ x: ox + (p.x - minX) * s, y: oy + (p.y - minY) * s }));
-}
-
-/** A circle's radius for a number of scenes on stage: 14 px for none, growing with the square root up to 40. */
-export function radiusFor(scenes: number, most: number): number {
-  if (!most) return 18;
-  return Math.round(14 + 26 * Math.sqrt(scenes / most));
 }
 
 /** A line's width for a tension: 3 px when the words do not say, 1.5 (calm) to 9 (open hostility) when they do. */
@@ -131,7 +78,44 @@ export function lineWidth(tension: number | null): number {
   return tension == null ? 3 : Math.round((1.5 + (tension / 10) * 7.5) * 10) / 10;
 }
 
-export function castWeb(index: VaultIndex, book: BookEntry, width = 720, height = 520): CastWeb {
+/** The character to start on: the one on stage in the most scenes who has a tie, else the one on stage the most. */
+export function defaultFocus(web: CastWeb): number {
+  if (!web.nodes.length) return -1;
+  const tied = new Set<number>();
+  web.edges.forEach((e) => { tied.add(e.a); tied.add(e.b); });
+  const order = web.nodes.map((_, i) => i).sort((x, y) => web.nodes[y].scenes - web.nodes[x].scenes || x - y);
+  return order.find((i) => tied.has(i)) ?? order[0];
+}
+
+export interface HubSpoke { node: number; edge: WebEdge; x: number; y: number; r: number; side: 'left' | 'right' }
+export interface Hub { focus: number; x: number; y: number; r: number; spokes: HubSpoke[]; width: number; height: number }
+
+const ROW = 64;
+
+/** One character in the middle and everyone tied to them in two columns, left and right, bowed like brackets. Each row is
+ *  64 px apart and every name sits on the outside of its column, so no circle or name can cover another. The tensest ties
+ *  are at the top. */
+export function hubFor(web: CastWeb, focus: number, width = 800): Hub {
+  const mine = web.edges.filter((e) => e.a === focus || e.b === focus)
+    .map((e) => ({ edge: e, node: e.a === focus ? e.b : e.a }))
+    .sort((x, y) => (y.edge.tension ?? -1) - (x.edge.tension ?? -1) || web.nodes[y.node].scenes - web.nodes[x.node].scenes || x.node - y.node);
+  const rows = Math.ceil(mine.length / 2);
+  const height = Math.max(200, rows * ROW + 80);
+  const cx = width / 2, cy = height / 2;
+  const most = Math.max(1, ...web.nodes.map((n) => n.scenes));
+  const reach = width / 2 - 205;
+  const spokes = mine.map((m, i) => {
+    const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
+    const row = Math.floor(i / 2);
+    const y = rows === 1 ? cy : 40 + ROW / 2 + row * ((height - 80 - ROW) / Math.max(1, rows - 1));
+    const t = rows === 1 ? 0 : (y - cy) / (height / 2 - 40 - ROW / 2);
+    const x = cx + (side === 'left' ? -1 : 1) * (reach - 60 * t * t);
+    return { ...m, side, x, y, r: Math.round(10 + 14 * Math.sqrt(web.nodes[m.node].scenes / most)) };
+  });
+  return { focus, x: cx, y: cy, r: 34, spokes, width, height };
+}
+
+export function castWeb(index: VaultIndex, book: BookEntry): CastWeb {
   const cast = castFor(index, book).filter((c) => c.name);
   const scenes = storyScenes(index, book);
   const codex = codexFor(index, book);
@@ -161,11 +145,8 @@ export function castWeb(index: VaultIndex, book: BookEntry, width = 720, height 
       if (said) e.texts.push(c.name + ': ' + said);
     });
   });
-  const most = Math.max(0, ...counts);
-  const radii = counts.map((n) => radiusFor(n, most));
-  const pos = layout(cast.length, edges, width, height, radii);
   const nodes = cast.map((c, i) => ({
-    name: c.name, note: c.series || c.note, color: entries[i] ? entries[i]!.color : 'var(--accent)', scenes: counts[i], x: pos[i].x, y: pos[i].y, r: radii[i]
+    name: c.name, note: c.series || c.note, color: entries[i] ? entries[i]!.color : 'var(--accent)', scenes: counts[i]
   }));
-  return { nodes, edges, unknown, anyTension: edges.some((e) => e.tension != null), width, height };
+  return { nodes, edges, unknown, anyTension: edges.some((e) => e.tension != null) };
 }
