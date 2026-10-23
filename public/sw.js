@@ -18,6 +18,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/** Every deploy gives the app's script and styles new names, so without this the iPad keeps a copy of each old one
+ * (about 1 MB a deploy). Once a new page is saved, drop the scripts and styles it no longer names. Fonts and pictures
+ * keep their names between deploys and stay. */
+function prune(cache, html) {
+  const named = new Set((html.match(/assets\/[^"'\s>]+\.(?:js|css)/g) || []));
+  if (!named.size) return Promise.resolve();
+  return cache.keys().then((reqs) => Promise.all(reqs.map((r) => {
+    const m = /assets\/[^/?#]+\.(?:js|css)$/.exec(new URL(r.url).pathname);
+    return m && !named.has(m[0]) ? cache.delete(r) : null;
+  })));
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -28,8 +40,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          // Only a good page replaces the offline copy: an error page from GitHub would otherwise be what opens offline.
+          if (res.ok) {
+            const copy = res.clone();
+            event.waitUntil(copy.text().then((html) => caches.open(CACHE).then((c) =>
+              c.put('./index.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })).then(() => prune(c, html)))));
+          }
           return res;
         })
         .catch(() => caches.match('./index.html'))
