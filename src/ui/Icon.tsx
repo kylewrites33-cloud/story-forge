@@ -64,7 +64,7 @@ const PATHS: Record<string, string> = {
   timeline: 'M3 18l5-6 4 3 4-8 5 5M3 21h18',
   heat: 'M4 4h5v5H4zM10 4h5v5h-5zM16 4h4v5h-4zM4 10h5v5H4zM10 10h5v5h-5zM4 16h5v4H4z',
   web: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 6.8l-5 9.5M13 6.8l5 9.5M7 18h10',
-  bracket: 'M9 4H5v16h4M15 4h4v16h-4',
+  bracket: 'M9 4H8a2 2 0 0 0-2 2v4l-2 2 2 2v4a2 2 0 0 0 2 2h1M15 4h1a2 2 0 0 1 2 2v4l2 2-2 2v4a2 2 0 0 1-2 2h-1',
   scan: 'M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM21 21l-5.2-5.2M7.5 10.5l2 2 4-4',
   speaker: 'M4 9h4l5-4v14l-5-4H4zM16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13',
   swap: 'M4 8h14l-3.5-3.5M20 16H6l3.5 3.5',

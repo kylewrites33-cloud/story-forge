@@ -161,7 +161,7 @@ add a dated line here when you add or change one.
   Words typed count all the time, with or without a Pomodoro (Kyle, 2026-10-21: "sometimes ill write in the app but forget
   to hit the pomodoro"): the day's total goes to the same Writing Log note as `typed`, after a two-minute pause or every ten
   minutes of steady typing (and when the app is put away), and the panel leads with "Today: N words typed". They count
-  Kyle's own words only: words the team puts on the page (filled brackets, Options, Put it at the end, lines merged in from
+  Kyle's own words only: words the team puts on the page (filled braces, Options, Put it at the end, lines merged in from
   elsewhere), a copy brought back, a joined scene, a beat moved to another scene and undo or redo add nothing, and since
   cuts never take words away, deleting the team's words does not lower the count (Kyle, 2026-10-21: "how the words typed
   might be affected by deleting generated text"). The Pomodoro's own words follow the same rule.
@@ -202,7 +202,7 @@ add a dated line here when you add or change one.
   workflow", each step linking to `#/workflow/<n>`.
   Quick jobs on Sonnet (Kyle, 2026-10-19: "for these cases, where I'm doing a quick chat in the app or if I'm pressing
   one of those quick buttons like filling in the brackets, I would like to use Sonnet... I do want the ideal models to
-  persist in workflow use and be reflected on the team page"): chat, Fill brackets, Options, Check and scene summaries
+  persist in workflow use and be reflected on the team page"): chat, Fill braces, Options, Check and scene summaries
   run on the vault's `job_quick_model` (Sonnet 5.5), helpers included; every other job keeps the workflow's models.
   Naming a model in the ask ("use Opus", "on Fable") runs that one job on it. The Team page keeps each agent's own model
   and says so under the table; an agent's page adds "Quick chats and buttons".
@@ -248,7 +248,7 @@ add a dated line here when you add or change one.
   button left Beats ("redundant"); a `beats` job is now asked from the side column's Ask the team, "Beats for this chapter" (the old beats note goes to the Archive). Reached from the writing screen's and whole chapter's Beats button and each
   chapter heading on the Chapter Grid. The writing screen's tool row stays in beats mode (Kyle, 2026-10-19, "the full word
   processor tool set too"): Undo, Redo, Bold, Italic, Highlight, Normal, Find, Names, Check, Listen and the Ask the team
-  buttons work on the open beat the cursor is in. Split, Join, Options and Fill brackets stay on the page only.
+  buttons work on the open beat the cursor is in. Split, Join, Options and Fill braces stay on the page only.
   Beats mode also shows the page's heading: the scene line, the chapter strip and the target bar, all
   counting the words as Kyle types in the beats (Kyle, 2026-10-19). The writing screen no longer shows pages and minutes to read
   (Kyle, 2026-10-22: "the minutes to read area in a section isn't needed"); the Chapter Grid and home page still do. A beat's prose looks like the page while it is edited
@@ -262,8 +262,11 @@ add a dated line here when you add or change one.
   title and one-line summary, no prose. A beat in the open scene is a link that puts the cursor where it starts. Its beat titles are a little larger than the rest of the column, for scanning (Kyle, 2026-10-22).
   The writing screen's top bar stays on one line with icons only below 1300 px (Kyle, 2026-10-19, after trying short
   names under the icons: "bring it back to what it was before for now. i like them all on one line").
-  Brackets, plan and chat beside the page (Kyle, 2026-10-18): `[...]` in the prose is a gap and `[a question]` an ask
-  for the team (`src/lib/brackets.ts`; never `[[links]]`, `[!callouts]`, `[^notes]` or `[text](links)`). Fill brackets in
+  Braces, plan and chat beside the page (Kyle, 2026-10-18): `{...}` in the prose is a gap and `{a question}` an ask
+  for the team (`src/lib/brackets.ts`; never `{{doubled}}`). Until 2026-10-23 these were square brackets; Kyle moved them
+  to braces because he types square brackets in his System screens ("i actually use the same bars sometimes for my system
+  screens... change the functional agent change bars to {} instead"), so `[ ]` is now always plain text: not marked, not
+  sent, read aloud without the marks. Below, "bracket" means an ask in braces. Fill braces in
   the toolbar (or, per device, on their own after 20 quiet seconds) writes a `fill` job listing them; the Writer answers in
   the job note only, and the page puts each answer in once: a gap's words right after it, an ask as a paragraph under its
   paragraph. The bracket always stays until Kyle deletes it (Kyle, 2026-10-19: "I do want to keep the bracket so that I
@@ -482,11 +485,11 @@ its still possible to go through the workflow mode from somewhere, please apply 
   (`src/lib/topbar.ts`). Settings, Top of the screen sets it by hand per device: Let the app decide, Leave room for the
   clock, No room; it also shows the window and screen size, for a screenshot if it still goes wrong.
 - **Writing screen**: one slim bar (Chapters, chapter number and name, Undo, Redo, B, I, Highlight, Find, Saved and
-  today's words, timer, Team, •••). The ••• menu holds Split here, Join, Names, Check, Listen, Fill brackets, Ask
+  today's words, timer, Team, •••). The ••• menu holds Split here, Join, Names, Check, Listen, Fill braces, Ask
   the team for a job, Focus, Page look, Copies, Mark as drafted, Whole chapter and Done. Normal left the ••• menu on 2026-10-22 (Kyle: "i dont think we need
   it"); pressing B, I or Highlight again on picked words takes that style off. Page | Beats | Whole chapter sits
   above the chapter title. Picking words brings a menu under them: Rewrite, Describe, Options, Ask about this (opens the
-  chat with the words quoted), and ••• for Brainstorm, Write on and Fill brackets. On the iPad with the on-screen keyboard
+  chat with the words quoted), and ••• for Brainstorm, Write on and Fill braces. On the iPad with the on-screen keyboard
   up, a format row (the two arrows, Undo, Redo, B, I, Highlight) sits just above the keyboard. The side column's groups are
   one row: Chat, Scene (Page look and Check moved here), Chapter.
 - **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
