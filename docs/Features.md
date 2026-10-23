@@ -527,3 +527,9 @@ button shapes"). Cream pages, black outlines, square corners on everything but d
 flat orange buttons with black words, yellow soft buttons, orange for the chosen tab, the Space Mono typewriter font for
 the app and Space Grotesk for headings. The fonts ship with the app (src/fonts, SIL Open Font License), so they work
 offline. The writing page keeps the font chosen in its Page panel, which gained a Typewriter (Space Mono) choice.
+
+Same day, a seventh light theme, Lo-Fi, from a lo-fi hip hop picture of old computer windows Kyle sent ("take heavy
+inspiration from this one in the same manner"): white windows with blue outlines and a hard blue shadow, square corners,
+pink, mint and butter-yellow panels, blue words, a faint dot grid behind the page, buttons with a small hard shadow that
+press in, Pixelify Sans for headings and buttons and the DotGothic16 dot font for the rest (src/fonts, SIL OFL). The
+writing page keeps its own font and has no shadows.
