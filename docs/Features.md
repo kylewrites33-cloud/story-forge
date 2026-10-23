@@ -508,6 +508,16 @@ its still possible to go through the workflow mode from somewhere, please apply 
   chat with the words quoted), and ••• for Brainstorm, Write on and Fill braces. On the iPad with the on-screen keyboard
   up, a format row (the two arrows, Undo, Redo, B, I, Highlight) sits just above the keyboard. The side column's groups are
   one row: Chat, Scene (Page look and Check moved here), Chapter.
+- **The side column in one row** (Kyle, 2026-10-23: "simplify the appearance of it to make it easier to find what we need
+  right away", then "this design change is good as long as we don't lose any functionality. But rather than scrap as the
+  third immediately visible option, I think it should be to-dos since I use that more frequently"). The groups and chips
+  are gone. One row at the top of the column: Chat, Plan, Beats, To-dos and More, with the hide arrow at its end (the
+  to-do count and the chat's dot as before). More fills the column with every other part under four headings: This scene
+  (Card and names, Marks, Word target, Copies, Done, split, join), This chapter (Scrap, From the workflow), The team (Ask
+  the team for a job, Options to pick from) and Tools (Check for AI phrases, Page look, Braindump for the whole book, which
+  the old tabs called Notes). Picking one opens it and the More button shows its name until another tab is picked. The
+  ••• menu and pressing a name on the page still open the same parts. The column is 376 px wide so the row fits on the
+  iPad. Mockups: project files `app/side-column/`.
 - **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
   small shape beside the colour on Chapter Grid cards (empty circle planned, half drafted, three quarters revised, full
   final), so colour is never the only sign; nothing smaller than 15 px except small capital headings.
