@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { GitHubSource } from '../lib/github.ts';
 import { normalise, type Settings } from '../lib/settings.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
-import { chirp } from './chirp.ts';
+import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
 import { loadTopRoom, saveTopRoom, type TopRoom } from '../lib/topbar.ts';
 
@@ -115,16 +115,29 @@ function ReadingRates() {
   );
 }
 
-/** Try the Pomodoro's two bird calls, to check this device's sound. */
+/** The Pomodoro's bird calls: twelve to try, one picked for the end of writing and one for the end of the break. */
 function TimerSound() {
+  const [pick, setPick] = useState(loadPick);
+  const choose = (moment: Moment, id: string) => { savePick(moment, id); setPick(loadPick()); playBird(id); };
   return (
     <>
       <h2>Timer sound</h2>
-      <p class="hint">The Pomodoro plays a bird call when the writing ends and a different one when the break ends. Press to hear them on this device. While a timer runs, the screen stays on so the call can play.</p>
-      <p class="buttons">
-        <button type="button" onClick={() => chirp('work')}>End of writing</button>
-        <button type="button" onClick={() => chirp('break')}>End of break</button>
-      </p>
+      <p class="hint">Pick a bird for the end of writing and one for the end of the break. Press a name to hear it. Each device keeps its own choice. While a timer runs, the screen stays on so the call can play.</p>
+      <ul class="bird-list">
+        {BIRDS.map((b) => (
+          <li key={b.id}>
+            <button type="button" class="bird-play" onClick={() => playBird(b.id)}>
+              <strong>{b.name}</strong><span>{b.line}</span>
+            </button>
+            <button type="button" class="bird-pick" aria-pressed={pick.work === b.id} onClick={() => choose('work', b.id)}>
+              {pick.work === b.id ? '✓ ' : ''}End of writing
+            </button>
+            <button type="button" class="bird-pick" aria-pressed={pick.break === b.id} onClick={() => choose('break', b.id)}>
+              {pick.break === b.id ? '✓ ' : ''}End of break
+            </button>
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
