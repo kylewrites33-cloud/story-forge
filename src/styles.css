@@ -251,6 +251,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 .props { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 0.95rem; }
 .props th, .props td { text-align: left; vertical-align: top; padding: 8px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .props th { width: 9em; color: var(--muted); font-weight: 500; padding-right: 12px; }
+.props .prop-list { margin: 0; padding-left: 1.1em; }
+.props .prop-list li { margin: 0 0 4px; }
 .prose { font-size: 1.1rem; line-height: 1.65; overflow-wrap: anywhere; }
 .prose blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--line); color: var(--muted); }
 .prose pre { overflow-x: auto; background: var(--surface); padding: 12px; border-radius: 8px; font-size: 0.94rem; }
