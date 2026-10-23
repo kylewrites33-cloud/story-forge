@@ -3,21 +3,22 @@
 // carries its mark in `data-m`, so the page can always be read back to exactly the Markdown it came from (see
 // StyledEditor's readText). Nothing here changes the text.
 
+import { ASK_RE } from './brackets.ts';
 import { mentions, type Matcher } from './codex.ts';
 
 /** What else the page marks, beyond emphasis: codex names (underlined in their colour) and the words Find is looking for. */
 export interface StyleOptions {
   names?: Matcher | null;
   find?: string;
-  /** Show [brackets] (asks for the team) as marked words; those in `asking` (by their words) as being worked on. */
+  /** Show {braces} (asks for the team) as marked words; those in `asking` (by their words) as being worked on. */
   asks?: boolean;
   asking?: Set<string>;
   /** Lines the team or another place added, shown with a dot beside them. */
   added?: Set<string>;
 }
 
-// [words] that are not [[links]], [!callouts], [^footnotes] or [text](links): the same rule as brackets.ts.
-const ASK = /\[(?![[!^])([^[\]\n]{0,400})\](?![([:\]])/g;
+// {words}: the same rule as brackets.ts.
+const ASK = ASK_RE;
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -77,7 +78,7 @@ function leaf(s: string, o: StyleOptions): string {
     ASK.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = ASK.exec(s))) {
-      if (m.index > 0 && s[m.index - 1] === '[') continue;
+      if (m.index > 0 && s[m.index - 1] === '{') continue;
       const busy = o.asking && o.asking.has(m[0].trim().toLowerCase());
       spans.push({ from: m.index, to: m.index + m[0].length, open: '<span class="md-ask' + (busy ? ' asking' : '') + '">' });
     }

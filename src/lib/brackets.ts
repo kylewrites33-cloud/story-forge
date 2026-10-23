@@ -1,14 +1,16 @@
-// [Brackets] in the prose are asks for the team that Kyle leaves without stopping (Kyle, 2026-10-18). A gap such as
-// "she was wearing [...]" gets its words right after the marker; a bracket with words in it ("[how was she dressed]",
-// "[research: make this farmerly]") is a question, answered as a paragraph right under the paragraph it sits in. Fill
-// brackets sends them as a `fill` job; the Writer answers in the job note only, and the app puts the words into the
-// page, so the team never races the paragraph Kyle is typing. The bracket itself always stays until Kyle deletes it, so
-// he can check the answer against what he asked (Kyle, 2026-10-19).
+// {Braces} in the prose are asks for the team that Kyle leaves without stopping (Kyle, 2026-10-18; braces since
+// 2026-10-23, when square brackets went back to being plain text: "i actually use the same bars sometimes for my system
+// screens"). A gap such as "she was wearing {...}" gets its words right after the marker; braces with words in them
+// ("{how was she dressed}", "{research: make this farmerly}") are a question, answered as a paragraph right under the
+// paragraph they sit in. Fill braces sends them as a `fill` job; the Writer answers in the job note only, and the app
+// puts the words into the page, so the team never races the paragraph Kyle is typing. The braces themselves always stay
+// until Kyle deletes them, so he can check the answer against what he asked (Kyle, 2026-10-19). The code still calls
+// each ask a bracket.
 import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
 
 export interface Bracket {
-  /** The marker exactly as on the page, brackets included. */
+  /** The marker exactly as on the page, braces included. */
   marker: string;
   inner: string;
   /** Where the marker starts and ends in the text. */
@@ -20,23 +22,21 @@ export interface Bracket {
   before: string;
 }
 
-// [words] that are not [[links]], [!callouts], [^footnotes] or [text](links), on one line.
-const RE = /\[(?![[!^])([^[\]\n]{0,400})\](?![([:\]])/g;
+// {words} on one line, never {{doubled}}. [Square brackets] are Kyle's own text (System screens, tags) and never an ask.
+export const ASK_RE = /\{(?!\{)([^{}\n]{0,400})\}(?!\})/g;
 const GAP = /^\s*(?:\.{2,}|…|_{2,}|-{2,}|\?{1,3})?\s*$/;
 
 export function findBrackets(text: string): Bracket[] {
   const out: Bracket[] = [];
   let m: RegExpExecArray | null;
-  RE.lastIndex = 0;
-  while ((m = RE.exec(text))) {
+  ASK_RE.lastIndex = 0;
+  while ((m = ASK_RE.exec(text))) {
     const at = m.index;
-    if (at > 0 && text[at - 1] === '[') continue;
+    if (at > 0 && text[at - 1] === '{') continue;
     const lineStart = text.lastIndexOf('\n', at - 1) + 1;
     let lineEnd = text.indexOf('\n', at);
     if (lineEnd < 0) lineEnd = text.length;
     const before = text.slice(lineStart, at);
-    // A task box at the start of a list line ("- [ ] milk") is not an ask.
-    if (/^\s*[-*+]\s*$/.test(before)) continue;
     out.push({
       marker: m[0], inner: m[1], at, end: at + m[0].length, kind: GAP.test(m[1]) ? 'gap' : 'ask',
       line: text.slice(lineStart, lineEnd), before: before.slice(-80)
@@ -55,8 +55,8 @@ export interface FillItem { name: string; kind: 'gap' | 'ask'; marker: string; b
 
 /** The ## Ask of a fill job: a line for Kyle, then one ### B<n> block per bracket with the paragraph it sits in. */
 export function fillAsk(scene: string, list: Bracket[], text: string): string {
-  const L = ['Kyle left ' + (list.length === 1 ? 'this bracket' : 'these ' + list.length + ' brackets') + ' in ' + scene +
-    ' while writing. Answer each one; the app puts the words into his page.'];
+  const L = ['Kyle left ' + (list.length === 1 ? 'this ask in braces' : 'these ' + list.length + ' asks in braces') + ' in ' + scene +
+    ' while writing. Answer each one; the app puts the words into his page. Square brackets in his text are his own and never an ask.'];
   list.forEach((b, i) => {
     const lineStart = text.lastIndexOf('\n', b.at - 1) + 1;
     const prev = text.slice(0, Math.max(0, lineStart - 1)).split('\n').filter((l) => l.trim()).pop() || '';
@@ -68,7 +68,7 @@ export function fillAsk(scene: string, list: Bracket[], text: string): string {
 
 export function fillJob(sceneId: string, sceneLabel: string, bookFolder: string, list: Bracket[], text: string): NewJob {
   const n = list.length;
-  return { title: 'Fill ' + n + (n === 1 ? ' bracket' : ' brackets') + ' in ' + sceneId, kind: 'fill', target: sceneId, book: bookFolder, ask: fillAsk(sceneLabel, list, text) };
+  return { title: 'Fill ' + n + (n === 1 ? ' brace' : ' braces') + ' in ' + sceneId, kind: 'fill', target: sceneId, book: bookFolder, ask: fillAsk(sceneLabel, list, text) };
 }
 
 /** The brackets a fill job's ask lists. */

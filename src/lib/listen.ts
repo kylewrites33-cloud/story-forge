@@ -12,10 +12,10 @@ export interface SpeechItem { say: string; start: number; end: number; part: num
 // Long sentences are said in pieces at a comma, semicolon or dash: some voices stop part way through a long one.
 const LONG = 220;
 
-/** What the words sound like with the page's marks gone: no brackets around asks, no [...] gaps, no stray stars. */
+/** What the words sound like with the page's marks gone: no braces around asks, no {...} gaps, no brackets, no stray stars. */
 export function sayable(s: string): string {
-  return s.replace(/\[(?:\s*(?:\.{2,}|…|_{2,}|-{2,}|\?{1,3})?\s*)\]/g, ' ')
-    .replace(/[[\]*_#~=]/g, '')
+  return s.replace(/[[{](?:\s*(?:\.{2,}|…|_{2,}|-{2,}|\?{1,3})?\s*)[\]}]/g, ' ')
+    .replace(/[[\]{}*_#~=]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/ ([,.;:!?])/g, '$1')
     .trim();

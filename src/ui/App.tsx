@@ -296,7 +296,7 @@ export function App() {
   const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
     const cur = snapRef.current;
-    // Fill brackets may run again while one is waiting: the page only sends brackets the team does not have yet.
+    // Fill braces may run again while one is waiting: the page only sends asks the team does not have yet.
     const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
@@ -529,7 +529,7 @@ export function App() {
       if ((name === 'jobs' || name === 'chat') && document.visibilityState === 'visible') runSync();
     }, 60000);
     // An open conversation waiting on a reply is read again every 15 seconds, about as often as the runner looks for work.
-    // So is an open scene while the team is answering its chat or its brackets; any open scene is read every 30 seconds,
+    // So is an open scene while the team is answering its chat or its braces; any open scene is read every 30 seconds,
     // so words pushed from elsewhere come into the page without reloading.
     let beat = 0;
     const quick = setInterval(() => {

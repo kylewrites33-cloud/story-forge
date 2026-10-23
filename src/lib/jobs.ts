@@ -34,7 +34,7 @@ export function jobLabel(kind: unknown): string {
     case 'todo-review': return 'Tick off fixed to-dos';
     case 'summaries': return 'Scene summaries';
     case 'beats': return 'Beats for this chapter';
-    case 'fill': return 'Fill brackets';
+    case 'fill': return 'Fill braces';
     case 'combine': return 'Combine these ideas';
     case 'variations': return 'Variations on this idea';
     case 'learn-taste': return 'Update my taste';

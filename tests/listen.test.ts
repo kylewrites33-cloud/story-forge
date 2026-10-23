@@ -11,8 +11,9 @@ test('sentences to say, marks gone, each with its place on the page', () => {
   assert.deepEqual(speechItems('x', 2).map((i) => i.part), [2]);
 });
 
-test('headings, comments and callouts are not read; brackets lose their marks', () => {
-  const items = speechItems('# Chapter One\n\n%% a note %%\n\n> [!team] Team notes\n> skip me\n\nShe wore [...] and [a red coat].');
+test('headings, comments and callouts are not read; braces and brackets lose their marks', () => {
+  const items = speechItems('# Chapter One\n\n%% a note %%\n\n> [!team] Team notes\n> skip me\n\nShe wore {...} and {a red coat}.');
+  assert.equal(sayable('Grey was a [Deserter] now.'), 'Grey was a Deserter now.');
   assert.deepEqual(items.map((i) => i.say), ['She wore and a red coat.']);
   assert.equal(sayable('**Bold** ==mark== _it_'), 'Bold mark it');
 });

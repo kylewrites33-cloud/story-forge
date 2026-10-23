@@ -135,7 +135,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   waiting?: Record<string, Choice>;
   /** The Pomodoro timer, drawn in the top bar (or beside Leave focus in Focus mode) so it never covers the page. */
   timer?: (variant: 'bar' | 'focus') => ComponentChildren;
-  /** The team's fill jobs for this scene: the [brackets] they are answering, and their answers. */
+  /** The team's fill jobs for this scene: the {braces} they are answering, and their answers. */
   fillJobs?: NoteRecord[];
   /** This scene's conversation with the team, for the Chat tab. */
   convo?: Conversation | null;
@@ -203,7 +203,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [repl, setRepl] = useState('');
   const [hit, setHit] = useState(0);
   const [asked, setAsked] = useState<{ busy: PassageTool | ''; error: boolean; text: string } | null>(null);
-  // [Brackets]: what Fill brackets said, answers that found no place, and the per-device switch to send them unasked.
+  // {Braces}: what Fill braces said, answers that found no place, and the per-device switch to send them unasked.
   const [filling, setFilling] = useState<{ busy: boolean; error: boolean; text: string } | null>(null);
   const [unplaced, setUnplaced] = useState<{ key: string; marker: string; answer: string }[]>([]);
   const [autoFill, setAutoFill] = useState(loadAutoFill);
@@ -487,7 +487,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const pageText = () => (beatsMode ? beatText.current : splitLead(draftRef.current.body).text);
 
-  // ---- [Brackets] ----
+  // ---- {Braces} (the code calls each ask a bracket) ----
   // Brackets sent a moment ago, before the job shows up in the next read of the vault (key: when it was sent).
   const sent = useRef<Map<string, number>>(new Map());
   const notAsked = (b: Bracket) => {
@@ -497,23 +497,23 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const fill = async (auto = false) => {
     const id = String(note.data.id || '');
-    if (!onJob || !id || !bookFolder) { if (!auto) setFilling({ busy: false, error: true, text: 'Filling brackets needs your own vault, not the demo.' }); return; }
+    if (!onJob || !id || !bookFolder) { if (!auto) setFilling({ busy: false, error: true, text: 'Filling braces needs your own vault, not the demo.' }); return; }
     const words = pageText();
     const list = findBrackets(words).filter(notAsked);
     if (!list.length) {
       const all = findBrackets(words);
       if (!auto) setFilling({ busy: false, error: false, text: all.length ? (all.some((b) => asking.has(bracketKey(b)))
-        ? 'The team already has every bracket on this page.'
-        : 'The team has answered every bracket on this page. Delete a bracket once you are happy with its answer, or change its words to ask again.') : 'Put [brackets] in your text first: [...] for a gap the team fills in, or [a question] for an answer under that paragraph.' });
+        ? 'The team already has every ask in braces on this page.'
+        : 'The team has answered every ask in braces on this page. Delete the braces once you are happy with the answer, or change their words to ask again.') : 'Put {braces} in your text first: {...} for a gap the team fills in, or {a question} for an answer under that paragraph. Square brackets stay your own text.' });
       return;
     }
     setFilling({ busy: true, error: false, text: '' });
     const r = await onJob(fillJob(id, [id, note.data.title].filter(Boolean).join(' '), bookFolder, list, words));
     if (!r.error) list.forEach((b) => sent.current.set(bracketKey(b), Date.now()));
-    setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 bracket' : list.length + ' brackets') + '. Keep writing: the words appear by each bracket, with a dot beside them. Your brackets stay until you delete them.' });
+    setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 ask' : list.length + ' asks') + '. Keep writing: the words appear by each one, with a dot beside them. Your braces stay until you delete them.' });
   };
 
-  // The team's answers: put each one into the page once, where its bracket is now.
+  // The team's answers: put each one into the page once, where its braces are now.
   const filled = useRef<Set<string>>(loadFilled(source.key));
   useEffect(() => {
     if (beatsMode) return;
@@ -669,7 +669,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const brackets = findBrackets(text);
   const newBrackets = brackets.filter(notAsked).length;
   const askedBrackets = brackets.filter((b) => !notAsked(b) && !answered.has(bracketKey(b))).length;
-  // Fill brackets on their own: 20 quiet seconds after the last change, any closed bracket the cursor is not in goes.
+  // Fill braces on their own: 20 quiet seconds after the last change, any closed braces the cursor is not in go.
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (beatsMode || !autoFill || !newBrackets) return;
@@ -822,7 +822,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 {(codex || []).length > 0 && moreItem('people', look.names === 'on' ? 'Names: underlined (turn off)' : 'Names: underline them', () => { const l: PageLook = { ...look, names: look.names === 'on' ? 'off' : 'on' }; setLook(l); saveLook(l); })}
                 {moreItem('scan', 'Check for AI-sounding phrases', () => openTab('check'))}
                 {listen.supported && moreItem('speaker', listen.state !== 'idle' ? 'Stop reading aloud' : 'Listen: read it aloud', () => (listen.state !== 'idle' && listen.reader ? listen.reader.stop() : listen.start()))}
-                {!beatsMode && moreItem('bracket', filling && filling.busy ? 'Filling brackets…' : 'Fill the [brackets]' + (newBrackets ? ' (' + newBrackets + ')' : ''), () => fill())}
+                {!beatsMode && moreItem('bracket', filling && filling.busy ? 'Filling braces…' : 'Fill the {braces}' + (newBrackets ? ' (' + newBrackets + ')' : ''), () => fill())}
                 {moreItem('team', 'Ask the team for a job', () => openTab('team'))}
                 {moreItem('focus', 'Focus: only the page', enterFocus)}
                 {moreItem('type', 'Page look', () => openTab('page'))}
@@ -984,7 +984,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 <div class="sel-more-menu">
                   <button type="button" {...keepFocus} onClick={() => { setSelMore(false); askTeam('brainstorm'); }}><Icon name="idea" size={18} />Brainstorm what comes next</button>
                   <button type="button" {...keepFocus} onClick={() => { setSelMore(false); askTeam('write-on'); }}><Icon name="pen" size={18} />Write on from here</button>
-                  <button type="button" {...keepFocus} onClick={() => { setSelMore(false); fill(); }}><Icon name="bracket" size={18} />Fill the [brackets]</button>
+                  <button type="button" {...keepFocus} onClick={() => { setSelMore(false); fill(); }}><Icon name="bracket" size={18} />Fill the {'{braces}'}</button>
                 </div>
               )}
             </div>
@@ -1031,10 +1031,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <button type="button" class="icon-button" aria-label="Close" onClick={() => setFilling(null)}><Icon name="close" size={16} /></button>
             </p>
           )}
-          {!filling && askedBrackets > 0 && <p class="tool-said ok" role="status"><span class="job-dot" aria-hidden="true" /> The team is filling {askedBrackets === 1 ? '1 bracket' : askedBrackets + ' brackets'} on this page.</p>}
+          {!filling && askedBrackets > 0 && <p class="tool-said ok" role="status"><span class="job-dot" aria-hidden="true" /> The team is filling {askedBrackets === 1 ? '1 ask in braces' : askedBrackets + ' asks in braces'} on this page.</p>}
           {unplaced.map((u) => (
             <div class="tool-said unplaced" key={u.key} role="status">
-              <span>The team answered <b>{u.marker.length > 50 ? u.marker.slice(0, 47) + '…]' : u.marker}</b>, but that bracket is no longer on the page:</span>
+              <span>The team answered <b>{u.marker.length > 50 ? u.marker.slice(0, 47) + '…' + u.marker.slice(-1) : u.marker}</b>, but those braces are no longer on the page:</span>
               <blockquote>{u.answer.length > 300 ? u.answer.slice(0, 297) + '…' : u.answer}</blockquote>
               <span class="buttons">
                 <button type="button" onClick={() => {
@@ -1667,7 +1667,7 @@ function TeamPanel({ status, id, title, chapter, bookFolder, onJob, link, autoFi
       {talk}
       <label class="check-row">
         <input type="checkbox" checked={autoFill} onChange={(e) => onAutoFill((e.currentTarget as HTMLInputElement).checked)} />
-        <span>Fill [brackets] on their own, 20 seconds after you stop typing (this device)</span>
+        <span>Fill {'{braces}'} on their own, 20 seconds after you stop typing (this device)</span>
       </label>
       <RecipePicker names={recipes} value={recipe} onChange={setRecipe} />
       {status === 'planned'

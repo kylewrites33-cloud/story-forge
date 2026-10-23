@@ -6,24 +6,26 @@ import { makeNote } from '../src/lib/vault-index.ts';
 import { hunks, mapFor, merge3 } from '../src/lib/live.ts';
 import { styledHtml, textOf } from '../src/lib/styled.ts';
 
-const PAGE = 'Mara stood at the gate. She was wearing [...] and her hands were cold.\n\n' +
-  'The squash leaves were trampled [research: what would they look like, farmer words] along the fence.\n\n' +
-  'See [[Mara]], the [!plan] callout, a [link](x), a note[^1] and\n- [ ] a task box.';
+const PAGE = 'Mara stood at the gate. She was wearing {...} and her hands were cold.\n\n' +
+  'The squash leaves were trampled {research: what would they look like, farmer words} along the fence.\n\n' +
+  'See [[Mara]], the [!plan] callout, a [link](x), a note[^1], {{doubled}} and\n- [ ] a task box.\n\n' +
+  'STRENGTH: 99 [+15, Status Effect] and a [Deserter] tag [...] [what is this].';
 
-test('brackets: gaps and asks, never links, callouts, footnotes or task boxes', () => {
+test('braces: gaps and asks; square brackets are never an ask (Kyle, 2026-10-23)', () => {
   const b = findBrackets(PAGE);
-  assert.deepEqual(b.map((x) => x.kind + ':' + x.marker), ['gap:[...]', 'ask:[research: what would they look like, farmer words]']);
+  assert.deepEqual(b.map((x) => x.kind + ':' + x.marker), ['gap:{...}', 'ask:{research: what would they look like, farmer words}']);
   assert.equal(b[0].before, 'Mara stood at the gate. She was wearing ');
   assert.equal(b[1].line.startsWith('The squash leaves'), true);
-  assert.deepEqual(findBrackets('[ ] and [?] and […]').map((x) => x.kind), ['gap', 'gap', 'gap']);
+  assert.deepEqual(findBrackets('{ } and {?} and {…} and {}').map((x) => x.kind), ['gap', 'gap', 'gap', 'gap']);
+  assert.deepEqual(findBrackets('[ ] and [?] and [describe her coat]'), []);
 });
 
 test('a fill job lists each bracket, and its answers come back by name', () => {
   const j = fillJob('S-031', 'S-031 The Field', 'Series/Q/Books/2 B', findBrackets(PAGE), PAGE);
-  assert.equal(j.title, 'Fill 2 brackets in S-031');
+  assert.equal(j.title, 'Fill 2 braces in S-031');
   assert.equal(j.kind, 'fill');
   const items = askItems(j.ask);
-  assert.deepEqual(items.map((i) => i.name + ' ' + i.kind + ' ' + i.marker), ['B1 gap [...]', 'B2 ask [research: what would they look like, farmer words]']);
+  assert.deepEqual(items.map((i) => i.name + ' ' + i.kind + ' ' + i.marker), ['B1 gap {...}', 'B2 ask {research: what would they look like, farmer words}']);
   assert.match(j.ask, /Paragraph before: Mara stood at the gate/);
   const note = makeNote('Jobs/J-010 Fill 2 brackets in S-031.md', 'x', jobText('J-010', j, new Date('2026-10-18T12:00:00')));
   assert.equal(fillJobsFor([note], 'S-031', 'Series/Q/Books/2 B').length, 1);
@@ -35,14 +37,14 @@ test('a fill job lists each bracket, and its answers come back by name', () => {
 test('a gap gets its words after the marker; a question is answered two lines down; both brackets stay', () => {
   const [gap, ask] = askItems(fillJob('S-1', 'S-1', 'b', findBrackets(PAGE), PAGE).ask);
   const g = placeAnswer(PAGE, gap, 'a grey wool coat')!;
-  assert.equal(g.text.split('\n')[0], 'Mara stood at the gate. She was wearing [...] a grey wool coat and her hands were cold.');
-  assert.deepEqual(g.added, ['Mara stood at the gate. She was wearing [...] a grey wool coat and her hands were cold.']);
+  assert.equal(g.text.split('\n')[0], 'Mara stood at the gate. She was wearing {...} a grey wool coat and her hands were cold.');
+  assert.deepEqual(g.added, ['Mara stood at the gate. She was wearing {...} a grey wool coat and her hands were cold.']);
   // A cursor after the gap moves with the words; one before it stays.
   assert.equal(g.map(5), 5);
   assert.equal(g.map(PAGE.indexOf('and her')), g.text.indexOf('and her'));
   const a = placeAnswer(g.text, ask, 'The vines lay flat, leaves split and muddied.')!;
   const lines = a.text.split('\n');
-  assert.equal(lines[2], 'The squash leaves were trampled [research: what would they look like, farmer words] along the fence.');
+  assert.equal(lines[2], 'The squash leaves were trampled {research: what would they look like, farmer words} along the fence.');
   assert.equal(lines[3], '');
   assert.equal(lines[4], 'The vines lay flat, leaves split and muddied.');
   assert.equal(lines[5], '');
@@ -71,19 +73,21 @@ test('an answered bracket is not sent again', () => {
 });
 
 test('two identical gaps: the one with the same words before it', () => {
-  const t = 'He wore [...] to the barn.\nShe wore [...] to the dance.';
+  const t = 'He wore {...} to the barn.\nShe wore {...} to the dance.';
   const [, second] = findBrackets(t);
-  assert.equal(locate(t, { marker: '[...]', before: second.before }), t.lastIndexOf('[...]'));
-  assert.equal(locate(t, { marker: '[...]', before: 'nothing like it ' }), -1);
+  assert.equal(locate(t, { marker: '{...}', before: second.before }), t.lastIndexOf('{...}'));
+  assert.equal(locate(t, { marker: '{...}', before: 'nothing like it ' }), -1);
 });
 
 test('brackets and added lines are shown without changing a character', () => {
-  const opts = { asks: true, asking: new Set(['[...]']), added: new Set(['The squash leaves were trampled [research: what would they look like, farmer words] along the fence.']) };
+  const opts = { asks: true, asking: new Set(['{...}']), added: new Set(['The squash leaves were trampled {research: what would they look like, farmer words} along the fence.']) };
   const html = styledHtml(PAGE, opts);
   assert.equal(textOf(html), PAGE);
-  assert.match(html, /<span class="md-ask asking">\[\.\.\.\]<\/span>/);
+  assert.match(html, /<span class="md-ask asking">\{\.\.\.\}<\/span>/);
   assert.match(html, /<span class="md-added">The squash/);
   assert.equal(html.indexOf('md-ask">[[Mara'), -1);
+  assert.equal(html.indexOf('md-ask">[+15'), -1);
+  assert.equal(html.indexOf('md-ask">{{'), -1);
 });
 
 test('words pushed from elsewhere merge into the page line by line', () => {
