@@ -5,7 +5,7 @@ export interface PageLook {
   size: 'small' | 'medium' | 'large' | 'huge';
   spacing: 'tight' | 'normal' | 'loose';
   width: 'narrow' | 'normal' | 'wide';
-  font: 'serif' | 'sans' | 'readable';
+  font: 'serif' | 'sans' | 'readable' | 'typewriter';
   paper: 'white' | 'cream' | 'dark';
   /** Character, place and item names underlined in their colour. */
   names: 'on' | 'off';
@@ -18,7 +18,7 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'size', label: 'Text size', options: [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['huge', 'Huge']] },
   { key: 'spacing', label: 'Line spacing', options: [['tight', 'Tight'], ['normal', 'Normal'], ['loose', 'Loose']] },
   { key: 'width', label: 'Page width', options: [['narrow', 'Narrow'], ['normal', 'Normal'], ['wide', 'Wide']] },
-  { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)']] },
+  { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)'], ['typewriter', 'Typewriter (Space Mono)']] },
   { key: 'paper', label: 'Paper', options: [['white', 'Theme colour'], ['cream', 'Cream'], ['dark', 'Dark']] },
   { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] }
 ];
@@ -49,7 +49,8 @@ const WIDTHS = { narrow: '36rem', normal: '44rem', wide: '58rem' };
 const FONTS = {
   serif: 'Georgia, "Times New Roman", serif',
   sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  readable: 'Verdana, "Atkinson Hyperlegible", Tahoma, sans-serif'
+  readable: 'Verdana, "Atkinson Hyperlegible", Tahoma, sans-serif',
+  typewriter: '"Space Mono", ui-monospace, Menlo, monospace'
 };
 
 /** The CSS variables the writing page reads. */

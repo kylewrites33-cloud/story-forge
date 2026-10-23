@@ -520,3 +520,10 @@ threads ... green, blue, and orange, with the ocassional white pop"): Keep writi
 blue one with a blue-grey button, Kyle's chat messages dark green and the team's dark blue, orange for kickers and counts,
 white for the main buttons. Set by `--kicker`, `--next-go`, `--team-msg`, `--badge` and friends, which fall back to the
 accent everywhere else.
+
+2026-10-23: a sixth light theme, Marigold, from a book-app design Kyle sent ("this light mode will also have different
+buttons and ui element changes that match a color theme, including different font choices"; "you kmow i expect different
+button shapes"). Cream pages, black outlines, square corners on everything but dots, a yellow top bar and writing bar,
+flat orange buttons with black words, yellow soft buttons, orange for the chosen tab, the Space Mono typewriter font for
+the app and Space Grotesk for headings. The fonts ship with the app (src/fonts, SIL Open Font License), so they work
+offline. The writing page keeps the font chosen in its Page panel, which gained a Typewriter (Space Mono) choice.
