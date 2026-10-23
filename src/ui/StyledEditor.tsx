@@ -58,14 +58,17 @@ function wrap(inner: string, m: string): string {
  * a new line. `points` are stand-in characters to put at places in the page (the selection). With `marks` false, the
  * words alone (for copying out). */
 export function readText(root: Node, points: Point[] = [], marks = true): string {
-  const at = (n: Node, i: number) => points.filter((p) => p.node === n && p.offset === i).map((p) => p.mark).join('');
+  // The points by node, so a page with a stand-in at every piece of text (locator) is read in one pass.
+  const byNode = new Map<Node, Point[]>();
+  points.forEach((p) => { const list = byNode.get(p.node); if (list) list.push(p); else byNode.set(p.node, [p]); });
+  const at = (n: Node, i: number) => { const list = byNode.get(n); return list ? list.filter((p) => p.offset === i).map((p) => p.mark).join('') : ''; };
   const walk = (n: Node, top: boolean, look: Look, waiting: boolean): string => {
     let out = '';
     n.childNodes.forEach((c, i) => {
       out += at(n, i);
       if (c.nodeType === 3) {
         let d = (c as Text).data;
-        points.filter((p) => p.node === c).sort((a, b) => b.offset - a.offset).forEach((p) => { d = d.slice(0, p.offset) + p.mark + d.slice(p.offset); });
+        (byNode.get(c) || []).slice().sort((a, b) => b.offset - a.offset).forEach((p) => { d = d.slice(0, p.offset) + p.mark + d.slice(p.offset); });
         out += waiting ? d.split(WAIT).join('') : d;
       } else if (c.nodeName === 'BR') {
         if (!(top && i === n.childNodes.length - 1)) out += '\n';
@@ -149,17 +152,20 @@ function locator(root: HTMLElement): (want: number) => [Node, number] {
   };
 }
 
-/** What the page shows, character by character, for telling whether the browser's own edit already looks right. Spaces
- * look the same styled or not. */
+/** What the page shows, for telling whether the browser's own edit already looks right: the words, with each letter's
+ * look written before it whenever it differs from the letter before's. Spaces look the same styled or not. Written per
+ * piece of text rather than per letter, which kept typing slow in a long chapter on the iPad (audit, 2026-10-23). */
 function lookString(root: Node): string {
   let out = '';
+  let last: string | null = null;
   const walk = (n: Node, cls: string, top: boolean) => {
     n.childNodes.forEach((c, i) => {
       if (c.nodeType === 3) {
-        for (const ch of (c as Text).data) {
-          if (ch === WAIT) continue;
-          out += /\s/.test(ch) ? (ch === '\n' ? '\n' : ' ') : ch + '\u0001' + cls + '\u0002';
-        }
+        const d = (c as Text).data.split(WAIT).join('').replace(/\s/g, (s) => (s === '\n' ? '\n' : ' '));
+        const at = d.search(/\S/);
+        if (at < 0) out += d;
+        else if (cls === last) out += d;
+        else { out += d.slice(0, at) + '\u0001' + cls + '\u0002' + d.slice(at); last = cls; }
       } else if (c.nodeName === 'BR') { if (!(top && i === n.childNodes.length - 1)) out += '\n'; }
       else if (c.nodeType === 1) {
         const el = c as HTMLElement;
