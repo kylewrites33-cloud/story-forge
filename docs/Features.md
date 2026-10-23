@@ -154,6 +154,9 @@ add a dated line here when you add or change one.
   page. Settings, Timer sound has "End of writing" and "End of break" to hear them.
   Brighter (Kyle, 2026-10-23: "it's not very soothing. It sounds like an alarm ... more bright and cheerful"): the chirps
   became soft bell chimes, a rising C-E-G-C run when the writing ends and a G-C ding-ding, twice, when the break ends.
+  Birds again (Kyle, 2026-10-23: "i do kind of still want it to be bird chirps. in keeping with the sparrow theme ... a
+  soothing small bird sound"): soft songbird calls made on the device, quieter than before; a little warbled song (two
+  sweet notes, a short trill, a falling note) when the writing ends, two slow rising "tsweet" calls when the break ends.
   The panel keeps only its buttons, the words so far and the "Today" line: no grey explanations and no buttons to hear the
   chirps (Kyle, 2026-10-22: "you dont need all those explanations in the grey text. or the option to hear the bird chirps").
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
