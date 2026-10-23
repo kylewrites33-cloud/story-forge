@@ -1954,7 +1954,7 @@ button, [role="button"] { -webkit-touch-callout: none; }
 .flow-bar { display: block; height: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
 .flow-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .flow-chip { flex: none; display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 0.94rem; font-weight: 650; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-.flow-chip.flow-check { background: var(--fill, var(--accent)); border-color: var(--fill-line, var(--accent)); color: var(--on-fill, var(--on-accent)); }
+.flow-chip.flow-judge, .flow-chip.flow-check { background: var(--fill, var(--accent)); border-color: var(--fill-line, var(--accent)); color: var(--on-fill, var(--on-accent)); }
 .flow-chip.flow-working { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
 .flow-chip.flow-kept { border-color: var(--ok); color: var(--ok); }
 .flow-steps { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
