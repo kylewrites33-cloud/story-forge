@@ -498,7 +498,10 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
     lastSel.current = s;
     const h = styledHtml(text, opts.current) + '<br>';
     shown.current = text;
-    if (el.innerHTML !== h) {
+    // Typing at the very end replaces the page's last line break, which only keeps an empty last line visible: that page
+    // looks the same as `h`, so it is left as it is without the slower check below (audit, 2026-10-23).
+    const now = el.innerHTML;
+    if (now !== h && now + '<br>' !== h) {
       // Repaint only when the page would look different: a space typed at the end of italic words stays inside them
       // on the page (so the next word is italic too), while the text keeps the space outside the stars.
       const want = document.createElement('div');

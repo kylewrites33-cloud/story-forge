@@ -42,6 +42,8 @@ src/ui/Pomodoro.tsx      the timer's button and panel: in the sidebar's foot, th
 src/ui/chirp.ts        the Pomodoro's bird calls: twelve made on the device, the two picked in Settings, unlocked by a press, and keeping the screen on while it runs
 src/ui/hold.ts         names on a long press: a finger held on a button with a title shows the title (touch only)
 src/ui/viewport.ts       useLockedPage: the writing screens lock the document so the iPad cannot scroll it under them
+src/ui/EditorPanels.tsx  the writing screen's side-column panels and small forms (card, codex, Find, beats, marks, notes, history,
+                         copies, archive, chapter forms, scene, team, page look, target, to-dos, plan, scrap)
 src/ui/ChapterPage.tsx   the whole chapter as one page
 src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
 src/lib/brackets.ts      {braces} (asks for the team): finding them, the fill job, its answers, putting each answer into the page

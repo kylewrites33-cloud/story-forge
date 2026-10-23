@@ -182,11 +182,22 @@ export function markList(text: string): { at: number; text: string }[] {
 
 /** The whole text as HTML for the editor. Lines that start with ">" (callouts such as Team notes) are muted. */
 export function styledHtml(text: string, o: StyleOptions = {}): string {
+  // Each line's HTML depends only on the line and the options, so lines are kept per options object: typing one letter
+  // works out one line again, not the whole chapter (audit, 2026-10-23).
+  let done = made.get(o);
+  if (!done || done.size > 5000) { done = new Map(); made.set(o, done); }
+  const seen = done;
   return text.split('\n').map((line) => {
-    const html = /^\s*>/.test(line) ? '<span class="md-quote">' + lineHtml(line, o) + '</span>' : lineHtml(line, o);
-    return o.added && line.trim() && o.added.has(line) ? '<span class="md-added">' + html + '</span>' : html;
+    let html = seen.get(line);
+    if (html === undefined) {
+      html = /^\s*>/.test(line) ? '<span class="md-quote">' + lineHtml(line, o) + '</span>' : lineHtml(line, o);
+      if (o.added && line.trim() && o.added.has(line)) html = '<span class="md-added">' + html + '</span>';
+      seen.set(line, html);
+    }
+    return html;
   }).join('\n');
 }
+const made = new WeakMap<StyleOptions, Map<string, string>>();
 
 /** The Markdown an HTML string from styledHtml holds, for tests: each span's data-m around its words, entities read back. */
 export function textOf(html: string): string {

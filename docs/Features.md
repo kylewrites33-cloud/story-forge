@@ -597,3 +597,11 @@ every old version: each deploy gave the script and styles new names and the iPad
 deploy), so the service worker now drops the ones the new page no longer names, and only a good page from GitHub
 replaces the offline page. About 95 lines of styles and four functions left from earlier designs, and ten unused
 imports, went.
+
+Same day, the writing screen rework (Kyle: "you can go ahead with reworking the writing page to improve it"). Typing in a
+long chapter takes about half the time per key it took in the morning, and the slowest keys a third: each line's styled
+HTML is kept and only the changed line is worked out again (`styledHtml`); typing at the very end of the page no longer
+runs the full look check, since only the page's last line break differs; and the page's words are counted 300 ms after
+typing pauses rather than on every letter (words typed just before leaving the page still count for the Pomodoro). The
+side column's panels moved out of `Editor.tsx` into `EditorPanels.tsx`, so the writing screen's file is about 1,200
+lines instead of 2,050. Saving, offline and the live merge are unchanged.

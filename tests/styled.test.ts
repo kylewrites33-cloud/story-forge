@@ -82,3 +82,16 @@ test('a new line inside styled words closes and reopens their marks; deleting ke
   assert.equal(insertText('a *bc* d', 3, 5, '').text, 'a  d');
   assert.equal(insertText('plain text', 5, 5, '\n').text, 'plain\n text');
 });
+
+test('the page HTML is the same when lines are reused, and new options are worked out afresh', () => {
+  const o = { added: new Set(['Two *b*.']), find: 'one' };
+  const text = 'One *a*.\nTwo *b*.\n\n> Three\nOne *a*.';
+  const first = styledHtml(text, o);
+  assert.equal(styledHtml(text, o), first);
+  assert.equal(styledHtml(text + 'x', o).startsWith(first), true);
+  // The same lines with other options: nothing kept from the first options shows.
+  const plain = styledHtml(text, {});
+  assert.equal(plain.includes('md-find') || plain.includes('md-added'), false);
+  assert.equal(first.includes('md-find') && first.includes('md-added'), true);
+  assert.equal(textOf(first), text);
+});
