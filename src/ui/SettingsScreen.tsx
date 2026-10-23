@@ -115,12 +115,12 @@ function ReadingRates() {
   );
 }
 
-/** Try the Pomodoro's two chimes, to check this device's sound. */
+/** Try the Pomodoro's two bird calls, to check this device's sound. */
 function TimerSound() {
   return (
     <>
       <h2>Timer sound</h2>
-      <p class="hint">The Pomodoro plays a chime when the writing ends and a different one when the break ends. Press to hear them on this device. While a timer runs, the screen stays on so the chime can play.</p>
+      <p class="hint">The Pomodoro plays a bird call when the writing ends and a different one when the break ends. Press to hear them on this device. While a timer runs, the screen stays on so the call can play.</p>
       <p class="buttons">
         <button type="button" onClick={() => chirp('work')}>End of writing</button>
         <button type="button" onClick={() => chirp('break')}>End of break</button>
