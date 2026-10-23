@@ -538,3 +538,8 @@ Same day, an eighth light theme, Retro OS, from a "Retro OS UI kit" picture Kyle
 desktop. Beige raised panels and buttons (light top-left edge, dark bottom-right) that sink when pressed, a black frame
 on the main button, sunken boxes to type in, blue title-bar strips over Keep writing and Next step, a dark teal top bar,
 Windows blue for chosen tabs and sidebar items, Verdana for words and the VT323 terminal font for big titles.
+
+Kyle then asked for checkboxes to match each of these three themes, each different, and for better Marigold titles.
+Marigold: a black-edged square that fills orange with a thick black tick. Lo-Fi: a white box with a hard blue shadow
+that fills mint with a pixel tick and presses in. Retro OS: a sunken white box with the old black pixel tick. Marigold's
+page titles are now big, tight Space Grotesk with a yellow marker stroke behind the lower half.
