@@ -44,7 +44,7 @@ import { FlowTab } from './Flow.tsx';
 import type { CodexNow } from '../lib/codexnow.ts';
 import { CodexNowBox } from './CodexNow.tsx';
 import { findAll, markList } from '../lib/styled.ts';
-import { withBody } from '../lib/drafts.ts';
+import { typedWords, withBody } from '../lib/drafts.ts';
 import { propertyOrder } from '../lib/schema.ts';
 import { render } from '../lib/markdown.ts';
 import { makeNote } from '../lib/vault-index.ts';
@@ -725,7 +725,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const nextGo = gi >= 0 && group && group.num != null && book && book.groups[gi + 1] ? book.groups[gi + 1].scenes[0] || next : together ? null : next;
   const subtitle = isEmptyValue(note.data.subtitle) ? '' : String(note.data.subtitle);
   // The chapter's scenes as a strip of blocks sized by their length; this scene's block uses its live word count.
-  const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : beatsMode && beatWords[n.path] != null ? beatWords[n.path] : toNumber(n.data.words) || 0 })) : [];
+  const strip = group && group.scenes.length > 1 ? group.scenes.map((n) => ({ note: n, words: n.path === note.path ? words : beatsMode && beatWords[n.path] != null ? beatWords[n.path] : typedWords(n) })) : [];
   // A scene with few or no words still gets a block wide enough to see and press.
   const stripMin = Math.max(1, strip.reduce((m, x) => Math.max(m, x.words), 0) * 0.12);
   const stripTotal = strip.reduce((s, x) => s + Math.max(x.words, stripMin), 0);
@@ -916,7 +916,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                   <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene side-sub"
                     aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data, n.path)}>
                     <span class="side-name">{label}</span>
-                    <span class="side-words">{n.path === note.path ? num(words) : num(toNumber(n.data.words) || 0)}</span>
+                    <span class="side-words">{n.path === note.path ? num(words) : num(typedWords(n))}</span>
                   </a>
                 );
                 if (g.num == null) return (
@@ -927,7 +927,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 );
                 const inHere = g.scenes.some((n) => n.path === note.path);
                 const to = inHere ? note : g.scenes[0];
-                const gWords = g.scenes.reduce((t, n) => t + (n.path === note.path ? words : toNumber(n.data.words) || 0), 0);
+                const gWords = g.scenes.reduce((t, n) => t + (n.path === note.path ? words : typedWords(n)), 0);
                 return (
                   <div key={g.key} class="side-group" {...holdProps}>
                     <a {...link(beatsMode ? href.beats(to.path) : href.write(to.path))} class="side-scene side-chapter-row"
