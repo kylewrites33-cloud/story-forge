@@ -19,7 +19,6 @@ import { loadDrafts, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups } from '../lib/board.ts';
-import { Icon } from './Icon.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';

@@ -1,5 +1,5 @@
 // Reads System/schema.json and answers the questions the screens ask of it.
-import type { BoardDef, PropertyDef, Schema, TypeDef } from './types.ts';
+import type { BoardDef, PropertyDef, Schema } from './types.ts';
 
 export const SCHEMA_PATH = 'System/schema.json';
 export const CONFIG_PATH = 'System/Config.md';
@@ -20,10 +20,6 @@ export function parseSchema(text: string): Schema {
     if (!s.types[name]) throw new Error(SCHEMA_PATH + ' has no "' + name + '" type, and the app needs it.');
   }
   return { version: s.version, statuses: s.statuses || {}, common: s.common, types: s.types, boards: s.boards || {} };
-}
-
-export function typeDef(schema: Schema, type: string): TypeDef | null {
-  return schema.types[type] || null;
 }
 
 /** A property's definition, from the type or from the properties every type shares. */

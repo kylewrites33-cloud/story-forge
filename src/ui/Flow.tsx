@@ -8,9 +8,9 @@ import { stamp, type Decision } from '../lib/ideas.ts';
 import { jobNotes, type OnJob } from '../lib/jobs.ts';
 import { inline } from '../lib/markdown.ts';
 import {
-  allTasks, flowJobAsk, flowJobTitle, flowResults, flowStages, jobTarget, keptAbout, loadMode, nextTask, ownResults,
-  plainStep, resultTag, saveMode, splitResults, stageProgress, STATE_LABEL, taskByKey, taskLabel, taskStatuses, targetValue,
-  type FlowAsk, type FlowStage, type FlowTask, type Mode, type NewResult, type TaskStatus
+  allTasks, flowJobAsk, flowJobTitle, flowResults, flowStages, jobTarget, keptAbout, nextTask, ownResults,
+  plainStep, resultTag, splitResults, stageProgress, STATE_LABEL, taskByKey, taskLabel, taskStatuses, targetValue,
+  type FlowAsk, type FlowStage, type FlowTask, type NewResult, type TaskStatus
 } from '../lib/flow.ts';
 import { parseWorkflow } from '../lib/workflow.ts';
 import type { Choice } from '../lib/write-queue.ts';
@@ -23,8 +23,6 @@ type OnDecide = (path: string, decision: Decision, reason: string, fields?: Reco
 export type OnResults = (book: BookEntry, list: NewResult[]) => Promise<string | null>;
 
 const html = (md: string) => ({ __html: inline(md) });
-const STAGE_ICONS = ['market', 'juice', 'people', 'cards', 'outline', 'pen'];
-export const stageIcon = (i: number) => STAGE_ICONS[i] || 'list';
 
 export interface FlowData {
   stages: FlowStage[];

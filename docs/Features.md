@@ -587,3 +587,14 @@ Marigold's shapes in the dark. Square corners, outlined cards and buttons, the S
 Grotesk headings, buttons that press in, and a title marker stroke, but quiet like the other dark themes: near-black
 pages, grey outlines, bone-white main buttons and chosen tabs, teal only in words, counts, ticks and the title stroke.
 The word under the percent in the progress ring uses the heading font in Marigold and Typewriter so it fits.
+
+## Code audit (2026-10-23)
+
+Kyle asked for an audit of the app's code for places to simplify or improve. Nothing a screen does changed. Typing in a
+long chapter is about a third faster per key: after each letter the writing box checked whether the page needed
+redrawing by spelling out every letter's look (`lookString`), and reading the page back with a mark at every piece of
+text (`locator`) compared every mark with every piece; both now do one pass. The offline copy of the app no longer keeps
+every old version: each deploy gave the script and styles new names and the iPad kept the old ones (about 1 MB a
+deploy), so the service worker now drops the ones the new page no longer names, and only a good page from GitHub
+replaces the offline page. About 95 lines of styles and four functions left from earlier designs, and ten unused
+imports, went.
