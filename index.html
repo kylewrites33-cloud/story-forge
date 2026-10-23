@@ -15,7 +15,7 @@
       // The colour theme chosen in Settings, put on before the app draws so the page never flashes the wrong colours (see src/lib/theme.ts).
       try {
         var t = localStorage.getItem('story-forge.theme');
-        var dark = ['violet-night', 'midnight', 'forest', 'ember', 'ink', 'black'];
+        var dark = ['violet-night', 'midnight', 'forest', 'ember', 'ink', 'black', 'typewriter'];
         if (t && t !== 'auto') { document.documentElement.dataset.theme = t; document.documentElement.dataset.mode = dark.indexOf(t) >= 0 ? 'dark' : 'light'; }
       } catch (e) {}
     </script>

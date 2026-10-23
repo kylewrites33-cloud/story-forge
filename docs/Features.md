@@ -543,3 +543,9 @@ Kyle then asked for checkboxes to match each of these three themes, each differe
 Marigold: a black-edged square that fills orange with a thick black tick. Lo-Fi: a white box with a hard blue shadow
 that fills mint with a pixel tick and presses in. Retro OS: a sunken white box with the old black pixel tick. Marigold's
 page titles are now big, tight Space Grotesk with a yellow marker stroke behind the lower half.
+
+Same day, a seventh dark theme, Typewriter (Kyle: "make a dark mode UI out of marigold, too. Choose different colors."):
+Marigold's shapes in the dark. Square corners, outlined cards and buttons, the Space Mono typewriter font with Space
+Grotesk headings, buttons that press in, and a title marker stroke, but quiet like the other dark themes: near-black
+pages, grey outlines, bone-white main buttons and chosen tabs, teal only in words, counts, ticks and the title stroke.
+The word under the percent in the progress ring uses the heading font in Marigold and Typewriter so it fits.
