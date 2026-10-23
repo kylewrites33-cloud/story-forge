@@ -520,7 +520,3 @@ threads ... green, blue, and orange, with the ocassional white pop"): Keep writi
 blue one with a blue-grey button, Kyle's chat messages dark green and the team's dark blue, orange for kickers and counts,
 white for the main buttons. Set by `--kicker`, `--next-go`, `--team-msg`, `--badge` and friends, which fall back to the
 accent everywhere else.
-
-Nightshade (Kyle, same evening: "1 more dark mode set with the claude color relationship inspiration"): the Claude
-theme's pattern in new colours, plum shapes for Keep writing and Kyle's messages, teal for Next step and the team's
-replies, gold for kickers and counts, white buttons.
