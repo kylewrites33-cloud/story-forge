@@ -475,6 +475,11 @@ its still possible to go through the workflow mode from somewhere, please apply 
   change) and Drop, stars, and Undo for ten seconds. Keys K, M, D and U are extras.
 - **Codex**: Characters, Places, Items and Lore each have a page: a list with a filter on the left, the entry on the
   right with its "now" and where it appears (`Codex.tsx`). Narrower than 900 px the list comes first.
+  2026-10-23 (Kyle: agents should look up "Grey's abilities or what a certain character's motivations are" without
+  reading the book, and "what a character wants could potentially change from act to act"): character cards show
+  Wants over time, Looks and Abilities, each line starting with the scene it becomes true at, and every codex card shows
+  what Kyle has Not decided yet. Lists of sentences show one per line (`longList` in `format.ts`). The fields come from
+  the schema; the vault's `sf index` builds a Book Index from them for the team.
   2026-10-22 (Kyle: "there's some weird scrolling here"): the list and the entry each scroll on their own, under the
   top bar, and a newly picked entry opens at its top. The note view says "To change this, ask the team" (Kyle never
   opens Obsidian; error messages say the same). On the iPad home-screen app the top bar fills the strip above it, and

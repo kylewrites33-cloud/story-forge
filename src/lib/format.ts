@@ -2,7 +2,21 @@
 import { linkName, nameList, toNumber } from './links.ts';
 import type { PropertyDef } from './types.ts';
 
-const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU', sub_subgenre: 'Niche', protagonist_type: 'Hero', headline: 'Summary' };
+const LABELS: Record<string, string> = { pov: 'POV', id: 'ID', ai: 'AI', ku: 'KU', sub_subgenre: 'Niche', protagonist_type: 'Hero', headline: 'Summary',
+  wants: 'Wants over time', open: 'Not decided yet' };
+
+/** A list of sentences (a character's wants, looks or abilities, each with its scene) reads as lines, not one comma run
+ * (Kyle, 2026-10-23). */
+export function longList(v: unknown): boolean {
+  return Array.isArray(v) && v.length > 1 && listLines(v).some((x) => x.length > 40);
+}
+
+/** A list's items as plain lines. An unquoted "B2 S-024: Terrakinesis" reads back as a one-key object; it shows as written. */
+export function listLines(v: unknown): string[] {
+  return (Array.isArray(v) ? v : [v]).map((x) => (x && typeof x === 'object' && !Array.isArray(x)
+    ? Object.entries(x as Record<string, unknown>).map(([k, y]) => k + ': ' + String(y)).join('; ')
+    : String(x ?? ''))).filter(Boolean);
+}
 
 export function label(key: string): string {
   if (LABELS[key]) return LABELS[key];

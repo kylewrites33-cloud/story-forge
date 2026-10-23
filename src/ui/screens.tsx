@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { chapterGroups, chapterHeading } from '../lib/board.ts';
-import { formatValue, isEmptyValue, label, sceneHeader } from '../lib/format.ts';
+import { formatValue, isEmptyValue, label, listLines, longList, sceneHeader } from '../lib/format.ts';
 import { basename, toNumber } from '../lib/links.ts';
 import { searchScenes } from '../lib/search.ts';
 import { render } from '../lib/markdown.ts';
@@ -606,7 +606,7 @@ export function NoteView({ schema, index, path }: { schema: Schema; index: Vault
             {keys.map((k) => (
               <tr key={k}>
                 <th scope="row">{label(k)}</th>
-                <td>{formatValue(k, note.data[k], propDef(schema, note.type, k))}</td>
+                <td>{longList(note.data[k]) ? <ul class="prop-list">{listLines(note.data[k]).map((x, i) => <li key={i}>{x}</li>)}</ul> : formatValue(k, note.data[k], propDef(schema, note.type, k))}</td>
               </tr>
             ))}
           </tbody>
