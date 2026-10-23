@@ -518,13 +518,10 @@ its still possible to go through the workflow mode from somewhere, please apply 
   the old tabs called Notes). Picking one opens it and the More button shows its name until another tab is picked. The
   ••• menu and pressing a name on the page still open the same parts. The column is 376 px wide so the row fits on the
   iPad. Mockups: project files `app/side-column/`.
-<<<<<<< HEAD
   2026-10-23 (Kyle's screenshot: Team opened on the chat scrolled to its last message, the row out of sight: "it should
   always start at the very top. It shouldn't have the same behavior as the chapters on the left-hand column"). The column
   opens at its top, and so does every tab and the More list; the chat beside the page no longer jumps to its last
   message when it opens (only a new message scrolls it down). The row stays at the top of the column while it scrolls.
-=======
->>>>>>> origin/claude/project-thread-mgfqm9
 - **Colours and type**: darker status colours (planned #6e6b7b, drafted #a35f00, revised #2f6aa6, final #237445) and a
   small shape beside the colour on Chapter Grid cards (empty circle planned, half drafted, three quarters revised, full
   final), so colour is never the only sign; nothing smaller than 15 px except small capital headings.
