@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { AUTO, THEMES, cleanTheme, resolveTheme } from '../src/lib/theme.ts';
 
-test('five light themes and seven dark ones, Violet first', () => {
+test('five light themes and six dark ones, Violet first', () => {
   assert.equal(THEMES.filter((t) => t.mode === 'light').length, 5);
-  assert.equal(THEMES.filter((t) => t.mode === 'dark').length, 7);
+  assert.equal(THEMES.filter((t) => t.mode === 'dark').length, 6);
   assert.equal(THEMES[0].id, 'violet');
 });
 
