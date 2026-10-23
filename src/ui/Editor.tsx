@@ -73,10 +73,17 @@ function saveSide(key: string, open: boolean) {
 type Tab = 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
 const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Done, split, join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
-// The column's tabs in four groups (Kyle, 2026-10-21): the group first, then its tabs as small chips.
-// One row of three since the design review (2026-10-22): Chat, Scene and Chapter; Page look and Check sit under Scene.
-const TAB_GROUPS: [string, Tab[]][] = [['Chat', ['chat', 'options', 'team']], ['Scene', ['card', 'notes', 'marks', 'copies', 'target', 'tools', 'check', 'page']],
-  ['Chapter', ['plan', 'scrap', 'beats', 'flow', 'todos']]];
+// One row of four tabs and More (Kyle, 2026-10-23: "this design change is good as long as we don't lose any
+// functionality", with To-dos in the row instead of Scrap). Every other tab is one press away in More, by heading.
+const MAIN_TABS: Tab[] = ['chat', 'plan', 'beats', 'todos'];
+// What the More button says while a part picked from it is open: short, so the row fits beside the page on the iPad.
+const SHORT: Partial<Record<Tab, string>> = { tools: 'Split, join', team: 'Ask', options: 'Options', flow: 'Workflow', notes: 'Braindump', check: 'Check' };
+const MORE_GROUPS: [string, [Tab, string, string][]][] = [
+  ['This scene', [['card', 'cards', 'Card and names'], ['marks', 'marker', 'Marks'], ['target', 'gauge', 'Word target'], ['copies', 'history', 'Copies'], ['tools', 'split', 'Done, split, join']]],
+  ['This chapter', [['scrap', 'note', 'Scrap'], ['flow', 'outline', 'From the workflow']]],
+  ['The team', [['team', 'spark', 'Ask the team for a job'], ['options', 'swap', 'Options to pick from']]],
+  ['Tools', [['check', 'scan', 'Check for AI phrases'], ['page', 'type', 'Page look'], ['notes', 'idea', 'Braindump (whole book)']]],
+];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
 const TAB_KEY = 'story-forge.panel-tab';
 function loadTab(): Tab {
@@ -191,7 +198,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [left, setLeft] = useState(left0);
   const [right, setRight] = useState(() => (wide(WIDE_RIGHT) || (wide(WIDE_LEFT) && !left0())) && loadSide('scene-panel', true));
   const [tab, setTabState] = useState<Tab>(loadTab);
-  const setTab = (t: Tab) => { setTabState(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* lasts until reload */ } };
+  const setTab = (t: Tab) => { setTabState(t); setMoreList(false); try { localStorage.setItem(TAB_KEY, t); } catch { /* lasts until reload */ } };
+  // The More list fills the column in place of the open tab until one is picked or More is pressed again.
+  const [moreList, setMoreList] = useState(false);
   const [look, setLook] = useState<PageLook>(loadLook);
   const [focus, setFocus] = useState(false);
   const commands = useRef<EditorCommands | null>(null);
@@ -1089,32 +1098,49 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         </div>
         {right && !focus && (
           <aside class="writer-right" aria-label="Scene panel">
-            <div class="side-head">
-              <strong>{tab === 'chat' ? 'Chat with the team' : tab === 'plan' ? (chapterNum != null ? 'Plan for chapter ' + chapterNum : 'Chapter plan') : tab === 'scrap' ? (chapterNum != null ? 'Scrap for chapter ' + chapterNum : 'Chapter scrap') : tab === 'beats' ? (chapterNum != null ? 'Beats of chapter ' + chapterNum : 'Chapter beats') : tab === 'check' ? 'Check for AI phrases' : tab === 'options' ? 'Options to pick from' : tab === 'flow' ? 'From the workflow' : 'Scene'}</strong>
-              <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
-            </div>
             {(() => {
-              const label = (k: Tab) => (TABS.find(([x]) => x === k) || [k, k])[1];
               const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
                 : k === 'chat' && convo && convo.pending ? <span class="job-dot" aria-hidden="true" /> : null);
-              const groupOn = TAB_GROUPS.find(([, ks]) => ks.indexOf(tab) >= 0) || TAB_GROUPS[0];
+              const inMore = MAIN_TABS.indexOf(tab) < 0;
+              const moreName = inMore ? SHORT[tab] || (TABS.find(([x]) => x === tab) || [tab, 'More'])[1] : 'More';
+              const marks = markList(text).length;
               return (
                 <>
-                  <div class="panel-groups" role="tablist" aria-label="Groups">
-                    {TAB_GROUPS.map(([g, ks]) => (
-                      <button key={g} type="button" role="tab" aria-selected={groupOn[0] === g} onClick={() => setTab(ks[0])}>
-                        {g}{ks.map((k) => <span key={k}>{groupOn[0] !== g && mark(k)}</span>)}
+                  <div class="side-head side-tabs-head">
+                    <div class="panel-tabs side-tabs" role="tablist" aria-label="Beside the page">
+                      {MAIN_TABS.map((k) => (
+                        <button key={k} type="button" role="tab" aria-selected={tab === k && !moreList} onClick={() => setTab(k)}>
+                          {(TABS.find(([x]) => x === k) || [k, k])[1]}{mark(k)}
+                        </button>
+                      ))}
+                      <button type="button" class="side-more" aria-haspopup="true" aria-expanded={moreList} aria-selected={inMore || moreList}
+                        title={inMore ? moreName + ': press for the rest' : 'Everything else: the scene card, scrap, copies, check and more'}
+                        onClick={() => setMoreList(!moreList)}>
+                        <span class="side-more-name">{moreName}</span><Icon name={moreList ? 'up' : 'down'} size={16} />
                       </button>
-                    ))}
+                    </div>
+                    <button type="button" class="icon-button" onClick={toggleRight} aria-label="Hide this column" title="Hide this column"><Icon name="right" /></button>
                   </div>
-                  <div class="panel-tabs" role="tablist" aria-label={groupOn[0]}>
-                    {groupOn[1].map((k) => (
-                      <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label(k)}{mark(k)}</button>
-                    ))}
-                  </div>
+                  {moreList && (
+                    <div class="side-more-list" role="menu" aria-label="More">
+                      {MORE_GROUPS.map(([g, items]) => (
+                        <div key={g} role="group" aria-label={g}>
+                          <span class="panel-key">{g}</span>
+                          {items.map(([k, icon, name]) => (
+                            <button key={k} type="button" role="menuitem" aria-current={tab === k ? 'true' : undefined} onClick={() => setTab(k)}>
+                              <Icon name={icon} size={20} />{k === 'scrap' && chapterNum != null ? 'Scrap for chapter ' + chapterNum : name}
+                              {k === 'marks' && marks > 0 && <span class="meta">{marks}</span>}
+                              {k === 'target' && target ? <span class="meta">{num(target)}</span> : null}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               );
             })()}
+            {!moreList && <>
             {tab === 'chat' && (
               <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed}
                 fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />
@@ -1176,6 +1202,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 onStatus={(st) => { setDraft({ ...draftRef.current, status: st }); }}
                 onSplit={split} onJoin={join} />
             )}
+            </>}
           </aside>
         )}
         {(left || right) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
