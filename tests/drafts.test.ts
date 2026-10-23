@@ -6,6 +6,7 @@ import {
   bodyWords, flushDrafts, holdOpen, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
   sceneWords, snapshotFolder, splitLead, withBody, type Draft
 } from '../src/lib/drafts.ts';
+import { typedWords } from '../src/lib/drafts.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { GitHubSource } from '../src/lib/github.ts';
 import { renderProse } from '../scripts/sync-parser.js';
@@ -212,4 +213,9 @@ test('a scene open on the page is saved by the page, not by the sync beside it',
   release();
   const r = await flushDrafts(src, 'mem', new Date(), st);
   assert.equal(r.saved.length, 1);
+});
+
+test('typedWords counts the words in a planned scene, which sf writes as 0 (Kyle, 2026-10-23)', () => {
+  assert.equal(typedWords({ body: '\nOutside the community center, the air stood still.\n', data: { status: 'planned', words: 0 } }), 8);
+  assert.equal(typedWords({ data: { words: 12 } }), 12);
 });

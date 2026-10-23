@@ -71,6 +71,17 @@ export function bodyWords(body: string): number {
   return wordCount(Prose.proseText(body));
 }
 
+/** The words typed in a scene, whatever its status, for the writing screen's lists and the Keep writing card. The saved
+ * `words` line stays 0 while a scene is planned (as `sf words` writes it), which showed Kyle "0" for a chapter he had
+ * written (Kyle's screenshots, 2026-10-22 and 2026-10-23). Kept per note, so a list of many scenes counts each once. */
+const typed = new WeakMap<object, number>();
+export function typedWords(n: { body?: string; data: Record<string, unknown> }): number {
+  if (typeof n.body !== 'string') return typeof n.data.words === 'number' ? n.data.words : 0;
+  let w = typed.get(n);
+  if (w == null) { w = bodyWords(n.body); typed.set(n, w); }
+  return w;
+}
+
 /** What `sf words` writes on a scene: nothing counts while it is planned. */
 export function sceneWords(status: unknown, body: string): number {
   return status === 'planned' ? 0 : bodyWords(body);

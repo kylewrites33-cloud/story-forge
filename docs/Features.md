@@ -305,6 +305,9 @@ add a dated line here when you add or change one.
   page or when the window narrows; its open or shut state is remembered only beside the page. Its heading and Hide arrow
   stay in sight while the chat scrolls. The Keep writing card on Home shows the words typed in the scene even while it is
   still planned (the book's totals still count a planned scene as none, as `sf words` does).
+  2026-10-23 (Kyle: "Chapter 34, Fighting Saffron, says it has 0 words when I've selected a different chapter"): the
+  writing screen's chapter list and scene strip count the words typed in every scene the same way (`typedWords` in
+  `src/lib/drafts.ts`), so a planned chapter shows its real words whether or not it is open.
   Deciding faster (Kyle, 2026-10-18, from Writers Room): after Keep, Later or Drop on any proposal board the toast offers
   one-press reasons (Love it, Surprising, Specific, Raises the stakes; Not now, Needs work, Could combine; Cliché, Wrong
   tone, Already have this, Too clever) written to the note's `reasons` list as a separate edit, so skipping costs nothing
