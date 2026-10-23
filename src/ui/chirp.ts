@@ -1,31 +1,33 @@
-// The Pomodoro's two chirps (Kyle, 2026-10-22: "chirp at the end of 25, and a different chirp after 5"): two rising
-// chirps, twice, when the writing ends; three falling ones, twice, when the break ends. Kyle didn't hear the first
-// version on the iPad (2026-10-22), so the chirps are now short sound files made on the device and played through a
-// plain audio player, which the iPad plays even on silent and louder than the old tones. The iPad only lets a page play
-// sound after a touch or key press, so the first one anywhere quietly starts and stops each player; after that the
-// timer can play them on its own. The screen is also kept awake while a timer runs, because a sleeping iPad stops the
-// page and nothing can play.
+// The Pomodoro's two sounds (Kyle, 2026-10-22: "chirp at the end of 25, and a different chirp after 5"). Kyle didn't
+// hear the first version on the iPad (2026-10-22), so they are short sound files made on the device and played through a
+// plain audio player, which the iPad plays even on silent. The chirps then sounded like an alarm, so they are now soft
+// bell chimes (Kyle, 2026-10-23: "more bright and cheerful"): a rising four-note major arpeggio when the writing ends,
+// a gentle two-note ding-ding, played twice, when the break ends. The iPad only lets a page play sound after a touch or
+// key press, so the first one anywhere quietly starts and stops each player; after that the timer can play them on its
+// own. The screen is also kept awake while a timer runs, because a sleeping iPad stops the page and nothing can play.
 
-type Note = [number, number, number];
+/** [start s, pitch Hz]. */
+type Note = [number, number];
 const RATE = 22050;
 
-/** A WAV file of chirps: each is [start s, from Hz, to Hz], a 0.16 s sweep with a soft harmonic. */
+/** A WAV file of soft bell notes: a quick attack, a long fading ring and a faint overtone. */
 function wav(notes: Note[], length: number): Blob {
   const n = Math.round(length * RATE);
   const data = new Float32Array(n);
-  const dur = 0.16;
-  for (const [start, from, to] of notes) {
+  const ring = 1.1;
+  for (const [start, f] of notes) {
     const s0 = Math.round(start * RATE);
-    const len = Math.round(dur * RATE);
-    let phase = 0;
+    const len = Math.round(ring * RATE);
     for (let i = 0; i < len && s0 + i < n; i++) {
-      const x = i / len;
-      const f = from * Math.pow(to / from, x);
-      phase += (2 * Math.PI * f) / RATE;
-      const env = Math.min(1, x / 0.08) * Math.pow(1 - x, 1.5);
-      data[s0 + i] += env * (0.8 * Math.sin(phase) + 0.2 * Math.sin(2 * phase));
+      const t = i / RATE;
+      const env = Math.min(1, t / 0.006) * Math.exp(-t * 4.5);
+      const w = 2 * Math.PI * f * t;
+      data[s0 + i] += env * (0.75 * Math.sin(w) + 0.18 * Math.sin(2 * w) * Math.exp(-t * 6) + 0.07 * Math.sin(3 * w) * Math.exp(-t * 9));
     }
   }
+  let peak = 0;
+  for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(data[i]));
+  const gain = peak ? 0.8 / peak : 1;
   const buf = new ArrayBuffer(44 + n * 2);
   const v = new DataView(buf);
   const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
@@ -33,13 +35,14 @@ function wav(notes: Note[], length: number): Blob {
   v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
   v.setUint32(24, RATE, true); v.setUint32(28, RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
   str(36, 'data'); v.setUint32(40, n * 2, true);
-  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, data[i] * 0.95)) * 32767, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, data[i] * gain)) * 32767, true);
   return new Blob([buf], { type: 'audio/wav' });
 }
 
-const twice = (notes: Note[], gap: number): Note[] => notes.concat(notes.map(([t, a, b]) => [t + gap, a, b] as Note));
-const WORK: Note[] = twice([[0, 1800, 3400], [0.2, 1800, 3400]], 0.7);
-const BREAK: Note[] = twice([[0, 3000, 1600], [0.22, 2700, 1450], [0.44, 2400, 1300]], 0.9);
+// C, E, G, high C: a bright "well done" rising run.
+const WORK: Note[] = [[0, 1046.5], [0.13, 1318.5], [0.26, 1568], [0.39, 2093]];
+// G then C, twice: a friendly "back to it".
+const BREAK: Note[] = [[0, 1568], [0.22, 2093], [0.7, 1568], [0.92, 2093]];
 
 const players: Record<'work' | 'break', HTMLAudioElement | null> = { work: null, break: null };
 let unlocked = false;
@@ -50,7 +53,7 @@ function player(kind: 'work' | 'break'): HTMLAudioElement | null {
   if (players[kind]) return players[kind];
   if (typeof Audio === 'undefined' || typeof URL === 'undefined') return null;
   try {
-    const a = new Audio(URL.createObjectURL(kind === 'work' ? wav(WORK, 1.5) : wav(BREAK, 1.6)));
+    const a = new Audio(URL.createObjectURL(kind === 'work' ? wav(WORK, 1.6) : wav(BREAK, 2.1)));
     a.preload = 'auto';
     players[kind] = a;
     return a;

@@ -152,6 +152,8 @@ add a dated line here when you add or change one.
   volume was up 2/3"): each chirp plays twice, as a small sound file made on the device and played through an audio
   player, which the iPad plays even on silent; the screen stays on while a timer runs, since a sleeping iPad stops the
   page. Settings, Timer sound has "End of writing" and "End of break" to hear them.
+  Brighter (Kyle, 2026-10-23: "it's not very soothing. It sounds like an alarm ... more bright and cheerful"): the chirps
+  became soft bell chimes, a rising C-E-G-C run when the writing ends and a G-C ding-ding, twice, when the break ends.
   The panel keeps only its buttons, the words so far and the "Today" line: no grey explanations and no buttons to hear the
   chirps (Kyle, 2026-10-22: "you dont need all those explanations in the grey text. or the option to hear the bird chirps").
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
