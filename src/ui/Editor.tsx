@@ -201,6 +201,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const setTab = (t: Tab) => { setTabState(t); setMoreList(false); try { localStorage.setItem(TAB_KEY, t); } catch { /* lasts until reload */ } };
   // The More list fills the column in place of the open tab until one is picked or More is pressed again.
   const [moreList, setMoreList] = useState(false);
+  // The right-hand column opens at its top, and every tab or the More list starts at the top too (Kyle, 2026-10-23:
+  // "it should always start at the very top. It shouldn't have the same behavior as the chapters").
+  const rightRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (rightRef.current) rightRef.current.scrollTop = 0; }, [tab, moreList]);
   const [look, setLook] = useState<PageLook>(loadLook);
   const [focus, setFocus] = useState(false);
   const commands = useRef<EditorCommands | null>(null);
@@ -1097,7 +1101,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           </>}
         </div>
         {right && !focus && (
-          <aside class="writer-right" aria-label="Scene panel">
+          <aside class="writer-right" aria-label="Scene panel" ref={rightRef}>
             {(() => {
               const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
                 : k === 'chat' && convo && convo.pending ? <span class="job-dot" aria-hidden="true" /> : null);
@@ -1142,7 +1146,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             })()}
             {!moreList && <>
             {tab === 'chat' && (
-              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed}
+              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed} fromTop
                 fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />
             )}
             {tab === 'plan' && (
