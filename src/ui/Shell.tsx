@@ -55,13 +55,6 @@ export interface ShellProps {
 
 const WIDE_SIDE = '(min-width: 1200px)';
 
-/** A stage's name for the sidebar: the part after the colon ("Story planning: premise and cast seeds" is "Premise and cast seeds"). */
-export function shortStage(title: string): string {
-  const at = title.indexOf(':');
-  const t = at >= 0 ? title.slice(at + 1).trim() : title.trim();
-  return t ? t[0].toUpperCase() + t.slice(1) : title;
-}
-
 const SLIM = '(max-width: 699px)';
 
 // The app's sparrow: the same bird and colours as the icons drawn by scripts/make-icons.js (Kyle's pick, 2026-10-22).

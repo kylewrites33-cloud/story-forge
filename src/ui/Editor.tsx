@@ -24,7 +24,7 @@ import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { LOOK_CHOICES, loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 import { askBody, defaultJobTitle, jobAsk, resultBody, type JobKind, type OnJob } from '../lib/jobs.ts';
-import { PASSAGE_TOOLS, passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
+import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
 import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
@@ -38,7 +38,6 @@ import type { Choice } from '../lib/write-queue.ts';
 
 type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
-const TOOL_ICON: Record<PassageTool, string> = { rewrite: 'wand', describe: 'eye', brainstorm: 'idea', 'write-on': 'pen' };
 import { matcher, namedIn, type CodexEntry } from '../lib/codex.ts';
 import { FlowTab } from './Flow.tsx';
 import type { CodexNow } from '../lib/codexnow.ts';
@@ -50,7 +49,7 @@ import { render } from '../lib/markdown.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { ListenBar, ListenButton, useListen } from './Listen.tsx';
+import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
 
@@ -89,8 +88,6 @@ const TAB_KEY = 'story-forge.panel-tab';
 function loadTab(): Tab {
   try { const t = localStorage.getItem(TAB_KEY) as Tab | null; return t && TABS.some(([k]) => k === t) ? t : 'chat'; } catch { return 'chat'; }
 }
-// How often an open scene is read again, so words pushed from elsewhere show up without reloading.
-export const LIVE_MS = 30 * 1000;
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 

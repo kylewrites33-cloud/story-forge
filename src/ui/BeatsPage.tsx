@@ -15,7 +15,7 @@ import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, sav
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import type { OnJob } from '../lib/jobs.ts';
-import { loadLook, lookStyle } from '../lib/page.ts';
+import { loadLook } from '../lib/page.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';

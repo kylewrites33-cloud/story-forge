@@ -7,7 +7,6 @@ import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
 import { href } from './route.ts';
 import { EmptyBox } from './screens.tsx';
-import { Icon } from './Icon.tsx';
 import { seeingLinks } from './Seeing.tsx';
 
 export interface BoardLink { key: string; title: string; to: string; icon: string }

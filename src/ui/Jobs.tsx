@@ -1,5 +1,4 @@
 import { useState } from 'preact/hooks';
-import { timeAgo } from '../lib/format.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { askBody, costLabel, jobGroups, jobLabel, jobNotes, jobStatusLabel, resultBody } from '../lib/jobs.ts';
 import { basename } from '../lib/links.ts';
