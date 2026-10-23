@@ -157,6 +157,11 @@ add a dated line here when you add or change one.
   Birds again (Kyle, 2026-10-23: "i do kind of still want it to be bird chirps. in keeping with the sparrow theme ... a
   soothing small bird sound"): soft songbird calls made on the device, quieter than before; a little warbled song (two
   sweet notes, a short trill, a falling note) when the writing ends, two slow rising "tsweet" calls when the break ends.
+  Twelve birds to pick from (Kyle, 2026-10-23: "give me 12 different bird options in settings, and then I can choose in
+  settings what to select for end of writing and end of break"): Settings, Timer sound lists them (Little song and Two
+  tsweets first, the defaults); press a name to hear it, and "End of writing" or "End of break" to pick it. The picks
+  stay on the device. All twelve are made by the app for now: Kyle asked for some real recordings too, which wait on the
+  cloud environment being allowed to reach a free sound library such as Wikimedia Commons.
   The panel keeps only its buttons, the words so far and the "Today" line: no grey explanations and no buttons to hear the
   chirps (Kyle, 2026-10-22: "you dont need all those explanations in the grey text. or the option to hear the bird chirps").
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are

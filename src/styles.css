@@ -2401,3 +2401,11 @@ button, .button { border-radius: 12px; }
 .side-scene.side-sub[aria-current="page"] { background: none; color: var(--accent); font-weight: 600; }
 .main-section.has-below .writer-text { min-height: 4em; padding-bottom: 1em; }
 .ov-done-words { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Settings, Timer sound: twelve birds, each with Play and two picks. */
+.bird-list { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 8px; }
+.bird-list li { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.bird-play { flex: 1 1 220px; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; text-align: left; }
+.bird-play span { color: var(--muted); font-size: 0.9em; }
+.bird-pick { flex: 0 0 auto; min-height: 44px; }
+.bird-pick[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
