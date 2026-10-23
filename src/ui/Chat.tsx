@@ -167,7 +167,7 @@ export function ChatScreen({ index, thread, book, onChat, onDecide, waiting, dem
 
 /** A scene's conversation in the writing screen's right-hand column: the same messages as the Chat screen, narrower,
  * with the newest at the bottom and the box to write in under them. */
-export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro, seed }: {
+export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro, seed, fromTop }: {
   convo: Conversation | null; thread: string; book: string; onChat?: OnChat;
   /** The Chat screen's page for this conversation, opened with the page saved first. */
   fullHref?: { href: string; onClick?: (e: MouseEvent) => void };
@@ -179,6 +179,8 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
   intro?: string;
   /** Words to start the message with (Ask about this, in the writing screen). */
   seed?: string;
+  /** Open at the top rather than at the last message; only new messages scroll down (the writing screen's column). */
+  fromTop?: boolean;
 }) {
   const [words, setWords] = useState('');
   useEffect(() => { if (seed) setWords(seed); }, [seed]);
@@ -187,7 +189,11 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
   const end = useRef<HTMLDivElement>(null);
   const messages = convo ? convo.messages : [];
   const count = messages.length + messages.filter((m) => m.reply).length;
-  useEffect(() => { if (end.current && count) end.current.scrollIntoView({ block: 'nearest' }); }, [count]);
+  const seen = useRef(fromTop ? count : 0);
+  useEffect(() => {
+    if (end.current && count && count !== seen.current) end.current.scrollIntoView({ block: 'nearest' });
+    seen.current = count;
+  }, [count]);
   const send = async () => {
     const w = words.trim();
     if (!w || !onChat || busy) return;

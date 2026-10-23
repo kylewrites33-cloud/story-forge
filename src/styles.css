@@ -2191,6 +2191,7 @@ button, .button { border-radius: 12px; }
   }
   .writer-right::before { content: ""; flex: none; align-self: center; width: 44px; height: 5px; margin: 4px 0 8px; border-radius: 3px; background: var(--line); }
   .writer-right .side-head .icon-button .icon { transform: rotate(90deg); }
+  .writer-right .side-tabs-head { top: -6px; }
   .right-open .scrim { position: fixed; inset: 0; z-index: 6; border-radius: 0; }
 }
 @keyframes sheet-up { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
@@ -2412,7 +2413,7 @@ button, .button { border-radius: 12px; }
 
 /* The side column's one row (Kyle, 2026-10-23): Chat, Plan, Beats, To-dos and More, with the hide arrow at its end;
    More shows the name of a part picked from it, and its list fills the column until one is picked. */
-.side-tabs-head { gap: 0; padding: 0 0 8px; margin: 0 0 8px; border-bottom: 1px solid var(--line); }
+.side-tabs-head { position: sticky; top: -10px; z-index: 2; background: var(--surface); gap: 0; padding: 0 0 8px; margin: 0 0 8px; border-bottom: 1px solid var(--line); }
 .side-tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: 0; margin: 0; }
 .side-tabs button { flex: none; min-height: 44px; padding: 0 7px; border: none; border-radius: 10px; background: none; white-space: nowrap; }
 .side-tabs button:not(:disabled):hover { border-color: transparent; color: var(--text); }
