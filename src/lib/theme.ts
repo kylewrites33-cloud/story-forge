@@ -1,4 +1,4 @@
-// The app's colours: seven light themes and six dark ones, or Match this device (Violet by day, Violet Night by night).
+// The app's colours: eight light themes and six dark ones, or Match this device (Violet by day, Violet Night by night).
 // The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
 // Some dark ids are older than their names (midnight is Graphite, ember Warm Clay, forest Claude) so a saved choice still works.
 
@@ -20,6 +20,7 @@ export const THEMES: Theme[] = [
   { id: 'rose', name: 'Rose', mode: 'light', line: 'Blush with deep rose', bar: '#faf4f5' },
   { id: 'marigold', name: 'Marigold', mode: 'light', line: 'Cream, yellow and orange: square buttons, black outlines, a typewriter font', bar: '#f8dc3d' },
   { id: 'lofi', name: 'Lo-Fi', mode: 'light', line: 'Old computer windows: blue outlines, pink and mint, a pixel font', bar: '#ffffff' },
+  { id: 'retro', name: 'Retro OS', mode: 'light', line: 'A 1990s desktop: beige raised buttons, blue title bars, dark teal', bar: '#1f4a45' },
   { id: 'violet-night', name: 'Violet Night', mode: 'dark', line: 'The original dark: charcoal with violet', bar: '#16151b' },
   { id: 'midnight', name: 'Graphite', mode: 'dark', line: 'Near-black with soft blue in the words', bar: '#0f1011' },
   { id: 'ember', name: 'Warm Clay', mode: 'dark', line: 'Near-black with clay in the words', bar: '#0f1011' },

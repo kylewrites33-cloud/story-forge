@@ -533,3 +533,8 @@ inspiration from this one in the same manner"): white windows with blue outlines
 pink, mint and butter-yellow panels, blue words, a faint dot grid behind the page, buttons with a small hard shadow that
 press in, Pixelify Sans for headings and buttons and the DotGothic16 dot font for the rest (src/fonts, SIL OFL). The
 writing page keeps its own font and has no shadows.
+
+Same day, an eighth light theme, Retro OS, from a "Retro OS UI kit" picture Kyle sent ("now makeone for this"): a 1990s
+desktop. Beige raised panels and buttons (light top-left edge, dark bottom-right) that sink when pressed, a black frame
+on the main button, sunken boxes to type in, blue title-bar strips over Keep writing and Next step, a dark teal top bar,
+Windows blue for chosen tabs and sidebar items, Verdana for words and the VT323 terminal font for big titles.

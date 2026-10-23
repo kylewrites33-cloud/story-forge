@@ -129,7 +129,7 @@ function TimerSound() {
   );
 }
 
-/** The app's colours on this device: Match this device, seven light themes, six dark ones. Each card shows its own colours. */
+/** The app's colours on this device: Match this device, eight light themes, six dark ones. Each card shows its own colours. */
 function Colours() {
   const [choice, setChoice] = useState(loadTheme);
   const pick = (id: string) => { saveTheme(id); setChoice(id); };

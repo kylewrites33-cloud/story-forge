@@ -1161,8 +1161,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="marigold"] body { font-family: var(--mono); font-size: 17px; letter-spacing: -0.01em; }
 :root[data-theme="marigold"] :is(h1, h2, h3, .home-title, .card-title, .book-title, .top-title-text, .writer-title, .hero-text b, .slim-title, .brand) { font-family: var(--serif); letter-spacing: 0; }
 /* Square corners everywhere, black outlines; dots and the round Chat button stay round. */
-:root:is([data-theme="marigold"], [data-theme="lofi"]) *, :root:is([data-theme="marigold"], [data-theme="lofi"]) *::before { border-radius: 0 !important; }
-:root:is([data-theme="marigold"], [data-theme="lofi"]) :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar, .side-open-button) { border-radius: 50% !important; }
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *, :root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *::before { border-radius: 0 !important; }
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar, .side-open-button) { border-radius: 50% !important; }
 :root[data-theme="marigold"] :is(button, select, input, textarea, .card, .book-link, .next-step, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
 :root[data-theme="marigold"] :is(button, a.button, .bar-button) { font-family: var(--mono); letter-spacing: -0.01em; }
 :root[data-theme="marigold"] button.primary { font-weight: 700; }
@@ -1242,6 +1242,61 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .theme-card[data-theme="lofi"] .tp-rail { border-color: #1866a6; }
 .theme-card[data-theme="lofi"] .tp-page b { background: #1866a6; }
 .theme-card[data-theme="lofi"] .tp-page em { border-radius: 0; background: #f6b8c9; border: 1px solid #1866a6; }
+/* Retro OS (Kyle, 2026-10-23, from a "Retro OS UI kit" picture: "now makeone for this"): a classic desktop of the 1990s.
+   Beige raised panels and buttons with a light top-left edge and a dark bottom-right one, sunken boxes to type in, blue
+   title-bar strips, a dark teal top bar, Windows-blue for the chosen item, teal for marks, Verdana for words and the VT323
+   terminal font for big titles. */
+@font-face { font-family: "VT323"; font-weight: 400; font-style: normal; font-display: swap; src: url("./fonts/vt323-latin-400-normal.woff2") format("woff2"); }
+:root[data-theme="retro"], .theme-card[data-theme="retro"] {
+  --teal: #1f4a45; --title: linear-gradient(90deg, #24508f, #5a86c6); --sel: #2c5aa0;
+  --raised: inset -1px -1px #34322d, inset 1px 1px #fdfbf4, inset -2px -2px #8c8677, inset 2px 2px #efeadd;
+  --sunken: inset 1px 1px #34322d, inset -1px -1px #fdfbf4, inset 2px 2px #8c8677, inset -2px -2px #efeadd;
+  --bg: #d3cdbc; --surface: #e4dfd1; --rail: #dbd5c5; --hover: #cdc6b3; --text: #1d1c19; --muted: #514d44; --line: #34322d;
+  --accent: #1d5a52; --accent-soft: #d1e2dc; --on-accent: #ffffff;
+  --fill: var(--surface); --fill-line: #000; --on-fill: #1d1c19;
+  --hero-bg: var(--surface); --on-hero: #1d1c19; --hero-line: #34322d; --hero-kicker: #fff; --hero-go: var(--surface); --on-hero-go: #1d1c19;
+  --next-bg: var(--surface); --kicker: #fff; --next-go: var(--surface); --next-go-line: #000; --on-next-go: #1d1c19;
+  --badge: var(--accent); --on-badge: #fff;
+  --shadow: var(--raised); --shadow-lift: var(--raised), 3px 3px 0 rgba(0, 0, 0, 0.35); --radius: 0px;
+  --serif: Verdana, Tahoma, "Segoe UI", sans-serif;
+  --term: "VT323", ui-monospace, monospace;
+}
+:root[data-theme="retro"] body { font-family: Verdana, Tahoma, "Segoe UI", sans-serif; font-size: 17px; }
+:root[data-theme="retro"] :is(h1, .home-title) { font-family: var(--term); font-weight: 400; font-size: 2.6rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--teal); }
+/* Raised buttons that sink when pressed; the main button has the extra black frame of a default button. */
+:root[data-theme="retro"] button:not(.tool, .linklike, .star, .icon-button, .link, .chapter-name, .rail-item, .rail-sync-line, .top-title-button), :root[data-theme="retro"] :is(a.button, .bar-button, .top-team, .bar-team, .top-find, .hero-go) {
+  background-color: var(--surface); color: var(--text); border: 1px solid #34322d; box-shadow: var(--raised);
+}
+:root[data-theme="retro"] button:not(:disabled):active, :root[data-theme="retro"] a.button:active, :root[data-theme="retro"] .hero-card:active .hero-go { box-shadow: var(--sunken) !important; transform: translate(1px, 1px); }
+:root[data-theme="retro"] :is(button.primary, .hero-go, .next-step .next-button.primary) { outline: 1px solid #000; outline-offset: 0; border-color: #000; font-weight: 700; }
+:root[data-theme="retro"] button:disabled { color: #8c8677; text-shadow: 1px 1px #fdfbf4; opacity: 1; }
+:root[data-theme="retro"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) { background-color: #fbf9f2; border: 1px solid #34322d; box-shadow: var(--sunken); }
+:root[data-theme="retro"] :is(.search input, .filter-box input, .find-row input) { box-shadow: none; border: none; background: none; }
+:root[data-theme="retro"] :is(.card, .book-link, .ov-panel, .book-path, .next-step, .hero-card) { border: 1px solid #34322d; box-shadow: var(--raised); }
+/* Chosen tabs, switches and sidebar items in Windows blue with white words. */
+:root[data-theme="retro"] :is(.panel-tabs button[aria-selected="true"], .tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"], button.chip.on, .view-seg button[aria-pressed="true"], .panel-groups button[aria-selected="true"], .top-team.on, .bar-team.on) { background: var(--sel); color: #fff; border-color: #000; box-shadow: var(--sunken); }
+:root[data-theme="retro"] :is(.view-seg, .panel-groups) { background: none; padding: 0; gap: 4px; }
+:root[data-theme="retro"] :is(.rail-item, .rail-sub)[aria-current="page"] { background: var(--sel); color: #fff; }
+@media (max-width: 1099px) { :root[data-theme="retro"] .shell:not(.rail-open) .rail-room-here { background: var(--sel); color: #fff; } }
+:root[data-theme="retro"] .rail-item[aria-current="page"] :is(.icon, .rail-count) { color: #fff; }
+:root[data-theme="retro"] .rail { border-right: 1px solid #34322d; box-shadow: inset -2px 0 #8c8677; }
+:root[data-theme="retro"] .rail-write { background: var(--surface); color: var(--text); border: 1px solid #000; box-shadow: var(--raised); font-weight: 700; }
+:root[data-theme="retro"] .rail-heading { color: var(--teal); }
+/* The top bar is a dark teal header like the kit's section bars; the writing bar is a beige toolbar. */
+:root[data-theme="retro"] .top-bar { background: var(--teal); border-bottom: 2px solid #12302c; color: #f1ecdf; }
+:root[data-theme="retro"] .top-bar :is(.top-title-text, .top-title-button, .top-title-button .icon, .top-menu, .icon-button) { color: #f1ecdf; }
+:root[data-theme="retro"] .writer-bar { background: var(--rail); border-bottom: 1px solid #34322d; box-shadow: inset 0 -2px #8c8677, inset 0 1px #fdfbf4; }
+:root[data-theme="retro"] :is(.writer-right, .team-side) { border-left: 1px solid #34322d; box-shadow: inset 2px 0 #fdfbf4; }
+/* Kickers as blue title bars across the top of their window. */
+:root[data-theme="retro"] :is(.next-kicker, .hero-text small) { display: block; justify-self: stretch; align-self: stretch; margin: 0 0 6px; padding: 4px 10px; background: var(--title); color: #fff; opacity: 1; letter-spacing: 0.04em; }
+:root[data-theme="retro"] .next-step { padding-top: 12px; }
+:root[data-theme="retro"] .hero-card:hover { filter: none; }
+:root[data-theme="retro"] ::selection { background: var(--sel); color: #fff; }
+.theme-card[data-theme="retro"] { font-family: Verdana, Tahoma, sans-serif; border-radius: 0; border-color: #34322d; box-shadow: inset -1px -1px #34322d, inset 1px 1px #fdfbf4, inset -2px -2px #8c8677; }
+.theme-card[data-theme="retro"] :is(.theme-preview, .tp-rail i, .tp-page b, .tp-page i) { border-radius: 0; border-color: #34322d; }
+.theme-card[data-theme="retro"] .tp-rail i.on { background: #2c5aa0; }
+.theme-card[data-theme="retro"] .tp-page b { background: linear-gradient(90deg, #24508f, #5a86c6); }
+.theme-card[data-theme="retro"] .tp-page em { border-radius: 0; background: #e4dfd1; border: 1px solid #000; }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
 .theme-card {
