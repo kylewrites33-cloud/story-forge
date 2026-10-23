@@ -31,7 +31,7 @@ import { DecideQueue } from './Decide.tsx';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
-import { BookDetails, Home, SeriesPage } from './Home.tsx';
+import { BookDetails, ExportWord, Home, SeriesPage } from './Home.tsx';
 import { makeBackupFolder } from '../lib/docx.ts';
 import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
@@ -711,7 +711,7 @@ export function App() {
       else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
       else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} exportCard={boardKey === 'market' ? <ExportWord source={source} schema={schema} index={view} book={book} card /> : undefined} onRewrite={source.write ? onRewrite : undefined} />;
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
           onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}

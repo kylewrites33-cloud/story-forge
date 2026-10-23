@@ -38,6 +38,8 @@ add a dated line here when you add or change one.
   `series_book_YYYY-MM-DD.docx`, made on the device and downloaded (`src/lib/docx.ts`, the layout of sf's Docx.build;
   italics and bold read with styled.ts, so they come back unchanged through `sf import`). Each export also saves a copy in the vault's
   `Book Backups/<series>/<book>/` (same day replaces that day's file); New series and New book make their backup folders.
+  Since 2026-10-23 the same button is also a card, "Export the whole book", at the top of Publish's first page (the
+  Market board), because Kyle could not find Book details behind the top bar's page menu.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
   move to it; board shortcuts below), the page in the centre (a tool row with Bold, Italic, Undo, Redo, Split and Join;
   a chapter heading; an arrow to the previous and next section at the bottom), and the scene panel on the right (Card, Copies,

@@ -153,8 +153,9 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
 }
 
 /** Export to Word (Kyle, 2026-10-18): the whole book as a .docx named series_book_date, made on this device and
- * downloaded; italics and bold come through. */
-function ExportWord({ source, schema, index, book }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry }) {
+ * downloaded; italics and bold come through. Shown on Book details and, as a card, on Publish's first page, the Market
+ * board (Kyle, 2026-10-23: he could not find it behind the page menu). */
+export function ExportWord({ source, schema, index, book, card }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; card?: boolean }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [backup, setBackup] = useState<{ error: boolean; text: string } | null>(null);
   const run = () => {
@@ -186,8 +187,8 @@ function ExportWord({ source, schema, index, book }: { source: VaultSource; sche
     }
   };
   return (
-    <div class="details-export">
-      <h2>Export</h2>
+    <div class={'details-export' + (card ? ' export-card' : '')}>
+      <h2>{card ? 'Export the whole book' : 'Export'}</h2>
       <p class="hint">The whole book in reading order as a Word file, with its italics and bold. A copy is saved in the vault's Book Backups folder. Scenes still open in the writing screen export as last saved.</p>
       <button type="button" onClick={run}><Icon name="download" size={18} />Export to Word</button>
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}

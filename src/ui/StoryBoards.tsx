@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { boardNotes, castFor, groupLabel, groupNotes, groupOrder, ideasAbout, type StoryBoard } from '../lib/boards.ts';
 import { formatValue, isEmptyValue, label } from '../lib/format.ts';
 import { pileOf } from '../lib/ideas.ts';
@@ -94,7 +95,7 @@ function RocketFiles({ book, index, onAdd }: { book: BookEntry; index: VaultInde
   );
 }
 
-export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard; onAddRocket?: (book: BookEntry, file: File) => Promise<{ error: boolean; text: string }> }) {
+export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard; onAddRocket?: (book: BookEntry, file: File) => Promise<{ error: boolean; text: string }>; exportCard?: ComponentChildren }) {
   const { schema, index, book, board } = props;
   if (board === 'characters') return <CharactersBoard schema={schema} index={index} book={book} />;
   const t = board === 'market' ? {
@@ -102,7 +103,7 @@ export function StoryBoardScreen(props: IdeasProps & { board: StoryBoard; onAddR
     intro: 'The market case, comps, keyword sets and titles for the ' + book.seriesName + ' series. Every book in the series shares them. Keep tells the team to build on it. Later puts it aside. Rewrite sends it back to the team with what to change. Drop turns it down, and the note stays in the vault. Money figures are Publisher Rocket estimates.',
     empty: 'No market notes for this series yet. They appear here when the Market Analyst files them in the series\' Market folder.'
   } : INTRO[board];
-  const extra = board === 'market' ? <RocketFiles book={book} index={index} onAdd={props.onAddRocket && ((f) => props.onAddRocket!(book, f))} /> : undefined;
+  const extra = board === 'market' ? <>{props.exportCard}<RocketFiles book={book} index={index} onAdd={props.onAddRocket && ((f) => props.onAddRocket!(book, f))} /></> : undefined;
   return <ProposalBoard {...props} extra={extra} boardKey={board} heading={t.heading} intro={t.intro} emptyText={t.empty} notes={boardNotes(index, book, board)} />;
 }
 
