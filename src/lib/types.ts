@@ -1,4 +1,5 @@
 // Shapes shared by the vault reader, the cache and the screens.
+import type { SavedDraft } from './bookdrafts.ts';
 
 export interface PropertyDef {
   type?: string;
@@ -59,6 +60,8 @@ export interface VaultSource {
   /** Replace a file whose current blob sha is `sha`, or add a new file when `sha` is '', as one commit. Returns the new blob sha.
    * Throws an error with `conflict: true` when the file changed since `sha`. */
   write?(path: string, text: string, sha: string, message: string): Promise<string>;
+  /** Add several new files as one commit (a saved draft's copies). Every path must be new. */
+  writeMany?(files: { path: string; text: string }[], message: string): Promise<void>;
   /** Save a picture given as base64, as write does for text. Returns the new blob sha. */
   writeBytes?(path: string, base64: string, sha: string, message: string): Promise<string>;
   /** A picture's bytes by blob sha. */
@@ -132,6 +135,8 @@ export interface BookEntry {
   braindump?: string | null;
   /** Scene notes in the book's Archive folder. */
   archive?: FileEntry[];
+  /** The book's saved drafts (Drafts/Draft N/), oldest first. Missing in copies saved before the Edit room. */
+  drafts?: SavedDraft[];
   /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
   cover?: FileEntry | null;
 }

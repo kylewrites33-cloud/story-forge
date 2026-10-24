@@ -2433,6 +2433,88 @@
       },
       "body": "Kyle's words, free text: cut lines and spare notes. Agents leave it alone and do not treat it as canon or as a plan; read it only when Kyle asks."
     },
+    "chapter-changes": {
+      "description": "The team's changes to one chapter of Kyle's draft (workflow step 39): each change quotes his exact words, gives the new words and the reason, and waits for his Keep or No in the app's writing screen, as Word's track changes do. The scene files are never rewritten by the team in editing; only Kyle's Keep puts a change in.",
+      "scope": "book",
+      "folder": "Changes",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "chapter"
+      ],
+      "properties": {
+        "type": {
+          "const": "chapter-changes"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Chapter N changes\"."
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "The chapter these changes belong to."
+        },
+        "draft": {
+          "type": "integer",
+          "description": "The draft the changes make: 2 when they change draft 1."
+        },
+        "step": {
+          "type": "string",
+          "description": "The workflow step that made them (\"39\" revise, \"40\" checks, \"42\" proofread)."
+        },
+        "source": {
+          "type": "string",
+          "description": "The agent that wrote them."
+        },
+        "touched": {
+          "type": "integer",
+          "description": "The share of the chapter's words the changes touch, in percent, as the Writer reported it."
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "Optional lines before the first change (the Writer's report: share touched, questions). Then one `## C-NN` heading per change, in reading order, with the kind after a dot (`## C-03 · story`). Kinds: small (typo, punctuation, a continuity or tic fix: offered with Keep all), line (a sentence made better), story (from a story call or a chapter problem), new (mostly new words: read slowly). Under it, these lines: `Scene: S-NNN`, `Why: <the reason, naming the note, call or Style Guide rule>`, `Kyle: open` (the app sets kept, other, no or mine), then `Was:` followed by Kyle's exact words as `> ` lines (copied from the scene file with its * and = marks, long enough to be found once; never empty: to add words, quote the sentence before and repeat it in Now), `Now:` followed by the new words as `> ` lines (none to cut), and for a new passage `Or:` with a second version as `> ` lines. See `.claude/skills/revise-as-changes/SKILL.md`."
+    },
+    "draft": {
+      "description": "A saved draft of a book: a copy of every scene as it stood when Kyle started editing (Draft 1) or started the next draft, kept in the book's `Drafts/Draft N/` folder beside this note. The copies are never changed; tools and the app skip the Drafts folder except to show and export a draft. The scene files are always the draft being worked on.",
+      "scope": "book",
+      "folder": "Drafts",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "number"
+      ],
+      "properties": {
+        "type": {
+          "const": "draft"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Draft N\"."
+        },
+        "number": {
+          "type": "integer"
+        },
+        "saved": {
+          "type": "datetime",
+          "description": "When the copy was made."
+        },
+        "scenes": {
+          "type": "integer"
+        },
+        "words": {
+          "type": "integer"
+        },
+        "note": {
+          "type": "string",
+          "description": "Kyle's words about this draft, if any."
+        }
+      },
+      "body": "One line saying which draft it is and when it was saved. The scene copies sit in the folder `Drafts/Draft N/` next to this note, each with the same file name it had in `Scenes/`."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",
@@ -2593,7 +2675,8 @@
             "compare-read",
             "learn-taste",
             "fill-cards",
-            "workflow-step"
+            "workflow-step",
+            "revise"
           ]
         },
         "target": {

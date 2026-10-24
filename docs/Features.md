@@ -605,3 +605,32 @@ runs the full look check, since only the page's last line break differs; and the
 typing pauses rather than on every letter (words typed just before leaving the page still count for the Pomodoro). The
 side column's panels moved out of `Editor.tsx` into `EditorPanels.tsx`, so the writing screen's file is about 1,200
 lines instead of 2,050. Saving, offline and the live merge are unchanged.
+
+## The Edit room: drafts and the team's changes (2026-10-24)
+
+Workflow 1.2's editing stage (steps 35 to 42), built after Kyle said "Go for the build". The ideas came from his asks:
+draft 1 "labelled and kept accessible", "some kind of writing mode where i can scroll the chapter and cycle through the
+chapters", and "surely word's track changes can be an inspiration for us". The separate editing-path page, the
+compare-versions screen and side by side were dropped; Workflow mode (Plan > Steps) shows where the stage is.
+
+- **Drafts.** The Draft button over the page (beside Page, Beats, Whole chapter) shows which draft is on screen. "Save
+  Draft 1 before editing" copies every scene into the book's `Drafts/Draft 1/` folder with a `Draft 1.md` note, as one
+  save; the copies never change and the scene files become Draft 2. Picking a saved draft shows that scene's copy, read
+  only, with a line to go back. Export Draft N to Word works for any draft (file name ends `_Draft N`). Saving again
+  makes Draft 2's copies and starts Draft 3. The index and `sf` skip `Drafts/`, like Snapshots.
+- **Changes on the page.** The Writer revises a chapter as a `chapter-changes` note in `Changes/` (one per chapter), never
+  by rewriting the scene. When the open scene has changes, a bar over the page has Word's four views: All changes (old
+  words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
+  changed paragraph), Final (no marks) and Original (Kyle's own page, where he types). Up and down arrows step through
+  the changes and on into the next chapter that has any. Keep all small fixes keeps the typo and continuity tier at once.
+  The marked views are for reading; to type, press Original or Edit it myself.
+- **Changes tab.** First in the side column while a chapter has changes (Beats moves into More). One card per change:
+  its kind, its reason, the old and new words, "New passage · read slowly" for new words, and Keep, Keep the other
+  (a second version), No, Edit it myself. Decided cards fold away with Undo. Keep puts the words in as Kyle's own save;
+  his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
+  tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
+- **Story calls.** Edit > Story calls is Decide one at a time for the whole-book read's calls (ideas with `step: "36"`):
+  Yes with fix A, B or C (from the idea's "Fix A:" lines), Yes my way, Later, No. The fix goes in `decision_note`.
+- **Edit > Changes** lists the story calls waiting, each chapter with changes, and the saved drafts.
+- **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
+  the text when the page is wide enough, or In the text.

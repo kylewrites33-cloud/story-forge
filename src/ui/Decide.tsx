@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { render } from '../lib/markdown.ts';
 import { decideQueue } from '../lib/overview.ts';
+import { fixesOf, isStoryCall } from '../lib/changes.ts';
 import type { Decision } from '../lib/ideas.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
@@ -13,21 +14,23 @@ import { href } from './route.ts';
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 const KIND: Record<string, string> = { idea: 'Idea', beat: 'Beat', conflict: 'Conflict' };
 
-export function DecideQueue({ index, book, onDecide }: { index: VaultIndex; book: BookEntry; onDecide?: OnDecide }) {
+/** `calls`: only the whole-book read's story calls (Workflow 1.2, step 38), answered Yes with a fix, or No. */
+export function DecideQueue({ index, book, onDecide, calls }: { index: VaultIndex; book: BookEntry; onDecide?: OnDecide; calls?: boolean }) {
   // The queue is fixed when the page opens, so a card Kyle decides leaves it even before the vault catches up.
   const [done, setDone] = useState<string[]>([]);
   const [last, setLast] = useState<{ path: string; text: string } | null>(null);
   const [asking, setAsking] = useState(false);
   const [why, setWhy] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const list = decideQueue(index, book).filter((n) => done.indexOf(n.path) < 0);
+  const list = decideQueue(index, book).filter((n) => done.indexOf(n.path) < 0 && (!calls || isStoryCall(n)));
+  const [mine, setMine] = useState(false);
   const here = list[0];
   const choose = (decision: Decision, label: string, reason = '') => {
     if (!here || !onDecide) return;
     onDecide(here.path, decision, reason);
     setDone(done.concat(here.path));
     setLast({ path: here.path, text: label + ': ' + String(here.data.title || here.data.id || '') });
-    setAsking(false); setWhy('');
+    setAsking(false); setMine(false); setWhy('');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setLast(null), 10000);
   };
@@ -40,7 +43,7 @@ export function DecideQueue({ index, book, onDecide }: { index: VaultIndex; book
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (asking || e.metaKey || e.ctrlKey || (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT'))) return;
+      if (calls || asking || e.metaKey || e.ctrlKey || (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT'))) return;
       const k = e.key.toLowerCase();
       if (k === 'k') choose('keep', 'Kept');
       else if (k === 'm') choose('later', 'Later');
@@ -51,12 +54,15 @@ export function DecideQueue({ index, book, onDecide }: { index: VaultIndex; book
     return () => window.removeEventListener('keydown', key);
   });
   const total = list.length + done.length;
+  const fixes = here && calls ? fixesOf(here.body) : [];
+  const name = calls ? 'Story calls' : 'Decide one at a time';
   return (
     <section class="decide">
-      <p class="crumb"><a href={href.board('overview', book.folder)}>{book.title}</a> · Decide one at a time</p>
-      <h1>Decide one at a time</h1>
+      <p class="crumb"><a href={href.board('overview', book.folder)}>{book.title}</a> · {name}</p>
+      <h1>{name}</h1>
+      {calls && <p class="hint">The editor's questions about the whole book, most important first. Say yes with the fix you want, or no. The Writer follows only your yes answers when it revises (workflow steps 38 and 39).</p>}
       {!here ? (
-        <div class="decide-empty"><Icon name="check" size={28} /><p>Nothing is waiting on you in {book.title}.</p><a class="button" href={href.board('overview', book.folder)}>Back to Home</a></div>
+        <div class="decide-empty"><Icon name="check" size={28} /><p>{calls ? 'No story calls are waiting in ' + book.title + '.' : 'Nothing is waiting on you in ' + book.title + '.'}</p><a class="button" href={href.board(calls ? 'changes' : 'overview', book.folder)}>{calls ? 'Back to Changes' : 'Back to Home'}</a></div>
       ) : (
         <>
           <p class="meta">{done.length + 1} of {total} · {list.length === 1 ? 'the last one' : list.length - 1 + ' more after this'}</p>
@@ -69,7 +75,26 @@ export function DecideQueue({ index, book, onDecide }: { index: VaultIndex; book
             {onDecide && <Stars value={Number(here.data.rating) || 0} onRate={(n) => onDecide(here.path, 'edit', '', { rating: n ? String(n) : '' })} />}
             <p class="meta"><a href={href.note(here.path)}>Open the full note</a></p>
           </article>
-          {!onDecide ? <p class="hint">Choosing needs your own vault, not the demo.</p> : asking ? (
+          {!onDecide ? <p class="hint">Choosing needs your own vault, not the demo.</p> : calls ? (
+            mine ? (
+              <div class="decide-why">
+                <label for="decide-fix">Your fix, in your words</label>
+                <textarea id="decide-fix" rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
+                <div class="buttons">
+                  <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('keep', 'Yes, your way', 'My fix: ' + why.trim())}>Yes, my way</button>
+                  <button type="button" onClick={() => setMine(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div class="decide-buttons calls">
+                {fixes.map((f) => <button key={f.letter} type="button" class="primary" title={f.text} onClick={() => choose('keep', 'Yes, fix ' + f.letter, 'Fix ' + f.letter + ': ' + f.text)}>Yes, fix {f.letter}</button>)}
+                {!fixes.length && <button type="button" class="primary" onClick={() => choose('keep', 'Yes')}>Yes</button>}
+                <button type="button" onClick={() => setMine(true)}>Yes, my way</button>
+                <button type="button" onClick={() => choose('later', 'Later')}>Later</button>
+                <button type="button" onClick={() => choose('drop', 'No', 'No')}>No</button>
+              </div>
+            )
+          ) : asking ? (
             <div class="decide-why">
               <label for="decide-why">What should the team change?</label>
               <textarea id="decide-why" rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />

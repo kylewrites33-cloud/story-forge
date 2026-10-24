@@ -60,6 +60,10 @@ export class DemoSource implements VaultSource {
     return hash(text);
   }
 
+  async writeMany(list: { path: string; text: string }[], message = ''): Promise<void> {
+    for (const f of list) await this.write(f.path, f.text, '', message);
+  }
+
   async writeBytes(path: string, base64: string, sha: string): Promise<string> {
     const had = this.pictures.get(path);
     if ((had ? hash(had) : '') !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });

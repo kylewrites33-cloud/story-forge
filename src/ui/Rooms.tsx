@@ -12,6 +12,9 @@ export function roomLinks(schema: Schema, folder: string, workflow: boolean): Re
   if (workflow && out['chapter-grid']) out['chapter-grid'] = { ...out['chapter-grid'], to: href.board('chapter-grid', folder) };
   if (out.overview) out.overview = { ...out.overview, title: 'Overview' };
   out.decide = { key: 'decide', title: 'Decide one at a time', to: href.board('decide', folder), icon: 'cards' };
+  // The Edit room's pages for Workflow 1.2's editing stage (2026-10-24).
+  out.changes = { key: 'changes', title: 'Changes', to: href.board('changes', folder), icon: 'swap' };
+  out['story-calls'] = { key: 'story-calls', title: 'Story calls', to: href.board('story-calls', folder), icon: 'cards' };
   out.steps = { key: 'steps', title: 'Steps', to: href.flow(folder), icon: 'outline' };
   if (out.characters) {
     out.places = { key: 'places', title: 'Places', to: href.board('places', folder), icon: 'map' };

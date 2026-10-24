@@ -29,8 +29,9 @@ test('what is waiting on Kyle: ideas, to-dos, notes, questions and unseen jobs, 
   const { index, book } = await demoIndex();
   const items = waitingOnKyle(index, book);
   const by = Object.fromEntries(items.map((i) => [i.key, i]));
-  assert.equal(by.ideas.count, 7);
-  assert.equal(by.ideas.label, '7 ideas to decide');
+  // I-025 is the demo's story call (Workflow 1.2, step 36).
+  assert.equal(by.ideas.count, 8);
+  assert.equal(by.ideas.label, '8 ideas to decide');
   assert.equal(by.todos.count, 2);
   assert.equal(by.notes.count, 1);
   assert.equal(by.notes.href, '#/board/notes/' + encodeURIComponent(BOOK));
