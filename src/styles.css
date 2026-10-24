@@ -2337,3 +2337,80 @@ button, .button { border-radius: 12px; }
 .side-more-list button .icon { color: var(--muted); flex: none; }
 .side-more-list button .meta { margin-left: auto; }
 .side-more-list button:hover, .side-more-list button[aria-current="true"] { background: var(--hover); }
+
+/* ---- The Edit room: drafts and the team's changes as track changes (Workflow 1.2, 2026-10-24) ---- */
+.page-switch-row { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; width: 100%; max-width: 100%; margin: 14px 0 -4px; padding: 0 16px; }
+.page-switch-row .page-switch { margin: 0; }
+.draft-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-weight: 600; }
+.draft-button.old { border-color: var(--accent); color: var(--accent); }
+.draft-menu { width: min(360px, 92vw); }
+.draft-menu .menu-sep { height: 1px; background: var(--line); margin: 4px 6px; }
+.draft-menu .meta { font-weight: 400; }
+.draft-ask { padding: 8px 12px; display: grid; gap: 8px; }
+.draft-ask p { margin: 0; font-size: 0.94rem; color: var(--muted); }
+.draft-menu > p { margin: 6px 12px; font-size: 0.94rem; }
+.draft-banner, .changes-hint { width: 100%; max-width: var(--page-width, 44rem); margin: 8px auto 0; padding: 8px clamp(16px, 4vw, 48px); }
+.draft-banner { color: var(--accent); font-weight: 600; }
+.changes-hint { color: var(--muted); font-size: 0.9rem; padding-top: 0; padding-bottom: 0; }
+.draft-readonly { opacity: 0.92; }
+
+.changes-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; width: 100%; max-width: calc(var(--page-width, 44rem) + 2rem); margin: 10px auto 0; padding: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.changes-bar .view-seg button { min-height: 40px; }
+.changes-count { font-size: 0.94rem; font-variant-numeric: tabular-nums; }
+.changes-go { display: inline-flex; gap: 4px; margin-left: auto; }
+.changes-go .icon-button { min-width: 44px; min-height: 44px; }
+.keep-small { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+
+/* The marked page. Old words struck in the danger colour, new words underlined in the accent, as Word does. */
+.changes-page { cursor: default; }
+.changes-page .chg-line { min-height: calc(var(--page-line, 1.7) * 1em); position: relative; }
+.changes-page .chg-line.has-chg::before { content: ''; position: absolute; left: calc(-1 * clamp(10px, 2.4vw, 30px)); top: 0.2em; bottom: 0.2em; width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.55; }
+.changes-page .chg-line.has-chg.on::before { opacity: 1; }
+.changes-page .chg { cursor: pointer; border-radius: 3px; text-decoration-thickness: 2px; }
+.changes-page del.chg { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); }
+.changes-page ins.chg { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.changes-page ins.chg.chg-new { text-decoration-style: dashed; }
+.changes-page ins.chg.simple { color: inherit; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.changes-page .chg.on { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); }
+.changes-page.view-final .chg-line.has-chg::before { display: none; }
+
+/* The side column's cards. */
+.changes-panel { display: grid; gap: 10px; }
+.chg-intro { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--hover); font-size: 0.94rem; white-space: pre-wrap; }
+.chg-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.chg-card.decided { opacity: 0.8; }
+.chg-head { display: flex; justify-content: space-between; gap: 8px; margin: 0; }
+.chg-why { margin: 0; font-size: 0.94rem; }
+.chg-slow { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--accent); font-weight: 600; font-size: 0.94rem; }
+.chg-quote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--line); font-family: var(--page-font, Georgia, serif); font-size: 0.98rem; line-height: 1.5; }
+.chg-quote.was { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); border-left-color: var(--danger); }
+.chg-quote.now { border-left-color: var(--accent); }
+.chg-quote.empty { font-style: italic; text-decoration: none; }
+.chg-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.chg-buttons button { min-height: 44px; }
+.chg-done { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.94rem; color: var(--muted); }
+.chg-decided summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--muted); }
+.chg-decided[open] { display: grid; gap: 10px; }
+.side-changes { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+
+/* The Edit room's Changes page. */
+.changes-overview { max-width: 46rem; }
+.changes-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin: 16px 0; }
+.changes-step { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; }
+.changes-step > span { display: grid; gap: 2px; }
+.changes-step .icon { color: var(--accent); }
+.changes-chapters { list-style: none; margin: 0 0 20px; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.changes-chapters li + li { border-top: 1px solid var(--line); }
+.changes-chapters a { display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 0 14px; color: var(--text); text-decoration: none; }
+.changes-chapters .waiting { color: var(--accent); font-weight: 600; }
+.decide-buttons.calls { flex-wrap: wrap; }
+
+/* Asks for the team in {braces} sit in the margin beside the text when the page has room (Kyle, 2026-10-23). */
+.writer-page { container-type: inline-size; }
+@container (min-width: 760px) {
+  .writer.asks-margin :is(.main-section .writer-text.styled, .changes-page, .draft-readonly):has(.md-ask) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
+  .writer.asks-margin :is(.main-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: right; clear: right; width: 12rem; margin-right: -13rem; margin-top: 0.2em; padding: 4px 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.8em; line-height: 1.4; white-space: normal; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+}
+.ask-changes { display: grid; gap: 8px; margin-top: 8px; }
+.ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }

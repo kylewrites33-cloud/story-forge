@@ -124,6 +124,42 @@ export class GitHubSource implements VaultSource {
     return this.put(path, toBase64(text), sha, message);
   }
 
+  /** Several new files as one commit, through git's own objects: the branch's commit, a tree with the files added, a
+   * commit on it, and the branch moved to it (never forced: if the branch moved meanwhile, it starts again). */
+  async writeMany(files: { path: string; text: string }[], message: string): Promise<void> {
+    const prefix = this.s.root ? this.s.root + '/' : '';
+    const ref = this.repoUrl('/git/refs/heads/' + this.s.branch.split('/').map(encodeURIComponent).join('/'));
+    for (let attempt = 0; ; attempt++) {
+      const head = (await (await this.get(this.repoUrl('/git/ref/heads/' + this.s.branch.split('/').map(encodeURIComponent).join('/')), 'the branch "' + this.s.branch + '"', undefined, true)).json()) as { object: { sha: string } };
+      const parent = head.object.sha;
+      const commit = (await (await this.get(this.repoUrl('/git/commits/' + parent), 'the branch "' + this.s.branch + '"')).json()) as { tree: { sha: string } };
+      const tree = (await this.send('POST', this.repoUrl('/git/trees'), { base_tree: commit.tree.sha, tree: files.map((f) => ({ path: prefix + f.path, mode: '100644', type: 'blob', content: f.text })) }, 'the new files')) as { sha: string };
+      const made = (await this.send('POST', this.repoUrl('/git/commits'), { message, tree: tree.sha, parents: [parent] }, 'the save')) as { sha: string };
+      try {
+        await this.send('PATCH', ref, { sha: made.sha, force: false }, 'the branch "' + this.s.branch + '"');
+        return;
+      } catch (e) {
+        if (e instanceof GitHubError && e.status === 422 && attempt < 3) continue;
+        throw e;
+      }
+    }
+  }
+
+  private async send(method: string, url: string, body: unknown, what: string): Promise<unknown> {
+    let res: Response;
+    try {
+      res = await this.fetch(url, {
+        method,
+        headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch {
+      throw new GitHubError('Cannot reach GitHub. Check the connection and try again.', 0);
+    }
+    if (!res.ok) throw new GitHubError(explain(res, this.s, what, 'change'), res.status);
+    return res.json();
+  }
+
   /** A picture (a book cover) as base64, saved the same way as a note. */
   async writeBytes(path: string, base64: string, sha: string, message: string): Promise<string> {
     return this.put(path, base64, sha, message);

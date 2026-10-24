@@ -41,7 +41,7 @@ test('statuses: waiting on Kyle, kept, and Check when an earlier step was kept l
   const book = index.books.find((b) => b.folder === BOOK)!;
   const stages = flowStages(parseWorkflow(WORKFLOW));
   const results = flowResults(index, book);
-  assert.deepEqual(results.map((n) => n.data.id), ['I-019', 'I-020', 'I-021', 'I-022', 'I-023', 'I-024']);
+  assert.deepEqual(results.map((n) => n.data.id), ['I-019', 'I-020', 'I-021', 'I-022', 'I-023', 'I-024', 'I-025']);
   const st = taskStatuses(stages, results, [], BOOK);
   assert.equal(st['16'].state, 'kept');
   assert.equal(st['18-19'].state, 'judge', 'two traits wait on Kyle');

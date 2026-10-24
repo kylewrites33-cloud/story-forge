@@ -89,12 +89,13 @@ test('agents carry their role, never-sees and model in plain words; the team car
   assert.equal(noRole.members[0].role, 'First. Second.');
 });
 
-test('the vault\'s own workflow, when it is beside this repository, names every step\'s agents', () => {
+test('the vault\'s own workflow, when it is beside this repository, names every step\'s agents (or Kyle, or a script)', () => {
   let text = '';
   try { text = readFileSync(new URL('../../author-business/System/Workflow.md', import.meta.url), 'utf8'); } catch { return; }
   const w = parseWorkflow(text, ['Writer', 'Story Specialist', 'Contrarian', 'Market Analyst', 'Developmental Editor', 'Line Editor', 'Beta Reader', 'Continuity Keeper'])!;
   const steps = allSteps(w);
   assert.ok(steps.length >= 30);
-  steps.forEach((s) => assert.ok(s.agents.length, 'step ' + s.number + ' names no agent'));
+  // Workflow 1.2's editing steps include Kyle's own (decide the story calls, apply the changes) and scripts (check the quotes).
+  steps.forEach((s) => assert.ok(s.agents.length || /\b(Kyle|script)\b/i.test(s.who), 'step ' + s.number + ' names no agent'));
   assert.deepEqual(steps.map((s) => s.number), steps.map((_s, i) => i + 1));
 });

@@ -9,9 +9,12 @@ export interface PageLook {
   paper: 'white' | 'cream' | 'dark';
   /** Character, place and item names underlined in their colour. */
   names: 'on' | 'off';
+  /** Asks for the team in {braces}: beside the text in the margin where the page has room, or in the text (Kyle,
+   * 2026-10-23: "ideally these curly bars wouldn't be a part of the text document. They would be tangential to it"). */
+  asks: 'margin' | 'inline';
 }
 
-export const DEFAULT_LOOK: PageLook = { size: 'medium', spacing: 'normal', width: 'normal', font: 'serif', paper: 'white', names: 'on' };
+export const DEFAULT_LOOK: PageLook = { size: 'medium', spacing: 'normal', width: 'normal', font: 'serif', paper: 'white', names: 'on', asks: 'margin' };
 
 /** The choices for each setting, in the order the Page panel shows them, with the words on their buttons. */
 export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [string, string][] }[] = [
@@ -20,7 +23,8 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'width', label: 'Page width', options: [['narrow', 'Narrow'], ['normal', 'Normal'], ['wide', 'Wide']] },
   { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)'], ['typewriter', 'Typewriter (Space Mono)']] },
   { key: 'paper', label: 'Paper', options: [['white', 'Theme colour'], ['cream', 'Cream'], ['dark', 'Dark']] },
-  { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] }
+  { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] },
+  { key: 'asks', label: 'Asks for the team in { }', options: [['margin', 'In the margin'], ['inline', 'In the text']] }
 ];
 
 const KEY = 'story-forge.page-look';

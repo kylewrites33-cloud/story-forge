@@ -17,7 +17,7 @@ import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
-import { activeBook, resortScenes } from '../lib/vault-index.ts';
+import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups } from '../lib/board.ts';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
@@ -28,10 +28,12 @@ import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
 import { keepWriting, Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
+import { ChangesOverview } from './Changes.tsx';
+import { decideQueue } from '../lib/overview.ts';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
-import { BookDetails, ExportWord, Home, SeriesPage } from './Home.tsx';
+import { BookDetails, downloadWord, ExportWord, Home, SeriesPage } from './Home.tsx';
 import { makeBackupFolder } from '../lib/docx.ts';
 import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
@@ -43,6 +45,9 @@ import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
+import { changesNoteFor, chapterChanges, flushChoices, isStoryCall } from '../lib/changes.ts';
+import { copyFor, saveBookDraft } from '../lib/bookdrafts.ts';
+import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { optionJobsFor } from '../lib/options.ts';
 import { checkOptions } from '../lib/lintcheck.ts';
@@ -147,6 +152,8 @@ export function App() {
       await foldNotes(written.saved);
       if (written.notice) setNotice(written.notice);
       const saveError = (await runFlush()) || written.error;
+      // Keep or No on the team's changes, chosen while offline.
+      await flushChoices(source).catch(() => 0);
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       setSnap(next);
       setError(saveError);
@@ -620,6 +627,40 @@ export function App() {
           chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
+          changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }) } : undefined}
+          drafts={book ? {
+            saved: book.drafts || [],
+            onSave: async () => {
+              if (!source.write) return 'Saving a draft needs your own vault, not the demo.';
+              if (!navigator.onLine) return 'Connect to the internet to save a draft.';
+              try {
+                await saveBookDraft(source, book.folder, book.scenes.map((p) => view.notes[p]).filter(Boolean), new Date());
+                await runSync();
+                return null;
+              } catch (e) { return (e as Error).message; }
+            },
+            onExport: async (n) => {
+              try {
+                const notes = { ...view.notes };
+                const d = n == null ? null : (book.drafts || []).find((x) => x.number === n);
+                if (n != null && !d) return 'Draft ' + n + ' is not in the vault.';
+                // A saved draft: each scene's words as its copy holds them; a scene the draft did not have is left out.
+                if (d) for (const p of book.scenes) {
+                  const s = view.notes[p];
+                  if (!s) continue;
+                  const f = copyFor(d, s);
+                  notes[p] = f ? { ...makeNote(p, f.sha, await source.read(f.path, f.sha)), path: p } : { ...s, body: '' };
+                }
+                const m = manuscript(schema, { ...view, notes }, book);
+                if (!m.scenes) return 'This draft has no written scenes, so there is nothing to export.';
+                const data = view.notes[book.path] ? view.notes[book.path].data : {};
+                const working = (book.drafts || []).reduce((x, y) => Math.max(x, y.number), 0) + 1;
+                const name = exportName(book).replace(/\.docx$/, '_Draft ' + (n == null ? working : n) + '.docx');
+                downloadWord(buildDocx(book.title, typeof data.author === 'string' ? data.author : '', m) as Uint8Array<ArrayBuffer>, name);
+                return null;
+              } catch (e) { return 'The Word file could not be made: ' + (e as Error).message; }
+            }
+          } : undefined}
           backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
       );
     }
@@ -695,6 +736,9 @@ export function App() {
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
       else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
+      else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
+        calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
         const resume = keepWriting(view, book, source.key);

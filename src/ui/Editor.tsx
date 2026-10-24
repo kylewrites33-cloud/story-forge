@@ -18,7 +18,7 @@ import { boardLinks } from './StoryBoards.tsx';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import { loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
-import { askBody, resultBody, type OnJob } from '../lib/jobs.ts';
+import { askBody, defaultJobTitle, jobAsk, resultBody, type OnJob } from '../lib/jobs.ts';
 import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
@@ -40,6 +40,10 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
+import { applyChange, parseChanges, placeChanges, revertChange, saveChoices, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
+import { styledHtml } from '../lib/styled.ts';
+import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
@@ -49,6 +53,8 @@ import {
 } from './EditorPanels.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
+// Where to land after the change arrows open another chapter: its first change, or its last when going back.
+let landAt: 'first' | 'last' | null = null;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
 const TYPING_SAVE_MS = 5 * 60 * 1000;
 // How long after the last letter the page's words are counted again.
@@ -66,17 +72,19 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
-const TABS: [Tab, string][] = [['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+type Tab = 'changes' | 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
+const TABS: [Tab, string][] = [['changes', 'Changes'], ['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Done, split, join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
 // One row of four tabs and More (Kyle, 2026-10-23: "this design change is good as long as we don't lose any
 // functionality", with To-dos in the row instead of Scrap). Every other tab is one press away in More, by heading.
 const MAIN_TABS: Tab[] = ['chat', 'plan', 'beats', 'todos'];
+// While a chapter has the team's changes (Workflow 1.2, step 41), Changes takes the first place and Beats moves into More.
+const EDIT_TABS: Tab[] = ['changes', 'chat', 'plan', 'todos'];
 // What the More button says while a part picked from it is open: short, so the row fits beside the page on the iPad.
 const SHORT: Partial<Record<Tab, string>> = { tools: 'Split, join', team: 'Ask', options: 'Options', flow: 'Workflow', notes: 'Braindump', check: 'Check' };
 const MORE_GROUPS: [string, [Tab, string, string][]][] = [
   ['This scene', [['card', 'cards', 'Card and names'], ['marks', 'marker', 'Marks'], ['target', 'gauge', 'Word target'], ['copies', 'history', 'Copies'], ['tools', 'split', 'Done, split, join']]],
-  ['This chapter', [['scrap', 'note', 'Scrap'], ['flow', 'outline', 'From the workflow']]],
+  ['This chapter', [['changes', 'swap', 'Changes from the team'], ['beats', 'beats', 'Beats'], ['scrap', 'note', 'Scrap'], ['flow', 'outline', 'From the workflow']]],
   ['The team', [['team', 'spark', 'Ask the team for a job'], ['options', 'swap', 'Options to pick from']]],
   ['Tools', [['check', 'scan', 'Check for AI phrases'], ['page', 'type', 'Page look'], ['notes', 'idea', 'Braindump (whole book)']]],
 ];
@@ -90,7 +98,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -152,6 +160,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   recipes?: string[];
   /** Workflow mode's results for this book and the way there, for the Workflow tab (what was kept about this chapter and its people). */
   flow?: { results: NoteRecord[]; href: string };
+  /** The chapter's changes note, and every chapter's count of changes waiting with the scene to open, for the Changes view
+   * (Workflow 1.2, step 41). */
+  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean };
+  /** The book's saved drafts, saving the next one and exporting any of them to Word. */
+  drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
 }) {
   useLockedPage();
   const beatsMode = Boolean(beats);
@@ -475,10 +488,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
   const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
 
+  // While the page shows the team's changes or a saved draft, the writing box is not there: tools and new words go to the text.
+  const readOnly = useRef(false);
   const cmd = (): EditorCommands | null => {
     if (beatsMode) return beatsApi.current ? beatsApi.current.cmd() : null;
     const sib = sibFocus ? sibs.current.get(sibFocus) : null;
-    return sib && sib.commands.current ? sib.commands.current : commands.current;
+    if (sib && sib.commands.current) return sib.commands.current;
+    return readOnly.current ? null : commands.current;
   };
   /** Put new text on the page (the team's answers, words from elsewhere), keeping Kyle's cursor in his sentence. */
   const applyText = (next: string, map: (n: number) => number) => {
@@ -754,6 +770,129 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const chapterList = chapterTodos(todos || [], chapterNum);
   const openTodos = chapterList.filter(isOpen).length;
 
+  // ---- Saved drafts (Kyle, 2026-10-24: "i see value in at least labeling and keeping draft 1 accessible") ----
+  const savedList = drafts ? drafts.saved : [];
+  const working = workingNumber(savedList);
+  const viewKey = 'story-forge.draft-view.' + (bookFolder || '');
+  const [draftView, setDraftViewState] = useState<number | null>(() => { try { const v = Number(sessionStorage.getItem(viewKey)); return v > 0 ? v : null; } catch { return null; } });
+  const setDraftView = async (n: number | null) => {
+    // Leaving the working draft on screen: its words reach the vault first, as on any other page.
+    if (n != null && draftView == null) { if (quiet.current) clearTimeout(quiet.current); await save(false); }
+    setDraftViewState(n);
+    try { if (n == null) sessionStorage.removeItem(viewKey); else sessionStorage.setItem(viewKey, String(n)); } catch { /* lasts until reload */ }
+  };
+  const shownDraft = draftView != null && savedList.some((d) => d.number === draftView) ? draftView : null;
+  const [oldText, setOldText] = useState<{ key: string; text: string | null; error?: string } | null>(null);
+  const oldKey = shownDraft + '|' + note.path;
+  useEffect(() => {
+    if (shownDraft == null) return;
+    const d = savedList.find((x) => x.number === shownDraft);
+    const f = d ? copyFor(d, note) : null;
+    if (!f) { setOldText({ key: oldKey, text: null }); return; }
+    setOldText({ key: oldKey, text: '' });
+    source.read(f.path, f.sha)
+      .then((raw) => setOldText({ key: oldKey, text: splitLead(makeNote(f.path, f.sha, raw).body).text }))
+      .catch((e) => setOldText({ key: oldKey, text: null, error: offlineError(e) ? 'Connect to the internet to see Draft ' + shownDraft + ' of this scene.' : (e as Error).message }));
+  }, [oldKey]);
+
+  // ---- The team's changes (Workflow 1.2, step 41) ----
+  const [chView, setChViewState] = useState<ChangesView>(loadView);
+  const setChView = (v: ChangesView) => { setChViewState(v); saveView(v); };
+  const [chTick, setChTick] = useState(0);
+  const [chCur, setChCur] = useState<string | null>(null);
+  const chNote = changes ? changes.note : null;
+  const sceneId = String(note.data.id || '');
+  const chParsed = useMemo(() => (chNote ? parseChanges(chNote.body) : { intro: '', changes: [] as Change[] }), [chNote ? chNote.path + '@' + chNote.sha : '']);
+  const chAll = useMemo(() => (chNote ? withChoices(chParsed.changes, chNote.path, source.key) : []), [chParsed, chTick]);
+  const chMine = chAll.filter((c) => !c.scene || !sceneId || c.scene === sceneId);
+  const chPlace = useMemo(() => placeChanges(text, chMine, sceneId), [text, chAll, sceneId]);
+  const chOpenHere = chMine.filter((c) => c.status === 'open').length;
+  const chBookOpen = (changes ? changes.book : []).reduce((t, x) => t + (x.chapter === chapterNum ? 0 : x.open), 0) + chAll.filter((c) => c.status === 'open').length;
+  const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chPlace.placed.length > 0;
+  readOnly.current = showMarks || shownDraft != null;
+  const record = (choices: Record<string, ChangeStatus>) => {
+    if (!chNote) return;
+    // Kept on this device at once; it reaches the vault now, or with the next sync when offline.
+    saveChoices(source, chNote.path, choices).catch(() => { /* waits on this device */ });
+    setChTick((n) => n + 1);
+  };
+  const putText = (t: string) => {
+    wordsNotTyped(bodyWords(t) - bodyWords(pageText()));
+    changed(t);
+    reload();
+  };
+  const nextOpen = (after: string | null) => {
+    const list = chPlace.placed;
+    const i = list.findIndex((p) => p.change.id === after);
+    const rest = list.filter((_, k) => k !== i);
+    return (i >= 0 && rest[i]) || rest[0] || null;
+  };
+  const chooseChange = (c: Change, status: ChangeStatus) => {
+    if (status === 'kept' || status === 'other') {
+      const r = applyChange(pageText(), c, status === 'other' ? 'other' : 'now');
+      if (!r) { setMessage('Those words changed after the team wrote ' + c.id + ', so it could not go in. Use Edit it myself to put your own words in.'); return; }
+      putText(r.text);
+    }
+    const n = nextOpen(c.id);
+    record({ [c.id]: status });
+    setChCur(n ? n.change.id : null);
+  };
+  const undoChange = (c: Change) => {
+    if (c.status === 'kept' || c.status === 'other') {
+      const t = revertChange(pageText(), c, c.status === 'other' ? 'other' : 'now');
+      if (t == null) { setMessage('The words ' + c.id + ' put in have changed since, so it cannot be taken back out. Your page stays as it is.'); return; }
+      putText(t);
+    }
+    record({ [c.id]: 'open' });
+    setChCur(c.id);
+  };
+  const editMine = (c: Change) => {
+    const t = pageText();
+    const found = chPlace.placed.find((p) => p.change.id === c.id);
+    record({ [c.id]: 'mine' });
+    setChView('original');
+    // The writing box comes back; then Kyle's words that the change was about are picked, ready to type over.
+    if (found) setTimeout(() => { const ed = commands.current; if (ed && pageText() === t) ed.select(found.at, found.end); }, 60);
+    closeOver();
+  };
+  const keepSmall = () => {
+    let t = pageText();
+    const choices: Record<string, ChangeStatus> = {};
+    placeChanges(t, chMine, sceneId).placed.slice().reverse().forEach((p) => {
+      if (p.change.kind !== 'small') return;
+      t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
+      choices[p.change.id] = 'kept';
+    });
+    if (!Object.keys(choices).length) return;
+    putText(t);
+    record(choices);
+  };
+  // The arrows: the next change on this page, then on into the next chapter that has any (and back).
+  const chIdx = chPlace.placed.findIndex((p) => p.change.id === chCur);
+  const otherChapter = (dir: 1 | -1) => {
+    const list = (changes ? changes.book : []).filter((x) => x.open > 0 && chapterNum != null && (dir > 0 ? x.chapter > chapterNum : x.chapter < chapterNum));
+    return dir > 0 ? list[0] || null : list[list.length - 1] || null;
+  };
+  const goChange = (dir: 1 | -1) => {
+    const list = chPlace.placed;
+    const k = chIdx < 0 ? (dir > 0 ? 0 : list.length - 1) : chIdx + dir;
+    if (showMarks && k >= 0 && k < list.length) { setChCur(list[k].change.id); if (right && tab !== 'changes') setTab('changes'); return; }
+    const o = otherChapter(dir);
+    if (o) { landAt = dir > 0 ? 'first' : 'last'; go(href.write(o.path)); }
+  };
+  useEffect(() => {
+    if (!landAt || !showMarks) return;
+    const list = chPlace.placed;
+    setChCur(landAt === 'first' ? list[0].change.id : list[list.length - 1].change.id);
+    landAt = null;
+  }, [showMarks]);
+  useEffect(() => {
+    if (!chCur) return;
+    const el = document.querySelector('.changes-page [data-chg="' + chCur.replace(/"/g, '') + '"]');
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [chCur, showMarks]);
+  const pickChange = (id: string) => { setChCur(id); openTab('changes'); };
+
   // The page's heading: the chapter, the scene line, the chapter strip and the target bar. Beats mode shows it too.
   const headParts = (
     <>
@@ -796,7 +935,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-    <div class={'writer paper-' + look.paper + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
+     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
@@ -956,6 +1095,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       <span class="side-num">{g.num}</span>
                       <span class="side-name">{g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path)}</span>
                       {g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : String(n.data.status || '')) >= 0) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
+                      {changes && (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open > 0 && (
+                        <span class="side-changes" title="Changes from the team waiting">{g.num === chapterNum ? chAll.filter((c) => c.status === 'open').length : (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open}</span>
+                      )}
                       <span class="side-words">{num(gWords)}</span>
                     </a>
                     {shownScenes.indexOf(gk) >= 0 && g.scenes.map((n) => row(n, sceneHeader(n.data, n.path)))}
@@ -1022,11 +1164,25 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <button type="button" class="tool" aria-label="Highlight" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
             </div>
           )}
-          {group && (group.num != null || group.scenes.length > 1) && (
-            <div class="view-seg page-switch" role="group" aria-label="How to see this chapter">
-              <button type="button" aria-pressed={!beatsMode} onClick={() => { if (beatsMode) go(href.write(note.path)); }}>Page</button>
-              {group.num != null && <button type="button" aria-pressed={beatsMode} onClick={() => { if (!beatsMode) go(href.beats(note.path)); }}>Beats</button>}
-              {group.scenes.length > 1 && <button type="button" aria-pressed={false} onClick={() => go(href.chapter(note.path))}>Whole chapter</button>}
+          {((group && (group.num != null || group.scenes.length > 1)) || drafts) && (
+            <div class="page-switch-row">
+              {group && (group.num != null || group.scenes.length > 1) && (
+                <div class="view-seg page-switch" role="group" aria-label="How to see this chapter">
+                  <button type="button" aria-pressed={!beatsMode} onClick={() => { if (beatsMode) go(href.write(note.path)); }}>Page</button>
+                  {group.num != null && <button type="button" aria-pressed={beatsMode} onClick={() => { if (!beatsMode) go(href.beats(note.path)); }}>Beats</button>}
+                  {group.scenes.length > 1 && <button type="button" aria-pressed={false} onClick={() => go(href.chapter(note.path))}>Whole chapter</button>}
+                </div>
+              )}
+              {drafts && !beatsMode && (
+                <DraftMenu working={working} saved={savedList.map((d) => d.number)} viewing={shownDraft} onView={setDraftView} canSave={canSave}
+                  onExport={drafts.onExport}
+                  onSave={async () => {
+                    if (quiet.current) clearTimeout(quiet.current);
+                    if (!(await save(false)) || isUnsaved(draftRef.current)) return 'This scene did not reach the vault yet, so the draft was not saved. Try again in a moment.';
+                    if (!(await saveSiblings(false))) return 'Another scene of this chapter did not save yet. Try again in a moment.';
+                    return drafts.onSave();
+                  }} />
+              )}
             </div>
           )}
           {optionsOpen && <OptionsAsk busy={opt.busy} keep={keepFocus} onClose={() => setOptionsOpen(false)}
@@ -1082,6 +1238,18 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               head={headParts} onWords={setBeatWords} />
           ) : <>
           {pageHead}
+          {shownDraft != null && (
+            <p class="draft-banner" role="status">Draft {shownDraft}, saved and read only. <button type="button" class="link" onClick={() => setDraftView(null)}>Back to Draft {working}</button></p>
+          )}
+          {shownDraft == null && chNote && chMine.length > 0 && (
+            <ChangesBar view={chView} onView={setChView} open={chOpenHere} total={chBookOpen}
+              place={showMarks && chIdx >= 0 ? (chIdx + 1) + ' of ' + chPlace.placed.length : ''}
+              small={chPlace.placed.filter((p) => p.change.kind === 'small').length}
+              onPrev={(showMarks && chIdx > 0) || otherChapter(-1) ? () => goChange(-1) : null}
+              onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherChapter(1) ? () => goChange(1) : null}
+              onKeepSmall={keepSmall} busy={false} />
+          )}
+          {showMarks && <p class="hint changes-hint">To type, press Original, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
               <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
@@ -1089,8 +1257,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
           ))}
           <div class={"main-section" + (below.length ? " has-below" : "")} ref={mainRef} onFocusCapture={() => setSibFocus(null)}>
-          <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
-              options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />
+          {shownDraft != null ? (
+            oldText && oldText.key === oldKey && oldText.text
+              ? <div class="writer-text styled draft-readonly" role="document" aria-label={'Draft ' + shownDraft + ' of ' + title} dangerouslySetInnerHTML={{ __html: styledHtml(oldText.text, styleOpts) }} />
+              : <p class={'writer-text ' + (oldText && oldText.error ? 'error' : 'hint')}>{!oldText || oldText.key !== oldKey || oldText.text === '' ? 'Opening Draft ' + shownDraft + '…' : oldText.error || 'This scene was not in Draft ' + shownDraft + '.'}</p>
+          ) : showMarks
+            ? <ChangesPage text={text} placed={chPlace.placed} view={chView} current={chCur} onPick={pickChange} options={styleOpts} label={'Text of ' + title + ' with the team\'s changes'} />
+            : <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
+              options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />}
           </div>
           {below.map((n) => (
             <div key={n.path}>
@@ -1112,15 +1286,17 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           <aside class="writer-right" aria-label="Scene panel" ref={rightRef}>
             {(() => {
               const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
+                : k === 'changes' && chOpenHere > 0 ? <span class="count-badge">{chOpenHere}</span>
                 : k === 'chat' && convo && convo.pending ? <span class="job-dot" aria-hidden="true" /> : null);
-              const inMore = MAIN_TABS.indexOf(tab) < 0;
+              const mainTabs = chNote ? EDIT_TABS : MAIN_TABS;
+              const inMore = mainTabs.indexOf(tab) < 0;
               const moreName = inMore ? SHORT[tab] || (TABS.find(([x]) => x === tab) || [tab, 'More'])[1] : 'More';
               const marks = markList(text).length;
               return (
                 <>
                   <div class="side-head side-tabs-head">
                     <div class="panel-tabs side-tabs" role="tablist" aria-label="Beside the page">
-                      {MAIN_TABS.map((k) => (
+                      {mainTabs.map((k) => (
                         <button key={k} type="button" role="tab" aria-selected={tab === k && !moreList} onClick={() => setTab(k)}>
                           {(TABS.find(([x]) => x === k) || [k, k])[1]}{mark(k)}
                         </button>
@@ -1138,7 +1314,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       {MORE_GROUPS.map(([g, items]) => (
                         <div key={g} role="group" aria-label={g}>
                           <span class="panel-key">{g}</span>
-                          {items.map(([k, icon, name]) => (
+                          {items.filter(([k]) => (k !== 'beats' || chNote) && (k !== 'changes' || !chNote)).map(([k, icon, name]) => (
                             <button key={k} type="button" role="menuitem" aria-current={tab === k ? 'true' : undefined} onClick={() => setTab(k)}>
                               <Icon name={icon} size={20} />{k === 'scrap' && chapterNum != null ? 'Scrap for chapter ' + chapterNum : name}
                               {k === 'marks' && marks > 0 && <span class="meta">{marks}</span>}
@@ -1153,6 +1329,17 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               );
             })()}
             {!moreList && <>
+            {tab === 'changes' && (
+              chNote
+                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={new Set(chPlace.placed.map((p) => p.change.id))} current={chCur}
+                  onPick={(id) => { if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
+                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
+                : <div class="panel-body">
+                  <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
+                  <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)}
+                    onAsk={onJob && bookFolder && chapterNum != null ? () => onJob({ title: defaultJobTitle('revise', 'Chapter ' + chapterNum), kind: 'revise', target: 'Chapter ' + chapterNum, book: bookFolder, ask: jobAsk('revise', 'Chapter ' + chapterNum, '') }) : null} />
+                </div>
+            )}
             {tab === 'chat' && (
               <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed} fromTop
                 fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />

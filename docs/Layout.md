@@ -51,6 +51,9 @@ src/lib/live.ts          the open page stays live: line merge with a newer versi
 src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps renamed)
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
+src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, keeping, story calls
+src/lib/bookdrafts.ts    a book's saved drafts (Drafts/Draft N/): finding them, saving the next as one commit, a scene's copy
+src/ui/Changes.tsx       the changes on the page (four views), the Changes bar and tab, the Draft button, Edit > Changes
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene

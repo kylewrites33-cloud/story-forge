@@ -4,11 +4,12 @@ import { Frontmatter } from './frontmatter.js';
 import { basename, dirname, idNumber, toNumber } from './links.ts';
 import { rocketFiles } from './market.ts';
 import { readTeam } from './team.ts';
+import { savedDrafts } from './bookdrafts.ts';
 import { CONFIG_PATH, appTypes } from './schema.ts';
 import type { BookEntry, FileEntry, NoteRecord, Schema, SeriesEntry, TypeDef, VaultIndex } from './types.ts';
 
 // The same folders sf skips (SKIP_ANYWHERE and SKIP_PATHS in sf.js), plus hidden folders.
-const SKIP_ANYWHERE = new Set(['Exports', 'Snapshots', 'Archive', 'node_modules']);
+const SKIP_ANYWHERE = new Set(['Exports', 'Snapshots', 'Archive', 'Drafts', 'node_modules']);
 const SKIP_PATHS = ['Templates/', 'System/Tools/'];
 
 export function skipped(path: string): boolean {
@@ -93,7 +94,7 @@ export async function buildIndex(opts: BuildOptions): Promise<VaultIndex> {
   });
   const index = assemble(schema, records, opts.phase ?? 1);
   index.series.forEach((s) => { s.rocket = rocketFiles(opts.files, s.folder); });
-  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); b.archive = archiveFiles(opts.files, b.folder); });
+  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); b.archive = archiveFiles(opts.files, b.folder); b.drafts = savedDrafts(opts.files, b.folder); });
   index.team = await readTeam(opts.files, read, (opts.previous && opts.previous.team) || undefined);
   return index;
 }

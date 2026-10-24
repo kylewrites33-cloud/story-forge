@@ -152,6 +152,19 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
   );
 }
 
+/** Hand a .docx made on this device to the browser's downloads. */
+export function downloadWord(bytes: Uint8Array<ArrayBuffer>, name: string) {
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 /** Export to Word (Kyle, 2026-10-18): the whole book as a .docx named series_book_date, made on this device and
  * downloaded; italics and bold come through. Shown on Book details and, as a card, on Publish's first page, the Market
  * board (Kyle, 2026-10-23: he could not find it behind the page menu). */
@@ -165,15 +178,7 @@ export function ExportWord({ source, schema, index, book, card }: { source: Vaul
       const data = index.notes[book.path] ? index.notes[book.path].data : {};
       const name = exportName(book);
       const bytes = buildDocx(book.title, typeof data.author === 'string' ? data.author : '', m) as Uint8Array<ArrayBuffer>;
-      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      downloadWord(bytes, name);
       setSaid({ error: false, text: 'Made ' + name + ': ' + m.chapters.length + (m.chapters.length === 1 ? ' chapter, ' : ' chapters, ') + num(m.words) + ' words. Look for it in your downloads.' });
       // A copy goes into the vault's Book Backups folder too (Kyle, 2026-10-18).
       if (source.writeBytes) {
