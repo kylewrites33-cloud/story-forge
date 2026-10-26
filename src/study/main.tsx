@@ -1,4 +1,5 @@
-// The Character study app (2026-10-26): its own page beside Sparrow, at character-study/. Same key and colours as Sparrow.
+// Crow (2026-10-26; first called Character Study): the character and plot study app, its own page and home-screen icon
+// beside Sparrow at crow/. Same colours as Sparrow; its own key when it runs from its own icon.
 import { render } from 'preact';
 import '../styles.css';
 import './study.css';
@@ -12,3 +13,8 @@ const homeScreen = (navigator as { standalone?: boolean }).standalone === true |
 document.documentElement.classList.toggle('cs-clock', ios && homeScreen);
 
 render(<StudyApp />, document.getElementById('app')!);
+
+// Sparrow's service worker (one for the whole site) keeps Crow's page and files too, so Crow opens offline from its icon.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => { /* Crow still works online */ });
+}

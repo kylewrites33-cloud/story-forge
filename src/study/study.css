@@ -110,3 +110,14 @@ a.cs-card:hover { box-shadow: var(--shadow-lift); }
   .cs-tally li { grid-template-columns: 1fr auto; }
   .cs-tally .cs-bar { grid-column: 1 / -1; grid-row: 2; }
 }
+.cs-brand { gap: 10px; }
+.cs-brand img { border-radius: 7px; display: block; }
+.cs-settings { max-width: 640px; }
+.cs-settings p { line-height: 1.5; }
+.cs-ok { color: var(--ok); font-weight: 600; }
+.cs-label { display: block; font-weight: 600; margin: 12px 0 6px; }
+.cs-keyrow { display: flex; gap: 8px; }
+.cs-keyrow input { flex: 1; min-width: 0; min-height: 44px; font: inherit; font-size: 16px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+.cs-keyrow button, .cs-save { min-height: 44px; padding: 0 16px; }
+.cs-save { margin-top: 12px; }
+.cs-banner a { font-weight: 600; }

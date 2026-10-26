@@ -1,8 +1,9 @@
-// The Character study app's screens: the studies, a study's Character and Plot tabs, a character, a scene, the lenses.
-// Reads Studies/ in the vault with Sparrow's key; without one it shows the demo vault's sample study.
+// Crow's screens: the studies, a study's Character and Plot tabs, a character, a scene, the lenses, and Settings (the key).
+// Reads Studies/ in the vault with the key saved on this device (shared with Sparrow in the same browser tab, its own
+// when Crow runs from its home-screen icon); without one it shows the demo vault's sample study.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { loadSettings, isConnected } from '../lib/settings.ts';
+import { loadSettings, saveSettings, isConnected, type Settings } from '../lib/settings.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { DemoSource } from '../lib/demo-source.ts';
 import { readPicture, writePicture } from '../lib/cache.ts';
@@ -58,11 +59,12 @@ async function faceUrl(source: VaultSource, f: FileEntry): Promise<string | null
 
 // ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot], #/s/<study>/c/<name>, #/s/<study>/scene/<id>
 
-interface Route { page: 'home' | 'lenses' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; }
+interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
   if (parts[0] === 'lenses') return { page: 'lenses' };
+  if (parts[0] === 'settings') return { page: 'settings' };
   if (parts[0] !== 's' || !parts[1]) return { page: 'home' };
   const study = parts[1];
   if (parts[2] === 'c' && parts[3]) return { page: 'character', study, name: parts[3] };
@@ -83,7 +85,7 @@ function loadLens(): Record<Side, string> {
 // ------------------------------------------------------------------ the app
 
 export function StudyApp() {
-  const settings = useMemo(() => loadSettings(), []);
+  const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const source: VaultSource = useMemo(() => (isConnected(settings) ? new GitHubSource(settings) : new DemoSource()), [settings]);
   const demo = source.key === 'demo';
   const [cached, setCached] = useState<Cached | null>(() => loadCache(source.key));
@@ -120,7 +122,8 @@ export function StudyApp() {
 
   const study = lib && route.study ? lib.studies.find((s) => s.folder === ROOT + route.study) || null : null;
   let body: ComponentChildren;
-  if (!lib) body = state === 'error' ? <p class="cs-note">{error}</p> : <p class="cs-note">Reading the studies…</p>;
+  if (route.page === 'settings') body = <SettingsPage settings={settings} onSave={(s) => { setSettings(saveSettings(s)); location.hash = '#/'; }} />;
+  else if (!lib) body = state === 'error' ? <p class="cs-note">{error}</p> : <p class="cs-note">Reading the studies…</p>;
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
@@ -130,14 +133,14 @@ export function StudyApp() {
   return (
     <div class="cs">
       <header class="cs-top">
-        <a class="cs-brand" href="#/">Character Study</a>
+        <a class="cs-brand" href="#/"><img src="./icons/icon.svg" alt="" width="28" height="28" />Crow</a>
         <nav class="cs-topnav">
           <a href="#/lenses">Lenses</a>
           <button type="button" class="cs-sync" onClick={sync}>Refresh</button>
-          <a href="../">Sparrow</a>
+          <a href="#/settings">Settings</a>
         </nav>
       </header>
-      {demo && <p class="cs-banner">This is a made-up sample. To see your own studies, open Sparrow first, then come back here from its Settings page, so this page can use Sparrow's key.</p>}
+      {demo && route.page !== 'settings' && <p class="cs-banner">This is a made-up sample. To see your own studies, <a href="#/settings">paste your key in Settings</a>.</p>}
       {error && lib && <p class="cs-banner">{error}</p>}
       <main class="cs-main">{body}</main>
     </div>
@@ -242,7 +245,7 @@ function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
     <section>
       <h1>Studies</h1>
       {missing && <p class="cs-note">There is no study called {missing}. Pick one below.</p>}
-      {!lib.studies.length && <p class="cs-note">No studies yet. Paste a chapter in the Character Study chat and the first one appears here.</p>}
+      {!lib.studies.length && <p class="cs-note">No studies yet. Paste a chapter in the Crow project's chat and the first one appears here.</p>}
       <div class="cs-studies">
         {lib.studies.map((s) => (
           <a class="cs-study" href={studyHref(s)} key={s.folder}>
@@ -515,6 +518,49 @@ function LensesPage({ lib }: { lib: StudyLibrary }) {
       <p class="cs-quiet">Ways of reading a character or a plot. A new lens is a new note in the vault's Studies/Lenses folder.</p>
       {side('character', 'Character lenses')}
       {side('plot', 'Plot lenses')}
+    </section>
+  );
+}
+
+function SettingsPage({ settings, onSave }: { settings: Settings; onSave: (s: Settings) => void }) {
+  const [token, setToken] = useState(settings.token);
+  const [show, setShow] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = async (e: Event) => {
+    e.preventDefault();
+    const next = { ...settings, token: token.trim() };
+    if (!next.token) { setNote('Paste the key first.'); return; }
+    setBusy(true);
+    setNote('Checking the key with GitHub…');
+    try {
+      await new GitHubSource(next).test();
+      onSave(next);
+    } catch (err) {
+      setNote((err as Error).message || 'GitHub did not accept the key. Check it and try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section class="cs-settings">
+      <h1>Settings</h1>
+      <h2 class="cs-h2">Your key</h2>
+      <p>Crow reads your studies from the vault ({settings.owner}/{settings.repo}) with a GitHub key, the same kind Sparrow uses.
+        The key is kept on this device only. From the home-screen icon, Crow keeps its own key, so paste it here once.</p>
+      <p class={isConnected(settings) ? 'cs-ok' : 'cs-quiet'}>{isConnected(settings) ? 'A key is saved on this device.' : 'No key is saved on this device yet.'}</p>
+      <form onSubmit={save}>
+        <label class="cs-label" for="cs-key">Key</label>
+        <div class="cs-keyrow">
+          <input id="cs-key" type={show ? 'text' : 'password'} value={token} onInput={(e) => setToken(e.currentTarget.value)}
+            autocomplete="off" autocapitalize="off" spellcheck={false} placeholder="github_pat_…" />
+          <button type="button" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+        </div>
+        <button type="submit" class="primary cs-save" disabled={busy}>Save the key</button>
+      </form>
+      {note && <p class="cs-note">{note}</p>}
+      <h2 class="cs-h2">Sparrow</h2>
+      <p><a href="../">Open Sparrow</a></p>
     </section>
   );
 }

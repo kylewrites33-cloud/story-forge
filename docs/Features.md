@@ -640,13 +640,19 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.
 
-## Character Study (a separate app, 2026-10-26)
+## Crow, the character and plot study app (2026-10-26; first called Character Study)
 
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
 these stories scene by scene and build out the characters", with "various views that we can cycle through", and the
 plot studied beside it: "tabs so that I am focusing on just character or just plot". Its own page at
-`character-study/` on the same web address, opened from Settings in Sparrow (it uses Sparrow's key and colours). Not
+`crow/` on the same web address (the old `character-study/` address forwards there), opened from Settings in Sparrow. Not
 part of Sparrow's sidebar yet; it may join Sparrow later.
+
+- **Crow** (Kyle, 2026-10-26: "this app, I want to be named Crow", and "an icon on my iPad, and all of the information
+  can persist between sessions, the way Sparrow does"). Its own manifest, name and crow icon, so Add to Home Screen gives
+  a separate Crow icon. From that icon it has its own storage, so Crow has its own Settings with a key box (in the same
+  browser tab it shares Sparrow's key). Sparrow's service worker keeps Crow's page and files too, each app's page under its
+  own name, so both open offline; the last-read studies are kept on the device.
 
 - The notes are in the vault's `Studies/` folder (types `study`, `study-character`, `study-scene`, `study-lens`); the
   team writes them with the `character-study` skill from chapters Kyle pastes in the Character Study chat. The story's
