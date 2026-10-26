@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Character Study</title>
+    <meta name="description" content="Studying the characters and plot of finished stories, scene by scene." />
+    <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#16151b" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Character Study" />
+    <script>
+      // Sparrow's colour theme (Settings, Colours), put on before the page draws (see src/lib/theme.ts).
+      try {
+        var t = localStorage.getItem('story-forge.theme');
+        var dark = ['violet-night', 'midnight', 'forest', 'ember', 'ink', 'black', 'typewriter'];
+        if (t && t !== 'auto') { document.documentElement.dataset.theme = t; document.documentElement.dataset.mode = dark.indexOf(t) >= 0 ? 'dark' : 'light'; }
+      } catch (e) {}
+    </script>
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/study/main.tsx"></script>
+  </body>
+</html>
