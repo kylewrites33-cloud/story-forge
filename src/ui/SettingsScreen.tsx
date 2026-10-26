@@ -38,7 +38,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
   return (
     <section>
       <h1>Settings</h1>
-      <p class="settings-tool"><a href="./character-study/">Open Character Study</a>, the separate app for studying the characters and plot of finished stories. It uses this key.</p>
+      <p class="settings-tool"><a href="./crow/">Open Crow</a>, the separate app for studying the characters and plot of finished stories. In this browser it uses this key; from its own home-screen icon it keeps its own.</p>
       <Colours />
       <TopOfScreen />
       <TimerSound />
