@@ -2730,7 +2730,7 @@
       "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order. For kind fill, the ask lists the {braces} asks Kyle left in a scene (### B1, B2 ...) and the ## Result answers each under the same heading; the app puts the answers into the page and the agent never edits the scene."
     },
     "study": {
-      "description": "A finished story Kyle is studying in the Character study app: how its author builds characters and plot. Lives at Studies/<Title>/Study.md. Its notes are analysis, never canon for Kyle's books.",
+      "description": "A finished story Kyle is studying in Crow (the character and plot study app): how its author builds characters and plot. Lives at Studies/<Title>/Study.md. Its notes are analysis, never canon for Kyle's books.",
       "scope": "vault",
       "folder": "Studies",
       "recursive": true,
@@ -2764,7 +2764,7 @@
       "body": "## Plot structure (how the story is built so far) and ## What we are learning (running conclusions about character and plot)."
     },
     "study-character": {
-      "description": "One character of a studied story: the card in the Character study app. Its picture, if Kyle added one, is Studies/<Study>/Faces/<name>.jpg.",
+      "description": "One character of a studied story: the card in Crow (the character and plot study app). Its picture, if Kyle added one, is Studies/<Study>/Faces/<name>.jpg.",
       "scope": "vault",
       "folder": "Studies",
       "recursive": true,
@@ -2855,7 +2855,7 @@
       "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why lines and one ### section per plot lens; then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
     },
     "study-lens": {
-      "description": "A way of reading a character or a plot in the Character study app. Studies/Lenses/<name>.md. A new lens is a new note; the app shows it without a change.",
+      "description": "A way of reading a character or a plot in Crow (the character and plot study app). Studies/Lenses/<name>.md. A new lens is a new note; the app shows it without a change.",
       "scope": "vault",
       "folder": "Studies/Lenses",
       "filename": "{name}",
