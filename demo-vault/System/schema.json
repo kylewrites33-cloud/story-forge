@@ -2850,9 +2850,13 @@
         "summary": {
           "type": "string",
           "description": "One or two sentences, in our words"
+        },
+        "source_url": {
+          "type": "string",
+          "description": "Where Kyle can read the scene in full (the translator's page); the text itself is never saved here"
         }
       },
-      "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why lines and one ### section per plot lens; then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
+      "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why, - Others (non-carded forces and their roles, as The world (opposes)) lines; ### Beats (one '- <Who> (<kind>[, turning]): <beat>' line per beat, Who being the character or force that causes it); ### Retelling (the scene in our words, one paragraph); then one ### section per plot lens. Then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), - Role (driver, opposes, supports, receives), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
     },
     "study-lens": {
       "description": "A way of reading a character or a plot in Crow (the character and plot study app). Studies/Lenses/<name>.md. A new lens is a new note; the app shows it without a change.",
