@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { chapterGroups, chapterHeading } from '../lib/board.ts';
+import { chapterGroups, chapterHeading, sceneLabel } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label, listLines, longList, sceneHeader } from '../lib/format.ts';
 import { basename, toNumber } from '../lib/links.ts';
 import { searchScenes } from '../lib/search.ts';
@@ -429,6 +429,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
   // While searching, the chapter with the best match comes first, and each chapter lists its best match first.
   const groups = filtering ? chapterGroups(schema, shown).sort((a, b) => shown.indexOf(a.scenes[0]) - shown.indexOf(b.scenes[0])) : allGroups;
   const top = shown[0];
+  const topName = top ? sceneLabel(scenes, top) : null;
   const rates = loadRates();
   const counts: Record<string, number> = {};
   scenes.forEach((s) => { const st = String(s.data.status || 'planned'); counts[st] = (counts[st] || 0) + 1; });
@@ -515,7 +516,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
         <p class="best-match">
           <a class="button" href={href.write(top.path)}>
             <Icon name="search" size={18} />
-            <span>Best match: {(toNumber(top.data.chapter) != null ? 'Chapter ' + toNumber(top.data.chapter) + ' · ' : '') + sceneHeader(top.data, basename(top.path))}</span>
+            <span>Best match: {[topName && topName.chapter, (topName && topName.scene) || sceneHeader(top.data, basename(top.path))].filter(Boolean).join(' · ')}</span>
           </a>
         </p>
       )}

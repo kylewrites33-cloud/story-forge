@@ -1,8 +1,9 @@
 // The home page, like Novelcrafter's "Your Novels": Books or Series at the top, the scenes Kyle wrote in last,
 // then every book as a cover card (or a list), with search and sort. A series page shows its books and its notes.
 import { useEffect, useState } from 'preact/hooks';
+import { sceneLabel } from '../lib/board.ts';
 import { coverUrl } from '../lib/covers.ts';
-import { sceneHeader, timeAgo } from '../lib/format.ts';
+import { timeAgo } from '../lib/format.ts';
 import {
   bookChapters, bookWords, continueList, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
@@ -345,12 +346,12 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
           <p class="home-label">Continue where you left off</p>
           <ul class="continue">
             {go.length ? go.map(({ note, book, at }) => {
-              const ch = toNumber(note.data.chapter);
+              const named = sceneLabel(book.scenes.map((p) => index.notes[p]).filter(Boolean), note);
               return (
                 <li key={note.path}>
                   <a href={href.write(note.path)}>
                     <span class="book-title">{book.title}</span>
-                    <span class="meta">{[ch != null ? 'Chapter ' + ch : '', sceneHeader(note.data)].filter(Boolean).join(' · ')}</span>
+                    <span class="meta">{[named.chapter, named.scene].filter(Boolean).join(' · ')}</span>
                     <span class="meta">{timeAgo(at)}</span>
                     <span class="go">Keep writing <Icon name="right" size={16} /></span>
                   </a>

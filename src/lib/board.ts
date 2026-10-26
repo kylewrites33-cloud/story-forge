@@ -1,5 +1,6 @@
 // The Chapter Grid: a book's scenes grouped by chapter, in reading order.
 import { toNumber } from './links.ts';
+import { sceneHeader } from './format.ts';
 import type { NoteRecord, Schema } from './types.ts';
 
 export interface ChapterGroup {
@@ -36,4 +37,22 @@ export function chapterGroups(schema: Schema, scenes: NoteRecord[]): ChapterGrou
 export function chapterHeading(g: ChapterGroup): string {
   if (g.num == null) return 'No chapter yet';
   return 'Chapter ' + g.num + (g.title ? ': ' + g.title : '');
+}
+
+/** A chapter's name as it is now: the `chapter_title` on its scenes (Kyle, 2026-10-26: Continue showed a scene's old
+ * title after the chapter was renamed). `scenes` is the book's scene notes in reading order. */
+export function chapterName(scenes: NoteRecord[], chapter: number | null): string {
+  if (chapter == null) return '';
+  const s = scenes.find((n) => toNumber(n.data.chapter) === chapter && typeof n.data.chapter_title === 'string' && n.data.chapter_title.trim() !== '');
+  return s ? String(s.data.chapter_title).trim() : '';
+}
+
+/** How to name a scene wherever it stands for its chapter (Continue, Keep writing, Find, Next): the chapter's current
+ * name, and the scene's own header only when the chapter has no name or more than one scene. */
+export function sceneLabel(scenes: NoteRecord[], note: NoteRecord): { chapter: string; scene: string } {
+  const num = toNumber(note.data.chapter);
+  const name = chapterName(scenes, num);
+  const shared = num != null && scenes.filter((n) => toNumber(n.data.chapter) === num).length > 1;
+  const chapter = num == null ? '' : 'Chapter ' + num + (name ? ': ' + name : '');
+  return { chapter, scene: !name || shared ? sceneHeader(note.data) : '' };
 }
