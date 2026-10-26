@@ -2728,6 +2728,179 @@
         ]
       },
       "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order. For kind fill, the ask lists the {braces} asks Kyle left in a scene (### B1, B2 ...) and the ## Result answers each under the same heading; the app puts the answers into the page and the agent never edits the scene."
+    },
+    "study": {
+      "description": "A finished story Kyle is studying in the Character study app: how its author builds characters and plot. Lives at Studies/<Title>/Study.md. Its notes are analysis, never canon for Kyle's books.",
+      "scope": "vault",
+      "folder": "Studies",
+      "recursive": true,
+      "filename": "Study",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "study"
+        },
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "medium": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "description": "What Kyle shared it from. The story's text itself is never saved here; only summaries and short quotes."
+        },
+        "status": {
+          "enum": "open_done",
+          "default": "open"
+        }
+      },
+      "body": "## Plot structure (how the story is built so far) and ## What we are learning (running conclusions about character and plot)."
+    },
+    "study-character": {
+      "description": "One character of a studied story: the card in the Character study app. Its picture, if Kyle added one, is Studies/<Study>/Faces/<name>.jpg.",
+      "scope": "vault",
+      "folder": "Studies",
+      "recursive": true,
+      "filename": "{name}",
+      "required": [
+        "type",
+        "name",
+        "study"
+      ],
+      "properties": {
+        "type": {
+          "const": "study-character"
+        },
+        "name": {
+          "type": "string"
+        },
+        "study": {
+          "type": "string",
+          "description": "The study's title"
+        },
+        "role": {
+          "type": "string"
+        },
+        "facts": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "The card's key lines, at most six"
+        },
+        "best_lens": {
+          "type": "string",
+          "description": "The character lens that explains this character best so far"
+        },
+        "order": {
+          "type": "number"
+        }
+      },
+      "body": "One ## section per character lens, named as the lens note, with - Field: value lines; then ## Notes."
+    },
+    "study-scene": {
+      "description": "One scene of a studied story, read for character and for plot.",
+      "scope": "vault",
+      "folder": "Studies",
+      "recursive": true,
+      "idPrefix": "SC",
+      "filename": "{id} {title}",
+      "required": [
+        "type",
+        "id",
+        "title",
+        "study"
+      ],
+      "properties": {
+        "type": {
+          "const": "study-scene"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^SC-\\d{3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "study": {
+          "type": "string",
+          "description": "The study's title"
+        },
+        "order": {
+          "type": "number"
+        },
+        "where": {
+          "type": "string",
+          "description": "Where it sits in the book, as Volume 1, Chapter 2"
+        },
+        "characters": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the study's characters in the scene"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One or two sentences, in our words"
+        }
+      },
+      "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why lines and one ### section per plot lens; then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
+    },
+    "study-lens": {
+      "description": "A way of reading a character or a plot in the Character study app. Studies/Lenses/<name>.md. A new lens is a new note; the app shows it without a change.",
+      "scope": "vault",
+      "folder": "Studies/Lenses",
+      "filename": "{name}",
+      "required": [
+        "type",
+        "name",
+        "side"
+      ],
+      "properties": {
+        "type": {
+          "const": "study-lens"
+        },
+        "name": {
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "character",
+            "plot"
+          ]
+        },
+        "framework": {
+          "type": "string",
+          "description": "The framework and its author, so the craft claim is named"
+        },
+        "source": {
+          "type": "string",
+          "description": "Where it comes from; unverified if we could not check it"
+        },
+        "fields": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "The questions a reading fills, in order"
+        },
+        "question": {
+          "type": "string",
+          "description": "What this lens asks of a scene"
+        },
+        "order": {
+          "type": "number"
+        }
+      },
+      "body": "What the lens is, in a few lines, and when it tends to explain a story best."
     }
   },
   "boards": {

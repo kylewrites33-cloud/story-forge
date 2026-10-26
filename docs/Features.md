@@ -634,3 +634,26 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **Edit > Changes** lists the story calls waiting, each chapter with changes, and the saved drafts.
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.
+
+## Character Study (a separate app, 2026-10-26)
+
+Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
+these stories scene by scene and build out the characters", with "various views that we can cycle through", and the
+plot studied beside it: "tabs so that I am focusing on just character or just plot". Its own page at
+`character-study/` on the same web address, opened from Settings in Sparrow (it uses Sparrow's key and colours). Not
+part of Sparrow's sidebar yet; it may join Sparrow later.
+
+- The notes are in the vault's `Studies/` folder (types `study`, `study-character`, `study-scene`, `study-lens`); the
+  team writes them with the `character-study` skill from chapters Kyle pastes in the Character Study chat. The story's
+  text is never saved, only summaries and short quotes.
+- Studies, then a study with two tabs. **Character**: a card per character (name above the face, role and key facts
+  below, the best lens so far), lens buttons that switch every card to that lens's reading, and scenes with each
+  character's best lens and whether it holds. **Plot**: how the plot is built, which plot lens explains the scenes, and
+  the scenes as a chain joined by therefore, but or and then, with who drives each and why it comes next.
+- A character's page: the card, how often each lens was best, the reading across the story, and scene by scene with
+  moments (short quotes) and the lens's reading there. **Add a picture** saves Kyle's own picture as
+  `Studies/<Study>/Faces/<Name>.jpg`; without one the card shows a plain silhouette.
+- A scene's page: summary, the plot reading and every plot lens, then each character's moments and lenses.
+- Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
+  lens waits for the tweet Kyle shared (not found in the vault).
+- Without Sparrow's key it shows a made-up sample study from the demo vault.

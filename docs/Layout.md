@@ -115,4 +115,6 @@ src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
 tests/                   Node test runner tests
+src/lib/study.ts         the Character study app: Studies/ notes (studies, character cards, scenes read for character and plot, lenses), tallies of the best lens
+src/study/               the Character study app's page (character-study/index.html): main.tsx, StudyApp.tsx (its screens), study.css
 ```

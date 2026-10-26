@@ -38,6 +38,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
   return (
     <section>
       <h1>Settings</h1>
+      <p class="settings-tool"><a href="./character-study/">Open Character Study</a>, the separate app for studying the characters and plot of finished stories. It uses this key.</p>
       <Colours />
       <TopOfScreen />
       <TimerSound />
