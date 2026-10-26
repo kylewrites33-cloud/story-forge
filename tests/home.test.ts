@@ -125,3 +125,17 @@ test('the Chapter Grid search finds what Kyle means, best first', async () => {
   assert.deepEqual(ids('vote 33'), ['c']);
   assert.deepEqual(ids('nothing here'), []);
 });
+
+test('Continue names a chapter by its current name, not the scene\'s old title', async () => {
+  const { chapterName, sceneLabel } = await import('../src/lib/board.ts');
+  const n = (path: string, data: Record<string, unknown>) => ({ path, type: 'scene', data, body: '' } as unknown as NoteRecord);
+  const a = n('S-045.md', { title: 'Grey builds the slime a real barn', chapter: 29, chapter_title: 'Three Days' });
+  const b = n('S-046.md', { title: 'Peppermint leaves', chapter: 34 });
+  const c = n('S-047.md', { title: 'Second half', headline: 'Rue snaps the barrier', chapter: 34, chapter_title: 'Fighting Saffron' });
+  const d = n('S-048.md', { title: 'Untitled chapter scene', chapter: 35 });
+  const scenes = [a, b, c, d];
+  assert.equal(chapterName(scenes, 34), 'Fighting Saffron');
+  assert.deepEqual(sceneLabel(scenes, a), { chapter: 'Chapter 29: Three Days', scene: '' });
+  assert.deepEqual(sceneLabel(scenes, b), { chapter: 'Chapter 34: Fighting Saffron', scene: 'Peppermint leaves' });
+  assert.deepEqual(sceneLabel(scenes, d), { chapter: 'Chapter 35', scene: 'Untitled chapter scene' });
+});

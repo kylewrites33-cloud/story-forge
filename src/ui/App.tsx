@@ -18,7 +18,7 @@ import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
-import { chapterGroups } from '../lib/board.ts';
+import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
@@ -743,8 +743,9 @@ export function App() {
       else if (boardKey === 'overview') {
         const resume = keepWriting(view, book, source.key);
         const rn = resume ? view.notes[resume] : null;
-        const keep = rn ? { to: href.write(rn.path), title: String(rn.data.title || rn.data.headline || 'Your scene'),
-          where: [rn.data.chapter != null && rn.data.chapter !== '' ? 'Chapter ' + rn.data.chapter : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
+        const named = rn ? sceneLabel(book.scenes.map((p) => view.notes[p]).filter(Boolean), rn) : null;
+        const keep = rn && named ? { to: href.write(rn.path), title: named.chapter || named.scene || 'Your scene',
+          where: [named.chapter ? named.scene : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
         screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keep={keep} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
       }
       else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;

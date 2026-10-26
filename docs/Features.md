@@ -94,6 +94,11 @@ add a dated line here when you add or change one.
   card opens the writing screen; Needs work, Edit card and the note sit behind its "•••" button.
   Novelcrafter-style additions (Kyle, 2026-10-18): the app opens on a home page (Books or Series, "Continue where you
   left off" from the scenes last opened on this device, cover cards or a list, search and sort) and a page per series.
+  Chapter names are read fresh (Kyle, 2026-10-26: "when I open up the app and it tells me to continue on, it gives me an
+  old version of the chapter title"): Continue where you left off, Home's Keep writing card, Find and the Chapter Grid's
+  Best match name a scene by its chapter's current name ("Chapter 29: Three Days", from `chapter_title`), and add the
+  scene's own header only when the chapter has no name or holds more than one scene. Before, they showed the scene's
+  first `title`, which never changes when a chapter is renamed. `sceneLabel` in src/lib/board.ts.
   A book's cover is `Cover.jpg` in the book's folder, shrunk on the device before saving, and is added or changed on Book details (`#/board/details/<book>`, the sidebar's item under Keep writing, like Novelcrafter's novel settings; the Chapter Grid's cover links there; Kyle 2026-10-18); a book without one gets a
   pattern from its title. Empty pages offer buttons (Create first scene, Start from an outline: pasted lines become
   planned scenes). Chapter Grid: a summary under the title (stage, chapters, scenes, words, pages, a count per status, and a ring in the next status's colour for how far the book is through drafting, revising or finishing, set by its least finished scenes; `bookProgress`, Kyle 2026-10-18), coloured status edge with a key under the filter (grey planned, orange drafted, blue revised, green final; no scene ID or status word on cards and outline rows, an experiment, Kyle 2026-10-18), scene `labels` and `subtitle`, a search box (Kyle, 2026-10-21: "if i type in 33, chapter 33 should show up": a number finds that chapter, then the scene with that ID; "ch 33", "S-051" or "s51" ask for one or the other; a chapter's title finds its scenes; a nickname finds the character's scenes; one wrong letter in a longer title or name still matches; the best match comes first, with a Best match button, and Enter opens it; `src/lib/search.ts`), Outline (first, the default) or Cards,
