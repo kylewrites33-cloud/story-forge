@@ -33,11 +33,18 @@ export interface StudyCharacter {
   /** The reading across every scene so far, by lens name. */
   readings: Record<string, Reading>;
   notes: string;
+  /** "## Checks": does the card's reading of each lens field hold in each scene (Kyle, 2026-10-27, the trait table). */
+  checks: Check[];
   /** The picture Kyle added, Studies/<Study>/Faces/<name>.jpg (or .png), if there is one. */
   face: FileEntry | null;
 }
 
 export type Holds = 'yes' | 'partly' | 'no' | 'first' | '';
+
+/** Whether a card's reading holds in one scene; 'unshown' is "not shown" (the scene gives no evidence). */
+export type Verdict = 'yes' | 'partly' | 'no' | 'unshown';
+/** One "- <Lens> · <Field>: SC-001 yes; SC-002 partly" line of a card's ## Checks. */
+export interface Check { lens: string; field: string; verdicts: Record<string, Verdict>; }
 
 /** A character's or a force's part in one scene's plot (Kyle, 2026-10-26: "a color explaining their role"). */
 export type Role = 'driver' | 'opposes' | 'supports' | 'receives' | '';
@@ -240,11 +247,34 @@ export function parseCharacter(path: string, data: Record<string, unknown>, body
   const s = sections(body, 2);
   const readings: Record<string, Reading> = {};
   let notes = '';
+  let checks: Check[] = [];
   for (const p of s.parts) {
     if (/^notes$/i.test(p.heading)) notes = p.text;
+    else if (/^checks$/i.test(p.heading)) checks = items(p.text).map(parseCheck).filter((c): c is Check => !!c);
     else readings[p.heading] = fieldLines(p.text);
   }
-  return { name: str(data.name), path, role: str(data.role), facts: list(data.facts), bestLens: str(data.best_lens), order: num(data.order, 999), readings, notes, face: null };
+  return { name: str(data.name), path, role: str(data.role), facts: list(data.facts), bestLens: str(data.best_lens), order: num(data.order, 999), readings, notes, checks, face: null };
+}
+
+/** "Save the Cat · Want or goal: SC-001 no; SC-002 yes; SC-005 not shown", or null for a line in another shape. */
+export function parseCheck(line: string): Check | null {
+  const m = /^(.+?)\s+[·•|]\s+(.+?):\s*(.*)$/.exec(line.trim());
+  if (!m) return null;
+  const verdicts: Record<string, Verdict> = {};
+  for (const part of m[3].split(/[;,]/)) {
+    const v = /^\s*(SC-\d{3})\s+(.+?)\s*\.?\s*$/i.exec(part);
+    if (!v) continue;
+    const w = v[2].toLowerCase();
+    const verdict: Verdict | '' = w.startsWith('yes') ? 'yes' : w.startsWith('partly') ? 'partly' : w.startsWith('not') ? 'unshown' : w.startsWith('no') ? 'no' : '';
+    if (verdict) verdicts[v[1].toUpperCase()] = verdict;
+  }
+  return { lens: m[1].trim(), field: m[2].trim(), verdicts };
+}
+
+/** The scene's own reading of one lens field for a character ('' when the scene has none). */
+export function sceneField(scene: StudyScene, name: string, lens: string, fieldName: string): string {
+  const me = scene.cast.find((c) => c.name === name);
+  return me && me.readings[lens] ? field(me.readings[lens], fieldName) : '';
 }
 
 export function parseLens(data: Record<string, unknown>, body: string): Lens {

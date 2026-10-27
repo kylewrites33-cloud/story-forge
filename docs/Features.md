@@ -664,6 +664,11 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
 - A character's page: the card, how often each lens was best, the reading across the story, and scene by scene with
   moments (short quotes) and the lens's reading there. **Add a picture** saves Kyle's own picture as
   `Studies/<Study>/Faces/<Name>.jpg`; without one the card shows a plain silhouette.
+- **The trait table** (Kyle, 2026-10-27: "a table where i can see each of these character traits from a particular
+  perspective, and see if they hold up"). Character tab, Trait table: pick a character and a lens (or Every lens). A row
+  per lens field with the card's reading and how many scenes it fully holds in; a column per scene with the scene's own
+  reading of that field, coloured and labelled by the verdict in the card's `## Checks` (holds, partly, breaks, not
+  shown). Tapping a cell opens that scene's lenses. The team keeps `## Checks` up to date (character-study skill).
 - **The plot view** (Kyle, 2026-10-26: "with the plot scenes, i should be able to read the whole text as one option.
   next option would be to see a beat by beat breakdown. and then i want to see these scenes lined up next to each other
   in some view where i can see each character in the scene as an icon, with maybe a color explaining their role somehow.

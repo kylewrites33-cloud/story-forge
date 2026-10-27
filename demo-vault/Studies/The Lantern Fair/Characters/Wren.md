@@ -21,5 +21,11 @@ order: 1
 ## Comedy Type
 - Fit: does not fit, because the story plays her straight
 
+## Checks
+Does the card's reading hold in each scene? yes, partly, no, or not shown.
+- Save the Cat · Flaw: SC-001 yes; SC-002 yes
+- Save the Cat · Want: SC-001 yes; SC-002 partly
+- Save the Cat · Need: SC-001 not shown; SC-002 no
+
 ## Notes
 - 2026-10-26: Save the Cat best in both scenes.

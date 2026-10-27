@@ -2,7 +2,7 @@
 // Reads Studies/ in the vault with the key saved on this device (shared with Sparrow in the same browser tab, its own
 // when Crow runs from its home-screen icon); without one it shows the demo vault's sample study.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { ComponentChildren } from 'preact';
+import { Fragment, type ComponentChildren } from 'preact';
 import { loadSettings, saveSettings, isConnected, type Settings } from '../lib/settings.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { DemoSource } from '../lib/demo-source.ts';
@@ -11,8 +11,8 @@ import { coverProblem, shrinkToJpeg } from '../lib/covers.ts';
 import { inline } from '../lib/markdown.ts';
 import type { FileEntry, VaultSource } from '../lib/types.ts';
 import {
-  ROOT, ROLES, beatOwner, buildLibrary, driveGrid, faceFor, facePath, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, valueShift,
-  type Lens, type Reading, type Role, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
+  ROOT, ROLES, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, valueShift,
+  type Lens, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
@@ -65,7 +65,7 @@ type PlotViewName = 'board' | 'drivers' | 'lenses';
 /** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
 type SceneTab = 'read' | 'beats' | 'lenses';
 
-interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; view?: PlotViewName; sceneTab?: SceneTab; }
+interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
@@ -75,6 +75,7 @@ function parseRoute(hash: string): Route {
   const study = parts[1];
   if (parts[2] === 'c' && parts[3]) return { page: 'character', study, name: parts[3] };
   if (parts[2] === 'scene' && parts[3]) return { page: 'scene', study, name: parts[3], sceneTab: parts[4] === 'beats' ? 'beats' : parts[4] === 'lenses' ? 'lenses' : 'read' };
+  if (parts[2] === 'traits') return { page: 'study', study, tab: 'character', traits: true, name: parts[3] || '', lens: parts[4] || '' };
   const view: PlotViewName = parts[3] === 'drivers' ? 'drivers' : parts[3] === 'lenses' ? 'lenses' : 'board';
   return { page: 'study', study, tab: parts[2] === 'plot' ? 'plot' : 'character', view };
 }
@@ -82,6 +83,7 @@ const enc = encodeURIComponent;
 const studyHref = (s: Study, tab: Side = 'character') => '#/s/' + enc(s.folder.slice(ROOT.length)) + (tab === 'plot' ? '/plot' : '');
 const charHref = (s: Study, name: string) => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/c/' + enc(name);
 const sceneHref = (s: Study, id: string, tab: SceneTab = 'read') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/scene/' + enc(id) + (tab === 'read' ? '' : '/' + tab);
+const traitsHref = (s: Study, name = '', lens = '') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/traits' + (name ? '/' + enc(name) + (lens ? '/' + enc(lens) : '') : '');
 const plotHref = (s: Study, view: PlotViewName) => studyHref(s, 'plot') + (view === 'board' ? '' : '/' + view);
 
 // The lens picked on each side, remembered on this device. '' is the plain card (character) or the overview (plot).
@@ -136,7 +138,7 @@ export function StudyApp() {
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
   else if (route.page === 'scene') body = <ScenePage lib={lib} study={study} id={route.name || ''} tab={route.sceneTab || 'read'} lens={lens} setLens={setLens} source={source} />;
-  else body = <StudyPage lib={lib} study={study} tab={route.tab || 'character'} view={route.view || 'board'} lens={lens} setLens={setLens} source={source} />;
+  else body = <StudyPage lib={lib} study={study} tab={route.tab || 'character'} view={route.view || 'board'} traits={route.traits ? { name: route.name || '', lens: route.lens || '' } : null} lens={lens} setLens={setLens} source={source} />;
 
   return (
     <div class="cs">
@@ -327,13 +329,20 @@ function Card({ lib, study, c, lens, source }: { lib: StudyLibrary; study: Study
   );
 }
 
-function StudyPage({ lib, study, tab, view, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Side; view: PlotViewName; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
+function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Side; view: PlotViewName; traits: { name: string; lens: string } | null; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
   const learning = study.sections['What we are learning'];
   const views: [PlotViewName, string][] = [['board', 'Story board'], ['drivers', 'Who drives the plot'], ['lenses', 'Plot lenses']];
   return (
     <section>
       <StudyHead study={study} tab={tab} />
-      {tab === 'character' ? (
+      {tab === 'character' && (
+        <nav class="cs-views">
+          <a href={studyHref(study)} class={!traits ? 'on' : ''} aria-current={!traits ? 'page' : undefined}>Cards</a>
+          <a href={traitsHref(study)} class={traits ? 'on' : ''} aria-current={traits ? 'page' : undefined}>Trait table</a>
+        </nav>
+      )}
+      {tab === 'character' && traits ? <TraitTable study={study} pick={traits} source={source} />
+      : tab === 'character' ? (
         <>
           <Chips lenses={lensesFor(lib, 'character')} value={lens.character} onPick={(n) => setLens('character', n)} plain="Card" />
           {!study.characters.length && <p class="cs-note">No characters yet.</p>}
@@ -373,6 +382,71 @@ function SceneRows({ study }: { study: Study }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+const VERDICT_WORD: Record<Verdict, string> = { yes: 'Holds', partly: 'Partly', no: 'Breaks', unshown: 'Not shown' };
+
+/** The trait table (Kyle, 2026-10-27: "a table where i can see each of these character traits from a particular
+ *  perspective, and see if they hold up"). One character and one lens (or every lens): a row per field with the card's
+ *  reading, a column per scene with the scene's own reading, coloured by the card's ## Checks verdict. */
+function TraitTable({ study, pick, source }: { study: Study; pick: { name: string; lens: string }; source: VaultSource }) {
+  const withChecks = study.characters.filter((c) => c.checks.length);
+  if (!withChecks.length) return <p class="cs-note">No card has its checks yet. The team adds them when it audits the cards.</p>;
+  const c = withChecks.find((x) => x.name === pick.name) || withChecks[0];
+  const lensNames = [...new Set(c.checks.map((k) => k.lens))];
+  const lens = lensNames.includes(pick.lens) ? pick.lens : '';
+  const rows = c.checks.filter((k) => !lens || k.lens === lens);
+  const scenes = study.scenes.filter((s) => s.cast.some((x) => x.name === c.name) || rows.some((k) => k.verdicts[s.id]));
+  const cols = { gridTemplateColumns: 'minmax(190px, 1.4fr) repeat(' + scenes.length + ', minmax(150px, 1fr))', '--n': String(scenes.length) };
+  const verdicts: Verdict[] = ['yes', 'partly', 'no', 'unshown'];
+  return (
+    <>
+      <div class="cs-pickrow" role="group" aria-label="Character">
+        {withChecks.map((x) => (
+          <a key={x.name} href={traitsHref(study, x.name, lens)} class={'cs-pick' + (x === c ? ' on' : '')} aria-current={x === c ? 'true' : undefined}>
+            <Token study={study} source={source} name={x.name} size="s" /><span>{x.name}</span>
+          </a>
+        ))}
+      </div>
+      <div class="cs-chips" role="group" aria-label="Lens">
+        <a href={traitsHref(study, c.name)} class={!lens ? 'on' : ''}>Every lens</a>
+        {lensNames.map((l) => <a key={l} href={traitsHref(study, c.name, l)} class={lens === l ? 'on' : ''}>{l}</a>)}
+      </div>
+      <div class="cs-verdictkey">{verdicts.map((v) => <span key={v} class={'cs-verdict v-' + v}>{VERDICT_WORD[v]}</span>)}</div>
+      <div class="cs-grid-box">
+        <div class="cs-grid cs-traits" role="table" aria-label={'Does ' + c.name + "'s card hold, scene by scene"}>
+          <div class="cs-grid-row head" role="row" style={cols}>
+            <span role="columnheader" class="cs-sticky">Trait, as the card reads it</span>
+            {scenes.map((s) => <a role="columnheader" key={s.id} href={sceneHref(study, s.id, 'lenses')}><b>{s.id}</b><span>{s.title}</span></a>)}
+          </div>
+          {rows.map((k, i) => {
+            const card = c.readings[k.lens] ? (c.readings[k.lens].find(([f]) => f.toLowerCase() === k.field.toLowerCase()) || ['', ''])[1] : '';
+            const judged = Object.values(k.verdicts).filter((v) => v !== 'unshown');
+            const yes = judged.filter((v) => v === 'yes').length;
+            return (
+              <Fragment key={k.lens + '·' + k.field}>
+                {!lens && (i === 0 || rows[i - 1].lens !== k.lens) && <div class="cs-traits-lens" role="row"><span role="rowheader" class="cs-sticky">{k.lens}</span></div>}
+                <div class="cs-grid-row" role="row" style={cols}>
+                  <span role="rowheader" class="cs-trait cs-sticky"><b>{k.field}</b><span class="cs-holdcount">{judged.length ? 'Holds in ' + yes + ' of ' + judged.length : 'Not shown yet'}</span>{card ? <span dangerouslySetInnerHTML={{ __html: inline(card) }} /> : <span class="cs-quiet">not on the card</span>}</span>
+                  {scenes.map((s) => {
+                    const v = k.verdicts[s.id];
+                    const text = sceneField(s, c.name, k.lens, k.field);
+                    return (
+                      <a role="cell" key={s.id} href={sceneHref(study, s.id, 'lenses')} class={'cs-tcell' + (v ? ' v-' + v : ' v-none')}>
+                        {v && <span class={'cs-verdict v-' + v}>{VERDICT_WORD[v]}</span>}
+                        {text ? <span class="cs-tcell-text" dangerouslySetInnerHTML={{ __html: inline(text) }} /> : !v ? <span class="cs-quiet">not in it</span> : null}
+                      </a>
+                    );
+                  })}
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+      </div>
+      <p class="cs-quiet cs-grid-key">"Holds in" counts the scenes where the trait fully holds, out of the scenes that show it. Tap a cell to open that scene's lenses.</p>
+    </>
   );
 }
 

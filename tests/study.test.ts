@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildLibrary, driveGrid, fieldLines, findFace, parseBeat, parseOthers, players, scenesOf, splitMoment, studyFolder, tally, initials, valueShift } from '../src/lib/study.ts';
+import { buildLibrary, driveGrid, parseCheck, sceneField, fieldLines, findFace, parseBeat, parseOthers, players, scenesOf, splitMoment, studyFolder, tally, initials, valueShift } from '../src/lib/study.ts';
 import type { FileEntry } from '../src/lib/types.ts';
 
 const DEMO = path.join(import.meta.dirname, '..', 'demo-vault');
@@ -85,4 +85,17 @@ test('beat and others lines', () => {
     { name: 'The world', role: 'opposes', carded: false }, { name: 'Luna', role: 'supports', carded: false }
   ]);
   assert.deepEqual(parseOthers('none'), []);
+});
+
+test("a card's checks stay out of its readings and feed the trait table", () => {
+  const { files, texts } = demoStudies();
+  const s = buildLibrary(files, texts).studies[0];
+  const wren = s.characters[0];
+  assert.equal(wren.readings['Checks'], undefined);
+  assert.deepEqual(wren.checks.map((c) => c.field), ['Flaw', 'Want', 'Need']);
+  assert.deepEqual(wren.checks[2].verdicts, { 'SC-001': 'unshown', 'SC-002': 'no' });
+  assert.equal(sceneField(s.scenes[0], 'Wren', 'Save the Cat', 'Flaw'), 'works alone');
+  assert.deepEqual(parseCheck('Story Juice · Core Drive: SC-001 yes; SC-006 not shown; SC-008 no'),
+    { lens: 'Story Juice', field: 'Core Drive', verdicts: { 'SC-001': 'yes', 'SC-006': 'unshown', 'SC-008': 'no' } });
+  assert.equal(parseCheck('Audited 2026-10-27.'), null);
 });
