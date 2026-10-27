@@ -212,7 +212,7 @@
         },
         "target_words": {
           "type": "integer",
-          "default": 90000
+          "default": 60000
         },
         "chapter_words": {
           "type": "integer",

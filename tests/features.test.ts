@@ -25,6 +25,7 @@ class Mem implements VaultSource {
 test('books and manuscripts', () => {
   assert.equal(nextBookNumber([1, 2, null]), 3);
   assert.match(bookText('A', 'S', 1, new Date()), /series: "\[\[S\]\]"/);
+  assert.match(bookText('A', 'S', 1, new Date()), /\ntarget_words: 60000\n/, 'a new book starts at 60,000 words');
   assert.equal(manuscriptProblem('a.pdf', 1) !== null, true);
   assert.equal(manuscriptProblem('a.docx', 1), null);
   assert.equal(manuscriptPath('B', 'Draft: one.docx', ['B/Research/Draft one.docx']), 'B/Research/Draft one (2).docx');
