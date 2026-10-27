@@ -2279,6 +2279,10 @@ button, .button { border-radius: 12px; }
 .decide-kind { margin: 0; color: var(--muted); font-size: 0.94rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .decide-panel { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; }
 .decide-pitch { font-size: 1.1rem; }
+/* A story call reads as short paragraphs with each answer's letter and short version in bold (Kyle, 2026-10-27). */
+.call-body p { margin: 0 0 0.9em; }
+.call-body h2 { margin: 1.2em 0 0.4em; font-size: 0.94rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.call-body h2:first-child { margin-top: 0; }
 .decide-card .stars button.star { min-width: 44px; min-height: 44px; }
 .decide-buttons { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); background: var(--bg); }
 .decide-buttons button { min-height: 58px; font-size: 1.05rem; font-weight: 650; }

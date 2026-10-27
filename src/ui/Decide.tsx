@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { render } from '../lib/markdown.ts';
 import { decideQueue } from '../lib/overview.ts';
-import { fixesOf, isStoryCall } from '../lib/changes.ts';
+import { callBody, fixesOf, isStoryCall } from '../lib/changes.ts';
 import type { Decision } from '../lib/ideas.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
@@ -79,19 +79,19 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
             <h2>{String(here.data.title || here.data.id || '')}</h2>
             {here.data.panel_score != null && here.data.panel_score !== '' && <p class="decide-panel">The panel's score: <b>{String(here.data.panel_score)} of 5</b>{here.data.panel_note ? '. ' + String(here.data.panel_note) : ''}</p>}
             {here.data.pitch ? <p class="decide-pitch">{String(here.data.pitch)}</p> : null}
-            <div class="prose decide-body" dangerouslySetInnerHTML={{ __html: render(here.body) }} />
+            <div class={'prose decide-body' + (calls ? ' call-body' : '')} dangerouslySetInnerHTML={{ __html: render(calls ? callBody(here.body) : here.body) }} />
             {onDecide && <Stars value={Number(here.data.rating) || 0} onRate={(n) => onDecide(here.path, 'edit', '', { rating: n ? String(n) : '' })} />}
             <p class="meta"><a href={href.note(here.path)}>Open the full note</a></p>
           </article>
           {!onDecide ? <p class="hint">Choosing needs your own vault, not the demo.</p> : calls ? (
             <div class="decide-calls">
               <div class="decide-mine">
-                <label for="decide-fix">Or your own fix, in your words</label>
+                <label for="decide-fix">Or your own answer, in your words</label>
                 <textarea id="decide-fix" rows={2} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
                 <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('keep', 'Yes, your way', 'My fix: ' + why.trim())}>Yes, my way</button>
               </div>
               <div class="decide-buttons calls">
-                {fixes.map((f) => <button key={f.letter} type="button" class="primary" title={f.text} onClick={() => choose('keep', 'Yes, fix ' + f.letter, 'Fix ' + f.letter + ': ' + f.text)}>Yes, fix {f.letter}</button>)}
+                {fixes.map((f) => <button key={f.letter} type="button" class="primary" title={f.text} onClick={() => choose('keep', 'Yes, ' + f.letter, 'Fix ' + f.letter + ': ' + f.text)}>{f.letter}</button>)}
                 {!fixes.length && <button type="button" class="primary" onClick={() => choose('keep', 'Yes')}>Yes</button>}
                 <button type="button" onClick={() => choose('later', 'Later')}>Later</button>
                 <button type="button" onClick={() => choose('drop', 'No', 'No')}>No</button>

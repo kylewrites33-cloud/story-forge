@@ -284,6 +284,22 @@ export function isStoryCall(n: NoteRecord): boolean {
 }
 
 /** The fixes a story call offers, from its "Fix A: ..." lines. */
+/** A story call's body as Kyle reads it on its card: "Fix A" becomes "A", since "fix" reads as a verb (Kyle, 2026-10-27),
+ * each answer line starts with its letter in bold and its short version (the first sentence, or up to the first comma
+ * when that is long) in bold, and every line is its own paragraph. The note itself keeps "Fix A:". */
+export function callBody(body: string): string {
+  return body.split(/\r?\n/).map((line) => {
+    const m = /^\s*(?:[-*]\s+)?(?:\*\*)?Fix\s+([A-F])(?:\*\*)?\s*[:.)]\s*(?:\*\*)?\s*(.+)$/i.exec(line);
+    if (!m) return line.replace(/\bFix(es)? ([A-F])\b/g, (_s, _p, l) => l);
+    const text = m[2].replace(/\*\*/g, '').trim().replace(/\bFix(es)? ([A-F])\b/g, (_s, _p, l) => l);
+    const end = /^.*?[.!?](?=\s|$)/.exec(text);
+    let cut = end ? end[0].length : text.length;
+    if (cut > 90) { const c = /^.{12,90}?[,;:](?=\s)/.exec(text); cut = c ? c[0].length : cut; }
+    const rest = text.slice(cut).trim();
+    return '\n**' + m[1].toUpperCase() + ':** **' + text.slice(0, cut) + '**' + (rest ? ' ' + rest : '') + '\n';
+  }).join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
 export function fixesOf(body: string): { letter: string; text: string }[] {
   const out: { letter: string; text: string }[] = [];
   body.split(/\r?\n/).forEach((line) => {

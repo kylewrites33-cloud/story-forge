@@ -127,3 +127,12 @@ test('a story call offers its fixes as buttons', async () => {
   assert.equal(isStoryCall({ path: 'x', sha: '', type: 'idea', data: { step: '36' }, body: '', error: null }), true);
   assert.equal(isStoryCall({ path: 'x', sha: '', type: 'idea', data: { step: 18 }, body: '', error: null }), false);
 });
+
+test('a story call reads A: with its short version in bold', async () => {
+  const { callBody } = await import('../src/lib/changes.ts');
+  const out = callBody('Which name?\nFix A: DumbButt69. Ch 35 changes.\nFix B: Fix A, but keep the flub.\nRecommended: Fix A.');
+  assert.match(out, /\*\*A:\*\* \*\*DumbButt69\.\*\* Ch 35 changes\./);
+  assert.match(out, /\*\*B:\*\* \*\*A, but keep the flub\.\*\*/);
+  assert.match(out, /Recommended: A\./);
+  assert.doesNotMatch(out, /Fix/);
+});
