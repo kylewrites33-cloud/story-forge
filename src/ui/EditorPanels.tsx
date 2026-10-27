@@ -352,6 +352,31 @@ export function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
   );
 }
 
+/** "Delete chapter" or "Delete this scene" from the chapter list asks once, saying where the words go (Kyle, 2026-10-27). */
+export function DeleteAsk({ what, words, later, onDelete, onCancel }: {
+  what: string; words: number; later: boolean; onDelete: () => Promise<string | null>; onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async () => {
+    setBusy(true);
+    setError(null);
+    const err = await onDelete().catch((e) => (e as Error).message);
+    setBusy(false);
+    if (err) setError(err);
+  };
+  return (
+    <div class="side-add-form">
+      <p class="hint">Delete {what}{words ? ' and its ' + words.toLocaleString() + ' words' : ''}? It goes to the book's Archive (Book tools, Archive), where Restore brings it back.{later ? ' The chapters after it move down one.' : ''}</p>
+      <div class="buttons">
+        <button type="button" class="danger" disabled={busy} onClick={go}>{busy ? 'Deleting…' : 'Delete'}</button>
+        <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>
+      </div>
+      {error && <p class="error">{error}</p>}
+    </div>
+  );
+}
+
 /** The chapter list's last line: "Add a chapter", then a title (or none) and it opens for writing. */
 export function AddChapterAtEnd({ onAdd, scene }: { onAdd: (title: string) => Promise<string | null>; scene?: boolean }) {
   const [open, setOpen] = useState(false);

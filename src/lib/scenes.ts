@@ -151,6 +151,40 @@ export async function removeJoined(source: VaultSource, next: NoteRecord, sha: s
     '\n\nJoined in the Sparrow app. The note as it was is in the book\'s Archive folder.');
 }
 
+/** A free name in the Archive: the plain one, or "name (2).md" and so on, so an older archived copy is never overwritten. */
+async function freeArchivePath(source: VaultSource, dest: string): Promise<string> {
+  if (!source.readFresh) throw new Error('This vault cannot be changed from the app.');
+  for (let n = 1; ; n++) {
+    const p = n === 1 ? dest : dest.replace(/\.md$/, ' (' + n + ').md');
+    try {
+      await source.readFresh(p);
+    } catch (e) {
+      if ((e as { status?: number }).status === 404 || /has no/.test((e as Error).message)) return p;
+      throw e;
+    }
+  }
+}
+
+/** Delete a note from the app (Kyle, 2026-10-27: "hard press it and delete it"). Nothing is destroyed: the note as it
+ * stands goes to the Archive first, with a line saying why, and only then leaves its folder. `dest` is where in the
+ * Archive it goes (a scene: the book's Archive folder, where Restore finds it). Returns the archived path. */
+export async function archiveNote(source: VaultSource, path: string, dest: string, why: string, now: Date): Promise<string> {
+  if (!source.readFresh || !source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
+  const fresh = await source.readFresh(path);
+  const cur = makeNote(path, fresh.sha, fresh.text);
+  const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '');
+  const line = why + ' on ' + today(now) + '.';
+  const to = await freeArchivePath(source, dest);
+  await source.write(to, archivedText(fresh.text, line), '', 'archive: ' + name + '\n\n' + line + ' The note as it was is in the Archive.');
+  await source.remove(path, fresh.sha, 'delete: ' + name + '\n\n' + line + ' Its copy is in the Archive.');
+  return to;
+}
+
+/** Delete a scene: to the book's Archive folder, where the chapter list's Archive can restore it. */
+export function archiveScene(source: VaultSource, note: NoteRecord, now: Date): Promise<string> {
+  return archiveNote(source, note.path, archivePath(note.path), 'Deleted in the Sparrow app', now);
+}
+
 /** Notes in a book whose properties name a scene ID (progressions at it, beats and promises listing it). */
 export function mentionsOf(notes: NoteRecord[], id: string): NoteRecord[] {
   const re = new RegExp('\\b' + id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');

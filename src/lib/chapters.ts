@@ -138,6 +138,20 @@ export async function applyShifts(source: VaultSource, shifts: Shift[], why: str
   }
 }
 
+/** After chapter `gone` is deleted, every later chapter closes up by one, lowest first, so each note moves into a number
+ * (and a file name) the one before it has just left. `left` are notes already taken away (they are not shifted). */
+export function chapterCloseUp(notes: Record<string, NoteRecord>, bookFolder: string, gone: number, left: string[] = []): Shift[] {
+  return shiftsFor(notes, bookFolder, (ch) => (ch > gone ? ch - 1 : null))
+    .filter((s) => left.indexOf(s.path) < 0)
+    .sort((a, b) => a.from - b.from || a.path.localeCompare(b.path));
+}
+
+/** The notes that belong to chapter `ch` by number and are not scenes (beats, plan, scrap, to-dos, scene notes). */
+export function chapterNotes(notes: Record<string, NoteRecord>, bookFolder: string, ch: number): NoteRecord[] {
+  return Object.values(notes).filter((n) => n.path.startsWith(bookFolder + '/') && n.type !== 'scene' && CHAPTER_TYPES.indexOf(n.type) >= 0 &&
+    toNumber(n.data.chapter) === ch && !/\/(Archive|Snapshots|Exports)\//.test(n.path.slice(bookFolder.length)));
+}
+
 /** Move every note in `shifts` up one chapter to make room for a new chapter. */
 export async function makeRoom(source: VaultSource, shifts: Shift[], newChapter: number): Promise<void> {
   await applyShifts(source, shifts, 'Chapters after ' + (newChapter - 1) + ' move up one to make room for a new chapter ' + newChapter + '. Added in the Sparrow app.');
