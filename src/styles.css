@@ -2407,6 +2407,13 @@ button, .button { border-radius: 12px; }
 .changes-chapters a { display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 0 14px; color: var(--text); text-decoration: none; }
 .changes-chapters .waiting { color: var(--accent); font-weight: 600; }
 .decide-buttons.calls { flex-wrap: wrap; }
+/* Story calls: Kyle's own fix box sits above the fix buttons, both held at the bottom of the screen (2026-10-27). */
+.decide-calls { position: sticky; bottom: 0; display: grid; gap: 10px; padding: 10px 0 0; background: var(--bg); }
+.decide-calls .decide-buttons { position: static; }
+.decide-mine { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: end; }
+.decide-mine label { grid-column: 1 / -1; color: var(--muted); font-size: 0.94rem; }
+.decide-mine textarea { font: inherit; min-height: 58px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); resize: vertical; }
+.decide-mine button { min-height: 58px; padding: 0 18px; font-size: 1.05rem; font-weight: 650; }
 
 /* Asks for the team in {braces} sit in the margin beside the text when the page has room (Kyle, 2026-10-23). */
 .writer-page { container-type: inline-size; }
