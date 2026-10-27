@@ -2298,6 +2298,8 @@ button, .button { border-radius: 12px; }
 .side-menu button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: none; background: none; color: var(--text); text-align: left; border-radius: 8px; font-size: 0.97rem; }
 .side-menu button:hover { background: var(--bg); }
 .side-menu .side-menu-cancel { color: var(--muted); }
+.side-menu .side-menu-delete { color: var(--danger); }
+.side-add-form .danger { color: var(--danger); border-color: var(--danger); }
 /* Tap the chapter's name on the page to rename it (Kyle, 2026-10-22). */
 .page-head h1 .chapter-name { all: unset; cursor: text; border-radius: 6px; -webkit-tap-highlight-color: transparent; }
 .page-head h1 .chapter-name:hover, .page-head h1 .chapter-name:focus-visible { background: var(--bg); box-shadow: 0 0 0 4px var(--bg); }
