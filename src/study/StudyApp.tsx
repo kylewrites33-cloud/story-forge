@@ -2,7 +2,7 @@
 // Reads Studies/ in the vault with the key saved on this device (shared with Sparrow in the same browser tab, its own
 // when Crow runs from its home-screen icon); without one it shows the demo vault's sample study.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { ComponentChildren } from 'preact';
+import { Fragment, type ComponentChildren } from 'preact';
 import { loadSettings, saveSettings, isConnected, type Settings } from '../lib/settings.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { DemoSource } from '../lib/demo-source.ts';
@@ -11,8 +11,8 @@ import { coverProblem, shrinkToJpeg } from '../lib/covers.ts';
 import { inline } from '../lib/markdown.ts';
 import type { FileEntry, VaultSource } from '../lib/types.ts';
 import {
-  ROOT, buildLibrary, facePath, initials, lensesFor, scenesOf, splitMoment, studyFiles, tally,
-  type Lens, type Reading, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
+  ROOT, ROLES, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, valueShift,
+  type Lens, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
@@ -57,9 +57,15 @@ async function faceUrl(source: VaultSource, f: FileEntry): Promise<string | null
   return url;
 }
 
-// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot], #/s/<study>/c/<name>, #/s/<study>/scene/<id>
+// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot[/drivers|/lenses]],
+// #/s/<study>/c/<name>, #/s/<study>/scene/<id>[/beats|/lenses]
 
-interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; }
+/** The Plot tab's views (Kyle, 2026-10-26): the story board, who drives the plot, and the plot lenses. */
+type PlotViewName = 'board' | 'drivers' | 'lenses';
+/** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
+type SceneTab = 'read' | 'beats' | 'lenses';
+
+interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
@@ -68,13 +74,17 @@ function parseRoute(hash: string): Route {
   if (parts[0] !== 's' || !parts[1]) return { page: 'home' };
   const study = parts[1];
   if (parts[2] === 'c' && parts[3]) return { page: 'character', study, name: parts[3] };
-  if (parts[2] === 'scene' && parts[3]) return { page: 'scene', study, name: parts[3] };
-  return { page: 'study', study, tab: parts[2] === 'plot' ? 'plot' : 'character' };
+  if (parts[2] === 'scene' && parts[3]) return { page: 'scene', study, name: parts[3], sceneTab: parts[4] === 'beats' ? 'beats' : parts[4] === 'lenses' ? 'lenses' : 'read' };
+  if (parts[2] === 'traits') return { page: 'study', study, tab: 'character', traits: true, name: parts[3] || '', lens: parts[4] || '' };
+  const view: PlotViewName = parts[3] === 'drivers' ? 'drivers' : parts[3] === 'lenses' ? 'lenses' : 'board';
+  return { page: 'study', study, tab: parts[2] === 'plot' ? 'plot' : 'character', view };
 }
 const enc = encodeURIComponent;
 const studyHref = (s: Study, tab: Side = 'character') => '#/s/' + enc(s.folder.slice(ROOT.length)) + (tab === 'plot' ? '/plot' : '');
 const charHref = (s: Study, name: string) => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/c/' + enc(name);
-const sceneHref = (s: Study, id: string) => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/scene/' + enc(id);
+const sceneHref = (s: Study, id: string, tab: SceneTab = 'read') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/scene/' + enc(id) + (tab === 'read' ? '' : '/' + tab);
+const traitsHref = (s: Study, name = '', lens = '') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/traits' + (name ? '/' + enc(name) + (lens ? '/' + enc(lens) : '') : '');
+const plotHref = (s: Study, view: PlotViewName) => studyHref(s, 'plot') + (view === 'board' ? '' : '/' + view);
 
 // The lens picked on each side, remembered on this device. '' is the plain card (character) or the overview (plot).
 const LENS_KEY = 'character-study.lens';
@@ -127,8 +137,8 @@ export function StudyApp() {
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
-  else if (route.page === 'scene') body = <ScenePage lib={lib} study={study} id={route.name || ''} lens={lens} setLens={setLens} />;
-  else body = <StudyPage lib={lib} study={study} tab={route.tab || 'character'} lens={lens} setLens={setLens} source={source} />;
+  else if (route.page === 'scene') body = <ScenePage lib={lib} study={study} id={route.name || ''} tab={route.sceneTab || 'read'} lens={lens} setLens={setLens} source={source} />;
+  else body = <StudyPage lib={lib} study={study} tab={route.tab || 'character'} view={route.view || 'board'} traits={route.traits ? { name: route.name || '', lens: route.lens || '' } : null} lens={lens} setLens={setLens} source={source} />;
 
   return (
     <div class="cs">
@@ -149,14 +159,19 @@ export function StudyApp() {
 
 // ------------------------------------------------------------------ small parts
 
-function Face({ source, c, big }: { source: VaultSource; c: StudyCharacter; big?: boolean }) {
-  const [url, setUrl] = useState<string | null>(null);
+function useFaceUrl(source: VaultSource, f: FileEntry | null): string | null {
+  const [url, setUrl] = useState<string | null>(() => (f && faceUrls.get(f.sha)) || null);
   useEffect(() => {
     let live = true;
-    setUrl(null);
-    if (c.face) faceUrl(source, c.face).then((u) => { if (live) setUrl(u); });
+    setUrl((f && faceUrls.get(f.sha)) || null);
+    if (f) faceUrl(source, f).then((u) => { if (live) setUrl(u); });
     return () => { live = false; };
-  }, [c.face && c.face.sha]);
+  }, [f && f.sha]);
+  return url;
+}
+
+function Face({ source, c, big }: { source: VaultSource; c: StudyCharacter; big?: boolean }) {
+  const url = useFaceUrl(source, c.face);
   return (
     <div class={'cs-face' + (big ? ' big' : '')}>
       {url ? <img src={url} alt={'Picture of ' + c.name} /> : (
@@ -166,6 +181,30 @@ function Face({ source, c, big }: { source: VaultSource; c: StudyCharacter; big?
           <text x="50" y="50" text-anchor="middle">{initials(c.name)}</text>
         </svg>
       )}
+    </div>
+  );
+}
+
+const ROLE_WORD: Record<string, string> = { driver: 'Drives', opposes: 'Opposes', supports: 'Supports', receives: 'Receives' };
+const roleClass = (r: Role) => 'role-' + (r || 'none');
+
+/** A cast icon: the face if the study has one, else initials; a square for a force such as The world. The ring is the role. */
+function Token({ study, source, name, role, size = 'm', turning }: { study: Study; source: VaultSource; name: string; role?: Role; size?: 's' | 'm' | 'l'; turning?: boolean }) {
+  const url = useFaceUrl(source, faceFor(study, name));
+  const cls = ['cs-token', 'size-' + size, roleClass(role || ''), isForce(name) ? 'force' : '', turning ? 'turning' : ''].filter(Boolean).join(' ');
+  return (
+    <span class={cls} title={name + (role ? ': ' + ROLE_WORD[role].toLowerCase() : '')}>
+      {url ? <img src={url} alt="" /> : <span aria-hidden="true">{initials(name)}</span>}
+    </span>
+  );
+}
+
+function RoleKey() {
+  return (
+    <div class="cs-rolekey" aria-label="Role in the scene">
+      <span class="cs-quiet">Ring colour:</span>
+      {ROLES.map((r) => <span key={r} class={'cs-rolekey-item ' + roleClass(r)}><span class="cs-ring" />{ROLE_WORD[r]}</span>)}
+      <span class="cs-rolekey-item"><span class="cs-ring turning" />Turning beat</span>
     </div>
   );
 }
@@ -290,21 +329,38 @@ function Card({ lib, study, c, lens, source }: { lib: StudyLibrary; study: Study
   );
 }
 
-function StudyPage({ lib, study, tab, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Side; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
-  const lenses = lensesFor(lib, tab);
+function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Side; view: PlotViewName; traits: { name: string; lens: string } | null; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
   const learning = study.sections['What we are learning'];
+  const views: [PlotViewName, string][] = [['board', 'Story board'], ['drivers', 'Who drives the plot'], ['lenses', 'Plot lenses']];
   return (
     <section>
       <StudyHead study={study} tab={tab} />
-      <Chips lenses={lenses} value={lens[tab]} onPick={(n) => setLens(tab, n)} plain={tab === 'character' ? 'Card' : 'Overview'} />
-      {tab === 'character' ? (
+      {tab === 'character' && (
+        <nav class="cs-views">
+          <a href={studyHref(study)} class={!traits ? 'on' : ''} aria-current={!traits ? 'page' : undefined}>Cards</a>
+          <a href={traitsHref(study)} class={traits ? 'on' : ''} aria-current={traits ? 'page' : undefined}>Trait table</a>
+        </nav>
+      )}
+      {tab === 'character' && traits ? <TraitTable study={study} pick={traits} source={source} />
+      : tab === 'character' ? (
         <>
+          <Chips lenses={lensesFor(lib, 'character')} value={lens.character} onPick={(n) => setLens('character', n)} plain="Card" />
           {!study.characters.length && <p class="cs-note">No characters yet.</p>}
           <div class="cs-cards">{study.characters.map((c) => <Card key={c.name} lib={lib} study={study} c={c} lens={lens.character} source={source} />)}</div>
           <h2 class="cs-h2">Scene by scene</h2>
           <SceneRows study={study} />
         </>
-      ) : <PlotView lib={lib} study={study} lens={lens.plot} />}
+      ) : (
+        <>
+          <nav class="cs-views">{views.map(([v, label]) => <a key={v} href={plotHref(study, v)} class={view === v ? 'on' : ''} aria-current={view === v ? 'page' : undefined}>{label}</a>)}</nav>
+          {view === 'board' ? <StoryBoard study={study} source={source} />
+            : view === 'drivers' ? <Drivers study={study} source={source} />
+            : <>
+              <Chips lenses={lensesFor(lib, 'plot')} value={lens.plot} onPick={(n) => setLens('plot', n)} plain="Overview" />
+              <PlotView lib={lib} study={study} lens={lens.plot} />
+            </>}
+        </>
+      )}
       {learning && <><h2 class="cs-h2">What we are learning</h2><Prose text={learning} /></>}
     </section>
   );
@@ -326,6 +382,188 @@ function SceneRows({ study }: { study: Study }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+const VERDICT_WORD: Record<Verdict, string> = { yes: 'Holds', partly: 'Partly', no: 'Breaks', unshown: 'Not shown' };
+
+/** The trait table (Kyle, 2026-10-27: "a table where i can see each of these character traits from a particular
+ *  perspective, and see if they hold up"). One character and one lens (or every lens): a row per field with the card's
+ *  reading, a column per scene with the scene's own reading, coloured by the card's ## Checks verdict. */
+function TraitTable({ study, pick, source }: { study: Study; pick: { name: string; lens: string }; source: VaultSource }) {
+  const withChecks = study.characters.filter((c) => c.checks.length);
+  if (!withChecks.length) return <p class="cs-note">No card has its checks yet. The team adds them when it audits the cards.</p>;
+  const c = withChecks.find((x) => x.name === pick.name) || withChecks[0];
+  const lensNames = [...new Set(c.checks.map((k) => k.lens))];
+  const lens = lensNames.includes(pick.lens) ? pick.lens : '';
+  const rows = c.checks.filter((k) => !lens || k.lens === lens);
+  const scenes = study.scenes.filter((s) => s.cast.some((x) => x.name === c.name) || rows.some((k) => k.verdicts[s.id]));
+  const cols = { gridTemplateColumns: 'minmax(190px, 1.4fr) repeat(' + scenes.length + ', minmax(150px, 1fr))', '--n': String(scenes.length) };
+  const verdicts: Verdict[] = ['yes', 'partly', 'no', 'unshown'];
+  return (
+    <>
+      <div class="cs-pickrow" role="group" aria-label="Character">
+        {withChecks.map((x) => (
+          <a key={x.name} href={traitsHref(study, x.name, lens)} class={'cs-pick' + (x === c ? ' on' : '')} aria-current={x === c ? 'true' : undefined}>
+            <Token study={study} source={source} name={x.name} size="s" /><span>{x.name}</span>
+          </a>
+        ))}
+      </div>
+      <div class="cs-chips" role="group" aria-label="Lens">
+        <a href={traitsHref(study, c.name)} class={!lens ? 'on' : ''}>Every lens</a>
+        {lensNames.map((l) => <a key={l} href={traitsHref(study, c.name, l)} class={lens === l ? 'on' : ''}>{l}</a>)}
+      </div>
+      <div class="cs-verdictkey">{verdicts.map((v) => <span key={v} class={'cs-verdict v-' + v}>{VERDICT_WORD[v]}</span>)}</div>
+      <div class="cs-grid-box">
+        <div class="cs-grid cs-traits" role="table" aria-label={'Does ' + c.name + "'s card hold, scene by scene"}>
+          <div class="cs-grid-row head" role="row" style={cols}>
+            <span role="columnheader" class="cs-sticky">Trait, as the card reads it</span>
+            {scenes.map((s) => <a role="columnheader" key={s.id} href={sceneHref(study, s.id, 'lenses')}><b>{s.id}</b><span>{s.title}</span></a>)}
+          </div>
+          {rows.map((k, i) => {
+            const card = c.readings[k.lens] ? (c.readings[k.lens].find(([f]) => f.toLowerCase() === k.field.toLowerCase()) || ['', ''])[1] : '';
+            const judged = Object.values(k.verdicts).filter((v) => v !== 'unshown');
+            const yes = judged.filter((v) => v === 'yes').length;
+            return (
+              <Fragment key={k.lens + '·' + k.field}>
+                {!lens && (i === 0 || rows[i - 1].lens !== k.lens) && <div class="cs-traits-lens" role="row"><span role="rowheader" class="cs-sticky">{k.lens}</span></div>}
+                <div class="cs-grid-row" role="row" style={cols}>
+                  <span role="rowheader" class="cs-trait cs-sticky"><b>{k.field}</b><span class="cs-holdcount">{judged.length ? 'Holds in ' + yes + ' of ' + judged.length : 'Not shown yet'}</span>{card ? <span dangerouslySetInnerHTML={{ __html: inline(card) }} /> : <span class="cs-quiet">not on the card</span>}</span>
+                  {scenes.map((s) => {
+                    const v = k.verdicts[s.id];
+                    const text = sceneField(s, c.name, k.lens, k.field);
+                    return (
+                      <a role="cell" key={s.id} href={sceneHref(study, s.id, 'lenses')} class={'cs-tcell' + (v ? ' v-' + v : ' v-none')}>
+                        {v && <span class={'cs-verdict v-' + v}>{VERDICT_WORD[v]}</span>}
+                        {text ? <span class="cs-tcell-text" dangerouslySetInnerHTML={{ __html: inline(text) }} /> : !v ? <span class="cs-quiet">not in it</span> : null}
+                      </a>
+                    );
+                  })}
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+      </div>
+      <p class="cs-quiet cs-grid-key">"Holds in" counts the scenes where the trait fully holds, out of the scenes that show it. Tap a cell to open that scene's lenses.</p>
+    </>
+  );
+}
+
+/** The story board (Kyle, 2026-10-26): scenes side by side, joined by therefore or but, each with its cast ringed by
+ *  role and its beats as a strip of icons of who caused them, the turning beat ringed. */
+function StoryBoard({ study, source }: { study: Study; source: VaultSource }) {
+  if (!study.scenes.length) return <p class="cs-note">No scenes yet.</p>;
+  return (
+    <>
+      <RoleKey />
+      <div class="cs-board" role="list">
+        {study.scenes.map((s, i) => {
+          const v = valueShift(s);
+          return (
+            <div class="cs-board-step" role="listitem" key={s.id}>
+              {i > 0 && <span class={'cs-joint ' + linkClass(s.plot.link)}>{linkWord(s.plot.link)}</span>}
+              <div class="cs-board-card">
+                <a class="cs-board-title" href={sceneHref(study, s.id)}><span class="cs-id">{s.id} · {s.where}</span><strong>{s.title}</strong></a>
+                {(v.from || v.to) && <div class="cs-board-sec"><Shift v={v} short /></div>}
+                <div class="cs-board-sec">
+                  <h3>Cast</h3>
+                  <ul class="cs-board-cast">
+                    {players(s).map((p) => (
+                      <li key={p.name}><Token study={study} source={source} name={p.name} role={p.role} /><span class="cs-tok-name">{p.name}</span><span class={'cs-tok-role ' + roleClass(p.role)}>{p.role ? ROLE_WORD[p.role] : 'role not read'}</span></li>
+                    ))}
+                  </ul>
+                </div>
+                <a class="cs-board-sec cs-board-beats" href={sceneHref(study, s.id, 'beats')} aria-label={'The beats of ' + s.id + ', by who causes them'}>
+                  <h3>Beats, by who causes them</h3>
+                  {s.plot.beats.length ? (
+                    <span class="cs-strip">
+                      {s.plot.beats.map((b, j) => {
+                        const who = beatOwner(s, b);
+                        const p = players(s).find((x) => x.name === who);
+                        return <Token key={j} study={study} source={source} name={who || '?'} role={p ? p.role : ''} size="s" turning={b.turning} />;
+                      })}
+                    </span>
+                  ) : <span class="cs-quiet">No beats yet.</span>}
+                </a>
+                {s.plot.bestLens && <p class="cs-board-lens">Best plot lens: <strong>{s.plot.bestLens}</strong></p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/** The Value Shift reading: what is at stake, where the scene starts and where it ends. Short on the board (first clause). */
+function Shift({ v, short }: { v: { value: string; from: string; to: string }; short?: boolean }) {
+  // On the board, the first clause; a bare "positive" or "negative" takes the next clause with it.
+  const cut = (t: string) => {
+    if (!short) return t;
+    const parts = t.split(/;\s|\s\(/);
+    let out = parts[0];
+    for (let i = 1; i < parts.length && out.length < 20; i++) out += '; ' + parts[i];
+    return out;
+  };
+  return (
+    <div class={'cs-shift' + (short ? ' short' : '')}>
+      <span class="cs-caps">{v.value ? 'Value: ' + v.value : 'Value'}</span>
+      <span class="cs-shift-line"><b class="cs-from-label">From</b> <span dangerouslySetInnerHTML={{ __html: inline(cut(v.from)) }} /></span>
+      <span class="cs-shift-line"><b class="cs-to-label">To</b> <span dangerouslySetInnerHTML={{ __html: inline(cut(v.to)) }} /></span>
+    </div>
+  );
+}
+
+/** Who drives the plot: one row per character or force, one column per scene, their role there and the beats they caused. */
+function Drivers({ study, source }: { study: Study; source: VaultSource }) {
+  if (!study.scenes.length) return <p class="cs-note">No scenes yet.</p>;
+  const rows = driveGrid(study);
+  const turns = rows.filter((r) => r.turning).sort((a, b) => b.turning - a.turning).map((r) => r.name + ' ' + r.turning).join(' · ');
+  const runs: { name: string; n: number }[] = [];
+  for (const s of study.scenes) {
+    const d = players(s).find((p) => p.role === 'driver');
+    const name = d ? d.name : 'no driver read';
+    const last = runs[runs.length - 1];
+    if (last && last.name === name) last.n++; else runs.push({ name, n: 1 });
+  }
+  const driven = runs.map((r) => r.name + (r.n > 1 ? ' (' + r.n + ' scenes)' : '')).join(', then ');
+  const cols = { gridTemplateColumns: 'minmax(150px, 1.3fr) repeat(' + study.scenes.length + ', minmax(110px, 1fr)) minmax(70px, auto)' };
+  return (
+    <>
+      <div class="cs-tiles">
+        <div class="cs-tile"><span class="cs-quiet">Turning beats</span><strong>{turns || 'none marked yet'}</strong></div>
+        <div class="cs-tile"><span class="cs-quiet">Driver by scene</span><strong>{driven}</strong></div>
+      </div>
+      <div class="cs-grid-box">
+        <div class="cs-grid" role="table" aria-label="Who drives the plot">
+          <div class="cs-grid-row head" role="row" style={cols}>
+            <span role="columnheader">Character</span>
+            {study.scenes.map((s) => <a role="columnheader" key={s.id} href={sceneHref(study, s.id, 'beats')}><b>{s.id}</b><span>{s.title}</span></a>)}
+            <span role="columnheader" class="cs-grid-n">Beats caused</span>
+          </div>
+          {rows.map((r) => (
+            <div class="cs-grid-row" role="row" key={r.name} style={cols}>
+              <span role="rowheader" class="cs-grid-who"><Token study={study} source={source} name={r.name} />{r.carded && study.characters.some((c) => c.name === r.name) ? <a href={charHref(study, r.name)}>{r.name}</a> : <span>{r.name}</span>}</span>
+              {r.cells.map((c, i) => (
+                <span role="cell" key={i} class="cs-grid-cell">
+                  {c.present && (
+                    <>
+                      <span class={'cs-tok-role ' + roleClass(c.role)}>{c.role ? ROLE_WORD[c.role] : 'in it'}</span>
+                      <span class={'cs-dots ' + roleClass(c.role)} aria-label={c.beats + (c.beats === 1 ? ' beat' : ' beats') + (c.turning ? ', with the turning beat' : '')}>
+                        {Array.from({ length: c.beats }, (_, j) => <span key={j} class={'cs-dot' + (c.turning && j === 0 ? ' turning' : '')} />)}
+                      </span>
+                    </>
+                  )}
+                </span>
+              ))}
+              <span role="cell" class="cs-grid-n">{r.beats}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p class="cs-quiet cs-grid-key"><span class="cs-dot" /> a beat they caused <span class="cs-dot turning" /> the scene's turning beat</p>
+    </>
   );
 }
 
@@ -450,48 +688,116 @@ function Moments({ list }: { list: string[] }) {
   );
 }
 
-function ScenePage({ lib, study, id, lens, setLens }: { lib: StudyLibrary; study: Study; id: string; lens: Record<Side, string>; setLens: (s: Side, n: string) => void }) {
+function ScenePage({ lib, study, id, tab, lens, setLens, source }: { lib: StudyLibrary; study: Study; id: string; tab: SceneTab; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
   const at = study.scenes.findIndex((s) => s.id === id);
   const s: StudyScene | undefined = study.scenes[at];
-  if (!s) return <section><a class="cs-back" href={studyHref(study)}>{study.title}</a><p class="cs-note">There is no scene {id}.</p></section>;
+  if (!s) return <section><a class="cs-back" href={plotHref(study, 'board')}>{study.title}</a><p class="cs-note">There is no scene {id}.</p></section>;
   const prev = study.scenes[at - 1], next = study.scenes[at + 1];
   const plotLens = lens.plot ? [lib.lenses.find((x) => x.name === lens.plot)].filter(Boolean) as Lens[] : lensesFor(lib, 'plot').filter((l) => s.plot.readings[l.name]);
+  const tabs: [SceneTab, string][] = [['read', 'Read'], ['beats', 'Beats'], ['lenses', 'Lenses']];
   return (
     <section>
-      <a class="cs-back" href={studyHref(study)}>{study.title}</a>
+      <a class="cs-back" href={plotHref(study, 'board')}>{study.title}</a>
       <h1><span class="cs-id">{s.id}</span> {s.title}</h1>
       <p class="cs-quiet">{s.where}</p>
-      {s.summary && <p class="cs-summary">{s.summary}</p>}
+      <ul class="cs-scene-cast">
+        {players(s).map((p) => <li key={p.name}><Token study={study} source={source} name={p.name} role={p.role} /><span><b>{p.name}</b> <span class={'cs-tok-role ' + roleClass(p.role)}>{p.role ? ROLE_WORD[p.role] : ''}</span></span></li>)}
+      </ul>
       <div class="cs-pager">
-        {prev ? <a href={sceneHref(study, prev.id)}>Back: {prev.id}</a> : <span />}
-        {next ? <a href={sceneHref(study, next.id)}>Next: {next.id}</a> : <span />}
+        {prev ? <a href={sceneHref(study, prev.id, tab)}>Back: {prev.id}</a> : <span />}
+        {next ? <a href={sceneHref(study, next.id, tab)}>Next: {next.id}</a> : <span />}
       </div>
+      <nav class="cs-views">{tabs.map(([t, label]) => <a key={t} href={sceneHref(study, s.id, t)} class={tab === t ? 'on' : ''} aria-current={tab === t ? 'page' : undefined}>{label}</a>)}</nav>
 
-      <div class="cs-block">
-        <h2>Plot</h2>
-        <dl class="cs-reading">
-          {s.plot.driver && <div><dt>Driven by</dt><dd>{s.plot.driver}</dd></div>}
-          {s.plot.link && <div><dt>Link to the last scene</dt><dd>{s.plot.link}</dd></div>}
-          {s.plot.whyNext && <div><dt>Why this scene comes next</dt><dd dangerouslySetInnerHTML={{ __html: inline(s.plot.whyNext) }} /></div>}
-          {s.plot.bestLens && <div><dt>Best lens</dt><dd><strong>{s.plot.bestLens}</strong>{s.plot.why ? '. ' : ''}<span dangerouslySetInnerHTML={{ __html: inline(s.plot.why) }} /></dd></div>}
-        </dl>
-        <Chips lenses={lensesFor(lib, 'plot')} value={lens.plot} onPick={(n) => setLens('plot', n)} plain="Every lens" />
-        {plotLens.map((l) => <div key={l.name}><h3 class="cs-h3">{l.name}</h3><ReadingList lens={l} reading={s.plot.readings[l.name]} /></div>)}
-      </div>
-
-      <Chips lenses={lensesFor(lib, 'character')} value={lens.character} onPick={(n) => setLens('character', n)} plain="Every lens" />
-      {s.cast.map((c) => {
-        const shown = lens.character ? [lib.lenses.find((x) => x.name === lens.character)].filter(Boolean) as Lens[] : lensesFor(lib, 'character').filter((l) => c.readings[l.name]);
-        return (
-          <div class="cs-block" key={c.name}>
-            <h2><a href={charHref(study, c.name)}>{c.name}</a></h2>
-            <p><span class="cs-lensname">{c.bestLens || 'No best lens'}</span> <HoldsMark v={c.holds} /> <span dangerouslySetInnerHTML={{ __html: inline(c.why) }} /></p>
-            <Moments list={c.moments} />
-            {shown.map((l) => <div key={l.name}><h3 class="cs-h3">{l.name}</h3><ReadingList lens={l} reading={c.readings[l.name]} /></div>)}
+      {tab === 'read' && <SceneRead s={s} />}
+      {tab === 'beats' && <SceneBeats study={study} s={s} source={source} />}
+      {tab === 'lenses' && (
+        <>
+          <div class="cs-block">
+            <h2>Plot</h2>
+            <dl class="cs-reading">
+              {s.plot.driver && <div><dt>Driven by</dt><dd>{s.plot.driver}</dd></div>}
+              {s.plot.link && <div><dt>Link to the last scene</dt><dd>{s.plot.link}</dd></div>}
+              {s.plot.whyNext && <div><dt>Why this scene comes next</dt><dd dangerouslySetInnerHTML={{ __html: inline(s.plot.whyNext) }} /></div>}
+              {s.plot.bestLens && <div><dt>Best lens</dt><dd><strong>{s.plot.bestLens}</strong>{s.plot.why ? '. ' : ''}<span dangerouslySetInnerHTML={{ __html: inline(s.plot.why) }} /></dd></div>}
+            </dl>
+            <Chips lenses={lensesFor(lib, 'plot')} value={lens.plot} onPick={(n) => setLens('plot', n)} plain="Every lens" />
+            {plotLens.map((l) => <div key={l.name}><h3 class="cs-h3">{l.name}</h3><ReadingList lens={l} reading={s.plot.readings[l.name]} /></div>)}
           </div>
-        );
-      })}
+
+          <Chips lenses={lensesFor(lib, 'character')} value={lens.character} onPick={(n) => setLens('character', n)} plain="Every lens" />
+          {s.cast.map((c) => {
+            const shown = lens.character ? [lib.lenses.find((x) => x.name === lens.character)].filter(Boolean) as Lens[] : lensesFor(lib, 'character').filter((l) => c.readings[l.name]);
+            return (
+              <div class="cs-block" key={c.name}>
+                <h2><a href={charHref(study, c.name)}>{c.name}</a></h2>
+                <p><span class="cs-lensname">{c.bestLens || 'No best lens'}</span> <HoldsMark v={c.holds} /> <span dangerouslySetInnerHTML={{ __html: inline(c.why) }} /></p>
+                <Moments list={c.moments} />
+                {shown.map((l) => <div key={l.name}><h3 class="cs-h3">{l.name}</h3><ReadingList lens={l} reading={c.readings[l.name]} /></div>)}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      <div class="cs-pager">
+        {prev ? <a href={sceneHref(study, prev.id, tab)}>Back: {prev.id}</a> : <span />}
+        {next ? <a href={sceneHref(study, next.id, tab)}>Next: {next.id}</a> : <span />}
+      </div>
     </section>
+  );
+}
+
+/** The whole scene: a link to the original on the translator's page (the story's text is never kept here), then our retelling. */
+function SceneRead({ s }: { s: StudyScene }) {
+  let host = '';
+  try { host = s.sourceUrl ? new URL(s.sourceUrl).hostname.replace(/^www\./, '') : ''; } catch { host = ''; }
+  return (
+    <>
+      <div class="cs-source">
+        <div>
+          <strong>The whole scene, in the original</strong>
+          <span class="cs-quiet">{host ? 'Opens ' + host + ' in a new tab. The story\'s text stays there.' : 'No link to the original yet. The team adds it with the next scene.'}</span>
+        </div>
+        {host && <a class="cs-open" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">Open the original</a>}
+      </div>
+      <h2 class="cs-h3 cs-caps">Our retelling</h2>
+      {s.plot.retelling ? <div class="cs-retelling"><Prose text={s.plot.retelling} /></div>
+        : s.summary ? <><p class="cs-summary">{s.summary}</p><p class="cs-quiet">This scene has a summary but no retelling yet.</p></>
+        : <p class="cs-quiet">No retelling yet.</p>}
+    </>
+  );
+}
+
+/** Beat by beat, each with the icon of who caused it and its kind; the turning beat stands out. */
+function SceneBeats({ study, s, source }: { study: Study; s: StudyScene; source: VaultSource }) {
+  const v = valueShift(s);
+  const at = study.scenes.indexOf(s);
+  const ps = players(s);
+  return (
+    <>
+      <div class="cs-beats-top">
+        {(v.from || v.to) && <Shift v={v} />}
+        {at > 0 && s.plot.link && <p>Link from {study.scenes[at - 1].id}: <span class={'cs-joint ' + linkClass(s.plot.link)}>{linkWord(s.plot.link)}</span></p>}
+      </div>
+      {!s.plot.beats.length && <p class="cs-note">No beats yet. The team adds them when it reads the scene.</p>}
+      <ol class="cs-beatlist">
+        {s.plot.beats.map((b, i) => {
+          const who = beatOwner(s, b);
+          const p = ps.find((x) => x.name === who);
+          return (
+            <li key={i} class={b.turning ? 'turning' : ''}>
+              <span class="cs-beat-n">{i + 1}</span>
+              <Token study={study} source={source} name={who || '?'} role={p ? p.role : ''} size="l" />
+              <span class="cs-beat-body">
+                <span class="cs-beat-text" dangerouslySetInnerHTML={{ __html: inline(b.text) }} />
+                <span class="cs-beat-meta"><span class="cs-quiet">{[who, b.kind].filter(Boolean).join(' · ')}</span>{b.turning && <span class="cs-turn-badge">Turning beat</span>}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 }
 

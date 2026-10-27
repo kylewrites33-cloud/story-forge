@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildLibrary, fieldLines, findFace, scenesOf, splitMoment, studyFolder, tally, initials } from '../src/lib/study.ts';
+import { buildLibrary, driveGrid, parseCheck, sceneField, fieldLines, findFace, parseBeat, parseOthers, players, scenesOf, splitMoment, studyFolder, tally, initials, valueShift } from '../src/lib/study.ts';
 import type { FileEntry } from '../src/lib/types.ts';
 
 const DEMO = path.join(import.meta.dirname, '..', 'demo-vault');
@@ -59,4 +59,43 @@ test('field lines, moments and faces', () => {
   const face = findFace([{ path: 'Studies/K/Faces/Aqua.PNG', sha: 'x' }], 'Studies/K', 'Aqua');
   assert.equal(face && face.sha, 'x');
   assert.equal(initials('Kazuma Satou'), 'KS');
+});
+
+test('beats, retelling, roles and others stay out of the lens readings', () => {
+  const { files, texts } = demoStudies();
+  const s = buildLibrary(files, texts).studies[0];
+  const one = s.scenes[0];
+  assert.equal(one.plot.readings['Beats'], undefined);
+  assert.equal(one.plot.readings['Retelling'], undefined);
+  assert.equal(one.plot.beats.length, 5);
+  assert.deepEqual(one.plot.beats[2], { who: 'Wren', kind: 'choice', turning: true, text: "She lifts a merchant's purse and hides it in her hollow lantern." });
+  assert.match(one.plot.retelling, /^Wren walks the lantern fair/);
+  assert.deepEqual(players(one).map((p) => p.name + ':' + p.role), ['Wren:driver', 'Oskar:receives', 'The crowd:supports', 'The guard:opposes']);
+  assert.deepEqual(valueShift(one), { value: 'safety', from: 'unseen', to: 'seen by a guard' });
+  const grid = driveGrid(s);
+  assert.deepEqual(grid.slice(0, 2).map((r) => [r.name, r.beats, r.turning]), [['Wren', 4, 1], ['Oskar', 2, 1]]);
+  assert.deepEqual(grid[1].cells.map((c) => c.role), ['receives', 'supports']);
+});
+
+test('beat and others lines', () => {
+  assert.deepEqual(parseBeat('The angel (world rule): An angel takes over.'), { who: 'The angel', kind: 'world rule', turning: false, text: 'An angel takes over.' });
+  assert.deepEqual(parseBeat('Kazuma (choice, turning): He picks her.'), { who: 'Kazuma', kind: 'choice', turning: true, text: 'He picks her.' });
+  assert.deepEqual(parseBeat('Aqua: She laughs.'), { who: 'Aqua', kind: '', turning: false, text: 'She laughs.' });
+  assert.deepEqual(parseOthers('The world (opposes), Luna (supports, at the desk)'), [
+    { name: 'The world', role: 'opposes', carded: false }, { name: 'Luna', role: 'supports', carded: false }
+  ]);
+  assert.deepEqual(parseOthers('none'), []);
+});
+
+test("a card's checks stay out of its readings and feed the trait table", () => {
+  const { files, texts } = demoStudies();
+  const s = buildLibrary(files, texts).studies[0];
+  const wren = s.characters[0];
+  assert.equal(wren.readings['Checks'], undefined);
+  assert.deepEqual(wren.checks.map((c) => c.field), ['Flaw', 'Want', 'Need']);
+  assert.deepEqual(wren.checks[2].verdicts, { 'SC-001': 'unshown', 'SC-002': 'no' });
+  assert.equal(sceneField(s.scenes[0], 'Wren', 'Save the Cat', 'Flaw'), 'works alone');
+  assert.deepEqual(parseCheck('Story Juice · Core Drive: SC-001 yes; SC-006 not shown; SC-008 no'),
+    { lens: 'Story Juice', field: 'Core Drive', verdicts: { 'SC-001': 'yes', 'SC-006': 'unshown', 'SC-008': 'no' } });
+  assert.equal(parseCheck('Audited 2026-10-27.'), null);
 });

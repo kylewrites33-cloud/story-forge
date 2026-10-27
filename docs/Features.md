@@ -671,7 +671,30 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
 - A character's page: the card, how often each lens was best, the reading across the story, and scene by scene with
   moments (short quotes) and the lens's reading there. **Add a picture** saves Kyle's own picture as
   `Studies/<Study>/Faces/<Name>.jpg`; without one the card shows a plain silhouette.
-- A scene's page: summary, the plot reading and every plot lens, then each character's moments and lenses.
+- **The trait table** (Kyle, 2026-10-27: "a table where i can see each of these character traits from a particular
+  perspective, and see if they hold up"). Character tab, Trait table: pick a character and a lens (or Every lens). A row
+  per lens field with the card's reading and how many scenes it fully holds in; a column per scene with the scene's own
+  reading of that field, coloured and labelled by the verdict in the card's `## Checks` (holds, partly, breaks, not
+  shown). Tapping a cell opens that scene's lenses. The team keeps `## Checks` up to date (character-study skill).
+- **The plot view** (Kyle, 2026-10-26: "with the plot scenes, i should be able to read the whole text as one option.
+  next option would be to see a beat by beat breakdown. and then i want to see these scenes lined up next to each other
+  in some view where i can see each character in the scene as an icon, with maybe a color explaining their role somehow.
+  and then ... some way to visually represent where the scene beats come from--maybe like which character"). The Plot
+  tab has three views:
+  - **Story board** (the default): the scenes side by side in a row that scrolls sideways, joined by therefore, but or
+    and then. Each card has its value shift (from, to), its cast as icons (the face from `Faces/` if there is one, else
+    initials; a square for a force such as The world) ringed in the colour of their role in that scene (drives,
+    opposes, supports, receives, with the word beside it), and its beats as a strip of icons of who caused each one, the
+    turning beat ringed in black. Tapping the strip opens the scene's beats.
+  - **Who drives the plot**: one row per character or force, one column per scene, with their role there and a dot per
+    beat they caused (the turning beat ringed), the beats caused in all, the turning beats per character and the driver
+    scene by scene.
+  - **Plot lenses**: what the Plot tab showed before (how the plot is built, the lens tally, the chain by lens).
+- A scene's page: the cast with their roles, then three tabs. **Read**: Open the original (the scene's `source_url`, the
+  translator's page, in a new tab; the story's text is never kept in the vault) and our retelling below it. **Beats**:
+  the value shift, the link from the last scene, then beat by beat with who caused it, its kind, and the turning beat
+  marked. **Lenses**: the plot reading, every plot lens, and each character's moments and lenses, as before.
+  The scene format (`### Beats`, `### Retelling`, `- Others`, `- Role`) is in the vault's schema and character-study skill.
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.
