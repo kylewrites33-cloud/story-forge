@@ -6,6 +6,7 @@ study: The Lantern Fair
 order: 1
 where: Part 1
 characters: [Wren, Oskar]
+premise: A pickpocket at a lantern fair takes the one purse she should have left alone.
 summary: Wren lifts a purse at the fair and hides it in her lantern. Oskar sees her do it and says nothing.
 ---
 ## Plot
@@ -17,11 +18,11 @@ summary: Wren lifts a purse at the fair and hides it in her lantern. Oskar sees 
 - Others: The crowd (supports), The guard (opposes)
 
 ### Beats
-- Wren (want): Wren works the lantern fair for one purse fat enough to leave the city.
-- The crowd (world rule): The crush at the stalls hides her hands.
-- Wren (choice, turning): She lifts a merchant's purse and hides it in her hollow lantern.
-- Oskar (reaction): Oskar, sweeping by the stall, sees her do it and says nothing.
-- The guard (reveal): A guard turns his head her way as she walks off.
+- Wren (want, ki): Wren works the lantern fair for one purse fat enough to leave the city.
+- The crowd (world rule, shō): The crush at the stalls hides her hands.
+- Wren (choice, turning, ten): She lifts a merchant's purse and hides it in her hollow lantern.
+- Oskar (reaction, ketsu): Oskar, sweeping by the stall, sees her do it and says nothing.
+- The guard (reveal, ketsu): A guard turns his head her way as she walks off.
 
 ### Retelling
 Wren walks the lantern fair looking for one purse big enough to get her out of the city. The crowd at the stalls is thick enough to hide her hands, so she takes a merchant's purse and drops it into her hollow lantern. Oskar, the sweeper, sees it and keeps sweeping. As she leaves, a guard looks her way.

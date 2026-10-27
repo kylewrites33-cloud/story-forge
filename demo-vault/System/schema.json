@@ -2803,7 +2803,7 @@
           "type": "number"
         }
       },
-      "body": "One ## section per character lens, named as the lens note, with - Field: value lines; then ## Notes."
+      "body": "One ## section per character lens, named as the lens note, with - Field: value lines; then ## Checks (one '- <Lens> · <Field>: SC-001 yes; SC-002 partly; ...' line per checked field, verdicts yes, partly, no, not shown: does the card's reading hold in each scene); then ## Notes."
     },
     "study-scene": {
       "description": "One scene of a studied story, read for character and for plot.",
@@ -2851,12 +2851,16 @@
           "type": "string",
           "description": "One or two sentences, in our words"
         },
+        "premise": {
+          "type": "string",
+          "description": "The scene's premise in one line: the situation the scene starts from, as a what-if (Kyle, 2026-10-27)"
+        },
         "source_url": {
           "type": "string",
           "description": "Where Kyle can read the scene in full (the translator's page); the text itself is never saved here"
         }
       },
-      "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why, - Others (non-carded forces and their roles, as The world (opposes)) lines; ### Beats (one '- <Who> (<kind>[, turning]): <beat>' line per beat, Who being the character or force that causes it); ### Retelling (the scene in our words, one paragraph); then one ### section per plot lens. Then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), - Role (driver, opposes, supports, receives), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
+      "body": "## Plot with - Driver, - Link (therefore, but, and then), - Why next, - Best lens, - Why, - Others (non-carded forces and their roles, as The world (opposes)) lines; ### Beats (one '- <Who> (<kind>[, turning][, ki|shō|ten|ketsu]): <beat>' line per beat, Who being the character or force that causes it, and the last tag the kishōtenketsu part the beat belongs to); ### Retelling (the scene in our words, one paragraph); then one ### section per plot lens. Then one ## section per character with - Best lens, - Why, - Holds (yes, partly, no, first), - Role (driver, opposes, supports, receives), ### Moments (short quotes, each with what it shows) and one ### section per character lens."
     },
     "study-lens": {
       "description": "A way of reading a character or a plot in Crow (the character and plot study app). Studies/Lenses/<name>.md. A new lens is a new note; the app shows it without a change.",
@@ -2905,6 +2909,34 @@
         }
       },
       "body": "What the lens is, in a few lines, and when it tends to explain a story best."
+    },
+    "study-engine": {
+      "description": "The distilled method of a studied story, for Crow's Engine tab: what matters about each character, what the world does for the plot, where the scenes come from, why they work, and the recipe to build one. Lives at Studies/<Title>/Engine.md (Kyle, 2026-10-27).",
+      "scope": "vault",
+      "folder": "Studies",
+      "recursive": true,
+      "filename": "Engine",
+      "required": [
+        "type",
+        "study",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "study-engine"
+        },
+        "study": {
+          "type": "string",
+          "description": "The study's title"
+        },
+        "title": {
+          "type": "string"
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "A lead paragraph with the short answer, then ## sections in the order Crow shows them: The short answer; What matters about each character (one ### per character with - Gift, - Cost, - Pride, - Pattern, - Decoration lines); What the world does for the plot; Where the scenes come from; Why they work; How each scene is built; To build one ourselves; Open questions."
     }
   },
   "boards": {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildLibrary, driveGrid, parseCheck, sceneField, fieldLines, findFace, parseBeat, parseOthers, players, scenesOf, splitMoment, studyFolder, tally, initials, valueShift } from '../src/lib/study.ts';
+import { beatsOf, buildLibrary, driveGrid, handoffs, turnAt, parseCheck, sceneField, fieldLines, findFace, parseBeat, parseOthers, players, scenesOf, splitMoment, studyFolder, tally, initials, valueShift } from '../src/lib/study.ts';
 import type { FileEntry } from '../src/lib/types.ts';
 
 const DEMO = path.join(import.meta.dirname, '..', 'demo-vault');
@@ -68,7 +68,7 @@ test('beats, retelling, roles and others stay out of the lens readings', () => {
   assert.equal(one.plot.readings['Beats'], undefined);
   assert.equal(one.plot.readings['Retelling'], undefined);
   assert.equal(one.plot.beats.length, 5);
-  assert.deepEqual(one.plot.beats[2], { who: 'Wren', kind: 'choice', turning: true, text: "She lifts a merchant's purse and hides it in her hollow lantern." });
+  assert.deepEqual(one.plot.beats[2], { who: 'Wren', kind: 'choice', turning: true, part: 'ten', text: "She lifts a merchant's purse and hides it in her hollow lantern." });
   assert.match(one.plot.retelling, /^Wren walks the lantern fair/);
   assert.deepEqual(players(one).map((p) => p.name + ':' + p.role), ['Wren:driver', 'Oskar:receives', 'The crowd:supports', 'The guard:opposes']);
   assert.deepEqual(valueShift(one), { value: 'safety', from: 'unseen', to: 'seen by a guard' });
@@ -78,9 +78,9 @@ test('beats, retelling, roles and others stay out of the lens readings', () => {
 });
 
 test('beat and others lines', () => {
-  assert.deepEqual(parseBeat('The angel (world rule): An angel takes over.'), { who: 'The angel', kind: 'world rule', turning: false, text: 'An angel takes over.' });
-  assert.deepEqual(parseBeat('Kazuma (choice, turning): He picks her.'), { who: 'Kazuma', kind: 'choice', turning: true, text: 'He picks her.' });
-  assert.deepEqual(parseBeat('Aqua: She laughs.'), { who: 'Aqua', kind: '', turning: false, text: 'She laughs.' });
+  assert.deepEqual(parseBeat('The angel (world rule): An angel takes over.'), { who: 'The angel', kind: 'world rule', turning: false, part: '', text: 'An angel takes over.' });
+  assert.deepEqual(parseBeat('Kazuma (choice, turning): He picks her.'), { who: 'Kazuma', kind: 'choice', turning: true, part: '', text: 'He picks her.' });
+  assert.deepEqual(parseBeat('Aqua: She laughs.'), { who: 'Aqua', kind: '', turning: false, part: '', text: 'She laughs.' });
   assert.deepEqual(parseOthers('The world (opposes), Luna (supports, at the desk)'), [
     { name: 'The world', role: 'opposes', carded: false }, { name: 'Luna', role: 'supports', carded: false }
   ]);
@@ -98,4 +98,23 @@ test("a card's checks stay out of its readings and feed the trait table", () => 
   assert.deepEqual(parseCheck('Story Juice · Core Drive: SC-001 yes; SC-006 not shown; SC-008 no'),
     { lens: 'Story Juice', field: 'Core Drive', verdicts: { 'SC-001': 'yes', 'SC-006': 'unshown', 'SC-008': 'no' } });
   assert.equal(parseCheck('Audited 2026-10-27.'), null);
+});
+
+test('premise, kishōtenketsu parts, the turn and the handoff between scenes', () => {
+  const { files, texts } = demoStudies();
+  const s = buildLibrary(files, texts).studies[0];
+  assert.deepEqual(parseBeat('Aqua (reveal, turning, ten): It was a tractor.'), { who: 'Aqua', kind: 'reveal', turning: true, part: 'ten', text: 'It was a tractor.' });
+  assert.equal(parseBeat('Kazuma (plan, sho): He plans.').part, 'shō');
+  assert.equal(s.scenes[0].premise, 'A pickpocket at a lantern fair takes the one purse she should have left alone.');
+  assert.deepEqual(s.scenes[0].plot.beats.map((b) => b.part), ['ki', 'shō', 'ten', 'ketsu', 'ketsu']);
+  assert.deepEqual(turnAt(s.scenes[0]), { at: 3, of: 5 });
+  assert.equal(beatsOf(s.scenes[1], 'ketsu').length, 1);
+  const h = handoffs(s);
+  assert.equal(h.length, 1);
+  assert.equal(h[0].ketsu.length, 2);
+  assert.equal(h[0].ki[0].who, "The lantern master's men");
+  assert.ok(s.engine);
+  assert.equal(s.engine!.title, 'What makes The Lantern Fair go');
+  assert.deepEqual(s.engine!.sections.map((x) => x.heading).slice(0, 2), ['The short answer', 'What matters about each character']);
+  assert.deepEqual(s.engine!.sections[1].parts.map((x) => x.heading), ['Wren', 'Oskar']);
 });

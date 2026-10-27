@@ -251,3 +251,52 @@ a.cs-card:hover { box-shadow: var(--shadow-lift); }
   .cs-traits .cs-grid-row { grid-template-columns: 132px repeat(var(--n, 1), minmax(140px, 1fr)) !important; }
   .cs-trait { font-size: 0.85rem; }
 }
+
+/* The Engine tab and the Kishōtenketsu page (Kyle, 2026-10-27) */
+.cs-pagelink { display: inline-block; padding: 10px 16px; border-radius: 14px; border: 1px solid var(--accent); color: var(--accent); font-weight: 600; text-decoration: none; line-height: 1.3; }
+.cs-engine-title { font-size: 1.4rem; margin: 14px 0 6px; }
+.cs-engine-sec { margin-top: 8px; }
+.cs-engine-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 8px; }
+.cs-engine-part h3 { margin: 0 0 6px; }
+.cs-engine-part h3 a { color: var(--text); text-decoration: none; }
+.cs-prose table { border-collapse: collapse; width: 100%; font-size: 0.95rem; display: block; overflow-x: auto; }
+.cs-prose th, .cs-prose td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; min-width: 120px; }
+.cs-prose th { color: var(--muted); font-weight: 600; }
+
+.cs .cs-pbeat.ki, .cs .cs-pstrip-cell.ki, .cs .cs-part-swatch.ki { --part: var(--surface); --part-line: var(--line); --part-text: var(--text); }
+.cs .cs-pbeat.sho, .cs .cs-pstrip-cell.sho, .cs .cs-part-swatch.sho { --part: var(--accent-soft); --part-line: var(--accent-soft); --part-text: var(--text); }
+.cs .cs-pbeat.ten, .cs .cs-pstrip-cell.ten, .cs .cs-part-swatch.ten { --part: var(--accent); --part-line: var(--accent); --part-text: var(--on-accent); }
+.cs .cs-pbeat.ketsu, .cs .cs-pstrip-cell.ketsu, .cs .cs-part-swatch.ketsu { --part: var(--hover); --part-line: var(--muted); --part-text: var(--text); }
+.cs .cs-pbeat.none, .cs .cs-pstrip-cell.none, .cs .cs-part-swatch.none { --part: transparent; --part-line: var(--line); --part-text: var(--muted); }
+.cs-part-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0 12px; }
+.cs-part-key span { display: inline-flex; align-items: center; gap: 6px; }
+.cs-part-swatch { width: 14px; height: 14px; border-radius: 4px; background: var(--part); border: 1px solid var(--part-line); display: inline-block; }
+.cs-turns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cs-turns li { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(120px, 2fr) auto; gap: 10px; align-items: center; min-height: 44px; }
+.cs-turns li a { color: var(--text); text-decoration: none; }
+.cs-pstrip { display: flex; gap: 3px; height: 14px; }
+.cs-pstrip-cell { flex: 1; border-radius: 3px; background: var(--part); border: 1px solid var(--part-line); box-sizing: border-box; }
+.cs-pstrip-cell.turning { outline: 2px solid var(--text); outline-offset: 1px; }
+.cs-kisho-scenes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.cs-kisho-scene { padding: 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.cs-kisho-head { display: block; color: var(--text); text-decoration: none; min-height: 44px; font-size: 1.1rem; }
+.cs-premise { margin: 4px 0 12px; font-size: 1.1rem; font-style: italic; }
+.cs-fit { margin: 0 0 10px; color: var(--muted); }
+.cs-pbeats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cs-pbeat { display: grid; grid-template-columns: 92px 1fr; gap: 2px 12px; padding: 10px 12px; border-radius: 8px; background: var(--part); border: 1px solid var(--part-line); color: var(--part-text); }
+.cs-pbeat.turning { box-shadow: inset 0 0 0 2px var(--text); }
+.cs-pbeat-tag { font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; grid-row: 1 / span 2; align-self: start; padding-top: 3px; }
+.cs-pbeat-who { font-weight: 700; }
+.cs-pbeat.ten .cs-quiet { color: var(--on-accent); opacity: 0.8; }
+.cs-reread { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); }
+.cs-handoff { padding: 6px 8px; }
+.cs-handoff .cs-link { margin: 0 auto 8px; }
+.cs-handoff-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cs-handoff-cols ul { margin: 4px 0 0; padding-left: 18px; }
+.cs-handoff-why { margin: 8px 0 0; font-size: 0.95rem; }
+@media (max-width: 640px) {
+  .cs-turns li { grid-template-columns: 1fr; gap: 4px; }
+  .cs-handoff-cols { grid-template-columns: 1fr; }
+  .cs-pbeat { grid-template-columns: 1fr; }
+  .cs-pbeat-tag { grid-row: auto; }
+}

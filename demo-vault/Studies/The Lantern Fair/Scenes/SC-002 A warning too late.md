@@ -6,6 +6,7 @@ study: The Lantern Fair
 order: 2
 where: Part 2
 characters: [Wren, Oskar]
+premise: The purse Wren stole belongs to the men who run the fair, and they are already looking.
 summary: The purse belonged to the lantern master's men, and they come for Wren. Oskar warns her a moment too late.
 ---
 ## Plot
@@ -17,11 +18,11 @@ summary: The purse belonged to the lantern master's men, and they come for Wren.
 - Others: The lantern master's men (opposes)
 
 ### Beats
-- The lantern master's men (reveal): The purse was the lantern master's, and his men are already searching the fair.
-- Wren (plan): Wren tries to walk out by the river gate as if nothing happened.
-- Oskar (choice, turning): Oskar shouts his first loud words: "Left, girl, left!"
-- Wren (choice): She pushes his hand away and runs the wrong way.
-- The lantern master's men (reaction): The men close the lane behind her.
+- The lantern master's men (reveal, ki): The purse was the lantern master's, and his men are already searching the fair.
+- Wren (plan, shō): Wren tries to walk out by the river gate as if nothing happened.
+- Oskar (choice, turning, ten): Oskar shouts his first loud words: "Left, girl, left!"
+- Wren (choice, ten): She pushes his hand away and runs the wrong way.
+- The lantern master's men (reaction, ketsu): The men close the lane behind her.
 
 ### Retelling
 The purse belonged to the lantern master, and his men are already sweeping the fair for it. Wren tries to stroll out by the river gate. Oskar, who has said nothing all story, shouts at her to go left. She shakes him off, runs right, and the men close the lane behind her.
