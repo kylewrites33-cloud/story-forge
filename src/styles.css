@@ -2282,7 +2282,7 @@ button, .button { border-radius: 12px; }
 .decide-card .stars button.star { min-width: 44px; min-height: 44px; }
 .decide-buttons { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); background: var(--bg); }
 .decide-buttons button { min-height: 58px; font-size: 1.05rem; font-weight: 650; }
-.decide-why { display: grid; gap: 8px; }
+.decide-why { position: sticky; bottom: 0; display: grid; gap: 8px; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); background: var(--bg); }
 .decide-why textarea { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
 .decide-toast { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%); bottom: max(20px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; padding: 6px 8px 6px 16px; border-radius: 12px; background: #1f1d26; color: #fff; box-shadow: var(--shadow-lift); }
 .decide-toast .link { color: #c9bbff; min-height: 44px; }

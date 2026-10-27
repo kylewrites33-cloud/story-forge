@@ -24,6 +24,15 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const list = decideQueue(index, book).filter((n) => done.indexOf(n.path) < 0 && (!calls || isStoryCall(n)));
   const [mine, setMine] = useState(false);
+  // The buttons stay at the bottom of the screen, but the card can be long (a call with three fixes): the box for Kyle's
+  // own words opens in the buttons' place and takes the cursor, so he sees it at once (Kyle, 2026-10-27: "Yes, my way ...
+  // did not give me an option to type in what I want").
+  const box = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (!(mine || asking) || !box.current) return;
+    box.current.focus({ preventScroll: true });
+    box.current.scrollIntoView({ block: 'nearest' });
+  }, [mine, asking]);
   const here = list[0];
   const choose = (decision: Decision, label: string, reason = '') => {
     if (!here || !onDecide) return;
@@ -79,7 +88,7 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
             mine ? (
               <div class="decide-why">
                 <label for="decide-fix">Your fix, in your words</label>
-                <textarea id="decide-fix" rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
+                <textarea id="decide-fix" ref={box} rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
                 <div class="buttons">
                   <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('keep', 'Yes, your way', 'My fix: ' + why.trim())}>Yes, my way</button>
                   <button type="button" onClick={() => setMine(false)}>Cancel</button>
@@ -97,7 +106,7 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
           ) : asking ? (
             <div class="decide-why">
               <label for="decide-why">What should the team change?</label>
-              <textarea id="decide-why" rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
+              <textarea id="decide-why" ref={box} rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
               <div class="buttons">
                 <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('regenerate', 'Sent back to rewrite', why.trim())}>Send it back</button>
                 <button type="button" onClick={() => setAsking(false)}>Cancel</button>
