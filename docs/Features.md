@@ -78,6 +78,13 @@ add a dated line here when you add or change one.
   finger on a chapter, or right-clicking it, opens a small menu under it: Add a chapter below and Add another scene. A
   chapter added in the middle moves every later chapter up one first (`src/lib/chapters.ts`): their scenes, to-dos,
   scene notes, and the beats, plan and scrap notes, renamed to their new number; one save each, Kyle's (no Agent line).
+  Delete (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it", about a team test-drive scene
+  under No chapter yet): the chapter's hold menu has Delete chapter, and holding a scene listed under its chapter (Show
+  scenes) or under No chapter yet gives Delete this scene. It asks once, with the word count. Nothing is destroyed: each
+  scene goes to the book's Archive (Book tools, Archive, with Restore) with a line saying when it was deleted, and an
+  older copy there is never overwritten (`archiveNote` in `src/lib/scenes.ts`). A chapter left with no scenes takes its
+  beats, plan, scrap, to-dos and scene notes to `Archive/Deleted chapter N <date>/`, and the chapters after it move down
+  one (`chapterCloseUp`). If the open scene goes, the page moves to the next scene left. Needs the internet.
   A short press still opens the scene. Renaming a chapter (Kyle, 2026-10-22: "i should be able to change the chapter name
   by tapping in the field in the word processor, or long pressing on the chapter in the left pane"): tap the chapter's
   name at the top of the page and type (Enter or tapping away saves, Esc cancels), or choose Rename the chapter in the

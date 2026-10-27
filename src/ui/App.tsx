@@ -11,11 +11,11 @@ import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
-import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
+import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
+import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
-import { loadDrafts, typedWords } from '../lib/drafts.ts';
+import { loadDrafts, putDraft, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
@@ -496,6 +496,41 @@ export function App() {
     }
   }, [source, runSync]);
 
+  /** Delete scenes from the chapter list (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it").
+   * Each scene goes to the book's Archive (Restore brings it back). A chapter left with no scenes takes its beats, plan,
+   * scrap, to-dos and scene notes to the Archive too, and the chapters after it close up by one. */
+  const onDeleteScenes = useCallback(async (book: BookEntry, paths: string[]): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to delete: the words go to the Archive first.';
+    const cur = snapRef.current;
+    if (!cur) return 'Press Sync first.';
+    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    const going = scenes.filter((n) => paths.indexOf(n.path) >= 0);
+    const now = new Date();
+    try {
+      for (const n of going) {
+        await archiveScene(source, n, now);
+        putDraft(source.key, n.path, null);
+      }
+      const emptied = Array.from(new Set(going.map((n) => toNumber(n.data.chapter)).filter((c): c is number => c != null)))
+        .filter((c) => !scenes.some((n) => paths.indexOf(n.path) < 0 && toNumber(n.data.chapter) === c))
+        .sort((a, b) => b - a);
+      for (const ch of emptied) {
+        const fresh = snapRef.current ? snapRef.current.index.notes : cur.index.notes;
+        const extra = chapterNotes(fresh, book.folder, ch);
+        const dir = book.folder + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
+        for (const n of extra) await archiveNote(source, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
+        await applyShifts(source, chapterCloseUp(fresh, book.folder, ch, going.map((n) => n.path).concat(extra.map((n) => n.path))),
+          'Chapter ' + ch + ' was deleted in the Sparrow app, so the chapters after it close up by one.');
+        await runSync();
+      }
+      if (!emptied.length) await runSync();
+      return null;
+    } catch (e) {
+      await runSync().catch(() => undefined);
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
   /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
     const clean = title.replace(/\s+/g, ' ').trim();
@@ -611,6 +646,7 @@ export function App() {
           onAddChapter={book && source.write && source.readFresh ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
           onRenameChapter={book && source.write ? onRenameChapter : undefined}
           onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
+          onDeleteScenes={book && source.write && source.readFresh && source.remove ? (paths) => onDeleteScenes(book, paths) : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}

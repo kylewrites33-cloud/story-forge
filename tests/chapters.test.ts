@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyShifts, chapterMove, chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
+import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
+import { archiveNote, archiveScene, archivedWhy } from '../src/lib/scenes.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { MemSource } from './helpers.ts';
 
@@ -96,4 +97,38 @@ test('moving chapter 1 down to 2 swaps it with chapter 2 and puts it after it in
   const o1 = Number(/^order: ([\d.]+)$/m.exec(text('S-001 One.md'))![1]);
   assert.ok(o1 > 2 && o1 < 3);
   assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 1 beats.md')!, /Grey wakes/);
+});
+
+test('deleting chapter 2: its scene, beats and to-do go to the Archive, chapter 3 closes up to 2 and nothing is lost', async () => {
+  const src = new MemSource();
+  Object.entries(files).forEach(([p, t]) => src.files.set(p, t));
+  const now = new Date(2026, 9, 27, 14, 0);
+  const s2 = notes[BOOK + '/Scenes/S-002 Two.md'];
+  const to = await archiveScene(src, s2, now);
+  assert.equal(to, BOOK + '/Archive/S-002 Two.md');
+  assert.ok(!src.files.has(s2.path));
+  assert.match(src.files.get(to)!, /Words of S-002/);
+  assert.equal(archivedWhy(src.files.get(to)!), 'Deleted in the Sparrow app on 2026-10-27.');
+  const extra = chapterNotes(notes, BOOK, 2);
+  assert.deepEqual(extra.map((n) => n.path.slice(BOOK.length + 1)).sort(), ['Chapter Beats/Chapter 2 beats.md', 'Tasks/T-001 Fix the bell.md']);
+  for (const n of extra) await archiveNote(src, n.path, BOOK + '/Archive/Deleted chapter 2/' + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter was deleted', now);
+  await applyShifts(src, chapterCloseUp(notes, BOOK, 2, [s2.path].concat(extra.map((n) => n.path))), 'test');
+  assert.match(src.files.get(BOOK + '/Scenes/S-003 Three.md')!, /^chapter: 2$/m);
+  assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 2 beats.md')!, /Rue leaves/);
+  assert.ok(!src.files.has(BOOK + '/Chapter Beats/Chapter 3 beats.md'));
+  assert.ok(src.files.has(BOOK + '/Chapter Plans/Chapter 2 plan.md'));
+  assert.match(src.files.get(BOOK + '/Archive/Deleted chapter 2/Chapter 2 beats.md')!, /Grey wakes/);
+  assert.match(src.files.get(BOOK + '/Scenes/S-001 One.md')!, /^chapter: 1$/m);
+  assert.match(src.files.get('Series/Ember Road/Books/2 Other/Scenes/S-001 Elsewhere.md')!, /^chapter: 5$/m);
+  assert.ok(src.writes.every((w) => !/Agent:/.test(w.message)));
+});
+
+test('an older copy in the Archive is never overwritten: the second gets its own name', async () => {
+  const src = new MemSource();
+  const p = BOOK + '/Scenes/S-002 Two.md';
+  src.files.set(p, files[p]);
+  src.files.set(BOOK + '/Archive/S-002 Two.md', 'older copy');
+  const to = await archiveScene(src, notes[p], new Date(2026, 9, 27));
+  assert.equal(to, BOOK + '/Archive/S-002 Two (2).md');
+  assert.equal(src.files.get(BOOK + '/Archive/S-002 Two.md'), 'older copy');
 });

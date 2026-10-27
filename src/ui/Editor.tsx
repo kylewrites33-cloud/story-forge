@@ -48,7 +48,7 @@ import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
 import {
-  AddChapterAtEnd, ArchiveList, BeatsList, CardPanel, CodexCard, CopiesPanel, FindBar, MarksPanel, MoveChapter, NotesPanel, offlineError, PagePanel,
+  AddChapterAtEnd, ArchiveList, BeatsList, CardPanel, CodexCard, CopiesPanel, DeleteAsk, FindBar, MarksPanel, MoveChapter, NotesPanel, offlineError, PagePanel,
   PlanPanel, ScenePanel, SideAddForm, TargetPanel, TeamPanel, TodosPanel
 } from './EditorPanels.tsx';
 
@@ -98,7 +98,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -119,6 +119,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onRenameChapter?: (scenes: NoteRecord[], title: string) => void;
   /** Move a chapter to another number, the ones between closing up. */
   onMoveChapter?: (from: number, to: number) => Promise<string | null>;
+  /** Delete scenes (to the book's Archive); a chapter left empty closes up. */
+  onDeleteScenes?: (paths: string[]) => Promise<string | null>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -170,7 +172,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const beatsMode = Boolean(beats);
   // The chapter list's long press (or right-click): a small menu under the chapter, then a form in the same place.
   const [chMenu, setChMenu] = useState<string | null>(null);
-  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' | 'move' } | null>(null);
+  const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' | 'move' | 'delete' } | null>(null);
   const [naming, setNaming] = useState<string | null>(null);
   const [toolsOpen, setToolsOpen] = useState(() => { try { return localStorage.getItem('story-forge.side-tools') === '1'; } catch { return false; } });
   const namingDone = useRef(false);
@@ -454,6 +456,51 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const done = () => go(backTo);
   const link = (to: string) => ({ href: to, onClick: (e: MouseEvent) => { e.preventDefault(); go(to); } });
+
+  /** Props for a row in the chapter list that opens a menu when held (or right-clicked). `inner` keeps the hold from also
+   * reaching the chapter around it. */
+  const holdFor = (openMenu: () => void, inner = false) => {
+    const stop = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
+    return {
+      'data-own-hold': '',
+      onPointerDown: (e: PointerEvent) => {
+        if (inner) e.stopPropagation();
+        if (e.pointerType === 'mouse') return;
+        stop();
+        const h = hold.current;
+        h.x = e.clientX; h.y = e.clientY;
+        h.t = setTimeout(() => { h.t = null; h.fired = Date.now(); openMenu(); }, 500);
+      },
+      onPointerMove: (e: PointerEvent) => { const h = hold.current; if (h.t && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) stop(); },
+      onPointerUp: stop,
+      onPointerCancel: stop,
+      onContextMenu: (e: MouseEvent) => { e.preventDefault(); if (inner) e.stopPropagation(); if (Date.now() - hold.current.fired > 800) openMenu(); },
+      onClickCapture: (e: MouseEvent) => {
+        // The finger lifting after the hold is not a press of the scene under it.
+        if (Date.now() - hold.current.fired < 800 && !(e.target as Element).closest('.side-menu, .side-add-form')) { hold.current.fired = 0; e.preventDefault(); e.stopPropagation(); }
+      }
+    };
+  };
+
+  /** Delete scenes from the chapter list: save what is typed first, then the scenes go to the Archive. When the open
+   * scene goes, the page moves to the next scene left in the book (or back, when none is). */
+  const remove = async (scenes: NoteRecord[]): Promise<string | null> => {
+    if (!onDeleteScenes || !book) return null;
+    if (quiet.current) clearTimeout(quiet.current);
+    if (beatsSaver.current && !(await beatsSaver.current(true))) return 'Save this scene first: it did not reach the vault.';
+    if (!(await save(true))) return 'Save this scene first: it did not reach the vault.';
+    await saveSiblings(true);
+    const paths = scenes.map((n) => n.path);
+    const all = book.groups.reduce((list: NoteRecord[], g) => list.concat(g.scenes), []);
+    const at = all.findIndex((n) => paths.indexOf(n.path) >= 0);
+    const stay = all.filter((n) => paths.indexOf(n.path) < 0);
+    const land = stay.find((n) => all.indexOf(n) > at) || stay.filter((n) => all.indexOf(n) < at).pop() || null;
+    const err = await onDeleteScenes(paths);
+    if (err) return err;
+    setChAdd(null);
+    if (paths.indexOf(note.path) >= 0) location.hash = land ? href.write(land.path) : backTo;
+    return null;
+  };
 
   // Between 900 and 1200 px only one side fits beside the page, so opening one closes the other.
   const shared = () => wide(WIDE_LEFT) && !wide(WIDE_RIGHT);
@@ -1004,31 +1051,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
             <nav class="scene-list">
               {book.groups.map((g) => {
-                const canHold = g.num != null && Boolean(onAdd || onAddChapter || onRenameChapter || onMoveChapter);
+                const canHold = g.num != null && Boolean(onAdd || onAddChapter || onRenameChapter || onMoveChapter || onDeleteScenes);
                 // Menus follow the chapter by its first scene, so Move up keeps its panel open under the moved chapter.
                 const gk = g.scenes.length ? g.scenes[0].path : g.key;
                 const openMenu = () => { setChAdd(null); setChMenu(gk); };
-                const stop = () => { const h = hold.current; if (h.t) clearTimeout(h.t); h.t = null; };
                 // Hold a finger on a chapter (or right-click it) for Add a chapter below and Add another scene (Kyle,
                 // 2026-10-22). A short press still opens the scene; moving the finger scrolls the list as before.
-                const holdProps = canHold ? {
-                  'data-own-hold': '',
-                  onPointerDown: (e: PointerEvent) => {
-                    if (e.pointerType === 'mouse') return;
-                    stop();
-                    const h = hold.current;
-                    h.x = e.clientX; h.y = e.clientY;
-                    h.t = setTimeout(() => { h.t = null; h.fired = Date.now(); openMenu(); }, 500);
-                  },
-                  onPointerMove: (e: PointerEvent) => { const h = hold.current; if (h.t && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) stop(); },
-                  onPointerUp: stop,
-                  onPointerCancel: stop,
-                  onContextMenu: (e: MouseEvent) => { e.preventDefault(); if (Date.now() - hold.current.fired > 800) openMenu(); },
-                  onClickCapture: (e: MouseEvent) => {
-                    // The finger lifting after the hold is not a press of the scene under it.
-                    if (Date.now() - hold.current.fired < 800 && !(e.target as Element).closest('.side-menu, .side-add-form')) { hold.current.fired = 0; e.preventDefault(); e.stopPropagation(); }
-                  }
-                } : {};
+                const holdProps = canHold ? holdFor(openMenu) : {};
                 const extra = canHold && (
                   <>
                     {chMenu === gk && (
@@ -1038,6 +1067,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                         {onAdd && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'scene' }); }}><Icon name="plus" size={18} />Add another scene</button>}
                         {onMoveChapter && book.groups.filter((x) => x.num != null).length > 1 && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'move' }); }}><Icon name="move" size={18} />Move chapter</button>}
                         {onRenameChapter && <button type="button" role="menuitem" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'rename' }); }}><Icon name="pen" size={18} />Rename the chapter</button>}
+                        {onDeleteScenes && <button type="button" role="menuitem" class="side-menu-delete" onClick={() => { setChMenu(null); setChAdd({ key: gk, kind: 'delete' }); }}><Icon name="archive" size={18} />Delete chapter</button>}
                         <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setChMenu(null)}>Cancel</button>
                       </div>
                     )}
@@ -1060,6 +1090,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       <SideAddForm label={'Name of chapter ' + g.num} button="Rename" allowEmpty initial={g.title}
                         onCancel={() => setChAdd(null)} onAdd={async (t) => { onRenameChapter(g.scenes, t); setChAdd(null); return null; }} />
                     )}
+                    {chAdd && chAdd.key === gk && chAdd.kind === 'delete' && onDeleteScenes && (
+                      <DeleteAsk what={'chapter ' + g.num + (g.title ? ', ' + g.title + ',' : '')} words={g.scenes.reduce((t, n) => t + (n.path === note.path ? words : typedWords(n)), 0)}
+                        later={g !== book.groups[book.groups.length - 1] && book.groups.some((x) => x.num != null && x.num > (g.num as number))}
+                        onCancel={() => setChAdd(null)} onDelete={() => remove(g.scenes)} />
+                    )}
                     {chAdd && chAdd.key === gk && chAdd.kind === 'scene' && onAdd && (
                       <SideAddForm label={'Title of the new scene in chapter ' + g.num} button="Add and start writing"
                         onCancel={() => setChAdd(null)} onAdd={async (t) => {
@@ -1072,13 +1107,34 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 // Chapters only, every chapter alike (Kyle, 2026-10-22: "by default the left hand view will just show the
                 // chapters"). A chapter opens at its first scene, or at the scene Kyle is in; its words are all its scenes'.
                 // Show scenes in the hold menu lists them under it, indented, the chapter's row staying as it was.
-                const row = (n: NoteRecord, label: string) => (
-                  <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene side-sub"
-                    aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data, n.path)}>
-                    <span class="side-name">{label}</span>
-                    <span class="side-words">{n.path === note.path ? num(words) : num(typedWords(n))}</span>
-                  </a>
-                );
+                // Hold a scene listed under its chapter (or under No chapter yet) to delete just that scene (Kyle, 2026-10-27).
+                const row = (n: NoteRecord, label: string) => {
+                  const sk = 'scene:' + n.path;
+                  const a = (
+                    <a key={n.path} {...link(beatsMode ? href.beats(n.path) : href.write(n.path))} class="side-scene side-sub"
+                      aria-current={n.path === note.path ? 'page' : undefined} title={sceneHeader(n.data, n.path)}>
+                      <span class="side-name">{label}</span>
+                      <span class="side-words">{n.path === note.path ? num(words) : num(typedWords(n))}</span>
+                    </a>
+                  );
+                  if (!onDeleteScenes) return a;
+                  return (
+                    <div key={n.path} {...holdFor(() => { setChAdd(null); setChMenu(sk); }, true)}>
+                      {a}
+                      {chMenu === sk && (
+                        <div class="side-menu" role="menu" aria-label={label}>
+                          <button type="button" role="menuitem" class="side-menu-delete" onClick={() => { setChMenu(null); setChAdd({ key: sk, kind: 'delete' }); }}><Icon name="archive" size={18} />Delete this scene</button>
+                          <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setChMenu(null)}>Cancel</button>
+                        </div>
+                      )}
+                      {chAdd && chAdd.key === sk && chAdd.kind === 'delete' && (
+                        <DeleteAsk what={'the scene ' + label} words={n.path === note.path ? words : typedWords(n)}
+                          later={g.num != null && g.scenes.length === 1 && book.groups.some((x) => x.num != null && x.num > (g.num as number))}
+                          onCancel={() => setChAdd(null)} onDelete={() => remove([n])} />
+                      )}
+                    </div>
+                  );
+                };
                 if (g.num == null) return (
                   <div key={g.key} class="side-group">
                     <p class="side-chapter">{chapterHeading(g)}</p>
