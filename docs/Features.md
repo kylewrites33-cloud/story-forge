@@ -688,6 +688,21 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
   the value shift, the link from the last scene, then beat by beat with who caused it, its kind, and the turning beat
   marked. **Lenses**: the plot reading, every plot lens, and each character's moments and lenses, as before.
   The scene format (`### Beats`, `### Retelling`, `- Others`, `- Role`) is in the vault's schema and character-study skill.
+- **The Engine tab** (Kyle, 2026-10-27: "what specific info about konosuba's characters actually matters to the
+  story (if we had to distill things as much as possible)(this is what im circling around in the whole app is just
+  getting that answer)"; also what the world does for the plot, where the author got the scenes, and why they work).
+  A third tab beside Character and Plot. It shows the study's `Engine.md` (type `study-engine`): the short answer, what
+  matters about each character (one card per character, linked to their page), what the world does for the plot, where
+  the scenes come from, why they work, how each scene is built, what we would need to build one, open questions. The
+  team writes it after five or six scenes (character-study skill). Without one, the tab says so.
+- **The Kishōtenketsu page** (Kyle, 2026-10-27: "a dedicated linked page to kishotenketsu from the app that shows the
+  premise of each scene, then each beat that is one of the 4 kishotenketsu. then i want to see if there is any way each
+  scene connects to the next"). Linked from the Engine tab and from the Plot lenses view when the Kishōtenketsu lens is
+  picked. Where the turn falls: a strip per scene, one cell per beat coloured by its part (ki, shō, ten, ketsu) with
+  the turning beat outlined, and "turn at beat n of m". Then scene by scene: the premise (the scene's `premise` line),
+  every beat as a block coloured by its part with who caused it, and the lens's "What the turn re-reads" line. Between
+  scenes, the handoff: the last scene's ketsu beats beside this scene's ki beats, the link word and why the scene comes
+  next. The part is the last tag of a beat (`- Aqua (reveal, turning, ten): ...`).
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.

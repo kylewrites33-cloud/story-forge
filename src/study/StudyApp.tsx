@@ -11,8 +11,8 @@ import { coverProblem, shrinkToJpeg } from '../lib/covers.ts';
 import { inline } from '../lib/markdown.ts';
 import type { FileEntry, VaultSource } from '../lib/types.ts';
 import {
-  ROOT, ROLES, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, valueShift,
-  type Lens, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
+  ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
+  type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
@@ -57,15 +57,18 @@ async function faceUrl(source: VaultSource, f: FileEntry): Promise<string | null
   return url;
 }
 
-// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot[/drivers|/lenses]],
+// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot[/drivers|/lenses]|/engine|/kishotenketsu],
 // #/s/<study>/c/<name>, #/s/<study>/scene/<id>[/beats|/lenses]
+
+/** A study's tabs: Character, Plot, and Engine (Kyle, 2026-10-27: the distilled method, what actually matters). */
+type Tab = Side | 'engine';
 
 /** The Plot tab's views (Kyle, 2026-10-26): the story board, who drives the plot, and the plot lenses. */
 type PlotViewName = 'board' | 'drivers' | 'lenses';
 /** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
 type SceneTab = 'read' | 'beats' | 'lenses';
 
-interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene'; study?: string; tab?: Side; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
+interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
@@ -76,11 +79,14 @@ function parseRoute(hash: string): Route {
   if (parts[2] === 'c' && parts[3]) return { page: 'character', study, name: parts[3] };
   if (parts[2] === 'scene' && parts[3]) return { page: 'scene', study, name: parts[3], sceneTab: parts[4] === 'beats' ? 'beats' : parts[4] === 'lenses' ? 'lenses' : 'read' };
   if (parts[2] === 'traits') return { page: 'study', study, tab: 'character', traits: true, name: parts[3] || '', lens: parts[4] || '' };
+  if (parts[2] === 'engine') return { page: 'study', study, tab: 'engine' };
+  if (parts[2] === 'kishotenketsu') return { page: 'kishotenketsu', study };
   const view: PlotViewName = parts[3] === 'drivers' ? 'drivers' : parts[3] === 'lenses' ? 'lenses' : 'board';
   return { page: 'study', study, tab: parts[2] === 'plot' ? 'plot' : 'character', view };
 }
 const enc = encodeURIComponent;
-const studyHref = (s: Study, tab: Side = 'character') => '#/s/' + enc(s.folder.slice(ROOT.length)) + (tab === 'plot' ? '/plot' : '');
+const studyHref = (s: Study, tab: Tab = 'character') => '#/s/' + enc(s.folder.slice(ROOT.length)) + (tab === 'character' ? '' : '/' + tab);
+const kishoHref = (s: Study) => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/kishotenketsu';
 const charHref = (s: Study, name: string) => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/c/' + enc(name);
 const sceneHref = (s: Study, id: string, tab: SceneTab = 'read') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/scene/' + enc(id) + (tab === 'read' ? '' : '/' + tab);
 const traitsHref = (s: Study, name = '', lens = '') => '#/s/' + enc(s.folder.slice(ROOT.length)) + '/traits' + (name ? '/' + enc(name) + (lens ? '/' + enc(lens) : '') : '');
@@ -137,6 +143,7 @@ export function StudyApp() {
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
+  else if (route.page === 'kishotenketsu') body = <KishotenketsuPage lib={lib} study={study} />;
   else if (route.page === 'scene') body = <ScenePage lib={lib} study={study} id={route.name || ''} tab={route.sceneTab || 'read'} lens={lens} setLens={setLens} source={source} />;
   else body = <StudyPage lib={lib} study={study} tab={route.tab || 'character'} view={route.view || 'board'} traits={route.traits ? { name: route.name || '', lens: route.lens || '' } : null} lens={lens} setLens={setLens} source={source} />;
 
@@ -220,11 +227,12 @@ function Chips({ lenses, value, onPick, plain }: { lenses: Lens[]; value: string
   );
 }
 
-function Tabs({ study, tab }: { study: Study; tab: Side }) {
+function Tabs({ study, tab }: { study: Study; tab: Tab }) {
   return (
     <div class="cs-tabs">
       <a href={studyHref(study, 'character')} class={tab === 'character' ? 'on' : ''}>Character</a>
       <a href={studyHref(study, 'plot')} class={tab === 'plot' ? 'on' : ''}>Plot</a>
+      <a href={studyHref(study, 'engine')} class={tab === 'engine' ? 'on' : ''}>Engine</a>
     </div>
   );
 }
@@ -249,6 +257,17 @@ function Prose({ text }: { text: string }) {
       {paras.map((p, i) => {
         const lines = p.split('\n');
         if (lines.every((l) => /^\s*[-*]\s/.test(l))) return <ul key={i}>{lines.map((l, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inline(l.replace(/^\s*[-*]\s+/, '')) }} />)}</ul>;
+        if (lines.every((l) => /^\s*\d+\.\s/.test(l))) return <ol key={i}>{lines.map((l, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inline(l.replace(/^\s*\d+\.\s+/, '')) }} />)}</ol>;
+        if (lines.length > 1 && lines.every((l) => /^\s*\|.*\|\s*$/.test(l))) {
+          // A pipe table: the first row is the head, a row of dashes is skipped (the engine note's scene table).
+          const rows = lines.map((l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim())).filter((r) => !r.every((c) => /^:?-+:?$/.test(c)));
+          return (
+            <table key={i}>
+              <thead><tr>{rows[0].map((c, j) => <th key={j} dangerouslySetInnerHTML={{ __html: inline(c) }} />)}</tr></thead>
+              <tbody>{rows.slice(1).map((r, j) => <tr key={j}>{r.map((c, k) => <td key={k} dangerouslySetInnerHTML={{ __html: inline(c) }} />)}</tr>)}</tbody>
+            </table>
+          );
+        }
         return <p key={i} dangerouslySetInnerHTML={{ __html: inline(p) }} />;
       })}
     </div>
@@ -299,7 +318,7 @@ function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
   );
 }
 
-function StudyHead({ study, tab }: { study: Study; tab: Side }) {
+function StudyHead({ study, tab }: { study: Study; tab: Tab }) {
   return (
     <div class="cs-head">
       <a class="cs-back" href="#/">Studies</a>
@@ -329,7 +348,7 @@ function Card({ lib, study, c, lens, source }: { lib: StudyLibrary; study: Study
   );
 }
 
-function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Side; view: PlotViewName; traits: { name: string; lens: string } | null; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
+function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { lib: StudyLibrary; study: Study; tab: Tab; view: PlotViewName; traits: { name: string; lens: string } | null; lens: Record<Side, string>; setLens: (s: Side, n: string) => void; source: VaultSource }) {
   const learning = study.sections['What we are learning'];
   const views: [PlotViewName, string][] = [['board', 'Story board'], ['drivers', 'Who drives the plot'], ['lenses', 'Plot lenses']];
   return (
@@ -341,7 +360,8 @@ function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { l
           <a href={traitsHref(study)} class={traits ? 'on' : ''} aria-current={traits ? 'page' : undefined}>Trait table</a>
         </nav>
       )}
-      {tab === 'character' && traits ? <TraitTable study={study} pick={traits} source={source} />
+      {tab === 'engine' ? <EngineView study={study} />
+      : tab === 'character' && traits ? <TraitTable study={study} pick={traits} source={source} />
       : tab === 'character' ? (
         <>
           <Chips lenses={lensesFor(lib, 'character')} value={lens.character} onPick={(n) => setLens('character', n)} plain="Card" />
@@ -361,7 +381,137 @@ function StudyPage({ lib, study, tab, view, traits, lens, setLens, source }: { l
             </>}
         </>
       )}
-      {learning && <><h2 class="cs-h2">What we are learning</h2><Prose text={learning} /></>}
+      {learning && tab !== 'engine' && <><h2 class="cs-h2">What we are learning</h2><Prose text={learning} /></>}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ the Engine tab and the Kishōtenketsu page (Kyle, 2026-10-27)
+
+/** The study's Engine.md: the distilled method, section by section, with the characters' parts as cards. */
+function EngineView({ study }: { study: Study }) {
+  const e: Engine | null = study.engine;
+  if (!e) {
+    return (
+      <>
+        <p class="cs-note">No engine note yet. The team writes Studies/{study.title}/Engine.md once five or six scenes are read: what matters about each character, what the world does, where the scenes come from, and how to build one.</p>
+        <p><a class="cs-pagelink" href={kishoHref(study)}>Kishōtenketsu, scene by scene</a></p>
+      </>
+    );
+  }
+  return (
+    <div class="cs-engine">
+      <h2 class="cs-engine-title">{e.title}</h2>
+      {e.lead && <Prose text={e.lead} />}
+      <p><a class="cs-pagelink" href={kishoHref(study)}>Kishōtenketsu, scene by scene: each scene's premise and beats by part</a></p>
+      {e.sections.map((sec) => (
+        <section class="cs-engine-sec" key={sec.heading}>
+          <h2 class="cs-h2">{sec.heading}</h2>
+          {sec.text && <Prose text={sec.text} />}
+          {sec.parts.length > 0 && (
+            <div class="cs-engine-parts">
+              {sec.parts.map((p) => {
+                const carded = study.characters.some((c) => c.name === p.heading);
+                return (
+                  <div class="cs-block cs-engine-part" key={p.heading}>
+                    <h3>{carded ? <a href={charHref(study, p.heading)}>{p.heading}</a> : p.heading}</h3>
+                    <Prose text={p.text} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+const PART_LABEL: Record<Exclude<Part, ''>, string> = { ki: 'Ki', shō: 'Shō', ten: 'Ten', ketsu: 'Ketsu' };
+
+function PartKey() {
+  return (
+    <p class="cs-quiet cs-part-key">
+      {PARTS.map((p) => <span key={p}><span class={'cs-part-swatch ' + partClass(p)} />{PART_LABEL[p]}: {PART_WORDS[p]}</span>)}
+    </p>
+  );
+}
+const partClass = (p: Part): string => (p === 'shō' ? 'sho' : p || 'none');
+
+/** One beat as a block coloured by its part. */
+function PartBeat({ b }: { b: Beat }) {
+  return (
+    <li class={'cs-pbeat ' + partClass(b.part) + (b.turning ? ' turning' : '')}>
+      <span class="cs-pbeat-tag">{b.part ? PART_LABEL[b.part] : 'untagged'}{b.turning ? ' · turning' : ''}</span>
+      <span class="cs-pbeat-who">{b.who}{b.kind ? <span class="cs-quiet"> ({b.kind})</span> : null}</span>
+      <span class="cs-pbeat-text" dangerouslySetInnerHTML={{ __html: inline(b.text) }} />
+    </li>
+  );
+}
+
+/** The scene's beats as a thin strip, one block per beat coloured by part, so the turn's place can be seen at a glance. */
+function PartStrip({ s }: { s: StudyScene }) {
+  return <span class="cs-pstrip" aria-hidden="true">{s.plot.beats.map((b, i) => <span key={i} class={'cs-pstrip-cell ' + partClass(b.part) + (b.turning ? ' turning' : '')} />)}</span>;
+}
+
+/** The dedicated Kishōtenketsu page (Kyle, 2026-10-27): each scene's premise, its beats as the four parts, and how
+ *  the ketsu of one scene hands on to the ki of the next. */
+function KishotenketsuPage({ lib, study }: { lib: StudyLibrary; study: Study }) {
+  const lens = lib.lenses.find((l) => /^kish/i.test(l.name));
+  const hands = handoffs(study);
+  const turns = study.scenes.map((s) => ({ s, t: turnAt(s) }));
+  const tagged = turns.filter((x) => x.t).length;
+  return (
+    <section class="cs-kisho">
+      <a class="cs-back" href={studyHref(study, 'engine')}>{study.title}: Engine</a>
+      <h1>Kishōtenketsu</h1>
+      <p class="cs-quiet">{lens ? lens.framework : 'Four parts: ki sets up, shō develops, ten turns, ketsu settles.'}{lens && lens.question ? ' ' + lens.question : ''}</p>
+      <PartKey />
+
+      <h2 class="cs-h2">Where the turn falls</h2>
+      {tagged === 0 ? <p class="cs-note">No scene's beats are tagged with their parts yet.</p> : (
+        <ol class="cs-turns">
+          {turns.map(({ s, t }) => (
+            <li key={s.id}>
+              <a href={sceneHref(study, s.id, 'beats')}><span class="cs-id">{s.id}</span> <strong>{s.title}</strong></a>
+              <PartStrip s={s} />
+              <span class="cs-quiet">{t ? 'turn at beat ' + t.at + ' of ' + t.of : 'no ten'}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <h2 class="cs-h2">Scene by scene</h2>
+      {!study.scenes.length && <p class="cs-note">No scenes yet.</p>}
+      <ol class="cs-kisho-scenes">
+        {study.scenes.map((s, i) => {
+          const reading = s.plot.readings[lens ? lens.name : 'Kishōtenketsu'] || [];
+          const reread = reading.find(([k]) => /re-?reads?/i.test(k));
+          const fit = reading.find(([k]) => /^fit$/i.test(k));
+          const hand = i > 0 ? hands[i - 1] : null;
+          return (
+            <Fragment key={s.id}>
+              {hand && (
+                <li class="cs-handoff">
+                  <div class={'cs-link ' + linkClass(s.plot.link)}>{linkWord(s.plot.link)}</div>
+                  <div class="cs-handoff-cols">
+                    <div><h4 class="cs-caps">{hand.from.id} ends (ketsu)</h4>{hand.ketsu.length ? <ul>{hand.ketsu.map((b, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inline(b.text) }} />)}</ul> : <p class="cs-quiet">No ketsu tagged.</p>}</div>
+                    <div><h4 class="cs-caps">{s.id} starts (ki)</h4>{hand.ki.length ? <ul>{hand.ki.map((b, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inline(b.text) }} />)}</ul> : <p class="cs-quiet">No ki tagged.</p>}</div>
+                  </div>
+                  {s.plot.whyNext && <p class="cs-handoff-why"><span class="cs-quiet">Why next: </span><span dangerouslySetInnerHTML={{ __html: inline(s.plot.whyNext) }} /></p>}
+                </li>
+              )}
+              <li class="cs-kisho-scene">
+                <a class="cs-kisho-head" href={sceneHref(study, s.id, 'beats')}><span class="cs-id">{s.id}</span> <strong>{s.title}</strong> <span class="cs-quiet">{s.where}</span></a>
+                {s.premise ? <p class="cs-premise">{s.premise}</p> : <p class="cs-quiet">No premise written yet.</p>}
+                {fit && <p class="cs-fit"><span dangerouslySetInnerHTML={{ __html: inline(fit[1]) }} /></p>}
+                {s.plot.beats.length ? <ol class="cs-pbeats">{s.plot.beats.map((b, j) => <PartBeat key={j} b={b} />)}</ol> : <p class="cs-quiet">No beats yet.</p>}
+                {reread && <p class="cs-reread"><span class="cs-quiet">{reread[0]}: </span><span dangerouslySetInnerHTML={{ __html: inline(reread[1]) }} /></p>}
+              </li>
+            </Fragment>
+          );
+        })}
+      </ol>
     </section>
   );
 }
@@ -574,6 +724,7 @@ function PlotView({ lib, study, lens }: { lib: StudyLibrary; study: Study; lens:
       {study.sections['Plot structure'] && <><h2 class="cs-h2">How the plot is built</h2><Prose text={study.sections['Plot structure']} /></>}
       <h2 class="cs-h2">Which plot lens explains the scenes</h2>
       <Tallies study={study} name="" />
+      {l && /^kish/i.test(l.name) && <p><a class="cs-pagelink" href={kishoHref(study)}>Kishōtenketsu, scene by scene: each scene's premise and beats by part</a></p>}
       <h2 class="cs-h2">Scene by scene</h2>
       {!study.scenes.length && <p class="cs-note">No scenes yet.</p>}
       <ol class="cs-chain">

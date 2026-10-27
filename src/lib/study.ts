@@ -50,8 +50,14 @@ export interface Check { lens: string; field: string; verdicts: Record<string, V
 export type Role = 'driver' | 'opposes' | 'supports' | 'receives' | '';
 export const ROLES: Exclude<Role, ''>[] = ['driver', 'opposes', 'supports', 'receives'];
 
-/** One beat of a scene: who (a character or a force, as The world) causes it, its kind, and whether it turns the scene. */
-export interface Beat { who: string; kind: string; turning: boolean; text: string; }
+/** The kishōtenketsu part a beat belongs to (Kyle, 2026-10-27): ki sets up, shō develops, ten turns, ketsu settles. '' is untagged. */
+export type Part = 'ki' | 'shō' | 'ten' | 'ketsu' | '';
+export const PARTS: Exclude<Part, ''>[] = ['ki', 'shō', 'ten', 'ketsu'];
+/** What each part does, for keys and headings. */
+export const PART_WORDS: Record<Exclude<Part, ''>, string> = { ki: 'set up', shō: 'develop', ten: 'turn', ketsu: 'settle' };
+
+/** One beat of a scene: who (a character or a force, as The world) causes it, its kind, whether it turns the scene, and its part. */
+export interface Beat { who: string; kind: string; turning: boolean; part: Part; text: string; }
 
 /** Someone in a scene's plot: a carded character (from its ## block) or a force or minor character from "- Others". */
 export interface Player { name: string; role: Role; carded: boolean; }
@@ -88,11 +94,18 @@ export interface StudyScene {
   where: string;
   characters: string[];
   summary: string;
+  /** The scene's premise in one line: the situation it starts from (Kyle, 2026-10-27). */
+  premise: string;
   /** Where Kyle reads the scene in full, on the translator's or publisher's page. */
   sourceUrl: string;
   plot: PlotInScene;
   cast: CharacterInScene[];
 }
+
+/** One ## section of a study's Engine.md, with its ### parts (a part per character under "What matters about each character"). */
+export interface EngineSection { heading: string; text: string; parts: { heading: string; text: string }[]; }
+/** Studies/<Study>/Engine.md (type study-engine): the distilled method of the story, Crow's Engine tab (Kyle, 2026-10-27). */
+export interface Engine { title: string; lead: string; sections: EngineSection[]; }
 
 export interface Study {
   title: string;
@@ -107,6 +120,7 @@ export interface Study {
   faces: FileEntry[];
   characters: StudyCharacter[];
   scenes: StudyScene[];
+  engine: Engine | null;
 }
 
 export interface StudyLibrary {
@@ -172,16 +186,24 @@ function cleanRole(v: string): Role {
   return (ROLES as string[]).includes(w) ? (w as Role) : '';
 }
 
-/** "- Kazuma (choice, turning): Stung, he picks her." A line without the brackets is "- Who: beat", or just the beat. */
+function cleanPart(tag: string): Part {
+  const w = tag.toLowerCase().replace(/[^a-zō]/g, '');
+  return w === 'ki' ? 'ki' : w === 'sho' || w === 'shō' ? 'shō' : w === 'ten' ? 'ten' : w === 'ketsu' ? 'ketsu' : '';
+}
+
+/** "- Kazuma (choice, turning, ten): Stung, he picks her." The tags are the kind, "turning", and the kishōtenketsu part.
+ *  A line without the brackets is "- Who: beat", or just the beat. */
 export function parseBeat(line: string): Beat {
   const m = /^([^():]{1,60}?)\s*\(([^)]*)\)\s*:\s*(.*)$/.exec(line.trim());
   if (m) {
     const tags = m[2].split(',').map((t) => t.trim()).filter(Boolean);
     const turning = tags.some((t) => /^turning$/i.test(t));
-    return { who: m[1].trim(), kind: tags.filter((t) => !/^turning$/i.test(t)).join(', '), turning, text: m[3].trim() };
+    const part = tags.map(cleanPart).find(Boolean) || '';
+    const kind = tags.filter((t) => !/^turning$/i.test(t) && !cleanPart(t)).join(', ');
+    return { who: m[1].trim(), kind, turning, part, text: m[3].trim() };
   }
   const c = /^([^:"“]{1,60}):\s*(.*)$/.exec(line.trim());
-  return c ? { who: c[1].trim(), kind: '', turning: false, text: c[2].trim() } : { who: '', kind: '', turning: false, text: line.trim() };
+  return c ? { who: c[1].trim(), kind: '', turning: false, part: '', text: c[2].trim() } : { who: '', kind: '', turning: false, part: '', text: line.trim() };
 }
 
 /** "The world (opposes), The angel (supports)": names and roles, split at commas outside brackets. */
@@ -239,7 +261,7 @@ export function parseScene(path: string, data: Record<string, unknown>, body: st
   }
   return {
     id: str(data.id), title: str(data.title), path, order: num(data.order, 0), where: str(data.where),
-    characters: list(data.characters), summary: str(data.summary), sourceUrl: str(data.source_url), plot, cast
+    characters: list(data.characters), summary: str(data.summary), premise: str(data.premise), sourceUrl: str(data.source_url), plot, cast
   };
 }
 
@@ -275,6 +297,14 @@ export function parseCheck(line: string): Check | null {
 export function sceneField(scene: StudyScene, name: string, lens: string, fieldName: string): string {
   const me = scene.cast.find((c) => c.name === name);
   return me && me.readings[lens] ? field(me.readings[lens], fieldName) : '';
+}
+
+export function parseEngine(data: Record<string, unknown>, body: string): Engine {
+  const s = sections(body, 2);
+  return {
+    title: str(data.title) || 'What makes it go', lead: s.lead,
+    sections: s.parts.map((p) => { const sub = sections(p.text, 3); return { heading: p.heading, text: sub.lead, parts: sub.parts }; })
+  };
 }
 
 export function parseLens(data: Record<string, unknown>, body: string): Lens {
@@ -313,6 +343,7 @@ export function buildLibrary(files: FileEntry[], texts: Map<string, string>): St
   const studies = new Map<string, Study>();
   const chars: { folder: string; c: StudyCharacter }[] = [];
   const scenes: { folder: string; s: StudyScene }[] = [];
+  const engines: { folder: string; e: Engine }[] = [];
   for (const [path, text] of texts) {
     const p = Frontmatter.parse(text);
     if (p.error) { problems.push(path + ' could not be read: ' + p.error + '.'); continue; }
@@ -327,15 +358,16 @@ export function buildLibrary(files: FileEntry[], texts: Map<string, string>): St
       const prior = studies.get(folder);
       studies.set(folder, {
         title: str(data.title) || folder.slice(ROOT.length), folder, author: str(data.author), medium: str(data.medium), status: str(data.status) || 'open',
-        about: sec.lead, sections: named, faces: [], characters: prior ? prior.characters : [], scenes: prior ? prior.scenes : []
+        about: sec.lead, sections: named, faces: [], characters: prior ? prior.characters : [], scenes: prior ? prior.scenes : [], engine: prior ? prior.engine : null
       });
     } else if (type === 'study-character' && folder) chars.push({ folder, c: parseCharacter(path, data, p.body) });
     else if (type === 'study-scene' && folder) scenes.push({ folder, s: parseScene(path, data, p.body) });
+    else if (type === 'study-engine' && folder) engines.push({ folder, e: parseEngine(data, p.body) });
   }
   const get = (folder: string): Study => {
     let s = studies.get(folder);
     if (!s) {
-      s = { title: folder.slice(ROOT.length), folder, author: '', medium: '', status: 'open', about: '', sections: {}, faces: [], characters: [], scenes: [] };
+      s = { title: folder.slice(ROOT.length), folder, author: '', medium: '', status: 'open', about: '', sections: {}, faces: [], characters: [], scenes: [], engine: null };
       studies.set(folder, s);
       problems.push(folder + ' has no Study.md, so it shows under its folder name.');
     }
@@ -343,6 +375,7 @@ export function buildLibrary(files: FileEntry[], texts: Map<string, string>): St
   };
   for (const { folder, c } of chars) { c.face = findFace(files, folder, c.name); get(folder).characters.push(c); }
   for (const { folder, s } of scenes) get(folder).scenes.push(s);
+  for (const { folder, e } of engines) get(folder).engine = e;
   for (const s of studies.values()) {
     s.faces = files.filter((f) => f.path.startsWith(s.folder + '/Faces/') && /\.(jpe?g|png|webp)$/i.test(f.path));
     s.characters.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
@@ -438,6 +471,29 @@ export function driveGrid(study: Study): DriveRow[] {
   });
   const order = (r: DriveRow) => { const k = study.characters.findIndex((c) => same(c.name, r.name)); return k < 0 ? 999 : k; };
   return rows.filter((r) => r.cells.some((c) => c.present)).sort((a, b) => order(a) - order(b) || b.beats - a.beats || a.name.localeCompare(b.name));
+}
+
+/** The beats of one part of a scene, in order. */
+export function beatsOf(scene: StudyScene, part: Part): Beat[] {
+  return scene.plot.beats.filter((b) => b.part === part);
+}
+
+/** Where the turn falls: the first ten beat's number (from 1) and the beat count, or null when no beat is tagged ten. */
+export function turnAt(scene: StudyScene): { at: number; of: number } | null {
+  const i = scene.plot.beats.findIndex((b) => b.part === 'ten');
+  return i < 0 ? null : { at: i + 1, of: scene.plot.beats.length };
+}
+
+/** How one scene hands on to the next (Kyle, 2026-10-27: "any way each scene connects to the next"): its ketsu beats,
+ *  the link word, and the next scene's ki beats, so the ending position can be read beside the starting one. */
+export interface Handoff { from: StudyScene; to: StudyScene; ketsu: Beat[]; ki: Beat[]; }
+export function handoffs(study: Study): Handoff[] {
+  const out: Handoff[] = [];
+  for (let i = 1; i < study.scenes.length; i++) {
+    const from = study.scenes[i - 1], to = study.scenes[i];
+    out.push({ from, to, ketsu: beatsOf(from, 'ketsu'), ki: beatsOf(to, 'ki') });
+  }
+  return out;
 }
 
 /** The Value Shift reading's From and To, for the story board's value line ('' when the scene was not read so). */
