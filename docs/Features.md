@@ -648,6 +648,8 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
 - **Story calls.** Edit > Story calls is Decide one at a time for the whole-book read's calls (ideas with `step: "36"`):
   Yes with fix A, B or C (from the idea's "Fix A:" lines), Yes my way, Later, No. The fix goes in `decision_note`.
+  The box for his own fix is always open above the buttons at the bottom of the screen, with Yes, my way beside it
+  (2026-10-27, Kyle: "When I say yes, my choice, it just goes on to the next one").
 - **Edit > Changes** lists the story calls waiting, each chapter with changes, and the saved drafts.
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.

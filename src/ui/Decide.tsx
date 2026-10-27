@@ -23,23 +23,22 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
   const [why, setWhy] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const list = decideQueue(index, book).filter((n) => done.indexOf(n.path) < 0 && (!calls || isStoryCall(n)));
-  const [mine, setMine] = useState(false);
-  // The buttons stay at the bottom of the screen, but the card can be long (a call with three fixes): the box for Kyle's
-  // own words opens in the buttons' place and takes the cursor, so he sees it at once (Kyle, 2026-10-27: "Yes, my way ...
-  // did not give me an option to type in what I want").
+  // A story call's box for Kyle's own fix is always open above its buttons, so typing never hangs on a button that
+  // first has to open it (Kyle, 2026-10-27: "When I say yes, my choice, it just goes on to the next one"). Rewrite's box
+  // opens in the buttons' place and takes the cursor.
   const box = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
-    if (!(mine || asking) || !box.current) return;
+    if (!asking || !box.current) return;
     box.current.focus({ preventScroll: true });
     box.current.scrollIntoView({ block: 'nearest' });
-  }, [mine, asking]);
+  }, [asking]);
   const here = list[0];
   const choose = (decision: Decision, label: string, reason = '') => {
     if (!here || !onDecide) return;
     onDecide(here.path, decision, reason);
     setDone(done.concat(here.path));
     setLast({ path: here.path, text: label + ': ' + String(here.data.title || here.data.id || '') });
-    setAsking(false); setMine(false); setWhy('');
+    setAsking(false); setWhy('');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setLast(null), 10000);
   };
@@ -85,24 +84,19 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
             <p class="meta"><a href={href.note(here.path)}>Open the full note</a></p>
           </article>
           {!onDecide ? <p class="hint">Choosing needs your own vault, not the demo.</p> : calls ? (
-            mine ? (
-              <div class="decide-why">
-                <label for="decide-fix">Your fix, in your words</label>
-                <textarea id="decide-fix" ref={box} rows={3} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
-                <div class="buttons">
-                  <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('keep', 'Yes, your way', 'My fix: ' + why.trim())}>Yes, my way</button>
-                  <button type="button" onClick={() => setMine(false)}>Cancel</button>
-                </div>
+            <div class="decide-calls">
+              <div class="decide-mine">
+                <label for="decide-fix">Or your own fix, in your words</label>
+                <textarea id="decide-fix" rows={2} value={why} onInput={(e) => setWhy((e.target as HTMLTextAreaElement).value)} />
+                <button type="button" class="primary" disabled={!why.trim()} onClick={() => choose('keep', 'Yes, your way', 'My fix: ' + why.trim())}>Yes, my way</button>
               </div>
-            ) : (
               <div class="decide-buttons calls">
                 {fixes.map((f) => <button key={f.letter} type="button" class="primary" title={f.text} onClick={() => choose('keep', 'Yes, fix ' + f.letter, 'Fix ' + f.letter + ': ' + f.text)}>Yes, fix {f.letter}</button>)}
                 {!fixes.length && <button type="button" class="primary" onClick={() => choose('keep', 'Yes')}>Yes</button>}
-                <button type="button" onClick={() => setMine(true)}>Yes, my way</button>
                 <button type="button" onClick={() => choose('later', 'Later')}>Later</button>
                 <button type="button" onClick={() => choose('drop', 'No', 'No')}>No</button>
               </div>
-            )
+            </div>
           ) : asking ? (
             <div class="decide-why">
               <label for="decide-why">What should the team change?</label>
