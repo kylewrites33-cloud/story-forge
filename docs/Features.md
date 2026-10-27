@@ -130,7 +130,8 @@ add a dated line here when you add or change one.
   Every save (the file's commits, with Go back to this version); the book's Archive with Restore; Whole chapter (every
   scene of the chapter as one page, each saving on its own). Boards: Matrix (scenes down, codex across; point of view,
   on the card, or named), Edit Queue (editorial notes and to-dos; part of To-do since 2026-10-22), and Appears in on character, place, item and lore notes.
-  New book and New series on the home page; Bring in a manuscript (file saved unchanged in the book's Research folder,
+  New book and New series on the home page (a new book starts with a 60,000-word target, Kyle 2026-10-27: "make the
+  default words target for every new created book 60,000 words"; changed on its Overview); Bring in a manuscript (file saved unchanged in the book's Research folder,
   then an `import` job); Edit card changes a scene's title (the file is renamed). Rewrite can ask the team to rewrite
   now (a `rewrite` job); Table read of this chapter (`table-read`) and Ask the team for more ideas (`ideas`). These kinds
   have full steps in the job's ## Ask, so the runner's coordinator can run them without its own prompt.
@@ -492,6 +493,10 @@ its still possible to go through the workflow mode from somewhere, please apply 
   Bring in results and Check work as before at the same addresses (`#/flow/...`). Home shows "Where the book is": one
   path of the workflow's six stages plus Publish, each opening its stage. The ten stage pills (Spark to Done) moved to
   Publish > Book details, where the book's `stage` is still changed.
+  2026-10-27 (Kyle: "if I've clearly just jumped into writing, then I think the writing step should be highlighted"):
+  the lit stage is the furthest one with work in it, skipped stages before it or not. A stage has work when a step has
+  a result or a job, Writing when a scene has prose, Editing when Kyle marked a chapter done; a fully kept stage hands
+  on to the next. Published books show "Published." (`currentStage` in `src/lib/flow.ts`).
 - **Decide one at a time** (Home > Decide one at a time, and a button in Waiting on you): every idea (with the workflow's
   results), beat and conflict waiting on Kyle, one large card at a time, with 58 px Keep, Later, Rewrite (asks what to
   change) and Drop, stars, and Undo for ten seconds. Keys K, M, D and U are extras.

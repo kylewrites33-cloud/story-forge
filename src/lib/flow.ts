@@ -169,6 +169,41 @@ export function stageProgress(stage: FlowStage, statuses: Record<string, TaskSta
   return { done, total: stage.tasks.length, waiting };
 }
 
+/** What the book itself shows, beyond the workflow's results: prose in its scenes, chapters Kyle marked done, published. */
+export interface BookSigns {
+  prose: boolean;
+  edited: boolean;
+  published: boolean;
+}
+
+/** The book's signs, from its scenes (test drives left out) and its stage. */
+export function bookSigns(index: VaultIndex, book: BookEntry): BookSigns {
+  const scenes = book.scenes.map((p) => index.notes[p]).filter((n) => n && n.data.kind !== 'test');
+  return {
+    prose: scenes.some((n) => /\w/.test(n.body)),
+    edited: scenes.some((n) => /^(revised|final)$/.test(str(n.data.status))),
+    published: /publish|done|live/i.test(book.stage || '')
+  };
+}
+
+/** Which stage the book is at, for "Where the book is" (Kyle, 2026-10-27: "if I've clearly just jumped into writing, then
+ * I think the writing step should be highlighted"). The furthest stage with work in it wins, skipped stages before it
+ * or not: a stage has work when a step has a result or a job, Writing when a scene has prose, Editing when Kyle marked a
+ * chapter done. When that stage is fully kept, the one after it. Nothing started: the first stage. Returns an index into
+ * the stages, `stages.length` for Publish, or -1 once the book is published. */
+export function currentStage(stages: FlowStage[], statuses: Record<string, TaskStatus>, signs: BookSigns): number {
+  if (signs.published) return -1;
+  const started = (st: FlowStage) =>
+    st.tasks.some((t) => { const s = statuses[t.key]; return !!s && (s.kept.length > 0 || s.decide.length > 0 || s.later.length > 0 || !!s.job); }) ||
+    (signs.prose && /\bwrit/i.test(st.title)) || (signs.edited && /\bedit/i.test(st.title));
+  const done = (st: FlowStage) => { const p = stageProgress(st, statuses); return p.total > 0 && p.done >= p.total; };
+  let last = -1;
+  stages.forEach((st, i) => { if (started(st)) last = i; });
+  const from = last >= 0 && !done(stages[last]) ? last : last + 1;
+  for (let i = Math.max(0, from); i < stages.length; i++) if (i === last || !done(stages[i])) return i;
+  return stages.length;
+}
+
 /** The first task not kept yet, in order: where to pick up. */
 export function nextTask(stages: FlowStage[], statuses: Record<string, TaskStatus>): FlowTask | null {
   return allTasks(stages).find((t) => statuses[t.key] && !statuses[t.key].kept.length) || null;

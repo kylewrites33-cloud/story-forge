@@ -32,8 +32,11 @@ export async function createSeries(source: VaultSource, name: string, genre: str
   return add(source, 'Series/' + clean + '/Series.md', seriesText(clean, genre, now), 'vault: new series ' + clean + '\n\nStarted in the Sparrow app.', 'A series called ' + clean);
 }
 
+/** The word target every new book starts with (Kyle, 2026-10-27); he changes it on the book's Overview. */
+export const NEW_BOOK_WORDS = 60000;
+
 export function bookText(title: string, seriesName: string, number: number, now: Date): string {
-  const data: Record<string, unknown> = { type: 'book', title, series: '[[' + seriesName + ']]', number, stage: 'spark', created: today(now) };
+  const data: Record<string, unknown> = { type: 'book', title, series: '[[' + seriesName + ']]', number, stage: 'spark', target_words: NEW_BOOK_WORDS, created: today(now) };
   return Frontmatter.join(data, '\n' + title + ' was started in the Sparrow app.\n');
 }
 

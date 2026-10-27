@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  createResults, defaultMode, flowJobAsk, flowResults, flowStages, keptFor, kindForStep, nextIdeaNumber, ownResults, resultText, resultTitle,
+  bookSigns, createResults, currentStage, defaultMode, flowJobAsk, flowResults, flowStages, keptFor, kindForStep, nextIdeaNumber, ownResults, resultText, resultTitle,
   splitResults, stageProgress, taskByKey, taskStatuses, targetValue
 } from '../src/lib/flow.ts';
 import { parseSchema } from '../src/lib/schema.ts';
@@ -122,4 +122,27 @@ test('results written by the app pass sf validate', { skip: !hasVault && 'the va
   fs.writeFileSync(path.join(dir, BOOK, 'Ideas', 'I-030 The ferry runs on Tobin\'s debt.md'), text);
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], { cwd: dir, env: { ...process.env, SF_VAULT: dir }, encoding: 'utf8' });
   assert.match(out, /no errors/, out);
+});
+
+test('Where the book is lights the furthest stage with work in it, so a book that jumped into writing shows Writing', async () => {
+  const index = await demo();
+  const book = index.books.find((b) => b.folder === BOOK)!;
+  const stages = flowStages(parseWorkflow(WORKFLOW));
+  const writing = stages.findIndex((st) => /writ/i.test(st.title) && !/pre-writ/i.test(st.title));
+  const none = taskStatuses(stages, [], [], BOOK);
+  const blank = { prose: false, edited: false, published: false };
+  assert.equal(currentStage(stages, none, blank), 0, 'nothing started: the first stage');
+  assert.equal(currentStage(stages, none, { ...blank, prose: true }), writing, 'prose with every step skipped: Writing');
+  const st = taskStatuses(stages, flowResults(index, book), [], BOOK);
+  assert.equal(currentStage(stages, st, blank), writing, 'the demo has a result kept for chapter 1');
+  const early = { ...st };
+  stages.slice(4).forEach((x) => x.tasks.forEach((t) => { early[t.key] = none[t.key]; }));
+  assert.equal(currentStage(stages, early, blank), 3, 'the cast stage has work, the stages before it were skipped');
+  assert.equal(currentStage(stages, st, { ...blank, prose: true }), writing);
+  assert.equal(currentStage(stages, st, { ...blank, published: true }), -1);
+  // A stage fully kept hands on to the next one.
+  const kept = { ...none };
+  stages[0].tasks.forEach((t) => { kept[t.key] = { ...none[t.key], kept: [{ path: 'x', sha: '', type: 'idea', error: null, body: '', data: {} }] }; });
+  assert.equal(currentStage(stages, kept, blank), 1);
+  assert.equal(bookSigns(index, book).prose, true);
 });

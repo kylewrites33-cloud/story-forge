@@ -8,7 +8,7 @@ import { stamp, type Decision } from '../lib/ideas.ts';
 import { jobNotes, type OnJob } from '../lib/jobs.ts';
 import { inline } from '../lib/markdown.ts';
 import {
-  allTasks, flowJobAsk, flowJobTitle, flowResults, flowStages, jobTarget, keptAbout, nextTask, ownResults,
+  allTasks, bookSigns, currentStage, flowJobAsk, flowJobTitle, flowResults, flowStages, jobTarget, keptAbout, nextTask, ownResults,
   plainStep, resultTag, splitResults, stageProgress, STATE_LABEL, taskByKey, taskLabel, taskStatuses, targetValue,
   type FlowAsk, type FlowStage, type FlowTask, type NewResult, type TaskStatus
 } from '../lib/flow.ts';
@@ -59,15 +59,17 @@ export function BookPath({ index, book }: { index: VaultIndex; book: BookEntry }
     const name = full.split(/\s+and\s+/)[0];
     return { name: name ? name[0].toUpperCase() + name.slice(1) : st.title, full, to: href.flowStage(book.folder, st.index + 1), done: p.total > 0 && p.done >= p.total, part: p.total ? p.done / p.total : 0, p };
   });
-  const published = /publish|done|live/i.test(book.stage || '');
+  const signs = bookSigns(index, book);
+  const published = signs.published;
   parts.push({ name: 'Publish', full: 'Publish', to: href.board('market', book.folder), done: published, part: published ? 1 : 0, p: { done: 0, total: 0, waiting: 0 } });
-  const cur = parts.findIndex((x) => !x.done);
-  const next = nextTask(flow.stages, flow.statuses);
+  const cur = currentStage(flow.stages, flow.statuses, signs);
+  // Where to pick up: the first started step at or after the stage the book is at.
+  const next = nextTask(cur >= 0 ? flow.stages.slice(cur) : [], flow.statuses);
   return (
     <section class="book-path" aria-label="Where the book is">
       <div class="book-path-head">
         <h2>Where the book is</h2>
-        <p class="meta">{cur < 0 ? 'Every stage is done.' : parts[cur].name + (parts[cur].p.total ? ': ' + parts[cur].p.done + ' of ' + parts[cur].p.total + ' steps kept' : '')}{next ? ' · next, ' + taskLabel(next) : ''}</p>
+        <p class="meta">{cur < 0 ? 'Published.' : parts[cur].name + (parts[cur].p.total ? ': ' + parts[cur].p.done + ' of ' + parts[cur].p.total + ' steps kept' : '')}{next ? ' · next, ' + taskLabel(next) : ''}</p>
         <a href={href.flow(book.folder)}>All steps <Icon name="right" size={16} /></a>
       </div>
       <ol class="book-path-row">
