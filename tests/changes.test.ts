@@ -186,3 +186,15 @@ test('todoTicks: a to-do is done once every change naming it is decided and one 
   list[1] = ch('C-2', 'To-do T-002: more pain', 'other');
   assert.deepEqual(todoTicks(list, ['C-2']), [{ id: 'T-002', done: true, note: 'Edit room: C-1 your own words, C-2 other version kept.' }]);
 });
+
+test('a change can carry what Kyle asked, what it does and the team check, each on its own line', async () => {
+  const { todoIds } = await import('../src/lib/changes.ts');
+  const body = '## C-01 · new\nScene: S-001\nWhy: To-do T-048\nAsked: the Genius Farmer book by his side\nChange: Puts the booklet beside him.\nCheck: the booklet is old, ch 6 to 8.\nKyle: open\n\nWas:\n> a\n\nNow:\n> b\n';
+  const c = parseChanges(body).changes[0];
+  assert.equal(c.why, 'To-do T-048');
+  assert.equal(c.asked, 'the Genius Farmer book by his side');
+  assert.equal(c.does, 'Puts the booklet beside him.');
+  assert.equal(c.check, 'the booklet is old, ch 6 to 8.');
+  assert.deepEqual(todoIds(c), ['T-048']);
+  assert.equal(parseChanges(setStatus(body, 'C-01', 'kept')).changes[0].status, 'kept');
+});

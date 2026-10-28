@@ -674,6 +674,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   has Edit, then accept; a card with two versions has Edit the first, then accept and Edit the other, then accept. The
   version's words open in a box on the card, labelled with which version it is; Accept my version puts them on the page
   in place of Kyle's old words and records his own words (or kept / the other version if he changed nothing).
+- **Readable reasons** (2026-10-28, Kyle: "the lack of formatting makes it extremely difficult to read ... you don't
+  need to tell me to read it slowly"). A change may carry `Asked:`, `Change:` and `Check:` lines under `Why:`; the card
+  shows them as YOU ASKED and THE CHANGE, and folds the team's check. "New passage · read slowly" is gone.
 - **Other scenes' changes** (2026-10-28, Kyle: "something is messed up with the number of changes remaining displayed in
   the chapters column"). The chapter list counts every waiting change in the chapter; the Changes tab counts the scene on
   screen and adds "· N more in this chapter's other scenes" so the two agree.

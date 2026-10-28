@@ -39,6 +39,11 @@ export interface Change {
   now: string;
   /** A second version (new passages), or null. */
   other: string | null;
+  /** Optional plain parts the card shows under labels (Kyle, 2026-10-28: the reasons were "extremely difficult to read"):
+   * what Kyle asked for in his own words, what the change does, and the team's own check, which stays folded. */
+  asked?: string;
+  does?: string;
+  check?: string;
 }
 
 export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Fix', line: 'Sentence', story: 'Story', new: 'New passage' };
@@ -170,7 +175,7 @@ export function changesNoteFor(notes: Record<string, NoteRecord>, bookFolder: st
 }
 
 const HEAD = /^##\s+(C-\d+)\s*(?:·\s*(\w+))?\s*$/i;
-const FIELD = /^(Scene|Why|Kyle):\s*(.*)$/i;
+const FIELD = /^(Scene|Why|Kyle|Asked|Change|Check):\s*(.*)$/i;
 const QUOTE = /^(Was|Now|Or):\s*$/i;
 
 /** The lines before the first change (the Writer's report) and the changes, in order. */
@@ -207,6 +212,9 @@ export function parseChanges(body: string): { intro: string; changes: Change[] }
       const key = f[1].toLowerCase();
       if (key === 'scene') cur.scene = f[2].trim().toUpperCase();
       else if (key === 'why') cur.why = f[2].trim();
+      else if (key === 'asked') cur.asked = f[2].trim();
+      else if (key === 'change') cur.does = f[2].trim();
+      else if (key === 'check') cur.check = f[2].trim();
       else { const s = f[2].trim().toLowerCase() as ChangeStatus; cur.status = STATUSES.indexOf(s) >= 0 ? s : 'open'; }
     }
   });
