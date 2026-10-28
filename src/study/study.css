@@ -302,3 +302,20 @@ a.cs-card:hover { box-shadow: var(--shadow-lift); }
   .cs-pbeat { grid-template-columns: 1fr; }
   .cs-pbeat-tag { grid-row: auto; }
 }
+
+/* The Writer's Kit above a scene's beats */
+.cs-kit { margin: 0 0 18px; padding: 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.cs-kit h2 { margin: 0 0 2px; font-size: 1.15rem; }
+.cs-kit-cast { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 12px; }
+.cs-kit-who { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.cs-kit-rest { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* Kishōtenketsu strips on a scene's beats: four colours from the theme, so they follow light and dark */
+.cs .strip-ki { --strip: var(--st-revised); }
+.cs .strip-sho { --strip: var(--st-final); }
+.cs .strip-ten { --strip: var(--danger); }
+.cs .strip-ketsu { --strip: var(--st-drafted); }
+.cs .strip-none { --strip: var(--line); }
+.cs-beatlist li[class*="strip-"] { border-left: 8px solid var(--strip); }
+.cs-strip-swatch { width: 8px; height: 18px; border-radius: 3px; background: var(--strip); display: inline-block; }
+.cs-strip-tag { font-size: 0.8rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1.5px solid var(--strip); color: var(--text); }

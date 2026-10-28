@@ -454,6 +454,16 @@ function PartKey() {
 }
 const partClass = (p: Part): string => (p === 'shō' ? 'sho' : p || 'none');
 
+/** The key to the beats' left strips (Kyle, 2026-10-28: "color the left side strip of each bubble one of 4 colors to mark
+ *  it as ki, sho, ten, or ketsu"). */
+function StripKey() {
+  return (
+    <p class="cs-quiet cs-part-key">
+      {PARTS.map((p) => <span key={p}><span class={'cs-strip-swatch strip-' + partClass(p)} />{PART_LABEL[p]}: {PART_WORDS[p]}</span>)}
+    </p>
+  );
+}
+
 /** One beat as a block coloured by its part. */
 function PartBeat({ b }: { b: Beat }) {
   return (
@@ -936,6 +946,42 @@ function SceneRead({ s }: { s: StudyScene }) {
   );
 }
 
+/** The Writer's Kit above the beats (Kyle, 2026-10-28: "what character elements might the author have used to help these
+ *  characters act characteristically? maybe put this in a little section above the beats"). Lines "- Name · Field: text"
+ *  are grouped under that character's icon; any other line is shown after them. */
+function WritersKit({ study, s, source }: { study: Study; s: StudyScene; source: VaultSource }) {
+  const r = s.plot.readings["Writer's Kit"];
+  if (!r || !r.length) return null;
+  const ps = players(s);
+  const groups: { name: string; rows: [string, string][] }[] = [];
+  const rest: [string, string][] = [];
+  for (const [k, v] of r) {
+    const m = /^(.+?)\s+·\s+(.+)$/.exec(k);
+    if (!m) { rest.push([k, v]); continue; }
+    let g = groups.find((x) => x.name === m[1]);
+    if (!g) { g = { name: m[1], rows: [] }; groups.push(g); }
+    g.rows.push([m[2], v]);
+  }
+  return (
+    <section class="cs-kit">
+      <h2>Writer's kit</h2>
+      <p class="cs-quiet">What the author seems to give each character so they act true to type. Inferred from the page.</p>
+      <div class="cs-kit-cast">
+        {groups.map((g) => {
+          const p = ps.find((x) => x.name === g.name);
+          return (
+            <div class="cs-kit-one" key={g.name}>
+              <div class="cs-kit-who"><Token study={study} source={source} name={g.name} role={p ? p.role : ''} /><b>{g.name}</b></div>
+              <dl class="cs-reading">{g.rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>
+            </div>
+          );
+        })}
+      </div>
+      {rest.length > 0 && <dl class="cs-reading cs-kit-rest">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>}
+    </section>
+  );
+}
+
 /** Beat by beat, each with the icon of who caused it and its kind; the turning beat stands out. */
 function SceneBeats({ study, s, source }: { study: Study; s: StudyScene; source: VaultSource }) {
   const v = valueShift(s);
@@ -947,18 +993,20 @@ function SceneBeats({ study, s, source }: { study: Study; s: StudyScene; source:
         {(v.from || v.to) && <Shift v={v} />}
         {at > 0 && s.plot.link && <p>Link from {study.scenes[at - 1].id}: <span class={'cs-joint ' + linkClass(s.plot.link)}>{linkWord(s.plot.link)}</span></p>}
       </div>
+      <WritersKit study={study} s={s} source={source} />
       {!s.plot.beats.length && <p class="cs-note">No beats yet. The team adds them when it reads the scene.</p>}
+      {s.plot.beats.some((b) => b.part) && <StripKey />}
       <ol class="cs-beatlist">
         {s.plot.beats.map((b, i) => {
           const who = beatOwner(s, b);
           const p = ps.find((x) => x.name === who);
           return (
-            <li key={i} class={b.turning ? 'turning' : ''}>
+            <li key={i} class={'strip-' + partClass(b.part) + (b.turning ? ' turning' : '')}>
               <span class="cs-beat-n">{i + 1}</span>
               <Token study={study} source={source} name={who || '?'} role={p ? p.role : ''} size="l" />
               <span class="cs-beat-body">
                 <span class="cs-beat-text" dangerouslySetInnerHTML={{ __html: inline(b.text) }} />
-                <span class="cs-beat-meta"><span class="cs-quiet">{[who, b.kind].filter(Boolean).join(' · ')}</span>{b.turning && <span class="cs-turn-badge">Turning beat</span>}</span>
+                <span class="cs-beat-meta"><span class="cs-quiet">{[who, b.kind].filter(Boolean).join(' · ')}</span>{b.part && <span class={'cs-strip-tag strip-' + partClass(b.part)}>{PART_LABEL[b.part]}</span>}{b.turning && <span class="cs-turn-badge">Turning beat</span>}</span>
               </span>
             </li>
           );

@@ -723,6 +723,12 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
   really important testing zone for us"). A large button at the top of Crow's front page opens SC-001's Beats tab
   straight away (Konosuba's first scene, or the first study's). SC-001 is broken into every beat by McKee's definition,
   an action and the reaction to it, with the kind written `action / reaction`.
+  Above the beats, the **Writer's kit** (Kyle, 2026-10-28: "what character elements might the author have used to help
+  these characters act characteristically? maybe put this in a little section above the beats"): the scene's
+  `### Writer's Kit` lines (`- Kazuma · Label: ...`) grouped under each character's icon, then lines about the pair.
+  Each beat's **left strip** is coloured by its kishōtenketsu part (Kyle, 2026-10-28: "color the left side strip of
+  each bubble one of 4 colors to mark it as ki, sho, ten, or ketsu"): ki blue, shō green, ten red, ketsu amber, from
+  the theme's colours, with a key above the list and the part's name on each beat.
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.
