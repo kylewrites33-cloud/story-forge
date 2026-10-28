@@ -647,7 +647,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   wide, small before the change when not (2026-10-28, Kyle: "some short text on the side that summarizes what the
   actual change is").
 - **Changes tab.** First in the side column while a chapter has changes (Beats moves into More). While it is open the
-  column takes a third of a wide screen and its words are about a fifth larger (2026-10-28, Kyle: "the right column text
+  column takes a third of a wide screen and its words are about a third larger (2026-10-28, Kyle: "make the right side text bigger"; "the right column text
   is a little small for me to read"); other tabs keep the usual column. One card per change:
   its kind, its reason, the old and new words, "New passage · read slowly" for new words, and Accept, Accept the other
   (a second version), Reject, Edit it myself (Accept and Reject as in Word, 2026-10-28, Kyle: "keep this change is
