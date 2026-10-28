@@ -664,6 +664,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   Microsoft Word's structure"); such a card says its words are gone from the page and offers I wrote my own and Back to Draft 1, 2026-10-28, Kyle: "I did indeed write my own version, but I don't see no like it's asking me to do"; "maybe reject should instead be revert to draft one". Back to Draft 1 finds Kyle's version by the words around the change in the scene's Draft 1 copy and puts Draft 1's words back, recorded as Rejected; with no Draft 1 the card offers Reject). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
+- **Other scenes' changes** (2026-10-28, Kyle: "something is messed up with the number of changes remaining displayed in
+  the chapters column"). The chapter list counts every waiting change in the chapter; the Changes tab counts the scene on
+  screen and adds "· N more in this chapter's other scenes" so the two agree.
 - **To-dos tick off with their changes** (2026-10-28, Kyle: "as those changes go through in edit mode, those to-do items
   you should tick off automatically"; "all to-dos should be reflected with a relevant change card, because these to-dos
   are revision-related to-dos"). A change names the to-dos it carries out in its Why (`To-do T-002: ...`). When every

@@ -188,7 +188,7 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link }: {
+export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0 }: {
   intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
@@ -197,6 +197,8 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
   /** Put the change's Was (Draft 1's words) back in place of what Kyle wrote there; null when there is no Draft 1. */
   onRevert: ((c: Change) => void) | null;
+  /** Waiting changes in this chapter's other scenes, which the chapter list counts too. */
+  elsewhere?: number;
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
 }) {
@@ -257,7 +259,7 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
         <>
           {intro && <p class="chg-intro">{intro}</p>}
           <div class="chg-top">
-            <p class="meta">{open.length ? open.length + ' waiting' : 'All decided'}{decided.length ? ' · ' + decided.length + ' decided' : ''}</p>
+            <p class="meta">{open.length ? open.length + ' waiting' : 'All decided'}{decided.length ? ' · ' + decided.length + ' decided' : ''}{elsewhere ? ' · ' + elsewhere + ' more in this chapter\'s other scenes' : ''}</p>
             {placedIds.length > 1 && <button type="button" class="chg-all" onClick={onAcceptAll}><Icon name="check" size={18} />Accept all ({placedIds.length})</button>}
           </div>
           {open.map(card)}

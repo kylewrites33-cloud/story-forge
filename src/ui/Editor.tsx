@@ -1477,7 +1477,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
+                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { if (chView === 'original' && id !== editingId) setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
