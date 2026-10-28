@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
+import { rewriteSpan,
   applyChange, findWords, finalText, flushChoices, loadChoices, parseChanges, placeChanges, revertChange, saveChoices, segments, setStatus, withChoices
 } from '../src/lib/changes.ts';
 
@@ -163,4 +163,12 @@ test('accept everywhere: a change made of word swaps, and the rule that takes it
   assert.equal(ruleFits(c('Grey said', 'Basil said'), rules), true);
   assert.equal(ruleFits(c('Grey told Cyrus', 'Basil told Rye'), rules), false);
   assert.equal(ruleFits({ ...c('Grey said', 'Basil said'), status: 'kept' }, rules), false);
+});
+
+test('rewriteSpan finds the words Kyle put in place of a change, by the words around it in Draft 1', () => {
+  const old = 'He walked in.\n\n*These should last another 2 months at least.*\n\nThen he slept.';
+  const page = 'He walked in.\n\n*Good for two more months before they go.*\n\nThen he slept.';
+  const s = rewriteSpan(page, '*These should last another 2 months at least.*', old)!;
+  assert.equal(page.slice(s.at, s.end), '*Good for two more months before they go.*');
+  assert.equal(rewriteSpan(page, 'not in the old copy', old), null);
 });

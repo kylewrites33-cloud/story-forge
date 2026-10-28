@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, ruleFits, saveChoices, swapsOf, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
@@ -901,6 +901,21 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [mineOpen, setMineOpen] = useState<string | null>(null);
   const editingId = mineOpen && chNote && mineOpen.startsWith(chNote.path + '#') ? mineOpen.slice(chNote.path.length + 1) : null;
   const doneMine = (c: Change) => { record({ [c.id]: 'mine' }); setMineOpen(null); };
+  // A change whose words Kyle already rewrote: Back to Draft 1 finds his version by the words around the change in
+  // Draft 1 and puts Draft 1's words back (Kyle, 2026-10-28: "maybe reject should instead be revert to draft one").
+  const firstDraft = savedList.find((d) => d.number === 1) || null;
+  const revertToDraft = async (c: Change) => {
+    const f = firstDraft ? copyFor(firstDraft, note) : null;
+    if (!f) { setMessage('This scene has no Draft 1 copy, so there is nothing to go back to.'); return; }
+    let old: string;
+    try { old = splitLead(makeNote(f.path, f.sha, await source.read(f.path, f.sha)).body).text; }
+    catch (e) { setMessage(offlineError(e) ? 'Connect to the internet to bring back Draft 1.' : (e as Error).message); return; }
+    const page = pageText();
+    const span = rewriteSpan(page, c.was, old);
+    if (!span) { setMessage('Could not find where ' + c.id + ' sat on your page, so nothing changed. Use Self-Edit to put Draft 1\'s words back by hand.'); return; }
+    putText(page.slice(0, span.at) + c.was + page.slice(span.end));
+    record({ [c.id]: 'no' });
+  };
   const editMine = (c: Change) => {
     const t = pageText();
     const found = chPlace.placed.find((p) => p.change.id === c.id);
@@ -1454,7 +1469,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {tab === 'changes' && (
               chNote
                 ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
-                  editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)}
+                  editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { if (chView === 'original' && id !== editingId) setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
