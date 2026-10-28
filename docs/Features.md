@@ -640,7 +640,11 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
   changed paragraph), Final (no marks) and Original (Kyle's own page, where he types). Up and down arrows step through
   the changes and on into the next chapter that has any. Keep all small fixes keeps the typo and continuity tier at once.
-  The marked views are for reading; to type, press Original or Edit it myself.
+  The marked views are for reading; to type, press Original or Edit it myself. All changes marks only the words that
+  differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
+  change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
+  wide, small before the change when not (2026-10-28, Kyle: "some short text on the side that summarizes what the
+  actual change is").
 - **Changes tab.** First in the side column while a chapter has changes (Beats moves into More). One card per change:
   its kind, its reason, the old and new words, "New passage · read slowly" for new words, and Keep, Keep the other
   (a second version), No, Edit it myself. Decided cards fold away with Undo. Keep puts the words in as Kyle's own save;

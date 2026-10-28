@@ -43,6 +43,66 @@ export interface Change {
 
 export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Small fix', line: 'Sentence', story: 'Story', new: 'New passage' };
 
+export type DiffPart = { kind: 'same' | 'del' | 'ins'; text: string };
+
+/** Was against now, word by word, so the page marks only the words that differ (Kyle, 2026-10-28: a name change showed
+ * as a whole sentence struck out and retyped). Spaces join the word before them, so runs read naturally. */
+export function wordDiff(was: string, now: string): DiffPart[] {
+  const tok = (s: string) => s.match(/[\p{L}\p{N}'’]+|\s+|[^\p{L}\p{N}'’\s]/gu) || [];
+  const a = tok(was), b = tok(now);
+  // Long passages (a new scene) are too slow to compare word by word and are mostly new anyway.
+  if (a.length * b.length > 250000) return [{ kind: 'del', text: was }, { kind: 'ins', text: now }].filter((x) => x.text) as DiffPart[];
+  const n = a.length, m = b.length;
+  const L: Uint32Array[] = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const raw: DiffPart[] = [];
+  let i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && a[i] === b[j]) { raw.push({ kind: 'same', text: a[i] }); i++; j++; }
+    else if (j < m && (i >= n || L[i][j + 1] >= L[i + 1][j])) { raw.push({ kind: 'ins', text: b[j] }); j++; }
+    else { raw.push({ kind: 'del', text: a[i] }); i++; }
+  }
+  // A space left the same between two changed words joins them into one run, and each run reads as its old words, then
+  // its new words.
+  const out: DiffPart[] = [];
+  let del = '', ins = '';
+  const flush = () => { if (del) out.push({ kind: 'del', text: del }); if (ins) out.push({ kind: 'ins', text: ins }); del = ins = ''; };
+  raw.forEach((x, k) => {
+    const next = raw.slice(k + 1).find((y) => !/^\s+$/.test(y.text));
+    if (x.kind === 'same' && /^\s+$/.test(x.text) && (del || ins) && next && next.kind !== 'same') { del += x.text; ins += x.text; return; }
+    if (x.kind === 'del') { del += x.text; return; }
+    if (x.kind === 'ins') { ins += x.text; return; }
+    flush();
+    const last = out[out.length - 1];
+    if (last && last.kind === 'same') last.text += x.text; else out.push({ kind: 'same', text: x.text });
+  });
+  flush();
+  return out;
+}
+
+/** A few words for the margin beside a change, saying what it is: "Name: Grey → Basil", "Typo", "Story call I-089". */
+export function shortLabel(c: Change): string {
+  let why = c.why.trim();
+  const check = /^Proofread \(one reader/i.test(why);
+  why = why.replace(/^Proofread \([^)]*\):\s*/i, '');
+  const names = /^Name:\s*you renamed (.+?)\s*\(/i.exec(why);
+  if (names) {
+    const pairs = names[1].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.replace(/\s+to\s+/, ' → '));
+    return (pairs.length > 1 ? 'Names: ' : 'Name: ') + pairs.join(', ');
+  }
+  const call = /^(Story call I-\d+|To-do T-\d+(?:\s*\/\s*T-\d+)*)/i.exec(why);
+  if (call) return call[1];
+  const head = /^([^:.]{2,24}):/.exec(why);
+  let label = head ? head[1] : KIND_LABEL[c.kind];
+  if (c.kind === 'small' || c.kind === 'line') {
+    const d = wordDiff(c.was, c.now).filter((x) => x.kind !== 'same');
+    const del = d.filter((x) => x.kind === 'del').map((x) => x.text.trim()).join(' ');
+    const ins = d.filter((x) => x.kind === 'ins').map((x) => x.text.trim()).join(' ');
+    if (d.length <= 2 && del.length + ins.length <= 28) label += ': ' + (del && ins ? del + ' → ' + ins : del ? 'cut ' + del : 'add ' + ins);
+  }
+  return label + (check ? ' (check)' : '');
+}
+
 export const changesTitle = (chapter: number) => 'Chapter ' + chapter + ' changes';
 export const changesPath = (bookFolder: string, chapter: number) => bookFolder + '/' + CHANGES_FOLDER + '/' + changesTitle(chapter) + '.md';
 

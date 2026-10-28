@@ -4,7 +4,7 @@
 // Each change has a card in the side column with its reason and Keep, No, the other version or Edit it myself.
 import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
-import { KIND_LABEL, segments } from '../lib/changes.ts';
+import { KIND_LABEL, segments, shortLabel, wordDiff } from '../lib/changes.ts';
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
@@ -18,7 +18,7 @@ export function loadView(): ChangesView {
 }
 export function saveView(v: ChangesView) { try { localStorage.setItem(VIEW_KEY, v); } catch { /* lasts until reload */ } }
 
-type Piece = { text: string; cls: '' | 'del' | 'ins'; id: string };
+type Piece = { text: string; cls: '' | 'del' | 'ins' | 'tag'; id: string };
 
 /** The page's lines, each a list of pieces: Kyle's words, and for each change its old words, its new words or both. */
 function linesOf(text: string, placed: Placed[], view: ChangesView): Piece[][] {
@@ -33,7 +33,9 @@ function linesOf(text: string, placed: Placed[], view: ChangesView): Piece[][] {
   segments(text, placed).forEach((s) => {
     if (s.kind === 'same') { add(s.text, '', ''); return; }
     const id = s.change.id;
-    if (view === 'all') { add(s.was, 'del', id); add(s.now, 'ins', id); }
+    // A few words in the margin say what the change is; only the words that differ are marked (Kyle, 2026-10-28).
+    if (view !== 'final') lines[lines.length - 1].push({ text: shortLabel(s.change), cls: 'tag', id });
+    if (view === 'all') wordDiff(s.was, s.now).forEach((d) => add(d.text, d.kind === 'same' ? '' : d.kind, id));
     else add(s.now, view === 'simple' ? 'ins' : '', view === 'simple' ? id : '');
   });
   return lines;
@@ -46,9 +48,13 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
   text: string; placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void; options: StyleOptions; label: string;
 }) {
   const kinds = new Map(placed.map((p) => [p.change.id, p.change.kind]));
-  const html = linesOf(text, placed, view).map((pieces) => {
+  const html = linesOf(text, placed, view).map((line) => {
+    let pieces = line;
     const ids = pieces.filter((p) => p.id).map((p) => p.id);
+    // Margin notes go first in the line so they float level with its top.
+    pieces = pieces.filter((p) => p.cls === 'tag').concat(pieces.filter((p) => p.cls !== 'tag'));
     const inner = pieces.map((p) => {
+      if (p.cls === 'tag') return '<span class="chg-tag' + (p.id === current ? ' on' : '') + '" data-chg="' + escAttr(p.id) + '">' + escAttr(p.text) + '</span>';
       const words = p.text ? styledHtml(p.text, options) : '';
       if (!p.id) return words;
       const tag = p.cls === 'del' ? 'del' : p.cls === 'ins' ? 'ins' : 'span';
