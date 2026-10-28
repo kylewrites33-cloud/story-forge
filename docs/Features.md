@@ -719,6 +719,10 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
   every beat as a block coloured by its part with who caused it, and the lens's "What the turn re-reads" line. Between
   scenes, the handoff: the last scene's ketsu beats beside this scene's ki beats, the link word and why the scene comes
   next. The part is the last tag of a beat (`- Aqua (reveal, turning, ten): ...`).
+- **The testing zone** (Kyle, 2026-10-28: "bring this view one button click away from the front page ... This is a
+  really important testing zone for us"). A large button at the top of Crow's front page opens SC-001's Beats tab
+  straight away (Konosuba's first scene, or the first study's). SC-001 is broken into every beat by McKee's definition,
+  an action and the reaction to it, with the kind written `action / reaction`.
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.

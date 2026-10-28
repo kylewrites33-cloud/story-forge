@@ -24,6 +24,8 @@
 .cs-chips button { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
 .cs-chips button.on { background: var(--fill, var(--accent)); border-color: var(--fill-line, var(--accent)); color: var(--on-fill, var(--on-accent)); font-weight: 600; }
 
+.cs-lab { display: flex; flex-direction: column; gap: 6px; padding: 22px 20px; margin: 8px 0 24px; border-radius: var(--radius); background: var(--accent-soft); border: 2px solid var(--accent); color: var(--text); text-decoration: none; min-height: 44px; }
+.cs-lab strong { font-size: 1.5rem; line-height: 1.2; }
 .cs-studies { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .cs-study { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--text); text-decoration: none; }
 .cs-study strong { font-size: 1.2rem; }

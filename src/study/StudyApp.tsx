@@ -298,9 +298,25 @@ function Tallies({ study, name }: { study: Study; name: string }) {
 
 // ------------------------------------------------------------------ pages
 
+/** The testing zone (Kyle, 2026-10-28: "bring this view one button click away from the front page"): the first scene's
+ *  beats, broken into every McKee beat, one tap from the front page. Konosuba when it is there, else the first study. */
+function BeatLab({ lib }: { lib: StudyLibrary }) {
+  const study = lib.studies.find((s) => /konosuba/i.test(s.folder)) || lib.studies.find((s) => s.scenes.length);
+  const s = study && study.scenes[0];
+  if (!study || !s) return null;
+  return (
+    <a class="cs-lab" href={sceneHref(study, s.id, 'beats')}>
+      <span class="cs-quiet">Testing zone · {study.title}</span>
+      <strong>{s.id} {s.title}: every beat</strong>
+      <span>{s.plot.beats.length} beats, each an action and the reaction to it (McKee)</span>
+    </a>
+  );
+}
+
 function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
   return (
     <section>
+      <BeatLab lib={lib} />
       <h1>Studies</h1>
       {missing && <p class="cs-note">There is no study called {missing}. Pick one below.</p>}
       {!lib.studies.length && <p class="cs-note">No studies yet. Paste a chapter in the Crow project's chat and the first one appears here.</p>}
