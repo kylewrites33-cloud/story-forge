@@ -895,6 +895,16 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     record({ [c.id]: status });
     setChCur(n ? n.change.id : null);
   };
+  // Edit, then accept: Kyle fixes the team's words on the card and his version goes in as his own (Kyle, 2026-10-28:
+  // "sometimes the writers choices are 80% good, and i just want to edit them in the right hand column card and accept that").
+  const tweakChange = (c: Change, words: string) => {
+    const r = applyChange(pageText(), { ...c, now: words }, 'now');
+    if (!r) { setMessage('Those words changed after the team wrote ' + c.id + ', so it could not go in. Use Edit it myself to put your own words in.'); return; }
+    putText(r.text);
+    const n = nextOpen(c.id);
+    record({ [c.id]: words === c.now ? 'kept' : c.other != null && words === c.other ? 'other' : 'mine' });
+    setChCur(n ? n.change.id : null);
+  };
   const undoChange = (c: Change) => {
     if (chNote && ruleFits({ ...c, status: 'open' }, rules)) addSkip(source.key, chNote.path + '#' + c.id);
     if (c.status === 'kept' || c.status === 'other') {
@@ -1493,7 +1503,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { const c = chMine.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
-                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
+                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
                   <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)}
