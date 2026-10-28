@@ -217,8 +217,13 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
       <article key={c.id} data-card={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a')) onPick(c.id); }}>
         <p class="chg-head"><b>{shortLabel(c)}</b><span class="meta">{shortLabel(c).startsWith(KIND_LABEL[c.kind]) ? '' : KIND_LABEL[c.kind] + ' · '}{c.id}</span></p>
-        {c.kind === 'new' && c.status === 'open' && <p class="chg-slow"><Icon name="eye" size={16} />New passage · read slowly</p>}
-        {c.why && <p class="chg-why">{c.why}</p>}
+        {c.asked || c.does ? (
+          <div class="chg-parts">
+            {c.asked && <p class="chg-why"><span class="chg-label">You asked</span>{c.asked}</p>}
+            {c.does && <p class="chg-why"><span class="chg-label">The change</span>{c.does}</p>}
+            {c.check && <details class="chg-check"><summary>The team's check</summary><p class="chg-why">{c.check}</p></details>}
+          </div>
+        ) : c.why && <p class="chg-why">{c.why}</p>}
         {c.status === 'open' ? (
           <>
             <Quote text={c.was} cls="was" />

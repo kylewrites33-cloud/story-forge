@@ -2414,7 +2414,6 @@ button, .button { border-radius: 12px; }
 .chg-mine { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-weight: 600; color: var(--accent); }
 .chg-head { display: flex; justify-content: space-between; gap: 8px; margin: 0; }
 .chg-why { margin: 0; font-size: 0.94rem; }
-.chg-slow { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--accent); font-weight: 600; font-size: 0.94rem; }
 .chg-quote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--line); font-family: var(--page-font, Georgia, serif); font-size: 0.98rem; line-height: 1.5; }
 .chg-quote.was { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); border-left-color: var(--danger); }
 .chg-quote.now { border-left-color: var(--accent); }
@@ -2457,3 +2456,6 @@ button, .button { border-radius: 12px; }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }
 .chg-tweak { width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
+.chg-parts { display: flex; flex-direction: column; gap: 8px; }
+.chg-label { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.chg-check summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--muted); font-size: 0.9rem; }
