@@ -43,6 +43,24 @@ function linesOf(text: string, placed: Placed[], view: ChangesView): Piece[][] {
 
 const escAttr = (s: string) => s.replace(/[&"<>]/g, (c) => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' }[c] as string));
 
+// A change that only adds or moves italics cuts a *thought* in pieces, so each piece alone shows raw stars (Kyle,
+// 2026-10-28). Such a line is drawn by carrying the italic and bold state across its pieces: Kyle's words and the new
+// words follow the new text's state, the struck words the old text's.
+type Marks = { i: boolean; b: boolean };
+const loneStars = (t: string) => (t.replace(/\*\*/g, '').match(/\*/g) || []).length % 2 === 1 || (t.match(/\*\*/g) || []).length % 2 === 1;
+const htmlEsc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+function markHtml(text: string, st: Marks): string {
+  return text.split(/(\*\*|\*)/).map((part) => {
+    if (part === '**') { st.b = !st.b; return ''; }
+    if (part === '*') { st.i = !st.i; return ''; }
+    if (!part) return '';
+    let h = htmlEsc(part);
+    if (st.i) h = '<em>' + h + '</em>';
+    if (st.b) h = '<strong>' + h + '</strong>';
+    return h;
+  }).join('');
+}
+
 /** Kyle's page with the changes marked, for reading. Pressing a change opens its card. */
 export function ChangesPage({ text, placed, view, current, onPick, options, label }: {
   text: string; placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void; options: StyleOptions; label: string;
@@ -53,9 +71,16 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
     const ids = pieces.filter((p) => p.id).map((p) => p.id);
     // Margin notes go first in the line so they float level with its top.
     pieces = pieces.filter((p) => p.cls === 'tag').concat(pieces.filter((p) => p.cls !== 'tag'));
+    const carry = pieces.some((p) => p.cls !== 'tag' && loneStars(p.text));
+    const now: Marks = { i: false, b: false };
+    const was: Marks = { i: false, b: false };
     const inner = pieces.map((p) => {
       if (p.cls === 'tag') return '<span class="chg-tag' + (p.id === current ? ' on' : '') + '" data-chg="' + escAttr(p.id) + '">' + escAttr(p.text) + '</span>';
-      const words = p.text ? styledHtml(p.text, options) : '';
+      let words = '';
+      if (!carry) words = p.text ? styledHtml(p.text, options) : '';
+      else if (p.cls === 'del') words = markHtml(p.text, was);
+      else if (p.cls === 'ins') words = markHtml(p.text, now);
+      else { markHtml(p.text, was); words = markHtml(p.text, now); }
       if (!p.id) return words;
       const tag = p.cls === 'del' ? 'del' : p.cls === 'ins' ? 'ins' : 'span';
       const cls = 'chg chg-' + (kinds.get(p.id) || 'line') + (p.id === current ? ' on' : '') + (view === 'simple' ? ' simple' : '');
