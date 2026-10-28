@@ -188,10 +188,12 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0 }: {
+export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0 }: {
   intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
+  /** Kyle's own version of the team's words, edited on the card, goes in as his own words (Kyle, 2026-10-28). */
+  onTweak: (c: Change, words: string) => void;
   /** The change Kyle is rewriting himself: its card stays open until he says he is done. */
   editing: string | null; onDoneMine: (c: Change) => void; onStopMine: () => void;
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
@@ -206,6 +208,7 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
   const open = changes.filter((c) => c.status === 'open').sort((a, b) => (b.id === editing ? 1 : 0) - (a.id === editing ? 1 : 0) || at(a) - at(b));
   useEffect(() => { if (current) showCard(current); }, [current]);
   const decided = changes.filter((c) => c.status !== 'open');
+  const [tweak, setTweak] = useState<{ id: string; words: string; other: boolean } | null>(null);
   const card = (c: Change) => {
     const here = placedIds.includes(c.id);
     const sw = c.status === 'open' ? swapsOf(c) : null;
@@ -229,6 +232,16 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
                   <button type="button" onClick={onStopMine}>Back to the choices</button>
                 </div>
               </>
+            ) : tweak && tweak.id === c.id && here ? (
+              <>
+                <label class="panel-key" for={'tweak-' + c.id}>{c.other != null ? (tweak.other ? 'Your edit of the other version' : 'Your edit of the first version') : 'Your edit of the team\'s words'}</label>
+                <textarea id={'tweak-' + c.id} class="chg-tweak" rows={Math.min(14, Math.max(3, Math.ceil(tweak.words.length / 34) + tweak.words.split('\n').length))} value={tweak.words}
+                  onInput={(e) => setTweak({ ...tweak, words: (e.target as HTMLTextAreaElement).value })} />
+                <div class="chg-buttons">
+                  <button type="button" class="primary" onClick={() => { onTweak(c, tweak.words); setTweak(null); }}>Accept my version</button>
+                  <button type="button" onClick={() => setTweak(null)}>Back to the choices</button>
+                </div>
+              </>
             ) : <>
             {!here ? <>
             <p class="hint">These words are no longer on the page, so there is nothing to show there (you have probably changed them yourself). I wrote my own keeps your words. Back to Draft 1 puts Draft 1's words back in their place.</p>
@@ -239,6 +252,8 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
             </> : <div class="chg-buttons">
               <button type="button" class="primary" onClick={() => onChoose(c, 'kept')}>Accept</button>
               {c.other != null && <button type="button" onClick={() => onChoose(c, 'other')}>Accept the other</button>}
+              <button type="button" onClick={() => setTweak({ id: c.id, words: c.now, other: false })}>{c.other != null ? 'Edit the first, then accept' : 'Edit, then accept'}</button>
+              {c.other != null && <button type="button" onClick={() => setTweak({ id: c.id, words: c.other || '', other: true })}>Edit the other, then accept</button>}
               <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
               {sw && many > 1 && <button type="button" class="chg-everywhere" onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}

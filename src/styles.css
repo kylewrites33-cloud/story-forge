@@ -2456,3 +2456,4 @@ button, .button { border-radius: 12px; }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }
+.chg-tweak { width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }

@@ -669,6 +669,11 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   screen jumps away"). Edit it myself scrolls the page to the change's words and picks them; tapping that card while
   editing goes back there (to Kyle's new words' starting place once the old words are gone). The page scrolls to the
   selection itself, not its paragraph. Bold, Italic and Highlight keep the page where it is.
+- **Edit, then accept** (2026-10-28, Kyle: "sometimes the writers choices are 80% good, and i just want to edit them in
+  the right hand column card and accept that"; "make sure you have the logic of which version I'm working in"). Each card
+  has Edit, then accept; a card with two versions has Edit the first, then accept and Edit the other, then accept. The
+  version's words open in a box on the card, labelled with which version it is; Accept my version puts them on the page
+  in place of Kyle's old words and records his own words (or kept / the other version if he changed nothing).
 - **Other scenes' changes** (2026-10-28, Kyle: "something is messed up with the number of changes remaining displayed in
   the chapters column"). The chapter list counts every waiting change in the chapter; the Changes tab counts the scene on
   screen and adds "· N more in this chapter's other scenes" so the two agree.
