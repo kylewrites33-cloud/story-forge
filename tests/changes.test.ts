@@ -172,3 +172,16 @@ test('rewriteSpan finds the words Kyle put in place of a change, by the words ar
   assert.equal(page.slice(s.at, s.end), '*Good for two more months before they go.*');
   assert.equal(rewriteSpan(page, 'not in the old copy', old), null);
 });
+
+test('todoTicks: a to-do is done once every change naming it is decided and one went in', async () => {
+  const { todoTicks, todoIds } = await import('../src/lib/changes.ts');
+  const ch = (id: string, why: string, status: string) => ({ id, kind: 'new', scene: 'S-001', why, status, was: 'a', now: 'b', other: null }) as never;
+  assert.deepEqual(todoIds(ch('C-1', 'To-do T-004 / T-006: wolf', 'open')), ['T-004', 'T-006']);
+  const list = [ch('C-1', 'To-do T-002: pain', 'mine'), ch('C-2', 'To-do T-002: more pain', 'open'), ch('C-3', 'To-do T-001: circle', 'kept'), ch('C-4', 'To-do T-009', 'no'), ch('C-5', 'Typo', 'kept')];
+  assert.deepEqual(todoTicks(list, ['C-1', 'C-3', 'C-4', 'C-5']), [
+    { id: 'T-002', done: false, note: '' },
+    { id: 'T-001', done: true, note: 'Edit room: C-3 kept.' }
+  ]);
+  list[1] = ch('C-2', 'To-do T-002: more pain', 'other');
+  assert.deepEqual(todoTicks(list, ['C-2']), [{ id: 'T-002', done: true, note: 'Edit room: C-1 your own words, C-2 other version kept.' }]);
+});

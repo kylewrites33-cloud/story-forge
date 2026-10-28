@@ -443,3 +443,27 @@ export function rewriteSpan(page: string, was: string, old: string): { at: numbe
   for (let n = Math.min(80, after.length); end < 0 && n >= 12; n--) { const a = page.indexOf(after.slice(0, n), at); if (a >= 0 && page.indexOf(after.slice(0, n), a + 1) < 0) end = a; }
   return end >= at ? { at, end } : null;
 }
+
+/** The to-dos a change carries out: the T-numbers its Why names ("To-do T-002: ...", "T-004 / T-006"). */
+export function todoIds(c: Change): string[] {
+  return (c.why.match(/\bT-\d{3}\b/g) || []).filter((id, i, a) => a.indexOf(id) === i);
+}
+
+const DID: Record<string, string> = { kept: 'kept', other: 'other version kept', mine: 'your own words' };
+
+/** What the chapter's to-dos become once these changes are decided (Kyle, 2026-10-28: "as those changes go through in edit
+ * mode, those to-do items you should tick off automatically"). A to-do is done when every change naming it is decided
+ * and at least one went in (kept, the other version, or Kyle's own words); it opens again when one goes back to open. A
+ * to-do whose changes Kyle all refused stays as it is. Only to-dos named by a change in `touched` are returned. */
+export function todoTicks(changes: Change[], touched: string[]): { id: string; done: boolean; note: string }[] {
+  const ids: string[] = [];
+  changes.filter((c) => touched.indexOf(c.id) >= 0).forEach((c) => todoIds(c).forEach((t) => { if (ids.indexOf(t) < 0) ids.push(t); }));
+  const out: { id: string; done: boolean; note: string }[] = [];
+  ids.forEach((id) => {
+    const mine = changes.filter((c) => todoIds(c).indexOf(id) >= 0);
+    const went = mine.filter((c) => DID[c.status]);
+    if (mine.some((c) => c.status === 'open')) out.push({ id, done: false, note: '' });
+    else if (went.length) out.push({ id, done: true, note: 'Edit room: ' + went.map((c) => c.id + ' ' + DID[c.status]).join(', ') + '.' });
+  });
+  return out;
+}

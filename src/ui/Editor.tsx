@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
@@ -864,6 +864,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     // Kept on this device at once; it reaches the vault now, or with the next sync when offline.
     saveChoices(source, chNote.path, choices).catch(() => { /* waits on this device */ });
     setChTick((n) => n + 1);
+    // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28).
+    if (!onTodo) return;
+    const after = chAll.map((c) => (choices[c.id] ? { ...c, status: choices[c.id] } : c));
+    todoTicks(after, Object.keys(choices)).forEach((t) => {
+      const n = (todos || []).find((x) => String(x.data.id || '') === t.id);
+      if (!n) return;
+      if (t.done && isOpen(n)) onTodo(n.path, 'edit', '', { status: 'done', done_note: t.note });
+      else if (!t.done && !isOpen(n) && /^Edit room:/.test(String(n.data.done_note || ''))) onTodo(n.path, 'edit', '', { status: 'open', done_note: '' });
+    });
   };
   const putText = (t: string) => {
     wordsNotTyped(bodyWords(t) - bodyWords(pageText()));
