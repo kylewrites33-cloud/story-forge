@@ -35,7 +35,8 @@ function linesOf(text: string, placed: Placed[], view: ChangesView): Piece[][] {
     const id = s.change.id;
     // A few words in the margin say what the change is; only the words that differ are marked (Kyle, 2026-10-28).
     if (view !== 'final') lines[lines.length - 1].push({ text: shortLabel(s.change), cls: 'tag', id });
-    if (view === 'all') wordDiff(s.was, s.now).forEach((d) => add(d.text, d.kind === 'same' ? '' : d.kind, id));
+    // A struck-out line break shows nothing, and on a book page it would only split a line in two.
+    if (view === 'all') wordDiff(s.was, s.now).forEach((d) => { if (!(d.kind === 'del' && !d.text.trim())) add(d.text, d.kind === 'same' ? '' : d.kind, id); });
     else add(s.now, view === 'simple' ? 'ins' : '', view === 'simple' ? id : '');
   });
   return lines;
@@ -66,8 +67,29 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
   text: string; placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void; options: StyleOptions; label: string;
 }) {
   const kinds = new Map(placed.map((p) => [p.change.id, p.change.kind]));
+  let prev = '';
   const html = linesOf(text, placed, view).map((line) => {
     let pieces = line;
+    // The line as it will read, and whether it is a System screen line: its "> " is taken off the pieces that carry it.
+    const reads = (ps: Piece[]) => ps.filter((p) => p.cls !== 'tag' && p.cls !== 'del').map((p) => p.text).join('');
+    const full = reads(pieces);
+    const before = pieces.filter((p) => p.cls !== 'tag' && p.cls !== 'ins').map((p) => p.text).join('');
+    const q = QUOTE.exec(full);
+    if (q) {
+      let cut = q[0].length;
+      pieces = pieces.map((p) => {
+        if (!cut || p.cls === 'tag' || p.cls === 'del') return p;
+        const n = Math.min(cut, p.text.length);
+        cut -= n;
+        return { ...p, text: p.text.slice(n) };
+      });
+    }
+    const rest = q ? full.slice(q[0].length) : full;
+    const kind = q ? (rest.trim() ? 'q' : 'gap') : full.trim() || before.trim() ? 'p' : 'blank';
+    const lineCls = kind === 'blank' ? (pieces.some((p) => p.cls === 'tag') ? ' bk-blank-tag' : ' bk-blank')
+      : kind === 'gap' ? ' bk-gap' : kind === 'q' ? ' bk-q' + (TITLE.test(rest.trim()) ? ' bk-qt' : '') + (prev === 'p' || prev === '' ? ' bk-qstart' : '')
+      : ' bk-p' + (prev === 'q' || prev === 'gap' ? ' bk-after' : prev === '' ? ' bk-first' : '');
+    if (kind !== 'blank') prev = kind;
     const ids = pieces.filter((p) => p.id).map((p) => p.id);
     // Margin notes go first in the line so they float level with its top.
     pieces = pieces.filter((p) => p.cls === 'tag').concat(pieces.filter((p) => p.cls !== 'tag'));
@@ -87,12 +109,10 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
       return '<' + tag + ' class="' + cls + '" data-chg="' + escAttr(p.id) + '">' + (words || (p.cls === 'del' ? '' : '')) + '</' + tag + '>';
     }).join('');
     const marked = ids.length > 0 && view !== 'final';
-    // A System screen line ("> ", format C1) is indented as a whole, whichever piece carries the mark.
-    const quote = /^\s*>/.test(line.filter((p) => p.cls !== 'tag' && p.cls !== 'del').map((p) => p.text).join(''));
-    return '<div class="chg-line' + (quote ? ' chg-quote' : '') + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
+    return '<div class="chg-line' + lineCls + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
   }).join('');
   return (
-    <div class={'writer-text styled changes-page view-' + view} role="document" aria-label={label}
+    <div class={'writer-text styled changes-page book view-' + view} role="document" aria-label={label}
       onClick={(e) => {
         const el = (e.target as HTMLElement).closest('[data-chg]') as HTMLElement | null;
         if (el && el.dataset.chg) onPick(el.dataset.chg);
@@ -131,9 +151,24 @@ export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }:
 // Accept and Reject, as in Word (Kyle, 2026-10-28: "keep this change is throwing me off. why not the language accept this change").
 const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Accepted the other version', no: 'Rejected', mine: 'Your own words' };
 
+// The page as a Kindle shows it (Kyle, 2026-10-28: "when we're in editing mode, the document automatically converts to
+// the form that it's going to show up as in Kindle"): paragraphs indented with no blank lines between them, System
+// screens (format C1) indented with their "> " marks hidden, a lone ">" a small gap, the bold title in small caps.
+const QUOTE = /^\s*> ?/;
+const TITLE = /^\*\*[^*].*\*\*$/;
+function bookHtml(text: string): string {
+  return text.split('\n').map((line) => {
+    if (!line.trim()) return '';
+    if (!QUOTE.test(line)) return '<div class="bk-p">' + styledHtml(line, {}) + '</div>';
+    const rest = line.replace(QUOTE, '');
+    if (!rest.trim()) return '<div class="bk-gap"></div>';
+    return '<div class="bk-q' + (TITLE.test(rest.trim()) ? ' bk-qt' : '') + '">' + styledHtml(rest, {}) + '</div>';
+  }).join('');
+}
+
 function Quote({ text, cls }: { text: string; cls: string }) {
   return text
-    ? <blockquote class={'chg-quote ' + cls} dangerouslySetInnerHTML={{ __html: styledHtml(text, {}).split('\n').join('<br>') }} />
+    ? <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: bookHtml(text) }} />
     : <p class={'chg-quote empty ' + cls}>(cut)</p>;
 }
 
