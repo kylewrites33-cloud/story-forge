@@ -656,7 +656,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   Accept all (as in Word) sits at the top of the column; there is no separate small-fixes button over the page any more
   (2026-10-28, Kyle: "the small fixes should exist as changes, just like anything else... in the right section would be
   where the accept or accept all buttons would be"). Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle
-  uses the arrows or picks a change on the page, and follows the page as he scrolls; changes no longer on the page come
+  uses the arrows or picks a change on the page, and follows the page as he scrolls (a card already in sight stays put, and scrolling the column itself is never pulled back, 2026-10-28); changes no longer on the page come
   last (2026-10-28, Kyle: "Why are the changes on the right column not in sequential order? Take inspiration from
   Microsoft Word's structure"). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the

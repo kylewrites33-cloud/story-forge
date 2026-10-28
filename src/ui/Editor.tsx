@@ -983,14 +983,17 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!showMarks || tab !== 'changes') return;
     let t = 0;
     const follow = (e: Event) => {
+      // Only the page's own scrolling counts: when Kyle scrolls the column itself, it stays where he puts it (Kyle,
+      // 2026-10-28: "when I try to scroll up to the button, it auto scrolls back down").
       const from = e.target as Element | Document;
-      if (from instanceof Element && from.closest('.changes-panel')) return;
+      const page = document.querySelector('.changes-page');
+      if (!page || (from instanceof Element && !from.contains(page))) return;
       clearTimeout(t);
       t = window.setTimeout(() => {
         const marks = Array.from(document.querySelectorAll('.changes-page [data-chg]')) as HTMLElement[];
         const seen = marks.filter((m) => { const r = m.getBoundingClientRect(); return r.bottom > window.innerHeight * 0.2 && r.top < window.innerHeight; });
         const mark = seen.find((m) => m.dataset.chg === curRef.current) || seen[0];
-        if (mark && mark.dataset.chg) showCard(mark.dataset.chg);
+        if (mark && mark.dataset.chg) showCard(mark.dataset.chg, true);
       }, 180);
     };
     document.addEventListener('scroll', follow, true);
