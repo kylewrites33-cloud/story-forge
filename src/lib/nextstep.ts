@@ -3,6 +3,7 @@
 // gate for Kyle's yes); some are Kyle's own (decide what is waiting on a board), and when a stage's work is done the step
 // is to move the book to the next stage. The Overview shows it as one big button with a sentence of why.
 import { chapterGroups } from './board.ts';
+import { CHANGES_TYPE, isStoryCall, openCount } from './changes.ts';
 import { piles } from './ideas.ts';
 import { jobNotes, type NewJob } from './jobs.ts';
 import { at, bookStage, bookStages, storyScenes } from './overview.ts';
@@ -66,6 +67,20 @@ export function nextStep(schema: Schema, index: VaultIndex, book: BookEntry): Ne
   const scenes = storyScenes(index, book);
   const groups = chapterGroups(schema, scenes).filter((g) => g.num != null);
   const plural = (n: number, one: string, many: string) => n + ' ' + (n === 1 ? one : many);
+
+  // A drafted book already in the Edit room (story calls or changes filed for it) is edited there, whatever its older
+  // `stage` says, so the step points to the Edit room instead of moving the book to revise (Kyle, 2026-10-28).
+  const changeNotes = Object.values(index.notes).filter((n) => n.type === CHANGES_TYPE && n.path.startsWith(book.folder + '/'));
+  const calls = ideas.filter(isStoryCall);
+  const allDrafted = scenes.length > 0 && !scenes.some((n) => str(n.data.status || 'planned') === 'planned');
+  if ((changeNotes.length || calls.length) && allDrafted && ['draft', 'revise', 'polish'].indexOf(stage) >= 0) {
+    const openCalls = pile.decide.filter(isStoryCall).length;
+    const openChanges = changeNotes.reduce((sum, n) => sum + openCount(n), 0);
+    if (openCalls) return link('Answer the story calls', plural(openCalls, 'story call is', 'story calls are') + ' waiting for you in the Edit room'
+      + (openChanges ? ', then ' + plural(openChanges, 'change', 'changes') + ' on the pages.' : '.'), at.board('story-calls', book.folder));
+    if (openChanges) return link('Go through the changes', plural(openChanges, 'change is', 'changes are') + ' waiting for your yes or no in the Edit room.', at.board('changes', book.folder));
+    return link('Open the Edit room', 'The book is in editing, and nothing in the Edit room is waiting on you right now.', at.board('changes', book.folder));
+  }
 
   switch (stage) {
     case 'spark':
