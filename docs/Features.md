@@ -640,6 +640,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
   changed paragraph), Final (no marks) and Original (Kyle's own page, where he types). Up and down arrows step through
   the changes and on into the next chapter that has any.
+  A change that only adds italics shows the words in italics, not raw stars (2026-10-28).
   The marked views are for reading; to type, press Original or Edit it myself. All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
