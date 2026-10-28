@@ -43,7 +43,7 @@ import { CheckPanel } from './CheckPanel.tsx';
 import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, ruleFits, saveChoices, swapsOf, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
-import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, loadView, saveView, type ChangesView } from './Changes.tsx';
+import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
@@ -847,6 +847,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const setChView = (v: ChangesView) => { setChViewState(v); saveView(v); };
   const [chTick, setChTick] = useState(0);
   const [chCur, setChCur] = useState<string | null>(null);
+  const curRef = useRef<string | null>(null);
+  curRef.current = chCur;
   const chNote = changes ? changes.note : null;
   const sceneId = String(note.data.id || '');
   const chParsed = useMemo(() => (chNote ? parseChanges(chNote.body) : { intro: '', changes: [] as Change[] }), [chNote ? chNote.path + '@' + chNote.sha : '']);
@@ -977,6 +979,24 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const el = document.querySelector('.changes-page [data-chg="' + chCur.replace(/"/g, '') + '"]');
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [chCur, showMarks]);
+  // Word's margin: as Kyle scrolls the page, the Changes column follows to the first change in view.
+  useEffect(() => {
+    if (!showMarks || tab !== 'changes') return;
+    let t = 0;
+    const follow = (e: Event) => {
+      const from = e.target as Element | Document;
+      if (from instanceof Element && from.closest('.changes-panel')) return;
+      clearTimeout(t);
+      t = window.setTimeout(() => {
+        const marks = Array.from(document.querySelectorAll('.changes-page [data-chg]')) as HTMLElement[];
+        const seen = marks.filter((m) => { const r = m.getBoundingClientRect(); return r.bottom > window.innerHeight * 0.2 && r.top < window.innerHeight; });
+        const mark = seen.find((m) => m.dataset.chg === curRef.current) || seen[0];
+        if (mark && mark.dataset.chg) showCard(mark.dataset.chg);
+      }, 180);
+    };
+    document.addEventListener('scroll', follow, true);
+    return () => { clearTimeout(t); document.removeEventListener('scroll', follow, true); };
+  }, [showMarks, tab]);
   const pickChange = (id: string) => { setChCur(id); openTab('changes'); };
 
   // The page's heading: the chapter, the scene line, the chapter strip and the target bar. Beats mode shows it too.
@@ -1426,7 +1446,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={new Set(chPlace.placed.map((p) => p.change.id))} current={chCur}
+                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur}
                   onPick={(id) => { if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
