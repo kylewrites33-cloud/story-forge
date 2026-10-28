@@ -682,6 +682,12 @@ line all in bold, one line per fact, a lone `>` for a blank line between the par
 fine print and the Note in italics. Two screens with no story between them share one block.
 - **Writing screen and Edit room**: a `> ` line is indented (the `>` shows faint, so Kyle can type one), a bold title
   line shows in small caps.
+- **The Edit room reads like a Kindle page** (Kyle, 2026-10-28: "when we're in editing mode, the document automatically
+  converts to the form that it's going to show up as in Kindle... without these weird arrows"): in All changes, Simple
+  and Final, and in the cards' quotes, paragraphs are indented with no blank lines between them, System screens are
+  indented with no `>` marks, a lone `>` is a small gap, and the story picks up after two lines' space. A struck-out line
+  break is not shown. The files stay Markdown. Self-Edit still shows the faint `>` marks; a Kindle look for the typing
+  page itself is an app to-do.
 - **Export to Word**: style System Screen, indented half an inch, one paragraph per line, a blank line where the block
   has a lone `>`, the title bold small caps, two blank lines before the story goes on.
 
