@@ -469,7 +469,11 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .md-i { font-style: italic; }
 .md-b { font-weight: 700; }
 .md-bi { font-style: italic; font-weight: 700; }
-.md-quote { color: var(--muted); }
+.md-quote { -webkit-box-decoration-break: clone; box-decoration-break: clone; padding-left: 1.4em; }
+.md-qm, .md-callout { color: var(--muted); }
+.md-qt .md-b { font-variant: small-caps; letter-spacing: 0.04em; }
+.chg-quote { padding-left: 1.4em; }
+.chg-quote .md-quote { padding-left: 0; }
 .md-hl { background: var(--mark, #fff1a8); border-radius: 3px; }
 .md-find { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 2px; }
 .md-ask { background: var(--accent-soft); color: var(--accent); border-radius: 4px; box-shadow: 0 0 0 1px var(--accent-soft); }

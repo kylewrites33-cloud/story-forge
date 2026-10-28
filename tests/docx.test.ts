@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { backupFolder, buildDocx, exportName, makeBackupFolder, manuscript, pieces, saveBackup } from '../src/lib/docx.ts';
+import { backupFolder, buildDocx, exportName, makeBackupFolder, manuscript, pieces, saveBackup, screen, isScreen } from '../src/lib/docx.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { DEMO, FsSource, MemSource } from './helpers.ts';
@@ -73,4 +73,16 @@ test('a new series and a new book get their backup folders', async () => {
   await makeBackupFolder(src, 'Ember Road', 'Ash Bell');
   await makeBackupFolder(src, 'Ember Road', 'Ash Bell');
   assert.deepEqual([...src.files.keys()], ['Book Backups/Ember Road/.gitkeep', 'Book Backups/Ember Road/Ash Bell/.gitkeep']);
+});
+
+test('a System screen (lines starting "> ") is indented, one paragraph a line, its bold title in small caps', () => {
+  const p = '> **Argo Brand Natural Spring Water**\n>\n> Freshness: 4/5 (Fresh)\n> *Collected from the springs.*';
+  assert.ok(isScreen(p));
+  assert.ok(!isScreen('He said.\n> not all'));
+  const out = screen(p);
+  assert.equal(out.length, 3);
+  assert.match(out[0], /SystemScreen.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
+  assert.match(out[1], /w:before="240"/);
+  assert.match(out[2], /<w:i\/>.*Collected/);
+  assert.match(out[2], /w:after="480"/);
 });

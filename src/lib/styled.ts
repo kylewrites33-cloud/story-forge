@@ -190,7 +190,10 @@ export function styledHtml(text: string, o: StyleOptions = {}): string {
   return text.split('\n').map((line) => {
     let html = seen.get(line);
     if (html === undefined) {
-      html = /^\s*>/.test(line) ? '<span class="md-quote">' + lineHtml(line, o) + '</span>' : lineHtml(line, o);
+      // A System screen line (Kyle, 2026-10-28: format C1): "> " starts it, shown faint, the line indented; a line
+      // that is all bold is the screen's title, in small caps.
+      const q = /^(\s*>\s?)(.*)$/.exec(line);
+      html = q ? '<span class="md-quote' + (/^\*\*[^*].*\*\*$/.test(q[2].trim()) ? ' md-qt' : /^\[!/.test(q[2]) ? ' md-callout' : '') + '"><span class="md-qm">' + esc(q[1]) + '</span>' + lineHtml(q[2], o) + '</span>' : lineHtml(line, o);
       if (o.added && line.trim() && o.added.has(line)) html = '<span class="md-added">' + html + '</span>';
       seen.set(line, html);
     }

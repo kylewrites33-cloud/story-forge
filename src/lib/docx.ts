@@ -39,11 +39,30 @@ export function pieces(line: string, b = false, i = false): Piece[] {
   return out.filter((p) => p.text);
 }
 
-function para(text: string, style: string): string {
+/** `caps`: bold small caps, for a System screen's title. */
+function para(text: string, style: string, ppr = '', caps = false): string {
   const words = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
-  return '<w:p><w:pPr><w:pStyle w:val="' + style + '"/></w:pPr>' + pieces(words).map((p) =>
-    '<w:r>' + (p.b || p.i ? '<w:rPr>' + (p.b ? '<w:b/>' : '') + (p.i ? '<w:i/>' : '') + '</w:rPr>' : '') +
+  return '<w:p><w:pPr><w:pStyle w:val="' + style + '"/>' + ppr + '</w:pPr>' + pieces(words).map((p) =>
+    '<w:r>' + (p.b || p.i || caps ? '<w:rPr>' + (p.b || caps ? '<w:b/>' : '') + (p.i ? '<w:i/>' : '') + (caps ? '<w:smallCaps/>' : '') + '</w:rPr>' : '') +
     '<w:t xml:space="preserve">' + xmlEsc(p.text) + '</w:t></w:r>').join('') + '</w:p>';
+}
+
+/** A System screen (Kyle, 2026-10-28: format C1) is a block of "> " lines: indented, one paragraph per line, a lone ">"
+ * a blank line between its parts, an all-bold line its title in bold small caps, two blank lines before the story goes on. */
+export const isScreen = (p: string) => p.split('\n').every((l) => /^\s*>/.test(l));
+export function screen(p: string): string[] {
+  const lines = p.split('\n').map((l) => l.replace(/^\s*> ?/, ''));
+  const out: string[] = [];
+  let gap = true;
+  lines.forEach((l, i) => {
+    if (!l.trim()) { gap = true; return; }
+    const last = !lines.slice(i + 1).some((x) => x.trim());
+    const title = /^\*\*[^*].*\*\*$/.test(l.trim());
+    const sp = '<w:spacing w:before="' + (gap ? 240 : 0) + '" w:after="' + (last ? 480 : 0) + '"/>';
+    out.push(para(title ? l.trim().slice(2, -2) : l, 'SystemScreen', sp, title));
+    gap = false;
+  });
+  return out;
 }
 
 export interface Manuscript { chapters: { heading: string; parts: string[] }[]; words: number; scenes: number }
@@ -117,8 +136,8 @@ export function buildDocx(title: string, author: string, m: Manuscript, when: Da
     body.push(para(c.heading, 'Heading1'));
     c.parts.forEach((part, pi) => {
       if (pi > 0) body.push(para('* * *', 'SceneBreak'));
-      part.split(/\n\s*\n/).map((p) => p.replace(/\n/g, ' ').trim()).filter(Boolean)
-        .forEach((p, i) => body.push(para(p, i === 0 ? 'FirstParagraph' : 'BodyText')));
+      part.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+        .forEach((p, i) => { if (isScreen(p)) body.push(...screen(p)); else body.push(para(p.replace(/\n/g, ' '), i === 0 ? 'FirstParagraph' : 'BodyText')); });
     });
   });
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
@@ -136,6 +155,7 @@ export function buildDocx(title: string, author: string, m: Manuscript, when: Da
     style('Heading1', 'heading 1', '<w:pageBreakBefore/><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="1440" w:after="480"/><w:outlineLvl w:val="0"/>', '<w:sz w:val="32"/>') +
     style('FirstParagraph', 'First Paragraph', '', '') +
     style('BodyText', 'Body Text', '<w:ind w:firstLine="360"/>', '') +
+    style('SystemScreen', 'System Screen', '<w:ind w:left="720"/>', '') +
     style('SceneBreak', 'Scene Break', '<w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/>', '') +
     '</w:styles>';
   const rels = (r: string) => head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + r + '</Relationships>';
