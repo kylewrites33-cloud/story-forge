@@ -144,6 +144,7 @@ test('a change marks only the words that differ, and says what it is', async () 
   assert.deepEqual(wordDiff('a big red dog', 'a small blue dog'), [{ kind: 'same', text: 'a ' }, { kind: 'del', text: 'big red' }, { kind: 'ins', text: 'small blue' }, { kind: 'same', text: ' dog' }]);
   const c = (why: string, was = 'x', now = 'y') => ({ id: 'C-01', kind: 'small' as const, scene: 'S-001', why, status: 'open' as const, was, now, other: null });
   assert.equal(shortLabel(c('Name: you renamed Grey to Basil (2026-10-27).')), 'Name: Grey → Basil');
+  assert.equal(shortLabel(c('System screen in format C1 (Style Guide, System screens; Kyle, 2026-10-28).')), 'System screen');
   assert.equal(shortLabel(c('Name: you renamed Cyrus to Rye, Grey to Basil (2026-10-27).')), 'Names: Cyrus → Rye, Grey → Basil');
   assert.equal(shortLabel(c('Proofread (both readers): Typo: "teh" should be "the".', 'teh cat', 'the cat')), 'Typo: teh → the');
   assert.equal(shortLabel(c('Proofread (one reader of two, so check it): Punctuation: a comma.', 'a, b', 'a b')), 'Punctuation: cut , (check)');

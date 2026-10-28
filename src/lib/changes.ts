@@ -92,6 +92,7 @@ export function shortLabel(c: Change): string {
   }
   const call = /^(Story call I-\d+|To-do T-\d+(?:\s*\/\s*T-\d+)*)/i.exec(why);
   if (call) return call[1];
+  if (/^System screen in format/i.test(why)) return 'System screen';
   const head = /^([^:.]{2,24}):/.exec(why);
   let label = head ? head[1] : KIND_LABEL[c.kind];
   if (c.kind === 'small' || c.kind === 'line') {
