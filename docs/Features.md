@@ -664,6 +664,11 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   Microsoft Word's structure"); such a card says its words are gone from the page and offers I wrote my own and Back to Draft 1, 2026-10-28, Kyle: "I did indeed write my own version, but I don't see no like it's asking me to do"; "maybe reject should instead be revert to draft one". Back to Draft 1 finds Kyle's version by the words around the change in the scene's Draft 1 copy and puts Draft 1's words back, recorded as Rejected; with no Draft 1 the card offers Reject). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
+- **Finding the spot** (2026-10-28, Kyle: "the word processor screen then loses the place of where I wanted to type. And
+  then if I tap the card, it doesn't bring me to the spot"; "right after I tap the italicize button, the word processing
+  screen jumps away"). Edit it myself scrolls the page to the change's words and picks them; tapping that card while
+  editing goes back there (to Kyle's new words' starting place once the old words are gone). The page scrolls to the
+  selection itself, not its paragraph. Bold, Italic and Highlight keep the page where it is.
 - **Other scenes' changes** (2026-10-28, Kyle: "something is messed up with the number of changes remaining displayed in
   the chapters column"). The chapter list counts every waiting change in the chapter; the Changes tab counts the scene on
   screen and adds "· N more in this chapter's other scenes" so the two agree.

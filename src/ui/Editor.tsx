@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
@@ -925,14 +925,27 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     putText(page.slice(0, span.at) + c.was + page.slice(span.end));
     record({ [c.id]: 'no' });
   };
-  const editMine = (c: Change) => {
+  // Where Kyle's own rewrite of a change began, so tapping its card finds the spot again after his words replace the
+  // team's (Kyle, 2026-10-28: "the word processor screen then loses the place ... if I tap the card, it doesn't bring
+  // me to the spot").
+  const mineAt = useRef<{ id: string; at: number; end: number } | null>(null);
+  const goToChange = (c: Change, tries = 0) => {
+    const ed = commands.current;
     const t = pageText();
+    if (!ed || !t) { if (tries < 30) setTimeout(() => goToChange(c, tries + 1), 50); return; }
+    const found = findWords(t, c.was);
+    const kept = mineAt.current && mineAt.current.id === c.id ? mineAt.current : null;
+    const spot = found || (kept && kept.at <= t.length ? { at: kept.at, end: Math.min(kept.end, t.length) } : null);
+    if (spot) ed.select(spot.at, spot.end);
+  };
+  const editMine = (c: Change) => {
     const found = chPlace.placed.find((p) => p.change.id === c.id);
     if (chNote) setMineOpen(chNote.path + '#' + c.id);
+    mineAt.current = found ? { id: c.id, at: found.at, end: found.end } : null;
     setChCur(c.id);
     setChView('original');
-    // The writing box comes back; then Kyle's words that the change was about are picked, ready to type over.
-    if (found) setTimeout(() => { const ed = commands.current; if (ed && pageText() === t) ed.select(found.at, found.end); }, 60);
+    // The writing box comes back; then Kyle's words that the change was about are picked and shown, ready to type over.
+    setTimeout(() => goToChange(c), 60);
     closeOver();
   };
   const acceptAll = () => {
@@ -1479,7 +1492,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               chNote
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
-                  onPick={(id) => { if (chView === 'original' && id !== editingId) setChView('all'); setChCur(id); closeOver(); }}
+                  onPick={(id) => { const c = chMine.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>

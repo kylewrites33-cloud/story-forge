@@ -284,12 +284,42 @@ export interface EditorCommands {
 }
 
 /** Scroll the selection into the middle of the screen. */
+/** The nearest box around `el` that scrolls (the writing page), or the document's. */
+function scroller(el: Element | null): HTMLElement {
+  let e = el ? el.parentElement : null;
+  while (e && !(e.scrollHeight > e.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(e).overflowY))) e = e.parentElement;
+  return e || (document.scrollingElement as HTMLElement) || document.documentElement;
+}
+
+/** Scroll the page so the selection sits about a third of the way down. It measures the selection itself: a plain line
+ * has the whole editor as its parent, and centring that sent the page far off (Kyle, 2026-10-28). */
 export function showSelection() {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount) return;
-  const n = sel.getRangeAt(0).startContainer;
-  const el = (n.nodeType === 3 ? n.parentElement : n) as HTMLElement | null;
-  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+  const range = sel.getRangeAt(0);
+  let r = range.getBoundingClientRect();
+  if (!r.height && !r.width) {
+    const n = range.startContainer;
+    const el = (n.nodeType === 3 ? n.parentElement : n) as HTMLElement | null;
+    if (!el) return;
+    r = el.getBoundingClientRect();
+  }
+  const n = range.startContainer;
+  const box = scroller(n.nodeType === 3 ? n.parentElement : (n as Element));
+  const b = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
+  if (r.top >= b.top + 40 && r.bottom <= b.top + b.height - 40) return;
+  box.scrollTop += r.top - b.top - b.height / 3;
+}
+
+/** Run a command without the page jumping: focus, repainting the text and the iPad's own scrolling to the caret can each
+ * move the page (Kyle, 2026-10-28: "right after I tap the italicize button, the word processing screen jumps away"). */
+function keepPlace(el: HTMLElement | null, fn: () => void) {
+  if (!el) { fn(); return; }
+  const box = scroller(el);
+  const top = box.scrollTop;
+  fn();
+  box.scrollTop = top;
+  requestAnimationFrame(() => { box.scrollTop = top; });
 }
 
 export function StyledEditor({ value, onChange, onCaret, label, commands, options, onName, onLook }: {
@@ -568,13 +598,13 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   };
 
   if (commands) {
-    const focus = () => { const el = ref.current; if (el && document.activeElement !== el) { el.focus(); if (lastSel.current) setSelection(el, lastSel.current.start, lastSel.current.end); } };
+    const focus = () => { const el = ref.current; if (el && document.activeElement !== el) { el.focus({ preventScroll: true }); if (lastSel.current) setSelection(el, lastSel.current.start, lastSel.current.end); } };
     commands.current = {
-      bold: () => { focus(); toggle('b'); },
-      italic: () => { focus(); toggle('i'); },
+      bold: () => keepPlace(ref.current, () => { focus(); toggle('b'); }),
+      italic: () => keepPlace(ref.current, () => { focus(); toggle('i'); }),
       undo: () => { focus(); step(undo, redo); },
       redo: () => { focus(); step(redo, undo); },
-      highlight: () => { focus(); toggle('h'); },
+      highlight: () => keepPlace(ref.current, () => { focus(); toggle('h'); }),
       plain: () => {
         focus();
         const el = ref.current;
@@ -593,12 +623,14 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
       select: (a, b) => {
         const el = ref.current;
         if (!el) return;
-        el.focus();
+        el.focus({ preventScroll: true });
         if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
         setSelection(el, a, b);
         lastSel.current = { start: a, end: b };
         onCaret(a);
         showSelection();
+        // The iPad's keyboard slides up after the focus and can push the spot out of sight; show it again once it has.
+        setTimeout(showSelection, 400);
       },
       replaceRange: (a, b, t) => {
         const el = ref.current;
