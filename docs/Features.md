@@ -392,7 +392,7 @@ add a dated line here when you add or change one.
   typing, as below. `chaptersDone` in `src/lib/overview.ts`. The guided next step (`src/lib/nextstep.ts`) is
   one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
   `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
-  one waits). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
+  one waits). Once every scene has a draft and the book has story calls or changes in the Edit room, the next step points there instead of moving the book to revise: Answer the story calls, then Go through the changes, else Open the Edit room (Kyle, 2026-10-28, asking what "Move the book to revise" meant on Quest Declined 1 mid proofread). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
   one agent, Mark done and Reopen, and where each was answered. Sessions (`#/board/sessions/<book>`, Review): the book's
   session notes newest first; a session note opens speaker by speaker (`> [!voice] Name` callouts or `**Name:**` lines),
   each agent in its own `--voice-N` colour, Kyle in the accent, then the ideas it filed (its `ideas` list and ideas whose

@@ -116,3 +116,14 @@ test('forging a specialist is a job with full steps and a gate', async () => {
   assert.match(ask, /source.*unverified/);
   assert.match(ask, /Stop at a gate.*after Kyle says yes/);
 });
+
+test('a drafted book with Edit room work points to the Edit room, not to the revise stage', async () => {
+  const { schema, index, book } = await demoIndex();
+  const notes = { ...index.notes };
+  book.scenes.forEach((p) => { const n = notes[p]; if (n && String(n.data.status || 'planned') === 'planned') notes[p] = { ...n, data: { ...n.data, status: 'drafted' } }; });
+  const s = nextStep(schema, { ...index, notes }, book);
+  assert.equal(s.action, 'link');
+  assert.match(s.href, /^#\/board\/(story-calls|changes)\//);
+  assert.match(s.why, /Edit room/);
+  assert.doesNotMatch(s.label, /Move the book/);
+});
