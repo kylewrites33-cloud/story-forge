@@ -103,6 +103,62 @@ export function shortLabel(c: Change): string {
   return label + (check ? ' (check)' : '');
 }
 
+/** The word swaps a change makes ("Grey" for "Basil"), when it is nothing but short swaps; else null. Accept everywhere
+ * works on these (Kyle, 2026-10-28: "apply this identical change in all cases"). */
+export function swapsOf(c: Change): [string, string][] | null {
+  const d = wordDiff(c.was, c.now);
+  const out: [string, string][] = [];
+  for (let k = 0; k < d.length; k++) {
+    if (d[k].kind === 'same') continue;
+    if (d[k].kind !== 'del' || !d[k + 1] || d[k + 1].kind !== 'ins') return null;
+    const a = d[k].text.trim(), b = d[k + 1].text.trim();
+    if (!a || !b || a.length > 40 || b.length > 40) return null;
+    if (!out.some(([x, y]) => x === a && y === b)) out.push([a, b]);
+    k++;
+  }
+  return out.length ? out : null;
+}
+
+const RULES = 'story-forge.change-rules.';
+/** The swaps Kyle accepted everywhere, kept on this device. */
+export function loadRules(sourceKey: string, s: Store | null = store()): [string, string][] {
+  try { const v = s && s.getItem(RULES + sourceKey); const o = v ? JSON.parse(v) : []; return Array.isArray(o) ? o : []; } catch { return []; }
+}
+export function addRules(sourceKey: string, pairs: [string, string][], s: Store | null = store()): [string, string][] {
+  const all = loadRules(sourceKey, s);
+  pairs.forEach(([a, b]) => { if (!all.some(([x, y]) => x === a && y === b)) all.push([a, b]); });
+  try { if (s) s.setItem(RULES + sourceKey, JSON.stringify(all)); } catch { /* lasts until reload */ }
+  return all;
+}
+const SKIPS = 'story-forge.change-rules-skip.';
+/** Changes Kyle undid after Accept everywhere took them: the rule leaves them alone from then on. */
+export function loadSkips(sourceKey: string, s: Store | null = store()): string[] {
+  try { const v = s && s.getItem(SKIPS + sourceKey); const o = v ? JSON.parse(v) : []; return Array.isArray(o) ? o : []; } catch { return []; }
+}
+export function addSkip(sourceKey: string, key: string, s: Store | null = store()): void {
+  const all = loadSkips(sourceKey, s);
+  if (all.indexOf(key) < 0) all.push(key);
+  try { if (s) s.setItem(SKIPS + sourceKey, JSON.stringify(all)); } catch { /* lasts until reload */ }
+}
+/** Whether every swap in a change is one Kyle accepted everywhere. */
+export function ruleFits(c: Change, rules: [string, string][]): boolean {
+  const sw = c.status === 'open' ? swapsOf(c) : null;
+  return !!sw && sw.every(([a, b]) => rules.some(([x, y]) => x === a && y === b));
+}
+/** How many waiting changes in the book make only these swaps (or some of them). Each note's swaps are worked out once
+ * per vault read, since a card asks on every draw. */
+const swapCache = new WeakMap<NoteRecord, [string, string][][]>();
+export function countLike(notes: Record<string, NoteRecord>, bookFolder: string, pairs: [string, string][]): number {
+  let n = 0;
+  Object.values(notes).forEach((x) => {
+    if (x.type !== CHANGES_TYPE || !x.path.startsWith(bookFolder + '/')) return;
+    let list = swapCache.get(x);
+    if (!list) { list = parseChanges(x.body).changes.map((c) => (c.status === 'open' && swapsOf(c)) || []); swapCache.set(x, list); }
+    list.forEach((sw) => { if (sw.length && sw.every(([a, b]) => pairs.some(([p, q]) => p === a && q === b))) n++; });
+  });
+  return n;
+}
+
 export const changesTitle = (chapter: number) => 'Chapter ' + chapter + ' changes';
 export const changesPath = (bookFolder: string, chapter: number) => bookFolder + '/' + CHANGES_FOLDER + '/' + changesTitle(chapter) + '.md';
 

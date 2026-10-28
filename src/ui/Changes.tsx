@@ -4,7 +4,7 @@
 // Each change has a card in the side column with its reason and Keep, No, the other version or Edit it myself.
 import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
-import { KIND_LABEL, segments, shortLabel, wordDiff } from '../lib/changes.ts';
+import { KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
@@ -74,7 +74,7 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
   );
 }
 
-/** The bar over the page while the chapter has changes: the four views, where Kyle is, the arrows and Keep all. */
+/** The bar over the page while the chapter has changes: the four views, where Kyle is, the arrows and Accept all small fixes. */
 export function ChangesBar({ view, onView, open, total, place, small, onPrev, onNext, onKeepSmall, busy }: {
   view: ChangesView; onView: (v: ChangesView) => void;
   /** Changes waiting in this scene, and in the whole book. */
@@ -97,12 +97,13 @@ export function ChangesBar({ view, onView, open, total, place, small, onPrev, on
         <button type="button" class="icon-button" aria-label="Previous change" title="Previous change" disabled={!onPrev} onClick={() => onPrev && onPrev()}><Icon name="up" /></button>
         <button type="button" class="icon-button" aria-label="Next change" title="Next change, into the next chapter at the end" disabled={!onNext} onClick={() => onNext && onNext()}><Icon name="down" /></button>
       </span>
-      {small > 0 && <button type="button" class="keep-small" disabled={busy} onClick={onKeepSmall}><Icon name="check" size={18} />Keep all small fixes ({small})</button>}
+      {small > 0 && <button type="button" class="keep-small" disabled={busy} onClick={onKeepSmall}><Icon name="check" size={18} />Accept all small fixes ({small})</button>}
     </div>
   );
 }
 
-const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Kept', other: 'Kept the other version', no: 'Said no', mine: 'Your own words' };
+// Accept and Reject, as in Word (Kyle, 2026-10-28: "keep this change is throwing me off. why not the language accept this change").
+const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Accepted the other version', no: 'Rejected', mine: 'Your own words' };
 
 function Quote({ text, cls }: { text: string; cls: string }) {
   return text
@@ -111,15 +112,19 @@ function Quote({ text, cls }: { text: string; cls: string }) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones first. */
-export function ChangesPanel({ intro, changes, placedIds, current, onPick, onChoose, onUndo, onMine, chapter, bookOpen, notePath, link }: {
+export function ChangesPanel({ intro, changes, placedIds, current, onPick, onChoose, onUndo, onMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
   intro: string; changes: Change[]; placedIds: Set<string>; current: string | null; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
+  /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
+  onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
 }) {
   const open = changes.filter((c) => c.status === 'open');
   const decided = changes.filter((c) => c.status !== 'open');
   const card = (c: Change) => {
     const here = placedIds.has(c.id);
+    const sw = c.status === 'open' ? swapsOf(c) : null;
+    const many = sw && like ? like(sw) : 0;
     return (
       <article key={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a')) onPick(c.id); }}>
@@ -133,10 +138,11 @@ export function ChangesPanel({ intro, changes, placedIds, current, onPick, onCho
             {c.other != null && <><p class="panel-key">Or the other version</p><Quote text={c.other} cls="now other" /></>}
             {!here && <p class="hint">These words are no longer on the page as the change quotes them (you may have changed them). Say no, or put your own words in.</p>}
             <div class="chg-buttons">
-              <button type="button" class="primary" disabled={!here} onClick={() => onChoose(c, 'kept')}>Keep</button>
-              {c.other != null && <button type="button" disabled={!here} onClick={() => onChoose(c, 'other')}>Keep the other</button>}
-              <button type="button" onClick={() => onChoose(c, 'no')}>No</button>
+              <button type="button" class="primary" disabled={!here} onClick={() => onChoose(c, 'kept')}>Accept</button>
+              {c.other != null && <button type="button" disabled={!here} onClick={() => onChoose(c, 'other')}>Accept the other</button>}
+              <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
+              {sw && many > 1 && <button type="button" class="chg-everywhere" disabled={!here} onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
             </div>
           </>
         ) : (

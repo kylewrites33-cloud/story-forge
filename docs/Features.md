@@ -639,15 +639,19 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   by rewriting the scene. When the open scene has changes, a bar over the page has Word's four views: All changes (old
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
   changed paragraph), Final (no marks) and Original (Kyle's own page, where he types). Up and down arrows step through
-  the changes and on into the next chapter that has any. Keep all small fixes keeps the typo and continuity tier at once.
+  the changes and on into the next chapter that has any. Accept all small fixes accepts the typo and continuity tier at once.
   The marked views are for reading; to type, press Original or Edit it myself. All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
   wide, small before the change when not (2026-10-28, Kyle: "some short text on the side that summarizes what the
   actual change is").
 - **Changes tab.** First in the side column while a chapter has changes (Beats moves into More). One card per change:
-  its kind, its reason, the old and new words, "New passage · read slowly" for new words, and Keep, Keep the other
-  (a second version), No, Edit it myself. Decided cards fold away with Undo. Keep puts the words in as Kyle's own save;
+  its kind, its reason, the old and new words, "New passage · read slowly" for new words, and Accept, Accept the other
+  (a second version), Reject, Edit it myself (Accept and Reject as in Word, 2026-10-28, Kyle: "keep this change is
+  throwing me off"). A change that only swaps words (Grey → Basil) also has Accept everywhere, with how many such
+  changes wait in the book (2026-10-28, Kyle: "apply this identical change in all cases"): it accepts them on this page
+  now and in each chapter, of either book, as it opens; the rule is kept on the device, and Undo on one leaves that one
+  alone. Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
 - **Story calls.** Edit > Story calls is Decide one at a time for the whole-book read's calls (ideas with `step: "36"`):

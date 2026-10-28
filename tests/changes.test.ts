@@ -149,3 +149,18 @@ test('a change marks only the words that differ, and says what it is', async () 
   assert.equal(shortLabel(c('Proofread (one reader of two, so check it): Punctuation: a comma.', 'a, b', 'a b')), 'Punctuation: cut , (check)');
   assert.equal(shortLabel(c('Story call I-089: where did Peppermint grow up?')), 'Story call I-089');
 });
+
+test('accept everywhere: a change made of word swaps, and the rule that takes it', async () => {
+  const { swapsOf, ruleFits, addRules, loadRules } = await import('../src/lib/changes.ts');
+  const c = (was: string, now: string) => ({ id: 'C-01', kind: 'small' as const, scene: 'S-001', why: '', status: 'open' as const, was, now, other: null });
+  assert.deepEqual(swapsOf(c('tavern," Grey said. He', 'tavern," Basil said. He')), [['Grey', 'Basil']]);
+  assert.deepEqual(swapsOf(c('Grey told Cyrus', 'Basil told Rye')), [['Grey', 'Basil'], ['Cyrus', 'Rye']]);
+  assert.equal(swapsOf(c('She ran.', 'She ran. Then she stopped.')), null);
+  const mem: Record<string, string> = {};
+  const s = { getItem: (k: string) => mem[k] ?? null, setItem: (k: string, v: string) => { mem[k] = v; }, removeItem: (k: string) => { delete mem[k]; } };
+  addRules('v', [['Grey', 'Basil']], s);
+  const rules = loadRules('v', s);
+  assert.equal(ruleFits(c('Grey said', 'Basil said'), rules), true);
+  assert.equal(ruleFits(c('Grey told Cyrus', 'Basil told Rye'), rules), false);
+  assert.equal(ruleFits({ ...c('Grey said', 'Basil said'), status: 'kept' }, rules), false);
+});
