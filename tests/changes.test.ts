@@ -144,6 +144,7 @@ test('a change marks only the words that differ, and says what it is', async () 
   assert.deepEqual(wordDiff('a big red dog', 'a small blue dog'), [{ kind: 'same', text: 'a ' }, { kind: 'del', text: 'big red' }, { kind: 'ins', text: 'small blue' }, { kind: 'same', text: ' dog' }]);
   const c = (why: string, was = 'x', now = 'y') => ({ id: 'C-01', kind: 'small' as const, scene: 'S-001', why, status: 'open' as const, was, now, other: null });
   assert.equal(shortLabel(c('Name: you renamed Grey to Basil (2026-10-27).')), 'Name: Grey → Basil');
+  assert.equal(shortLabel(c('System screen in format C1 (Style Guide, System screens; Kyle, 2026-10-28).')), 'System screen');
   assert.equal(shortLabel(c('Name: you renamed Cyrus to Rye, Grey to Basil (2026-10-27).')), 'Names: Cyrus → Rye, Grey → Basil');
   assert.equal(shortLabel(c('Proofread (both readers): Typo: "teh" should be "the".', 'teh cat', 'the cat')), 'Typo: teh → the');
   assert.equal(shortLabel(c('Proofread (one reader of two, so check it): Punctuation: a comma.', 'a, b', 'a b')), 'Punctuation: cut , (check)');
@@ -171,4 +172,17 @@ test('rewriteSpan finds the words Kyle put in place of a change, by the words ar
   const s = rewriteSpan(page, '*These should last another 2 months at least.*', old)!;
   assert.equal(page.slice(s.at, s.end), '*Good for two more months before they go.*');
   assert.equal(rewriteSpan(page, 'not in the old copy', old), null);
+});
+
+test('todoTicks: a to-do is done once every change naming it is decided and one went in', async () => {
+  const { todoTicks, todoIds } = await import('../src/lib/changes.ts');
+  const ch = (id: string, why: string, status: string) => ({ id, kind: 'new', scene: 'S-001', why, status, was: 'a', now: 'b', other: null }) as never;
+  assert.deepEqual(todoIds(ch('C-1', 'To-do T-004 / T-006: wolf', 'open')), ['T-004', 'T-006']);
+  const list = [ch('C-1', 'To-do T-002: pain', 'mine'), ch('C-2', 'To-do T-002: more pain', 'open'), ch('C-3', 'To-do T-001: circle', 'kept'), ch('C-4', 'To-do T-009', 'no'), ch('C-5', 'Typo', 'kept')];
+  assert.deepEqual(todoTicks(list, ['C-1', 'C-3', 'C-4', 'C-5']), [
+    { id: 'T-002', done: false, note: '' },
+    { id: 'T-001', done: true, note: 'Edit room: C-3 kept.' }
+  ]);
+  list[1] = ch('C-2', 'To-do T-002: more pain', 'other');
+  assert.deepEqual(todoTicks(list, ['C-2']), [{ id: 'T-002', done: true, note: 'Edit room: C-1 your own words, C-2 other version kept.' }]);
 });
