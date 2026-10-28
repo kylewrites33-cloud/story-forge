@@ -188,13 +188,15 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
+export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link }: {
   intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
   /** The change Kyle is rewriting himself: its card stays open until he says he is done. */
   editing: string | null; onDoneMine: (c: Change) => void; onStopMine: () => void;
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
+  /** Put the change's Was (Draft 1's words) back in place of what Kyle wrote there; null when there is no Draft 1. */
+  onRevert: ((c: Change) => void) | null;
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
 }) {
@@ -227,10 +229,10 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
               </>
             ) : <>
             {!here ? <>
-            <p class="hint">These words are no longer on the page, so there is nothing to show there (you have probably changed them yourself). If you wrote your own version, press I wrote my own.</p>
+            <p class="hint">These words are no longer on the page, so there is nothing to show there (you have probably changed them yourself). I wrote my own keeps your words. Back to Draft 1 puts Draft 1's words back in their place.</p>
             <div class="chg-buttons">
               <button type="button" class="primary" onClick={() => onDoneMine(c)}>I wrote my own</button>
-              <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
+              {onRevert ? <button type="button" onClick={() => onRevert(c)}>Back to Draft 1</button> : <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>}
             </div>
             </> : <div class="chg-buttons">
               <button type="button" class="primary" onClick={() => onChoose(c, 'kept')}>Accept</button>

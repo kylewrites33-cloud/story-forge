@@ -424,3 +424,22 @@ export function fixesOf(body: string): { letter: string; text: string }[] {
   });
   return out;
 }
+
+/** Where Kyle's own words now stand in place of a change's Was: the Was is found in an older copy of the scene (Draft 1),
+ * and the words just before and after it there are found on today's page; what lies between is his version. Null when
+ * the Was or its neighbours cannot be found exactly once. */
+export function rewriteSpan(page: string, was: string, old: string): { at: number; end: number } | null {
+  const i = old.indexOf(was);
+  if (!was || i < 0 || old.indexOf(was, i + 1) >= 0) return null;
+  const once = (s: string, from = 0) => { const a = page.indexOf(s, from); return a >= 0 && page.indexOf(s, a + 1) < 0 ? a : -1; };
+  let at = -1;
+  const before = old.slice(0, i);
+  if (!before) at = 0;
+  for (let n = Math.min(80, before.length); at < 0 && n >= 12; n--) { const a = once(before.slice(-n)); if (a >= 0) at = a + n; }
+  if (at < 0) return null;
+  let end = -1;
+  const after = old.slice(i + was.length);
+  if (!after) end = page.length;
+  for (let n = Math.min(80, after.length); end < 0 && n >= 12; n--) { const a = page.indexOf(after.slice(0, n), at); if (a >= 0 && page.indexOf(after.slice(0, n), a + 1) < 0) end = a; }
+  return end >= at ? { at, end } : null;
+}
