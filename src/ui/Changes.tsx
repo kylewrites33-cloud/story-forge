@@ -189,14 +189,19 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
                 </div>
               </>
             ) : <>
-            {!here && <p class="hint">These words are no longer on the page as the change quotes them (you may have changed them). Say no, or put your own words in.</p>}
+            {!here ? <>
+            <p class="hint">These words are no longer on the page, so there is nothing to show there (you have probably changed them yourself). If you wrote your own version, press I wrote my own.</p>
             <div class="chg-buttons">
-              <button type="button" class="primary" disabled={!here} onClick={() => onChoose(c, 'kept')}>Accept</button>
-              {c.other != null && <button type="button" disabled={!here} onClick={() => onChoose(c, 'other')}>Accept the other</button>}
+              <button type="button" class="primary" onClick={() => onDoneMine(c)}>I wrote my own</button>
+              <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
+            </div>
+            </> : <div class="chg-buttons">
+              <button type="button" class="primary" onClick={() => onChoose(c, 'kept')}>Accept</button>
+              {c.other != null && <button type="button" onClick={() => onChoose(c, 'other')}>Accept the other</button>}
               <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
-              {sw && many > 1 && <button type="button" class="chg-everywhere" disabled={!here} onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
-            </div>
+              {sw && many > 1 && <button type="button" class="chg-everywhere" onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
+            </div>}
             </>}
           </>
         ) : (

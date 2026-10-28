@@ -661,7 +661,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   where the accept or accept all buttons would be"). Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle
   uses the arrows or picks a change on the page, and follows the page as he scrolls (a card already in sight stays put, and scrolling the column itself is never pulled back, 2026-10-28); changes no longer on the page come
   last (2026-10-28, Kyle: "Why are the changes on the right column not in sequential order? Take inspiration from
-  Microsoft Word's structure"). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
+  Microsoft Word's structure"); such a card says its words are gone from the page and offers only I wrote my own and Reject, 2026-10-28, Kyle: "I did indeed write my own version, but I don't see no like it's asking me to do"). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
 - **Story calls.** Edit > Story calls is Decide one at a time for the whole-book read's calls (ideas with `step: "36"`):
