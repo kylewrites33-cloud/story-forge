@@ -136,13 +136,17 @@ function Quote({ text, cls }: { text: string; cls: string }) {
 }
 
 /** Scroll the side column (only it, not the page) so this change's card shows, the way Word's margin follows the text. */
-export function showCard(id: string) {
+export function showCard(id: string, gentle = false) {
   const card = document.querySelector('.changes-panel [data-card="' + id.replace(/"/g, '') + '"]') as HTMLElement | null;
   if (!card) return;
   let box = card.parentElement;
   while (box && !(box.scrollHeight > box.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
   if (!box) return;
-  const top = card.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  const c = card.getBoundingClientRect();
+  const b = box.getBoundingClientRect();
+  // Following the page, a card already in sight is left alone, so a long card can be read to its buttons.
+  if (gentle && c.bottom > b.top + 40 && c.top < b.bottom - 40) return;
+  const top = c.top - b.top + box.scrollTop;
   box.scrollTo({ top: Math.max(0, top - box.clientHeight / 3), behavior: 'smooth' });
 }
 
