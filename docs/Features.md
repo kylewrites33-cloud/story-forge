@@ -652,7 +652,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   throwing me off"). A change that only swaps words (Grey → Basil) also has Accept everywhere, with how many such
   changes wait in the book (2026-10-28, Kyle: "apply this identical change in all cases"): it accepts them on this page
   now and in each chapter, of either book, as it opens; the rule is kept on the device, and Undo on one leaves that one
-  alone. Every change is a card of its own, typos and names included, headed by what it does ("Typo: teh → the"), and
+  alone. Edit it myself keeps the card open at the top of the column, with the team's words, while Kyle rewrites the
+  spot on the page; Mark my changes as done records it as his own words, and Back to the choices puts the card back
+  (2026-10-28, Kyle: "the change stays open until i tap mark my changes as complete"). Every change is a card of its own, typos and names included, headed by what it does ("Typo: teh → the"), and
   Accept all (as in Word) sits at the top of the column; there is no separate small-fixes button over the page any more
   (2026-10-28, Kyle: "the small fixes should exist as changes, just like anything else... in the right section would be
   where the accept or accept all buttons would be"). Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle

@@ -151,16 +151,18 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
+export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, editing, onDoneMine, onStopMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
   intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
+  /** The change Kyle is rewriting himself: its card stays open until he says he is done. */
+  editing: string | null; onDoneMine: (c: Change) => void; onStopMine: () => void;
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
 }) {
   const at = (c: Change) => { const i = placedIds.indexOf(c.id); return i < 0 ? placedIds.length : i; };
-  const open = changes.filter((c) => c.status === 'open').sort((a, b) => at(a) - at(b));
+  const open = changes.filter((c) => c.status === 'open').sort((a, b) => (b.id === editing ? 1 : 0) - (a.id === editing ? 1 : 0) || at(a) - at(b));
   useEffect(() => { if (current) showCard(current); }, [current]);
   const decided = changes.filter((c) => c.status !== 'open');
   const card = (c: Change) => {
@@ -178,6 +180,15 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
             <Quote text={c.was} cls="was" />
             <Quote text={c.now} cls="now" />
             {c.other != null && <><p class="panel-key">Or the other version</p><Quote text={c.other} cls="now other" /></>}
+            {c.id === editing ? (
+              <>
+                <p class="chg-mine"><Icon name="pen" size={16} />You are writing this one yourself on the page. The team's version stays here while you work.</p>
+                <div class="chg-buttons">
+                  <button type="button" class="primary" onClick={() => onDoneMine(c)}>Mark my changes as done</button>
+                  <button type="button" onClick={onStopMine}>Back to the choices</button>
+                </div>
+              </>
+            ) : <>
             {!here && <p class="hint">These words are no longer on the page as the change quotes them (you may have changed them). Say no, or put your own words in.</p>}
             <div class="chg-buttons">
               <button type="button" class="primary" disabled={!here} onClick={() => onChoose(c, 'kept')}>Accept</button>
@@ -186,6 +197,7 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
               {sw && many > 1 && <button type="button" class="chg-everywhere" disabled={!here} onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
             </div>
+            </>}
           </>
         ) : (
           <p class="chg-done"><Icon name="check" size={16} />{STATUS_SAID[c.status]} <button type="button" class="link" onClick={() => onUndo(c)}>Undo</button></p>
