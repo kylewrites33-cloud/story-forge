@@ -896,10 +896,16 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     record({ [c.id]: 'open' });
     setChCur(c.id);
   };
+  // Edit it myself keeps the card open beside the page, with the team's words, until Kyle says he is done (Kyle,
+  // 2026-10-28: "maybe when i tap edit it myself, the change stays open until i tap mark my changes as complete").
+  const [mineOpen, setMineOpen] = useState<string | null>(null);
+  const editingId = mineOpen && chNote && mineOpen.startsWith(chNote.path + '#') ? mineOpen.slice(chNote.path.length + 1) : null;
+  const doneMine = (c: Change) => { record({ [c.id]: 'mine' }); setMineOpen(null); };
   const editMine = (c: Change) => {
     const t = pageText();
     const found = chPlace.placed.find((p) => p.change.id === c.id);
-    record({ [c.id]: 'mine' });
+    if (chNote) setMineOpen(chNote.path + '#' + c.id);
+    setChCur(c.id);
     setChView('original');
     // The writing box comes back; then Kyle's words that the change was about are picked, ready to type over.
     if (found) setTimeout(() => { const ed = commands.current; if (ed && pageText() === t) ed.select(found.at, found.end); }, 60);
@@ -1448,7 +1454,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {tab === 'changes' && (
               chNote
                 ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
-                  onPick={(id) => { if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
+                  editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)}
+                  onPick={(id) => { if (chView === 'original' && id !== editingId) setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
