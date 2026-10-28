@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { applyChange, parseChanges, placeChanges, revertChange, saveChoices, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, loadRules, loadSkips, parseChanges, placeChanges, revertChange, ruleFits, saveChoices, swapsOf, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, loadView, saveView, type ChangesView } from './Changes.tsx';
@@ -164,7 +164,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   flow?: { results: NoteRecord[]; href: string };
   /** The chapter's changes note, and every chapter's count of changes waiting with the scene to open, for the Changes view
    * (Workflow 1.2, step 41). */
-  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean };
+  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; like?: (pairs: [string, string][]) => number };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
   drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
 }) {
@@ -885,6 +885,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     setChCur(n ? n.change.id : null);
   };
   const undoChange = (c: Change) => {
+    if (chNote && ruleFits({ ...c, status: 'open' }, rules)) addSkip(source.key, chNote.path + '#' + c.id);
     if (c.status === 'kept' || c.status === 'other') {
       const t = revertChange(pageText(), c, c.status === 'other' ? 'other' : 'now');
       if (t == null) { setMessage('The words ' + c.id + ' put in have changed since, so it cannot be taken back out. Your page stays as it is.'); return; }
@@ -914,6 +915,44 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     putText(t);
     record(choices);
   };
+  // Accept everywhere (Kyle, 2026-10-28: "if i make a change to say greys name, can there be a button like, apply this
+  // identical change in all cases"): the change's word swaps become a rule on this device; every waiting change that
+  // makes only those swaps is accepted here now, and in each chapter as it opens. Undo on one leaves that one alone.
+  const [rules, setRules] = useState<[string, string][]>(() => loadRules(source.key));
+  const acceptByRules = (list: [string, string][]): number => {
+    if (!chNote || !canSave || shownDraft != null || !list.length) return 0;
+    const skips = loadSkips(source.key);
+    let t = pageText();
+    const choices: Record<string, ChangeStatus> = {};
+    placeChanges(t, chMine, sceneId).placed.slice().reverse().forEach((p) => {
+      if (!ruleFits(p.change, list) || skips.indexOf(chNote.path + '#' + p.change.id) >= 0) return;
+      t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
+      choices[p.change.id] = 'kept';
+    });
+    const n = Object.keys(choices).length;
+    if (!n) return 0;
+    putText(t);
+    record(choices);
+    return n;
+  };
+  const acceptEverywhere = (c: Change) => {
+    const sw = swapsOf(c);
+    if (!sw) return;
+    const all = addRules(source.key, sw);
+    setRules(all);
+    const n = acceptByRules(sw);
+    const left = changes && changes.like ? Math.max(0, changes.like(sw) - n) : 0;
+    setMessage('Accepted ' + n + ' here (' + sw.map(([a, b]) => a + ' → ' + b).join(', ') + ').' + (left ? ' The other ' + left + ' are accepted as you open each chapter.' : ''));
+  };
+  const rulesRan = useRef('');
+  useEffect(() => {
+    const key = (chNote ? chNote.path + '@' + chNote.sha : '') + '|' + sceneId + '|' + rules.length;
+    if (!chNote || !rules.length || rulesRan.current === key || beatsMode) return;
+    rulesRan.current = key;
+    const n = acceptByRules(rules);
+    if (n) setMessage('Accepted ' + n + (n === 1 ? ' change' : ' changes') + ' here that you said to accept everywhere.');
+  }, [chNote ? chNote.path + '@' + chNote.sha : '', sceneId, rules.length, beatsMode]);
+
   // The arrows: the next change on this page, then on into the next chapter that has any (and back).
   const chIdx = chPlace.placed.findIndex((p) => p.change.id === chCur);
   const otherChapter = (dir: 1 | -1) => {
@@ -1389,7 +1428,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               chNote
                 ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={new Set(chPlace.placed.map((p) => p.change.id))} current={chCur}
                   onPick={(id) => { if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
-                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
+                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
                   <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)}

@@ -45,7 +45,7 @@ import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
-import { changesNoteFor, chapterChanges, flushChoices, isStoryCall } from '../lib/changes.ts';
+import { changesNoteFor, chapterChanges, countLike, flushChoices, isStoryCall } from '../lib/changes.ts';
 import { copyFor, saveBookDraft } from '../lib/bookdrafts.ts';
 import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
@@ -663,7 +663,7 @@ export function App() {
           chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
-          changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }) } : undefined}
+          changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
           drafts={book ? {
             saved: book.drafts || [],
             onSave: async () => {
