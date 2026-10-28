@@ -2387,6 +2387,10 @@ button, .button { border-radius: 12px; }
 
 /* The side column's cards. */
 .changes-panel { display: grid; gap: 10px; }
+/* Editing, the Changes column takes a third of the screen and its words are larger, for long sittings (Kyle, 2026-10-28:
+   "the right column text is a little small for me to read"). Other tabs keep the usual column. */
+@media (min-width: 900px) { .writer.edit-wide .writer-right { width: max(376px, 33.3vw); } }
+.writer.edit-wide .changes-panel { zoom: 1.18; }
 .chg-intro { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--hover); font-size: 0.94rem; white-space: pre-wrap; }
 .chg-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }

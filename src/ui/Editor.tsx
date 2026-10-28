@@ -1049,7 +1049,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '')} style={lookStyle(look)}>
+     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && tab === 'changes' && chNote ? ' edit-wide' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
