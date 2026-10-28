@@ -639,7 +639,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   by rewriting the scene. When the open scene has changes, a bar over the page has Word's four views: All changes (old
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
   changed paragraph), Final (no marks) and Original (Kyle's own page, where he types). Up and down arrows step through
-  the changes and on into the next chapter that has any. Accept all small fixes accepts the typo and continuity tier at once.
+  the changes and on into the next chapter that has any.
   The marked views are for reading; to type, press Original or Edit it myself. All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
@@ -651,7 +651,10 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   throwing me off"). A change that only swaps words (Grey → Basil) also has Accept everywhere, with how many such
   changes wait in the book (2026-10-28, Kyle: "apply this identical change in all cases"): it accepts them on this page
   now and in each chapter, of either book, as it opens; the rule is kept on the device, and Undo on one leaves that one
-  alone. Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle
+  alone. Every change is a card of its own, typos and names included, headed by what it does ("Typo: teh → the"), and
+  Accept all (as in Word) sits at the top of the column; there is no separate small-fixes button over the page any more
+  (2026-10-28, Kyle: "the small fixes should exist as changes, just like anything else... in the right section would be
+  where the accept or accept all buttons would be"). Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle
   uses the arrows or picks a change on the page, and follows the page as he scrolls; changes no longer on the page come
   last (2026-10-28, Kyle: "Why are the changes on the right column not in sequential order? Take inspiration from
   Microsoft Word's structure"). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;

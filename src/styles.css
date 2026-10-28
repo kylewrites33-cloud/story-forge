@@ -2365,7 +2365,8 @@ button, .button { border-radius: 12px; }
 .changes-count { font-size: 0.94rem; font-variant-numeric: tabular-nums; }
 .changes-go { display: inline-flex; gap: 4px; margin-left: auto; }
 .changes-go .icon-button { min-width: 44px; min-height: 44px; }
-.keep-small { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.chg-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.chg-all { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 
 /* The marked page. Old words struck in the danger colour, new words underlined in the accent, as Word does. */
 .changes-page { cursor: default; }
