@@ -41,7 +41,7 @@ export interface Change {
   other: string | null;
 }
 
-export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Small fix', line: 'Sentence', story: 'Story', new: 'New passage' };
+export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Fix', line: 'Sentence', story: 'Story', new: 'New passage' };
 
 export type DiffPart = { kind: 'same' | 'del' | 'ins'; text: string };
 

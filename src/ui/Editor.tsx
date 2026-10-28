@@ -905,11 +905,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (found) setTimeout(() => { const ed = commands.current; if (ed && pageText() === t) ed.select(found.at, found.end); }, 60);
     closeOver();
   };
-  const keepSmall = () => {
+  const acceptAll = () => {
     let t = pageText();
     const choices: Record<string, ChangeStatus> = {};
     placeChanges(t, chMine, sceneId).placed.slice().reverse().forEach((p) => {
-      if (p.change.kind !== 'small') return;
       t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
       choices[p.change.id] = 'kept';
     });
@@ -1359,10 +1358,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {shownDraft == null && chNote && chMine.length > 0 && (
             <ChangesBar view={chView} onView={setChView} open={chOpenHere} total={chBookOpen}
               place={showMarks && chIdx >= 0 ? (chIdx + 1) + ' of ' + chPlace.placed.length : ''}
-              small={chPlace.placed.filter((p) => p.change.kind === 'small').length}
               onPrev={(showMarks && chIdx > 0) || otherChapter(-1) ? () => goChange(-1) : null}
               onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherChapter(1) ? () => goChange(1) : null}
-              onKeepSmall={keepSmall} busy={false} />
+              />
           )}
           {showMarks && <p class="hint changes-hint">To type, press Original, or Edit it myself on a change.</p>}
           {above.map((n) => (
@@ -1446,7 +1444,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur}
+                ? <ChangesPanel intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   onPick={(id) => { if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">

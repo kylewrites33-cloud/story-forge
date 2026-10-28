@@ -74,15 +74,15 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
   );
 }
 
-/** The bar over the page while the chapter has changes: the four views, where Kyle is, the arrows and Accept all small fixes. */
-export function ChangesBar({ view, onView, open, total, place, small, onPrev, onNext, onKeepSmall, busy }: {
+/** The bar over the page while the chapter has changes: the four views, where Kyle is and the arrows. Accept all is in
+ * the side column with the cards (Kyle, 2026-10-28: "in the right section would be where the accept or accept all buttons would be"). */
+export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }: {
   view: ChangesView; onView: (v: ChangesView) => void;
   /** Changes waiting in this scene, and in the whole book. */
   open: number; total: number;
   /** "3 of 12" when a change is picked. */
   place: string;
-  small: number;
-  onPrev: (() => void) | null; onNext: (() => void) | null; onKeepSmall: () => void; busy: boolean;
+  onPrev: (() => void) | null; onNext: (() => void) | null;
 }) {
   return (
     <div class="changes-bar" role="toolbar" aria-label="The team's changes">
@@ -97,7 +97,6 @@ export function ChangesBar({ view, onView, open, total, place, small, onPrev, on
         <button type="button" class="icon-button" aria-label="Previous change" title="Previous change" disabled={!onPrev} onClick={() => onPrev && onPrev()}><Icon name="up" /></button>
         <button type="button" class="icon-button" aria-label="Next change" title="Next change, into the next chapter at the end" disabled={!onNext} onClick={() => onNext && onNext()}><Icon name="down" /></button>
       </span>
-      {small > 0 && <button type="button" class="keep-small" disabled={busy} onClick={onKeepSmall}><Icon name="check" size={18} />Accept all small fixes ({small})</button>}
     </div>
   );
 }
@@ -123,8 +122,9 @@ export function showCard(id: string) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onPick, onChoose, onUndo, onMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
-  intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null; onPick: (id: string) => void;
+export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
+  intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
+  /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
@@ -141,7 +141,7 @@ export function ChangesPanel({ intro, changes, placedIds, current, onPick, onCho
     return (
       <article key={c.id} data-card={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a')) onPick(c.id); }}>
-        <p class="chg-head"><b>{KIND_LABEL[c.kind]}</b><span class="meta">{c.id}{c.scene ? ' · ' + c.scene : ''}</span></p>
+        <p class="chg-head"><b>{shortLabel(c)}</b><span class="meta">{shortLabel(c).startsWith(KIND_LABEL[c.kind]) ? '' : KIND_LABEL[c.kind] + ' · '}{c.id}</span></p>
         {c.kind === 'new' && c.status === 'open' && <p class="chg-slow"><Icon name="eye" size={16} />New passage · read slowly</p>}
         {c.why && <p class="chg-why">{c.why}</p>}
         {c.status === 'open' ? (
@@ -171,7 +171,10 @@ export function ChangesPanel({ intro, changes, placedIds, current, onPick, onCho
       ) : (
         <>
           {intro && <p class="chg-intro">{intro}</p>}
-          <p class="meta">{open.length ? open.length + ' waiting' : 'All decided'}{decided.length ? ' · ' + decided.length + ' decided' : ''}</p>
+          <div class="chg-top">
+            <p class="meta">{open.length ? open.length + ' waiting' : 'All decided'}{decided.length ? ' · ' + decided.length + ' decided' : ''}</p>
+            {placedIds.length > 1 && <button type="button" class="chg-all" onClick={onAcceptAll}><Icon name="check" size={18} />Accept all ({placedIds.length})</button>}
+          </div>
           {open.map(card)}
           {decided.length > 0 && (
             <details class="chg-decided">
