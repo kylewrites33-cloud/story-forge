@@ -2388,7 +2388,7 @@ button, .button { border-radius: 12px; }
 .changes-panel { display: grid; gap: 10px; }
 .chg-intro { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--hover); font-size: 0.94rem; white-space: pre-wrap; }
 .chg-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .chg-card.decided { opacity: 0.8; }
 .chg-head { display: flex; justify-content: space-between; gap: 8px; margin: 0; }
 .chg-why { margin: 0; font-size: 0.94rem; }

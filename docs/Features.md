@@ -651,7 +651,10 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   throwing me off"). A change that only swaps words (Grey → Basil) also has Accept everywhere, with how many such
   changes wait in the book (2026-10-28, Kyle: "apply this identical change in all cases"): it accepts them on this page
   now and in each chapter, of either book, as it opens; the rule is kept on the device, and Undo on one leaves that one
-  alone. Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
+  alone. Cards run in page order, as in Word's margin: the current one is highlighted, the column scrolls to it when Kyle
+  uses the arrows or picks a change on the page, and follows the page as he scrolls; changes no longer on the page come
+  last (2026-10-28, Kyle: "Why are the changes on the right column not in sequential order? Take inspiration from
+  Microsoft Word's structure"). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
   his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
 - **Story calls.** Edit > Story calls is Decide one at a time for the whole-book read's calls (ideas with `step: "36"`):

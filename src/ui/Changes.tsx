@@ -6,7 +6,7 @@ import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
 import { KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 
@@ -111,22 +111,35 @@ function Quote({ text, cls }: { text: string; cls: string }) {
     : <p class={'chg-quote empty ' + cls}>(cut)</p>;
 }
 
-/** The side column's Changes tab: one card per change in this scene, waiting ones first. */
+/** Scroll the side column (only it, not the page) so this change's card shows, the way Word's margin follows the text. */
+export function showCard(id: string) {
+  const card = document.querySelector('.changes-panel [data-card="' + id.replace(/"/g, '') + '"]') as HTMLElement | null;
+  if (!card) return;
+  let box = card.parentElement;
+  while (box && !(box.scrollHeight > box.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+  if (!box) return;
+  const top = card.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  box.scrollTo({ top: Math.max(0, top - box.clientHeight / 3), behavior: 'smooth' });
+}
+
+/** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
 export function ChangesPanel({ intro, changes, placedIds, current, onPick, onChoose, onUndo, onMine, onEverywhere, like, chapter, bookOpen, notePath, link }: {
-  intro: string; changes: Change[]; placedIds: Set<string>; current: string | null; onPick: (id: string) => void;
+  intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
   /** Accept this change's word swaps in every chapter; `like` counts the waiting changes in the book that make them. */
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
 }) {
-  const open = changes.filter((c) => c.status === 'open');
+  const at = (c: Change) => { const i = placedIds.indexOf(c.id); return i < 0 ? placedIds.length : i; };
+  const open = changes.filter((c) => c.status === 'open').sort((a, b) => at(a) - at(b));
+  useEffect(() => { if (current) showCard(current); }, [current]);
   const decided = changes.filter((c) => c.status !== 'open');
   const card = (c: Change) => {
-    const here = placedIds.has(c.id);
+    const here = placedIds.includes(c.id);
     const sw = c.status === 'open' ? swapsOf(c) : null;
     const many = sw && like ? like(sw) : 0;
     return (
-      <article key={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
+      <article key={c.id} data-card={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a')) onPick(c.id); }}>
         <p class="chg-head"><b>{KIND_LABEL[c.kind]}</b><span class="meta">{c.id}{c.scene ? ' · ' + c.scene : ''}</span></p>
         {c.kind === 'new' && c.status === 'open' && <p class="chg-slow"><Icon name="eye" size={16} />New passage · read slowly</p>}
