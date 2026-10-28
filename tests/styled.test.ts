@@ -14,7 +14,8 @@ test('italics and bold are styled with no stars on the page, nesting allowed', (
   assert.equal(styledHtml('==look== here'), '<span class="md-hl" data-m="==">look</span> here');
   assert.equal(styledHtml('un*believ*able'), 'un<span class="md-i" data-m="*">believ</span>able');
   for (const plain of ['2*3*4 = 24', '*not closed', 'x ** y ** z', 'line one *a\nb* line two']) assert.equal(styledHtml(plain).indexOf('md-'), -1, plain);
-  assert.match(styledHtml('> [!plan] Team notes'), /^<span class="md-quote">&gt; \[!plan\] Team notes<\/span>$/);
+  assert.match(styledHtml('> [!plan] Team notes'), /^<span class="md-quote md-callout"><span class="md-qm">&gt; <\/span>\[!plan\] Team notes<\/span>$/);
+  assert.match(styledHtml('> **Argo Soma**'), /^<span class="md-quote md-qt">/);
 });
 
 test('the styled view holds exactly the characters of the file', () => {

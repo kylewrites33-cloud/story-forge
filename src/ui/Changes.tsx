@@ -87,7 +87,9 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
       return '<' + tag + ' class="' + cls + '" data-chg="' + escAttr(p.id) + '">' + (words || (p.cls === 'del' ? '' : '')) + '</' + tag + '>';
     }).join('');
     const marked = ids.length > 0 && view !== 'final';
-    return '<div class="chg-line' + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
+    // A System screen line ("> ", format C1) is indented as a whole, whichever piece carries the mark.
+    const quote = /^\s*>/.test(line.filter((p) => p.cls !== 'tag' && p.cls !== 'del').map((p) => p.text).join(''));
+    return '<div class="chg-line' + (quote ? ' chg-quote' : '') + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
   }).join('');
   return (
     <div class={'writer-text styled changes-page view-' + view} role="document" aria-label={label}

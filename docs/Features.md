@@ -674,6 +674,17 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.
 
+## System screens, format C1 (2026-10-28)
+
+Kyle chose the layout for his System screens (Kyle: "What we want is C1"; the five options he compared are in project
+files `edit-qd1/system-screen-formats.html`). In the scene a screen is a block of lines that start with `> `: the title
+line all in bold, one line per fact, a lone `>` for a blank line between the parts (name, facts, fine print, Note), the
+fine print and the Note in italics. Two screens with no story between them share one block.
+- **Writing screen and Edit room**: a `> ` line is indented (the `>` shows faint, so Kyle can type one), a bold title
+  line shows in small caps.
+- **Export to Word**: style System Screen, indented half an inch, one paragraph per line, a blank line where the block
+  has a lone `>`, the title bold small caps, two blank lines before the story goes on.
+
 ## Crow, the character and plot study app (2026-10-26; first called Character Study)
 
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
