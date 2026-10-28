@@ -11,7 +11,7 @@ import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 
 export type ChangesView = 'all' | 'simple' | 'final' | 'original';
-export const VIEWS: [ChangesView, string][] = [['all', 'All changes'], ['simple', 'Simple'], ['final', 'Final'], ['original', 'My page']];
+export const VIEWS: [ChangesView, string][] = [['all', 'All changes'], ['simple', 'Simple'], ['final', 'Final'], ['original', 'Self-Edit']];
 const VIEW_KEY = 'story-forge.changes-view';
 export function loadView(): ChangesView {
   try { const v = localStorage.getItem(VIEW_KEY) as ChangesView | null; return v && VIEWS.some(([k]) => k === v) ? v : 'all'; } catch { return 'all'; }

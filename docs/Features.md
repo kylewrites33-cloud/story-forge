@@ -638,10 +638,10 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **Changes on the page.** The Writer revises a chapter as a `chapter-changes` note in `Changes/` (one per chapter), never
   by rewriting the scene. When the open scene has changes, a bar over the page has Word's four views: All changes (old
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each
-  changed paragraph), Final (no marks) and My page (Kyle's page as it stands, with every change he accepted, where he types; called Original until 2026-10-28, Kyle: "original sounds like im editing draft 1"). Up and down arrows step through
+  changed paragraph), Final (no marks) and Self-Edit (Kyle's page as it stands, with every change he accepted, where he types; called Original until 2026-10-28, Kyle: "original sounds like im editing draft 1", "make the button called Self-Edit"). Up and down arrows step through
   the changes and on into the next chapter that has any.
   A change that only adds italics shows the words in italics, not raw stars (2026-10-28).
-  The marked views are for reading; to type, press My page or Edit it myself. All changes marks only the words that
+  The marked views are for reading; to type, press Self-Edit or Edit it myself. All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
   wide, small before the change when not (2026-10-28, Kyle: "some short text on the side that summarizes what the

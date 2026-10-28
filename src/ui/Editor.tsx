@@ -1371,7 +1371,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherChapter(1) ? () => goChange(1) : null}
               />
           )}
-          {showMarks && <p class="hint changes-hint">To type, press My page, or Edit it myself on a change.</p>}
+          {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
               <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
