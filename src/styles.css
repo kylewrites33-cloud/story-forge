@@ -2475,3 +2475,4 @@ button, .button { border-radius: 12px; }
 .titles-own { display: flex; flex-wrap: wrap; gap: 8px; }
 .titles-own input { flex: 1 1 14rem; min-height: 44px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
 .titles-own button { min-height: 44px; }
+.titles-about { margin: -4px 0 10px; color: var(--muted); font-size: 0.95rem; line-height: 1.45; }

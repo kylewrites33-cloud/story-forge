@@ -727,6 +727,8 @@ good idea too".
   unticking puts the `Was:` name back. Write my own adds his title as a ticked line. None of these asks for four more.
 - The team writes each round in chat: four new options only in chapters marked None of these, None unticked, nothing
   removed (vault skill `chapter-titles`).
+- Each chapter shows its scenes' one-line headlines under its number, for context (Kyle, 2026-10-29: "Can you write a
+  short summary or use one we already have beside each chapter").
 
 ## System screens, format C1 (2026-10-28)
 
