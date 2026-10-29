@@ -35,7 +35,7 @@ import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, downloadWord, ExportWord, Home, SeriesPage } from './Home.tsx';
 import { makeBackupFolder } from '../lib/docx.ts';
-import { coverProblem, saveCover, shrinkToJpeg } from '../lib/covers.ts';
+import { addCover, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
@@ -344,13 +344,14 @@ export function App() {
     }
   }, [source, runSync]);
 
-  /** A picture from the device becomes the book's cover: shrunk here, saved as Cover.jpg in the book's folder. */
+  /** A picture from the device becomes the book's cover: kept full size in the book's Cover/ folder, and a small copy
+   * made here is saved as Cover.jpg in the book's folder. */
   const onCover = useCallback(async (book: BookEntry, file: File): Promise<string | null> => {
     const problem = coverProblem(file);
     if (problem) return problem;
     if (!navigator.onLine) return 'Connect to the internet to add a cover.';
     try {
-      await saveCover(source, book, await shrinkToJpeg(file));
+      await addCover(source, book, file);
       await runSync();
       return null;
     } catch (e) {

@@ -680,7 +680,7 @@ details.group[open] > summary h2::before { content: '▾ '; }
 .book-details .details-cover { display: grid; gap: 10px; justify-items: start; width: min(220px, 100%); }
 .book-details .details-cover .cover { width: 100%; }
 .book-details .details-cover .button { gap: 6px; }
-.book-details .details-cover .error { margin: 0; font-size: 0.94rem; }
+.book-details .details-cover .error, .book-details .details-cover .meta { margin: 0; font-size: 0.94rem; }
 .book-details .details-list { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
 .book-details .details-export { margin-top: 2rem; display: grid; gap: 8px; justify-items: start; }
 .book-details .details-export h2 { margin: 0; font-size: 1.1rem; }
