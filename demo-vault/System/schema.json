@@ -2519,6 +2519,37 @@
       },
       "body": "One line saying which draft it is and when it was saved. The scene copies sit in the folder `Drafts/Draft N/` next to this note, each with the same file name it had in `Scenes/`."
     },
+    "chapter-titles": {
+      "description": "Chapter title options for the book, picked in the app (Kyle, 2026-10-29): the team offers four titles per chapter a round; Kyle ticks the one he likes or None of these, and the next round adds four more only for the chapters marked None, keeping the picked ones.",
+      "scope": "book",
+      "folder": "",
+      "filename": "Chapter Titles",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "chapter-titles"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Chapter titles\"."
+        },
+        "round": {
+          "type": "integer",
+          "description": "How many rounds of options the team has offered."
+        },
+        "source": {
+          "type": "string",
+          "description": "The agent that wrote the options."
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "One `## Chapter N` heading per chapter, in order. Under it `Was: <the chapter's name before the first round>`, a blank line, then one `- [ ] <title>` line per option (the app ticks the one Kyle picks as `- [x]`, and only one per chapter), and last `- [ ] None of these`. A new round adds four option lines above None of these, only in chapters where None of these is ticked, and unticks it. Options are never removed. Picking a title in the app also renames the chapter (its scenes' chapter_title); unticking puts the Was name back."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

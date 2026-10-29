@@ -2459,3 +2459,19 @@ button, .button { border-radius: 12px; }
 .chg-parts { display: flex; flex-direction: column; gap: 8px; }
 .chg-label { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .chg-check summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--muted); font-size: 0.9rem; }
+
+/* Chapter titles (Edit room, 2026-10-29) */
+.titles-page { max-width: 46rem; }
+.titles-chapter { margin: 0 0 18px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.titles-chapter.done { border-color: var(--accent); }
+.titles-chapter h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; font-size: 1.1rem; }
+.titles-chapter h2 .meta { font-weight: 400; }
+.titles-options { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.titles-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.titles-option[aria-pressed="true"] { border-color: var(--accent); font-weight: 600; }
+.titles-tick { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 26px; border: 2px solid var(--line); border-radius: 50%; color: var(--accent); }
+.titles-option[aria-pressed="true"] .titles-tick { border-color: var(--accent); }
+.titles-write, .titles-none { color: var(--muted); }
+.titles-own { display: flex; flex-wrap: wrap; gap: 8px; }
+.titles-own input { flex: 1 1 14rem; min-height: 44px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.titles-own button { min-height: 44px; }

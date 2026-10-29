@@ -19,6 +19,7 @@ import { loadDrafts, putDraft, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
+import { ChapterTitlesPage } from './ChapterTitles.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
@@ -773,6 +774,7 @@ export function App() {
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
       else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
         calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null} />;

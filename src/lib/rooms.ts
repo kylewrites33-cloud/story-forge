@@ -11,7 +11,7 @@ export const ROOMS: Room[] = [
   { key: 'home', title: 'Home', icon: 'home', boards: ['overview', 'decide'] },
   { key: 'plan', title: 'Plan', icon: 'threads', boards: ['steps', 'chapter-grid', 'ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'promises', 'plot-grid', 'timeline', 'arcs', 'notes'] },
   { key: 'write', title: 'Write', icon: 'pen', boards: [] },
-  { key: 'review', title: 'Edit', icon: 'scan', boards: ['changes', 'story-calls', 'tension', 'themes', 'sessions', 'taste'] },
+  { key: 'review', title: 'Edit', icon: 'scan', boards: ['changes', 'story-calls', 'chapter-titles', 'tension', 'themes', 'sessions', 'taste'] },
   { key: 'publish', title: 'Publish', icon: 'upload', boards: ['market', 'details'] },
   { key: 'codex', title: 'Codex', icon: 'people', boards: ['characters', 'places', 'items', 'lore', 'matrix', 'cast-web'] }
 ];

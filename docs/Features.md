@@ -713,6 +713,21 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.
 
+## Chapter titles (2026-10-29)
+
+Kyle: "it would be helpful to have an actual interface in the app where I can select the chapter titles I like ... tap a
+check mark next to each title that I like, or check a box that says none, which will communicate to you that in the next
+round, I want you to generate 4 more options for that chapter title while retaining the chapter titles we already decided
+on"; "it would be one of the options in the edit dropdown section"; "a write my own option for each chapter would be a
+good idea too".
+
+- Edit > Chapter titles reads the book's `Chapter Titles.md` (schema type `chapter-titles`): one `## Chapter N` section
+  with `Was:` and `- [ ]` option lines ending in `- [ ] None of these`.
+- One tick per chapter. Ticking a title renames the chapter (its scenes' `chapter_title`, through the write queue);
+  unticking puts the `Was:` name back. Write my own adds his title as a ticked line. None of these asks for four more.
+- The team writes each round in chat: four new options only in chapters marked None of these, None unticked, nothing
+  removed (vault skill `chapter-titles`).
+
 ## System screens, format C1 (2026-10-28)
 
 Kyle chose the layout for his System screens (Kyle: "What we want is C1"; the five options he compared are in project
