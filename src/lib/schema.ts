@@ -78,6 +78,8 @@ EXTRA_TYPES.push('promise', 'thread', 'theme');
 EXTRA_TYPES.push('note', 'session', 'recipe');
 // Progressions: where a codex note stands now, on its card (codexnow.ts).
 EXTRA_TYPES.push('progression');
+// Chapter title options for the Edit room's Chapter titles page (2026-10-29).
+EXTRA_TYPES.push('chapter-titles');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

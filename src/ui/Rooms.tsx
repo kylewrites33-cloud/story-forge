@@ -15,6 +15,7 @@ export function roomLinks(schema: Schema, folder: string, workflow: boolean): Re
   // The Edit room's pages for Workflow 1.2's editing stage (2026-10-24).
   out.changes = { key: 'changes', title: 'Changes', to: href.board('changes', folder), icon: 'swap' };
   out['story-calls'] = { key: 'story-calls', title: 'Story calls', to: href.board('story-calls', folder), icon: 'cards' };
+  out['chapter-titles'] = { key: 'chapter-titles', title: 'Chapter titles', to: href.board('chapter-titles', folder), icon: 'pen' };
   out.steps = { key: 'steps', title: 'Steps', to: href.flow(folder), icon: 'outline' };
   if (out.characters) {
     out.places = { key: 'places', title: 'Places', to: href.board('places', folder), icon: 'map' };
