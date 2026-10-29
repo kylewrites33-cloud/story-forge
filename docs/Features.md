@@ -680,6 +680,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **Other scenes' changes** (2026-10-28, Kyle: "something is messed up with the number of changes remaining displayed in
   the chapters column"). The chapter list counts every waiting change in the chapter; the Changes tab counts the scene on
   screen and adds "· N more in this chapter's other scenes" so the two agree.
+  Since 2026-10-29 (Kyle: "no cards show up in chapter 7, even though 3 show up on the chapter bar") that line is a
+  button, "N more changes in this chapter's other scenes: show", that opens the next scene with waiting changes, also
+  when the open scene has none; and the up and down arrows go through the chapter's other scenes before the next chapter.
 - **To-dos tick off with their changes** (2026-10-28, Kyle: "as those changes go through in edit mode, those to-do items
   you should tick off automatically"; "all to-dos should be reflected with a relevant change card, because these to-dos
   are revision-related to-dos"). A change names the to-dos it carries out in its Why (`To-do T-002: ...`). When every
