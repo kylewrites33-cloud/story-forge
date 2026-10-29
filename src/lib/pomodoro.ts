@@ -7,6 +7,7 @@
 // "sometimes ill write in the app but forget to hit the pomodoro"). Words the team puts on the page (filled brackets, Options,
 // lines merged in from elsewhere), a copy brought back, a joined scene and a beat moved to another scene are not typed, so
 // they count nowhere; cuts never take words away, so deleting the team's words does not lower the count either.
+// Minutes typing are counted all the time too (Kyle, 2026-10-29), and go to the day note as `typing_minutes`.
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
@@ -259,6 +260,118 @@ export async function flushTyped(source: VaultSource, now: Date): Promise<NoteRe
   return saved;
 }
 
+// ------------------------------------------------------------------ minutes typing
+
+// Typing time counts on its own, with or without a Pomodoro, and is the main measure of a writing day (Kyle, 2026-10-29:
+// "the ultimate measure would probably simply be the Pomodoro times divided by the number of words typed as measured by
+// this new independent typing measurement"). Every change Kyle makes on the page (a key, a cut, dictation) marks him as
+// typing; the time between two changes counts when it is two minutes or less, and a longer gap counts nothing, so time
+// spent away, reading or thinking for long does not count. Words the team puts on the page are not changes Kyle made.
+
+/** A gap with nothing typed longer than this counts nothing. */
+export const TYPING_GAP_MS = 2 * 60000;
+const ACTIVE_KEY = 'sf-typing';
+
+/** Milliseconds of typing on this device and not yet in the vault, per day, and when Kyle last changed the page. */
+export interface TypingWaiting { days: Record<string, number>; lastAt: number; firstAt: number }
+
+export function loadTyping(): TypingWaiting {
+  try {
+    const t = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null') as TypingWaiting | null;
+    if (t && t.days) return { days: t.days, lastAt: t.lastAt || 0, firstAt: t.firstAt || 0 };
+  } catch { /* start empty */ }
+  return { days: {}, lastAt: 0, firstAt: 0 };
+}
+
+function saveTyping(t: TypingWaiting): void {
+  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(t)); } catch { /* counted for this page only */ }
+}
+
+/** The typing time with one more change on the page at `now`: the gap since the last change counts if it is short enough.
+ *  A gap that runs over midnight counts on the day it ends. */
+export function addTyping(t: TypingWaiting, now: number): TypingWaiting {
+  const gap = now - t.lastAt;
+  if (!(gap > 0)) return { ...t, lastAt: Math.max(t.lastAt, now) };
+  if (gap > TYPING_GAP_MS) return { ...t, lastAt: now };
+  const date = ymd(new Date(now));
+  const days = { ...t.days, [date]: (t.days[date] || 0) + gap };
+  return { days, lastAt: now, firstAt: Object.keys(t.days).length ? t.firstAt : now };
+}
+
+let lastMark = 0;
+/** Call from the writing screens whenever Kyle changes the words on the page. Cheap enough for every key: it writes to the
+ *  device at most once a second. */
+export function markTyping(now = Date.now()): void {
+  if (now - lastMark < 1000) return;
+  lastMark = now;
+  saveTyping(addTyping(loadTyping(), now));
+}
+
+/** Minutes, to one decimal place: 90,000 ms is 1.5. */
+export function toMinutes(ms: number): number {
+  return Math.floor(ms / 6000) / 10;
+}
+
+/** Send the typing time with the words typed: after a two-minute pause, or every ten minutes while he keeps typing. Only
+ *  whole tenths of a minute go; the rest waits. */
+export function typingDue(t: TypingWaiting, now: number): boolean {
+  if (!Object.keys(t.days).some((d) => toMinutes(t.days[d]) > 0)) return false;
+  return now - t.lastAt >= TYPING_GAP_MS || now - t.firstAt >= 10 * 60000;
+}
+
+/** The day's note with more minutes typing. */
+export function addTypingToDay(text: string, date: string, minutes: number, now: Date): string {
+  const stamp = now.toISOString().slice(0, 19) + 'Z';
+  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: 0, typing_minutes: minutes, updated: stamp }, '');
+  const p = Frontmatter.parse(text);
+  const data = { ...((p.data || {}) as Record<string, unknown>) };
+  data.typing_minutes = Math.round(((toNumber(data.typing_minutes) || 0) + minutes) * 10) / 10;
+  data.updated = stamp;
+  return Frontmatter.join(data, p.body || '');
+}
+
+/** Write the typing time to the vault, one commit per day, as Kyle's commits. Returns the notes written. */
+export async function flushTyping(source: VaultSource, now: Date): Promise<NoteRecord[]> {
+  if (!source.write) return [];
+  const saved: NoteRecord[] = [];
+  for (const date of Object.keys(loadTyping().days).sort()) {
+    const minutes = toMinutes(loadTyping().days[date] || 0);
+    if (!(minutes > 0)) {
+      // Seconds left over from an earlier day are too few to send.
+      if (date !== ymd(now)) { const t = loadTyping(); const days = { ...t.days }; delete days[date]; saveTyping({ ...t, days }); }
+      continue;
+    }
+    const path = logPath(date);
+    for (let attempt = 0; ; attempt++) {
+      const { files } = await source.tree();
+      const exists = files.some((f) => f.path === path);
+      const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
+      const text = addTypingToDay(cur.text, date, minutes, now);
+      try {
+        const sha = await source.write(path, text, cur.sha, 'log: ' + minutes + (minutes === 1 ? ' minute' : ' minutes') + ' typing on ' + date + '\n\nKept by the Sparrow app.');
+        saved.push(makeNote(path, sha, text));
+        break;
+      } catch (e) {
+        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
+        throw e;
+      }
+    }
+    // Time typed while it was sending, and the part of a tenth not sent, stay for the next time.
+    const t = loadTyping();
+    const left = (t.days[date] || 0) - minutes * 60000;
+    const days = { ...t.days };
+    if (left > 0 && date === ymd(now)) days[date] = left; else delete days[date];
+    saveTyping({ ...t, days, firstAt: now.getTime() });
+  }
+  return saved;
+}
+
+/** Words an hour of typing, or null when there is too little typing time to say (under a minute). */
+export function wordsAnHour(words: number, minutes: number): number | null {
+  if (!(minutes >= 1)) return null;
+  return Math.round((words / minutes) * 60);
+}
+
 function pad(n: number): string { return String(n).padStart(2, '0'); }
 export function ymd(d: Date): string { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 export function hm(d: Date): string { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
@@ -360,7 +473,8 @@ export function pomodoroCount(minutes: number): string {
 
 /** Today's Pomodoros, minutes and words, and the words typed with or without a Pomodoro: the day's note in the vault plus
  *  what is still waiting on this device. */
-export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date, typedWaiting: TypedWaiting = { days: {}, firstAt: 0, typedAt: 0 }): { pomodoros: number; minutes: number; words: number; typed: number } {
+export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: Date, typedWaiting: TypedWaiting = { days: {}, firstAt: 0, typedAt: 0 },
+  typingWaiting: TypingWaiting = { days: {}, lastAt: 0, firstAt: 0 }): { pomodoros: number; minutes: number; words: number; typed: number; typing: number } {
   const date = ymd(now);
   const n = index ? index.notes[logPath(date)] : undefined;
   let pomodoros = n ? toNumber(n.data.pomodoros) || 0 : 0;
@@ -370,5 +484,7 @@ export function today(index: VaultIndex | null, waiting: PomodoroRecord[], now: 
   let typed = n ? (n.data.typed != null ? toNumber(n.data.typed) || 0 : words) : 0;
   waiting.filter((r) => r.date === date).forEach((r) => { if (!r.stopped) pomodoros++; minutes += r.minutes; words += r.words; });
   typed += typedWaiting.days[date] || 0;
-  return { pomodoros, minutes, words, typed };
+  // Minutes typing, to one decimal place: what the vault has plus what waits on this device.
+  const typing = Math.round(((n ? toNumber(n.data.typing_minutes) || 0 : 0) + (typingWaiting.days[date] || 0) / 60000) * 10) / 10;
+  return { pomodoros, minutes, words, typed, typing };
 }

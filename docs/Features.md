@@ -188,6 +188,14 @@ add a dated line here when you add or change one.
   elsewhere), a copy brought back, a joined scene, a beat moved to another scene and undo or redo add nothing, and since
   cuts never take words away, deleting the team's words does not lower the count (Kyle, 2026-10-21: "how the words typed
   might be affected by deleting generated text"). The Pomodoro's own words follow the same rule.
+  Minutes typing count on their own too, with no timer to press (Kyle, 2026-10-29: "the ultimate measure would probably
+  simply be the Pomodoro times divided by the number of words typed as measured by this new independent typing
+  measurement"; the Pomodoro becomes mostly a stay-on-task tool). Every change Kyle makes on the page in any writing
+  screen (keys, cuts, dictation) keeps the clock running; the time between two changes counts when it is two minutes or
+  less, and a longer gap counts nothing, so time away or reading does not count. The team's words are not changes he
+  made. The minutes go to the day's Writing Log note as `typing_minutes` (one decimal place) with the words typed, and the
+  panel leads with "Today: 1,240 words typed in 52 minutes of typing, 1,431 words an hour", with the day's Pomodoros on
+  the line below. Pomodoros keep their own minutes and words as before.
   Opened from the iPad's home screen, the app moves down below the device's clock and battery bar (the `ios-app` class
   and `--safe-top`, 24 px), since iPadOS lays that bar over the page and reports no safe area (Kyle's screenshot, 2026-10-20).
   The writing screens lock the page in place, so dragging a text selection down on the iPad scrolls the writing, not the

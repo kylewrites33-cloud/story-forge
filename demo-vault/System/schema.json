@@ -2182,7 +2182,7 @@
       "body": "What needs doing and how to tell it is done."
     },
     "writing-day": {
-      "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them, and every word he typed that day (`typed`). Lives in Writing Log/ at the vault root, one note per day.",
+      "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them, every word he typed that day (`typed`) and the minutes he spent typing (`typing_minutes`). Lives in Writing Log/ at the vault root, one note per day.",
       "scope": "vault",
       "folder": "Writing Log",
       "filename": "{date}",
@@ -2214,6 +2214,10 @@
         "typed": {
           "type": "integer",
           "description": "Words Kyle typed in the app that day, with or without a Pomodoro. Cuts are not taken away, and words the team puts on the page (filled brackets, Options, lines merged in from elsewhere) never count, so deleting them does not lower it either (Kyle, 2026-10-21)."
+        },
+        "typing_minutes": {
+          "type": "number",
+          "description": "Minutes Kyle spent typing in the app that day, to one decimal place. The clock runs only while he types or changes the words on the page, and a gap of more than two minutes with nothing typed counts nothing, so time spent away or reading does not count (Kyle, 2026-10-29). Words an hour = typed / typing_minutes x 60."
         },
         "updated": {
           "type": "datetime"
