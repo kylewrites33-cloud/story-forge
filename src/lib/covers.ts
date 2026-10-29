@@ -46,21 +46,37 @@ export function shrunkSize(width: number, height: number, max: number): { width:
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
-/** The picture shrunk to cover size and turned into JPEG, as base64. Runs in the browser. */
-export async function shrinkToJpeg(file: Blob, height = PICTURE_HEIGHT, quality = 0.85): Promise<string> {
+/** A print book is 6 by 9 inches, so a cover is 2 wide to 3 tall (Kyle, 2026-10-29: "can you make sure it conforms to
+ * 6x9 format automatically? Maybe it'll end up cutting off the bottom of some images if necessary"). */
+export const COVER_SHAPE = 6 / 9;
+
+/** The part of a picture kept to give it the shape width / height: a picture too tall loses its bottom, one too wide
+ * loses the same amount from each side. */
+export function cropTo(width: number, height: number, shape: number): { x: number; y: number; width: number; height: number } {
+  if (width / height > shape) {
+    const w = Math.max(1, Math.round(height * shape));
+    return { x: Math.floor((width - w) / 2), y: 0, width: w, height };
+  }
+  return { x: 0, y: 0, width, height: Math.max(1, Math.min(height, Math.round(width / shape))) };
+}
+
+/** The picture shrunk to cover size and turned into JPEG, as base64; cut to `shape` (width / height) first when given.
+ * Runs in the browser. */
+export async function shrinkToJpeg(file: Blob, height = PICTURE_HEIGHT, quality = 0.85, shape?: number): Promise<string> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
     throw new Error('This browser cannot open that picture. Try a JPEG or PNG.');
   }
-  const size = shrunkSize(bitmap.width, bitmap.height, height);
+  const part = shape ? cropTo(bitmap.width, bitmap.height, shape) : { x: 0, y: 0, width: bitmap.width, height: bitmap.height };
+  const size = shrunkSize(part.width, part.height, height);
   const canvas = document.createElement('canvas');
   canvas.width = size.width;
   canvas.height = size.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('This browser cannot shrink pictures. Try another browser.');
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, part.x, part.y, part.width, part.height, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const data = canvas.toDataURL('image/jpeg', quality);
   return data.slice(data.indexOf(',') + 1);
@@ -83,11 +99,11 @@ async function toBase64(file: Blob): Promise<string> {
   return btoa(out);
 }
 
-/** A picture from the device becomes the book's cover: the full-size picture is kept in the book's Cover/ folder, and a
- * small copy becomes Cover.jpg, which is what the app shows. Two commits, made with Kyle's key. */
+/** A picture from the device becomes the book's cover: the full-size picture is kept untouched in the book's Cover/
+ * folder, and a small copy cut to 6 by 9 becomes Cover.jpg, which is what the app shows. Two commits, made with Kyle's key. */
 export async function addCover(source: VaultSource, book: BookEntry, file: File, now = new Date()): Promise<void> {
   if (!source.writeBytes) throw new Error('Covers need your own vault, not the demo.');
-  const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82);
+  const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82, COVER_SHAPE);
   try {
     await source.writeBytes(originalPath(book.folder, file.name, now), await toBase64(file), '', 'books: full-size cover for ' + book.title);
   } catch (e) {
