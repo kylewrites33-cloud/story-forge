@@ -1,10 +1,13 @@
 // Book covers: a picture in the book's folder (Cover.jpg), shrunk on the device before it is saved, and kept on the
-// device by blob sha so it shows offline and is downloaded once.
+// device by blob sha so it shows offline and is downloaded once. The picture as Kyle chose it is kept too, untouched, in
+// the book's Cover/ folder (the vault's rule 11: cover images live there), for publishing.
 import { readPicture, writePicture } from './cache.ts';
 import type { BookEntry, VaultSource } from './types.ts';
 
-/** Covers are saved at most this tall, which is plenty for the home page and keeps the vault small. */
-const COVER_HEIGHT = 900;
+/** Book covers show at most about 330 px tall (Book details), so 720 px is sharp on the iPad's screen and small to fetch
+ * (Kyle, 2026-10-29: "it'll be a small thumbnail"). Crow's character pictures keep the older 900. */
+export const COVER_HEIGHT = 720;
+const PICTURE_HEIGHT = 900;
 const MAX_BYTES = 15 * 1024 * 1024;
 
 const urls = new Map<string, string>();
@@ -37,24 +40,61 @@ export function coverProblem(file: { name: string; type: string; size: number })
   return null;
 }
 
+/** The size a picture is shrunk to: no taller than `height` and no wider than it either, never enlarged. */
+export function shrunkSize(width: number, height: number, max: number): { width: number; height: number } {
+  const scale = Math.min(1, max / height, max / width);
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
 /** The picture shrunk to cover size and turned into JPEG, as base64. Runs in the browser. */
-export async function shrinkToJpeg(file: Blob): Promise<string> {
+export async function shrinkToJpeg(file: Blob, height = PICTURE_HEIGHT, quality = 0.85): Promise<string> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
     throw new Error('This browser cannot open that picture. Try a JPEG or PNG.');
   }
-  const scale = Math.min(1, COVER_HEIGHT / bitmap.height);
+  const size = shrunkSize(bitmap.width, bitmap.height, height);
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
+  canvas.width = size.width;
+  canvas.height = size.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('This browser cannot shrink pictures. Try another browser.');
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  const data = canvas.toDataURL('image/jpeg', 0.85);
+  const data = canvas.toDataURL('image/jpeg', quality);
   return data.slice(data.indexOf(',') + 1);
+}
+
+/** Where the full-size picture is kept: the book's Cover/ folder, one file per picture added, named by the time. */
+export function originalPath(bookFolder: string, fileName: string, now: Date): string {
+  const m = /\.([a-z0-9]{2,5})$/i.exec(fileName);
+  const ext = m ? m[1].toLowerCase().replace('jpeg', 'jpg') : 'jpg';
+  const p = (n: number) => String(n).padStart(2, '0');
+  const stamp = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()) + ' ' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
+  return bookFolder + '/Cover/Original cover ' + stamp + '.' + ext;
+}
+
+/** A file's bytes as base64. Runs in the browser. */
+async function toBase64(file: Blob): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 0x8000)));
+  return btoa(out);
+}
+
+/** A picture from the device becomes the book's cover: the full-size picture is kept in the book's Cover/ folder, and a
+ * small copy becomes Cover.jpg, which is what the app shows. Two commits, made with Kyle's key. */
+export async function addCover(source: VaultSource, book: BookEntry, file: File, now = new Date()): Promise<void> {
+  if (!source.writeBytes) throw new Error('Covers need your own vault, not the demo.');
+  const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82);
+  try {
+    await source.writeBytes(originalPath(book.folder, file.name, now), await toBase64(file), '', 'books: full-size cover for ' + book.title);
+  } catch (e) {
+    if ((e as { conflict?: boolean }).conflict) throw new Error('A picture with that name is already in the Cover folder. Wait a moment and try again.');
+    throw e;
+  }
+  await saveCover(source, book, small);
 }
 
 /** Save a picture as the book's Cover.jpg, replacing the one there. One commit, made with Kyle's key. */

@@ -117,6 +117,7 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   return (
     <section class="book-details">
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · <a href={href.book(book.folder)}>{book.title}</a></p>
@@ -135,12 +136,16 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
                 input.value = '';
                 if (!file) return;
                 setBusy(true);
-                setError(await onCover(book, file));
+                setSaved(false);
+                const problem = await onCover(book, file);
+                setError(problem);
+                setSaved(!problem);
                 setBusy(false);
               }} />
             </label>
           )}
           {error && <p class="error">{error}</p>}
+          {saved && <p class="meta">Saved. The app shows a small copy; the full-size picture is kept in the book's Cover folder.</p>}
         </div>
         <dl class="details-list">
           <dt>Title</dt><dd>{book.title}</dd>
