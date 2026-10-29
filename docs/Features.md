@@ -683,6 +683,12 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   Since 2026-10-29 (Kyle: "no cards show up in chapter 7, even though 3 show up on the chapter bar") that line is a
   button, "N more changes in this chapter's other scenes: show", that opens the next scene with waiting changes, also
   when the open scene has none; and the up and down arrows go through the chapter's other scenes before the next chapter.
+- **The whole chapter in the Edit room** (2026-10-29, Kyle: "Can I just see all the scenes in a chapter by default? ...
+  from a work perspective, I'm always going to work on a chapter level, probably. at least in the writing portion. In the
+  planning and outlining part, it will be worth dividing by scenes"). In a chapter of several scenes, every scene on the
+  page shows its changes marked, and the Changes column lists every card in the chapter in page order. Accept, the other
+  version, Edit then accept, Reject, Undo and Accept all work on whichever scene the change is in; Edit it myself on a
+  change in another scene opens that scene first. The arrows run through the whole chapter.
 - **To-dos tick off with their changes** (2026-10-28, Kyle: "as those changes go through in edit mode, those to-do items
   you should tick off automatically"; "all to-dos should be reflected with a relevant change card, because these to-dos
   are revision-related to-dos"). A change names the to-dos it carries out in its Why (`To-do T-002: ...`). When every
