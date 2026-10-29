@@ -5,7 +5,7 @@
 // formatting.
 import { useEffect, useRef } from 'preact/hooks';
 import { bodyWords } from '../lib/drafts.ts';
-import { wordsNotTyped } from '../lib/pomodoro.ts';
+import { markTyping, wordsNotTyped } from '../lib/pomodoro.ts';
 import { insertText, piecesToMarkdown, styledHtml, stylesAt, toggleStyle, unstyle, type StyleKind, type StyleOptions } from '../lib/styled.ts';
 
 // Stand-ins for the start and end of the selection while the page is read back; private-use characters no prose holds.
@@ -522,6 +522,8 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   // Typing, deleting, autocorrect: let the browser do it, then read the text back and restyle what changed.
   const onInput = () => {
     const el = ref.current;
+    // Any change Kyle makes here, keys or dictation, keeps the clock of minutes typing running.
+    markTyping();
     if (!el || composing.current) return;
     const { text, sel: s } = readWithSelection(el);
     const caret = s ? s.start : text.length;
