@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
@@ -55,6 +55,8 @@ import {
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // Where to land after the change arrows open another chapter: its first change, or its last when going back.
 let landAt: 'first' | 'last' | null = null;
+// A change in another scene that Kyle chose to rewrite himself: that scene opens, then its Edit it myself runs.
+let mineNext: string | null = null;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
 const TYPING_SAVE_MS = 5 * 60 * 1000;
 // How long after the last letter the page's words are counted again.
@@ -855,9 +857,31 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const chAll = useMemo(() => (chNote ? withChoices(chParsed.changes, chNote.path, source.key) : []), [chParsed, chTick]);
   const chMine = chAll.filter((c) => !c.scene || !sceneId || c.scene === sceneId);
   const chPlace = useMemo(() => placeChanges(text, chMine, sceneId), [text, chAll, sceneId]);
-  const chOpenHere = chMine.filter((c) => c.status === 'open').length;
+  // The Edit room shows the whole chapter too: every scene's changes marked on the one page and every card in the
+  // column (Kyle, 2026-10-29: "I'm always going to work on a chapter level, probably. at least in the writing portion").
+  const [sibTick, setSibTick] = useState(0);
+  const sceneOf = (n: NoteRecord) => String(n.data.id || '');
+  const sibNotes = together ? [...above, ...below] : [];
+  const sibText = (n: NoteRecord) => {
+    const api = sibs.current.get(n.path);
+    return api ? api.text() : splitLead(openDraft(n, loadDrafts(source.key)[n.path], new Date()).body).text;
+  };
+  const sibPlace = useMemo(() => {
+    const m = new Map<string, Placed[]>();
+    sibNotes.forEach((n) => { const id = sceneOf(n); m.set(n.path, placeChanges(sibText(n), chAll.filter((c) => c.scene === id), id).placed); });
+    return m;
+  }, [chAll, sibTick, chView, sibNotes.map((n) => n.path + '@' + n.sha).join('|')]);
+  const chList: Placed[] = [
+    ...above.flatMap((n) => sibPlace.get(n.path) || []),
+    ...chPlace.placed,
+    ...below.flatMap((n) => sibPlace.get(n.path) || []),
+  ];
+  const chCards = together ? chAll.filter((c) => !c.scene || c.scene === sceneId || sibNotes.some((n) => sceneOf(n) === c.scene)) : chMine;
+  const sibFor = (c: Change) => (c.scene && c.scene !== sceneId ? sibNotes.find((n) => sceneOf(n) === c.scene) || null : null);
+  const sibApi = (c: Change) => { const n = sibFor(c); return n ? sibs.current.get(n.path) || null : null; };
+  const chOpenHere = chCards.filter((c) => c.status === 'open').length;
   const chBookOpen = (changes ? changes.book : []).reduce((t, x) => t + (x.chapter === chapterNum ? 0 : x.open), 0) + chAll.filter((c) => c.status === 'open').length;
-  const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chPlace.placed.length > 0;
+  const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chList.length > 0;
   readOnly.current = showMarks || shownDraft != null;
   const record = (choices: Record<string, ChangeStatus>) => {
     if (!chNote) return;
@@ -879,17 +903,19 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     changed(t);
     reload();
   };
+  const putSib = (api: SectionApi, t: string) => { api.put(t); setSibTick((n) => n + 1); };
   const nextOpen = (after: string | null) => {
-    const list = chPlace.placed;
+    const list = chList;
     const i = list.findIndex((p) => p.change.id === after);
     const rest = list.filter((_, k) => k !== i);
     return (i >= 0 && rest[i]) || rest[0] || null;
   };
   const chooseChange = (c: Change, status: ChangeStatus) => {
     if (status === 'kept' || status === 'other') {
-      const r = applyChange(pageText(), c, status === 'other' ? 'other' : 'now');
+      const sib = sibApi(c);
+      const r = applyChange(sib ? sib.text() : pageText(), c, status === 'other' ? 'other' : 'now');
       if (!r) { setMessage('Those words changed after the team wrote ' + c.id + ', so it could not go in. Use Edit it myself to put your own words in.'); return; }
-      putText(r.text);
+      if (sib) putSib(sib, r.text); else putText(r.text);
     }
     const n = nextOpen(c.id);
     record({ [c.id]: status });
@@ -898,9 +924,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // Edit, then accept: Kyle fixes the team's words on the card and his version goes in as his own (Kyle, 2026-10-28:
   // "sometimes the writers choices are 80% good, and i just want to edit them in the right hand column card and accept that").
   const tweakChange = (c: Change, words: string) => {
-    const r = applyChange(pageText(), { ...c, now: words }, 'now');
+    const sib = sibApi(c);
+    const r = applyChange(sib ? sib.text() : pageText(), { ...c, now: words }, 'now');
     if (!r) { setMessage('Those words changed after the team wrote ' + c.id + ', so it could not go in. Use Edit it myself to put your own words in.'); return; }
-    putText(r.text);
+    if (sib) putSib(sib, r.text); else putText(r.text);
     const n = nextOpen(c.id);
     record({ [c.id]: words === c.now ? 'kept' : c.other != null && words === c.other ? 'other' : 'mine' });
     setChCur(n ? n.change.id : null);
@@ -908,9 +935,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const undoChange = (c: Change) => {
     if (chNote && ruleFits({ ...c, status: 'open' }, rules)) addSkip(source.key, chNote.path + '#' + c.id);
     if (c.status === 'kept' || c.status === 'other') {
-      const t = revertChange(pageText(), c, c.status === 'other' ? 'other' : 'now');
+      const sib = sibApi(c);
+      const t = revertChange(sib ? sib.text() : pageText(), c, c.status === 'other' ? 'other' : 'now');
       if (t == null) { setMessage('The words ' + c.id + ' put in have changed since, so it cannot be taken back out. Your page stays as it is.'); return; }
-      putText(t);
+      if (sib) putSib(sib, t); else putText(t);
     }
     record({ [c.id]: 'open' });
     setChCur(c.id);
@@ -924,6 +952,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // Draft 1 and puts Draft 1's words back (Kyle, 2026-10-28: "maybe reject should instead be revert to draft one").
   const firstDraft = savedList.find((d) => d.number === 1) || null;
   const revertToDraft = async (c: Change) => {
+    const other = sibFor(c);
+    if (other) { landAt = null; go(href.write(other.path)); setMessage('Opened the scene with ' + c.id + '. Press Back to Draft 1 on its card again.'); return; }
     const f = firstDraft ? copyFor(firstDraft, note) : null;
     if (!f) { setMessage('This scene has no Draft 1 copy, so there is nothing to go back to.'); return; }
     let old: string;
@@ -949,6 +979,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (spot) ed.select(spot.at, spot.end);
   };
   const editMine = (c: Change) => {
+    const other = sibFor(c);
+    if (other) { mineNext = c.id; go(href.write(other.path)); return; }
     const found = chPlace.placed.find((p) => p.change.id === c.id);
     if (chNote) setMineOpen(chNote.path + '#' + c.id);
     mineAt.current = found ? { id: c.id, at: found.at, end: found.end } : null;
@@ -958,15 +990,33 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     setTimeout(() => goToChange(c), 60);
     closeOver();
   };
-  const acceptAll = () => {
-    let t = pageText();
+  // Accept the fitting changes in the open scene and the chapter's other scenes on the page; returns what went in.
+  const acceptIn = (fits: (c: Change) => boolean): Record<string, ChangeStatus> => {
     const choices: Record<string, ChangeStatus> = {};
-    placeChanges(t, chMine, sceneId).placed.slice().reverse().forEach((p) => {
-      t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
-      choices[p.change.id] = 'kept';
+    const run = (t: string, list: Change[], id: string): string => {
+      placeChanges(t, list, id).placed.slice().reverse().forEach((p) => {
+        if (!fits(p.change)) return;
+        t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
+        choices[p.change.id] = 'kept';
+      });
+      return t;
+    };
+    const before = Object.keys(choices).length;
+    const t = run(pageText(), chMine, sceneId);
+    if (Object.keys(choices).length > before) putText(t);
+    sibNotes.forEach((n) => {
+      const api = sibs.current.get(n.path);
+      if (!api) return;
+      const had = Object.keys(choices).length;
+      const id = sceneOf(n);
+      const out = run(api.text(), chAll.filter((c) => c.scene === id), id);
+      if (Object.keys(choices).length > had) putSib(api, out);
     });
+    return choices;
+  };
+  const acceptAll = () => {
+    const choices = acceptIn(() => true);
     if (!Object.keys(choices).length) return;
-    putText(t);
     record(choices);
   };
   // Accept everywhere (Kyle, 2026-10-28: "if i make a change to say greys name, can there be a button like, apply this
@@ -976,16 +1026,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const acceptByRules = (list: [string, string][]): number => {
     if (!chNote || !canSave || shownDraft != null || !list.length) return 0;
     const skips = loadSkips(source.key);
-    let t = pageText();
-    const choices: Record<string, ChangeStatus> = {};
-    placeChanges(t, chMine, sceneId).placed.slice().reverse().forEach((p) => {
-      if (!ruleFits(p.change, list) || skips.indexOf(chNote.path + '#' + p.change.id) >= 0) return;
-      t = t.slice(0, p.at) + p.change.now + t.slice(p.end);
-      choices[p.change.id] = 'kept';
-    });
+    const choices = acceptIn((c) => ruleFits(c, list) && skips.indexOf(chNote.path + '#' + c.id) < 0);
     const n = Object.keys(choices).length;
     if (!n) return 0;
-    putText(t);
     record(choices);
     return n;
   };
@@ -1008,7 +1051,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   }, [chNote ? chNote.path + '@' + chNote.sha : '', sceneId, rules.length, beatsMode]);
 
   // The arrows: the next change on this page, then on into the next chapter that has any (and back).
-  const chIdx = chPlace.placed.findIndex((p) => p.change.id === chCur);
+  const chIdx = chList.findIndex((p) => p.change.id === chCur);
+  useEffect(() => {
+    if (!mineNext) return;
+    const c = chMine.find((x) => x.id === mineNext);
+    if (!c || !chPlace.placed.some((p) => p.change.id === c.id)) return;
+    mineNext = null;
+    editMine(c);
+  }, [chPlace]);
   const otherChapter = (dir: 1 | -1) => {
     const list = (changes ? changes.book : []).filter((x) => x.open > 0 && chapterNum != null && (dir > 0 ? x.chapter > chapterNum : x.chapter < chapterNum));
     return dir > 0 ? list[0] || null : list[list.length - 1] || null;
@@ -1027,7 +1077,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (n) { landAt = 'first'; go(href.write(n.path)); }
   };
   const goChange = (dir: 1 | -1) => {
-    const list = chPlace.placed;
+    const list = chList;
     const k = chIdx < 0 ? (dir > 0 ? 0 : list.length - 1) : chIdx + dir;
     if (showMarks && k >= 0 && k < list.length) { setChCur(list[k].change.id); if (right && tab !== 'changes') setTab('changes'); return; }
     const sc = otherScene(dir);
@@ -1037,7 +1087,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   useEffect(() => {
     if (!landAt || !showMarks) return;
-    const list = chPlace.placed;
+    const list = chList;
     setChCur(landAt === 'first' ? list[0].change.id : list[list.length - 1].change.id);
     landAt = null;
   }, [showMarks]);
@@ -1426,17 +1476,18 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {shownDraft != null && (
             <p class="draft-banner" role="status">Draft {shownDraft}, saved and read only. <button type="button" class="link" onClick={() => setDraftView(null)}>Back to Draft {working}</button></p>
           )}
-          {shownDraft == null && chNote && chMine.length > 0 && (
+          {shownDraft == null && chNote && chCards.length > 0 && (
             <ChangesBar view={chView} onView={setChView} open={chOpenHere} total={chBookOpen}
-              place={showMarks && chIdx >= 0 ? (chIdx + 1) + ' of ' + chPlace.placed.length : ''}
+              place={showMarks && chIdx >= 0 ? (chIdx + 1) + ' of ' + chList.length : ''}
               onPrev={(showMarks && chIdx > 0) || otherScene(-1) || otherChapter(-1) ? () => goChange(-1) : null}
-              onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherScene(1) || otherChapter(1) ? () => goChange(1) : null}
+              onNext={(showMarks && chIdx < chList.length - 1) || otherScene(1) || otherChapter(1) ? () => goChange(1) : null}
               />
           )}
           {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib}
+                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
               <div class="scene-break" aria-hidden="true" />
             </div>
           ))}
@@ -1453,7 +1504,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {below.map((n) => (
             <div key={n.path}>
               <div class="scene-break" aria-hidden="true" />
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib} />
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib}
+                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
             </div>
           ))}
           <nav class="writer-done side-arrows" aria-label="Previous and next section">
@@ -1515,9 +1567,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} onElsewhere={() => goScene(1)} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
+                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} intro={chParsed.intro} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
-                  onPick={(id) => { const c = chMine.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
+                  onPick={(id) => { const c = chCards.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>

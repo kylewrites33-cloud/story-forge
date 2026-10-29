@@ -8,6 +8,8 @@ import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { ChangesPage, type ChangesView } from './Changes.tsx';
+import type { Placed } from '../lib/changes.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const TYPING_SAVE_MS = 5 * 60 * 1000;
@@ -16,15 +18,23 @@ export interface SectionApi {
   /** Send the draft to the vault; `closing` forgets it on the device once saved. False when it could not be saved. */
   save: (closing: boolean) => Promise<boolean>;
   commands: { current: EditorCommands | null };
+  /** The scene's words as they stand on the page. */
+  text: () => string;
+  /** Put the team's change in (the Edit room): saved like typing, not counted as words typed. */
+  put: (text: string) => void;
 }
 
-export function SceneSection({ source, note, options, onSaved, onFocus, onLook, register }: {
+/** The team's changes marked on this scene, when the Edit room shows the whole chapter. */
+export interface SectionMarks { placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void }
+
+export function SceneSection({ source, note, options, onSaved, onFocus, onLook, register, marks }: {
   source: VaultSource; note: NoteRecord; options: StyleOptions;
   onSaved: (n: NoteRecord) => void;
   /** Kyle's cursor went into this scene: the tool row works on it. */
   onFocus: () => void;
   onLook?: (l: { i: boolean; b: boolean; h: boolean }) => void;
   register: (path: string, api: SectionApi | null) => void;
+  marks?: SectionMarks | null;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
@@ -68,8 +78,21 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     }
   }, [source, canSave, onSaved, note, setDraft]);
 
+  const [ver, setVer] = useState(0);
+  const later = () => {
+    if (quiet.current) clearTimeout(quiet.current);
+    quiet.current = setTimeout(() => { typingSince.current = null; save(false); }, QUIET_SAVE_MS);
+  };
+  const put = (text: string) => {
+    const d = ref.current;
+    setDraft({ ...d, body: splitLead(d.body).lead + text, updatedAt: new Date().toISOString() });
+    setVer((v) => v + 1);
+    later();
+  };
+  const putRef = useRef(put);
+  putRef.current = put;
   useEffect(() => {
-    register(note.path, { save, commands });
+    register(note.path, { save, commands, text: () => splitLead(ref.current.body).text, put: (t) => putRef.current(t) });
     return () => register(note.path, null);
   }, [note.path, save, register]);
 
@@ -96,16 +119,17 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     const body = splitLead(d.body).lead + text;
     trackWords(note.path, String(note.data.id || ''), bodyWords(d.body), bodyWords(body));
     setDraft({ ...d, body, updatedAt: new Date().toISOString() });
-    if (quiet.current) clearTimeout(quiet.current);
-    quiet.current = setTimeout(() => { typingSince.current = null; save(false); }, QUIET_SAVE_MS);
+    later();
     if (typingSince.current == null) typingSince.current = Date.now();
     else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; save(false); }
   };
 
   return (
     <section class="chapter-section" data-section={note.path} onFocusCapture={onFocus}>
-      <StyledEditor value={splitLead(draft.body).text} onChange={changed} onCaret={() => {}} onLook={onLook}
-        label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options} />
+      {marks ? <ChangesPage text={splitLead(draft.body).text} placed={marks.placed} view={marks.view} current={marks.current} onPick={marks.onPick} options={options}
+        label={'Text of ' + String(note.data.title || note.data.id || '') + ' with the team\'s changes'} />
+      : <StyledEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={() => {}} onLook={onLook}
+        label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options} />}
       {error && <p class="note-line section-error">{error}</p>}
     </section>
   );
