@@ -1013,10 +1013,25 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const list = (changes ? changes.book : []).filter((x) => x.open > 0 && chapterNum != null && (dir > 0 ? x.chapter > chapterNum : x.chapter < chapterNum));
     return dir > 0 ? list[0] || null : list[list.length - 1] || null;
   };
+  // The chapter's other scenes come before the next chapter: their changes sit in the same note, and the cards show one
+  // scene at a time (Kyle, 2026-10-29: "no cards show up in chapter 7, even though 3 show up on the chapter bar").
+  const otherScene = (dir: 1 | -1) => {
+    if (!group) return null;
+    const at = group.scenes.findIndex((n) => n.path === note.path);
+    const waits = (n: NoteRecord) => chAll.some((c) => c.status === 'open' && c.scene === String(n.data.id || ''));
+    const list = (dir > 0 ? group.scenes.slice(at + 1) : group.scenes.slice(0, Math.max(0, at)).reverse()).filter(waits);
+    return list[0] || null;
+  };
+  const goScene = (dir: 1 | -1) => {
+    const n = otherScene(dir) || otherScene(dir > 0 ? -1 : 1);
+    if (n) { landAt = 'first'; go(href.write(n.path)); }
+  };
   const goChange = (dir: 1 | -1) => {
     const list = chPlace.placed;
     const k = chIdx < 0 ? (dir > 0 ? 0 : list.length - 1) : chIdx + dir;
     if (showMarks && k >= 0 && k < list.length) { setChCur(list[k].change.id); if (right && tab !== 'changes') setTab('changes'); return; }
+    const sc = otherScene(dir);
+    if (sc) { landAt = dir > 0 ? 'first' : 'last'; go(href.write(sc.path)); return; }
     const o = otherChapter(dir);
     if (o) { landAt = dir > 0 ? 'first' : 'last'; go(href.write(o.path)); }
   };
@@ -1414,8 +1429,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {shownDraft == null && chNote && chMine.length > 0 && (
             <ChangesBar view={chView} onView={setChView} open={chOpenHere} total={chBookOpen}
               place={showMarks && chIdx >= 0 ? (chIdx + 1) + ' of ' + chPlace.placed.length : ''}
-              onPrev={(showMarks && chIdx > 0) || otherChapter(-1) ? () => goChange(-1) : null}
-              onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherChapter(1) ? () => goChange(1) : null}
+              onPrev={(showMarks && chIdx > 0) || otherScene(-1) || otherChapter(-1) ? () => goChange(-1) : null}
+              onNext={(showMarks && chIdx < chPlace.placed.length - 1) || otherScene(1) || otherChapter(1) ? () => goChange(1) : null}
               />
           )}
           {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
@@ -1500,7 +1515,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
+                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chMine.includes(c)).length} onElsewhere={() => goScene(1)} intro={chParsed.intro} changes={chMine} placedIds={chPlace.placed.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { const c = chMine.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
