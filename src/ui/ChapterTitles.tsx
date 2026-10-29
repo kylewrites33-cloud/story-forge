@@ -1,6 +1,7 @@
 // Chapter titles (Edit room, Kyle 2026-10-29): the team's four options per chapter with a tick for the one Kyle likes,
 // None of these to ask for four more next round, and Write my own. A pick also renames the chapter; unticking puts its
-// old name back. Choices change only the tick lines of `Chapter Titles.md` and commit with Kyle's key.
+// old name back. Each chapter shows its scenes' headlines for context (Kyle, 2026-10-29: "a short summary ... beside
+// each chapter"). Choices change only the tick lines of `Chapter Titles.md` and commit with Kyle's key.
 import { useEffect, useState } from 'preact/hooks';
 import { addOwn, NONE, parseTitles, pickedTitle, setPick, TITLES_FILE } from '../lib/titles.ts';
 import type { BookEntry, NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
@@ -85,6 +86,9 @@ export function ChapterTitlesPage({ source, index, book, groups, onRename }: {
         return (
           <article key={c.chapter} class={'titles-chapter' + (chosen ? ' done' : c.none ? ' more' : '')}>
             <h2>Chapter {c.chapter}<span class="meta">{chosen ? chosen : c.was ? 'Now: ' + (g && g.title ? g.title : c.was) : ''}</span></h2>
+            {g && g.scenes.some((n) => String(n.data.headline || '').trim()) && (
+              <p class="titles-about">{g.scenes.map((n) => String(n.data.headline || '').trim()).filter(Boolean).join(' ')}</p>
+            )}
             <ul class="titles-options" role="group" aria-label={'Titles for chapter ' + c.chapter}>
               {c.options.map((o) => (
                 <li key={o.text}>
