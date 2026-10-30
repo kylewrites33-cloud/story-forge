@@ -1,4 +1,5 @@
-:root { --safe-top: env(safe-area-inset-top, 0px); }
+:root {
+  --safe-top: env(safe-area-inset-top, 0px); }
 /* The iPad home-screen app: the status bar (24 px) covers the page and the safe area says 0. */
 :root.ios-app { --safe-top: max(env(safe-area-inset-top, 0px), 24px); }
 @media (min-width: 700px) { .ios-app .shell-main { padding-top: var(--safe-top); } }
@@ -2455,7 +2456,16 @@ button, .button { border-radius: 12px; }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }
-.chg-tweak { width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
+/* The edit box reads at the same size and in the same page font as the card's quotes (Kyle, 2026-10-30), never under
+   16px so the iPad does not zoom. Its words are drawn by a copy behind it, so Kyle's own words show greyer as he types. */
+.chg-tweak { width: 100%; box-sizing: border-box; margin: 0; font-family: var(--page-font, Georgia, serif); font-size: max(16px, 0.98rem); line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; white-space: pre-wrap; overflow-wrap: break-word; scrollbar-gutter: stable; }
+.chg-tweak-wrap { position: relative; }
+.chg-tweak-wrap textarea.chg-tweak { position: relative; background: transparent; color: transparent; caret-color: var(--text); display: block; }
+.chg-tweak-back { position: absolute; inset: 0; overflow: hidden; color: color-mix(in srgb, var(--text) 68%, transparent); pointer-events: none; }
+.writer.edit-wide .changes-panel .chg-tweak { font-size: max(16px, 1em); }
+/* Kyle's own words in the team's version, a little greyer than the team's new words (Kyle, 2026-10-30). */
+.chg-quote.now { color: color-mix(in srgb, var(--text) 68%, transparent); }
+.chg-quote.now .chg-new, .chg-tweak-back .chg-new { color: var(--text); }
 .chg-parts { display: flex; flex-direction: column; gap: 8px; }
 .chg-label { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .chg-check summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--muted); font-size: 0.9rem; }

@@ -6,7 +6,7 @@ import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
 import { KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 
@@ -166,10 +166,37 @@ function bookHtml(text: string): string {
   }).join('');
 }
 
-function Quote({ text, cls }: { text: string; cls: string }) {
-  return text
-    ? <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: bookHtml(text) }} />
-    : <p class={'chg-quote empty ' + cls}>(cut)</p>;
+// Kyle's own words in the team's version show a little greyer than the team's new words, so he can tell them apart
+// (Kyle, 2026-10-30: "anything that's my original text to be slightly grayer than your proposed text"). The new words
+// are marked with two private characters before the page look is worked out, then turned into spans.
+const NEW_ON = '\uE000', NEW_OFF = '\uE001';
+function markNew(was: string, now: string): string {
+  return wordDiff(was, now).filter((d) => d.kind !== 'del')
+    .map((d) => d.kind === 'ins' ? d.text.split('\n').map((t) => t ? NEW_ON + t + NEW_OFF : t).join('\n') : d.text).join('')
+    // A mark must not sit in front of a System screen's "> ", or the line would lose its look.
+    .split('\n').map((line) => line.replace(/^([\uE000\uE001]+)(\s*> ?)/, '$2$1')).join('\n');
+}
+
+function Quote({ text, cls, was }: { text: string; cls: string; /** Draft 1's words, to show which words are new. */ was?: string }) {
+  if (!text) return <p class={'chg-quote empty ' + cls}>(cut)</p>;
+  const html = was == null ? bookHtml(text) : bookHtml(markNew(was, text)).replace(/\uE000/g, '<span class="chg-new">').replace(/\uE001/g, '</span>');
+  return <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/** The edit box over a copy of its words, so Kyle's own words show greyer there too while he types. */
+function TweakBox({ id, was, words, onInput }: { id: string; was: string; words: string; onInput: (w: string) => void }) {
+  const back = useRef<HTMLDivElement>(null);
+  const parts = wordDiff(was, words).filter((d) => d.kind !== 'del');
+  return (
+    <div class="chg-tweak-wrap">
+      <div class="chg-tweak chg-tweak-back" ref={back} aria-hidden="true">
+        {parts.map((d) => d.kind === 'ins' ? <span class="chg-new">{d.text}</span> : d.text)}{'\n'}
+      </div>
+      <textarea id={id} class="chg-tweak" rows={Math.min(14, Math.max(3, Math.ceil(words.length / 34) + words.split('\n').length))} value={words}
+        onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)}
+        onScroll={(e) => { if (back.current) back.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }} />
+    </div>
+  );
 }
 
 /** Scroll the side column (only it, not the page) so this change's card shows, the way Word's margin follows the text. */
@@ -229,8 +256,8 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
         {c.status === 'open' ? (
           <>
             <Quote text={c.was} cls="was" />
-            <Quote text={c.now} cls="now" />
-            {c.other != null && <><p class="panel-key">Or the other version</p><Quote text={c.other} cls="now other" /></>}
+            <Quote text={c.now} cls="now" was={c.was} />
+            {c.other != null && <><p class="panel-key">Or the other version</p><Quote text={c.other} cls="now other" was={c.was} /></>}
             {c.id === editing ? (
               <>
                 <p class="chg-mine"><Icon name="pen" size={16} />You are writing this one yourself on the page. The team's version stays here while you work.</p>
@@ -242,8 +269,7 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
             ) : tweak && tweak.id === c.id && here ? (
               <>
                 <label class="panel-key" for={'tweak-' + c.id}>{c.other != null ? (tweak.other ? 'Your edit of the other version' : 'Your edit of the first version') : 'Your edit of the team\'s words'}</label>
-                <textarea id={'tweak-' + c.id} class="chg-tweak" rows={Math.min(14, Math.max(3, Math.ceil(tweak.words.length / 34) + tweak.words.split('\n').length))} value={tweak.words}
-                  onInput={(e) => setTweak({ ...tweak, words: (e.target as HTMLTextAreaElement).value })} />
+                <TweakBox id={'tweak-' + c.id} was={c.was} words={tweak.words} onInput={(w) => setTweak({ ...tweak, words: w })} />
                 <div class="chg-buttons">
                   <button type="button" class="primary" onClick={() => { onTweak(c, tweak.words); setTweak(null); }}>Accept my version</button>
                   <button type="button" onClick={() => setTweak(null)}>Back to the choices</button>
