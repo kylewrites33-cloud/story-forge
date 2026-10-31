@@ -75,14 +75,14 @@ test('a new series and a new book get their backup folders', async () => {
   assert.deepEqual([...src.files.keys()], ['Book Backups/Ember Road/.gitkeep', 'Book Backups/Ember Road/Ash Bell/.gitkeep']);
 });
 
-test('a System screen (lines starting "> ") is indented, one paragraph a line, its bold title in small caps', () => {
+test('a System screen (lines starting "> ") is one block paragraph with line breaks, its bold title in small caps', () => {
   const p = '> **Argo Brand Natural Spring Water**\n>\n> Freshness: 4/5 (Fresh)\n> *Collected from the springs.*';
   assert.ok(isScreen(p));
   assert.ok(!isScreen('He said.\n> not all'));
   const out = screen(p);
-  assert.equal(out.length, 3);
+  assert.equal(out.length, 1);
   assert.match(out[0], /VellumBlockQuote.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
-  assert.match(out[1], /w:before="240"/);
-  assert.match(out[2], /<w:i\/>.*Collected/);
-  assert.match(out[2], /w:after="480"/);
+  assert.match(out[0], /Water<\/w:t><\/w:r><w:r><w:br\/><\/w:r><w:r><w:br\/><\/w:r><w:r><w:t[^>]*>Freshness/);
+  assert.match(out[0], /<w:i\/>.*Collected/);
+  assert.doesNotMatch(out[0], /&gt;/);
 });
