@@ -81,7 +81,7 @@ test('a System screen (lines starting "> ") is indented, one paragraph a line, i
   assert.ok(!isScreen('He said.\n> not all'));
   const out = screen(p);
   assert.equal(out.length, 3);
-  assert.match(out[0], /SystemScreen.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
+  assert.match(out[0], /VellumBlockQuote.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
   assert.match(out[1], /w:before="240"/);
   assert.match(out[2], /<w:i\/>.*Collected/);
   assert.match(out[2], /w:after="480"/);
