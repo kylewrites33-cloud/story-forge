@@ -745,8 +745,9 @@ fine print and the Note in italics. Two screens with no story between them share
   break is not shown. The files stay Markdown. Self-Edit still shows the faint `>` marks; a Kindle look for the typing
   page itself is an app to-do.
 - **Export to Word**: style "Vellum Block Quote" (2026-10-31, Kyle: "The system screens aren't showing correctly in the
-  Vellum version"; was "System Screen"), indented half an inch both sides, one paragraph per line, a blank line where
-  the block has a lone `>`, the title bold small caps (character style "Vellum Small Caps"), two blank lines before the
+  Vellum version"; was "System Screen"), indented half an inch both sides, the whole screen one paragraph with a line
+  break after each line (2026-10-31, Kyle: Vellum indented each line; "a block kind of formatting without the
+  carrots"), an empty line where the block has a lone `>`, the title bold small caps (character style "Vellum Small Caps"), two blank lines before the
   story goes on. Vellum reads its own style names on import, so a screen comes in as a block quote. The vault tool's
   `sf compile --docx` does the same since 2026-10-31.
 

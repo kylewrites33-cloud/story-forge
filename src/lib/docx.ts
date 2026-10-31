@@ -39,30 +39,31 @@ export function pieces(line: string, b = false, i = false): Piece[] {
   return out.filter((p) => p.text);
 }
 
-/** `caps`: bold small caps, for a System screen's title. */
-function para(text: string, style: string, ppr = '', caps = false): string {
+/** A line's runs; `caps`: bold small caps, for a System screen's title. */
+function runsXml(text: string, caps = false): string {
   const words = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
-  return '<w:p><w:pPr><w:pStyle w:val="' + style + '"/>' + ppr + '</w:pPr>' + pieces(words).map((p) =>
+  return pieces(words).map((p) =>
     '<w:r>' + (p.b || p.i || caps ? '<w:rPr>' + (caps ? '<w:rStyle w:val="VellumSmallCaps"/>' : '') + (p.b || caps ? '<w:b/>' : '') + (p.i ? '<w:i/>' : '') + (caps ? '<w:smallCaps/>' : '') + '</w:rPr>' : '') +
-    '<w:t xml:space="preserve">' + xmlEsc(p.text) + '</w:t></w:r>').join('') + '</w:p>';
+    '<w:t xml:space="preserve">' + xmlEsc(p.text) + '</w:t></w:r>').join('');
 }
 
-/** A System screen (Kyle, 2026-10-28: format C1) is a block of "> " lines: indented, one paragraph per line, a lone ">"
- * a blank line between its parts, an all-bold line its title in bold small caps, two blank lines before the story goes on. */
+function para(text: string, style: string): string {
+  return '<w:p><w:pPr><w:pStyle w:val="' + style + '"/></w:pPr>' + runsXml(text) + '</w:p>';
+}
+
+/** A System screen (Kyle, 2026-10-28: format C1) is a block of "> " lines. The whole screen is ONE paragraph, each line
+ * ended by a line break, so Vellum gives no line a first-line indent (Kyle, 2026-10-31: "a block kind of formatting");
+ * a lone ">" an empty line between parts, an all-bold line its title in bold small caps, space before the story goes on. */
 export const isScreen = (p: string) => p.split('\n').every((l) => /^\s*>/.test(l));
 export function screen(p: string): string[] {
   const lines = p.split('\n').map((l) => l.replace(/^\s*> ?/, ''));
-  const out: string[] = [];
-  let gap = true;
-  lines.forEach((l, i) => {
-    if (!l.trim()) { gap = true; return; }
-    const last = !lines.slice(i + 1).some((x) => x.trim());
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  const body = lines.map((l) => {
     const title = /^\*\*[^*].*\*\*$/.test(l.trim());
-    const sp = '<w:spacing w:before="' + (gap ? 240 : 0) + '" w:after="' + (last ? 480 : 0) + '"/>';
-    out.push(para(title ? l.trim().slice(2, -2) : l, 'VellumBlockQuote', sp, title));
-    gap = false;
-  });
-  return out;
+    return l.trim() ? runsXml(title ? l.trim().slice(2, -2) : l, title) : '';
+  }).join('<w:r><w:br/></w:r>');
+  return ['<w:p><w:pPr><w:pStyle w:val="VellumBlockQuote"/><w:spacing w:before="240" w:after="480"/><w:jc w:val="left"/></w:pPr>' + body + '</w:p>'];
 }
 
 export interface Manuscript { chapters: { heading: string; parts: string[] }[]; words: number; scenes: number }
