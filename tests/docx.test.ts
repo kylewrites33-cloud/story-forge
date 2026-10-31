@@ -81,7 +81,7 @@ test('a System screen (lines starting "> ") is one block paragraph with line bre
   assert.ok(!isScreen('He said.\n> not all'));
   const out = screen(p);
   assert.equal(out.length, 1);
-  assert.match(out[0], /VellumBlockQuote.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
+  assert.match(out[0], /VellumFlushLeft.*<w:b\/><w:smallCaps\/>.*Argo Brand Natural Spring Water</);
   assert.match(out[0], /Water<\/w:t><\/w:r><w:r><w:br\/><\/w:r><w:r><w:br\/><\/w:r><w:r><w:t[^>]*>Freshness/);
   assert.match(out[0], /<w:i\/>.*Collected/);
   assert.doesNotMatch(out[0], /&gt;/);
