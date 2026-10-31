@@ -744,8 +744,11 @@ fine print and the Note in italics. Two screens with no story between them share
   indented with no `>` marks, a lone `>` is a small gap, and the story picks up after two lines' space. A struck-out line
   break is not shown. The files stay Markdown. Self-Edit still shows the faint `>` marks; a Kindle look for the typing
   page itself is an app to-do.
-- **Export to Word**: style System Screen, indented half an inch, one paragraph per line, a blank line where the block
-  has a lone `>`, the title bold small caps, two blank lines before the story goes on.
+- **Export to Word**: style "Vellum Block Quote" (2026-10-31, Kyle: "The system screens aren't showing correctly in the
+  Vellum version"; was "System Screen"), indented half an inch both sides, one paragraph per line, a blank line where
+  the block has a lone `>`, the title bold small caps (character style "Vellum Small Caps"), two blank lines before the
+  story goes on. Vellum reads its own style names on import, so a screen comes in as a block quote. The vault tool's
+  `sf compile --docx` does the same since 2026-10-31.
 
 ## Crow, the character and plot study app (2026-10-26; first called Character Study)
 

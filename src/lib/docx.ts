@@ -43,7 +43,7 @@ export function pieces(line: string, b = false, i = false): Piece[] {
 function para(text: string, style: string, ppr = '', caps = false): string {
   const words = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
   return '<w:p><w:pPr><w:pStyle w:val="' + style + '"/>' + ppr + '</w:pPr>' + pieces(words).map((p) =>
-    '<w:r>' + (p.b || p.i || caps ? '<w:rPr>' + (p.b || caps ? '<w:b/>' : '') + (p.i ? '<w:i/>' : '') + (caps ? '<w:smallCaps/>' : '') + '</w:rPr>' : '') +
+    '<w:r>' + (p.b || p.i || caps ? '<w:rPr>' + (caps ? '<w:rStyle w:val="VellumSmallCaps"/>' : '') + (p.b || caps ? '<w:b/>' : '') + (p.i ? '<w:i/>' : '') + (caps ? '<w:smallCaps/>' : '') + '</w:rPr>' : '') +
     '<w:t xml:space="preserve">' + xmlEsc(p.text) + '</w:t></w:r>').join('') + '</w:p>';
 }
 
@@ -59,7 +59,7 @@ export function screen(p: string): string[] {
     const last = !lines.slice(i + 1).some((x) => x.trim());
     const title = /^\*\*[^*].*\*\*$/.test(l.trim());
     const sp = '<w:spacing w:before="' + (gap ? 240 : 0) + '" w:after="' + (last ? 480 : 0) + '"/>';
-    out.push(para(title ? l.trim().slice(2, -2) : l, 'SystemScreen', sp, title));
+    out.push(para(title ? l.trim().slice(2, -2) : l, 'VellumBlockQuote', sp, title));
     gap = false;
   });
   return out;
@@ -155,7 +155,9 @@ export function buildDocx(title: string, author: string, m: Manuscript, when: Da
     style('Heading1', 'heading 1', '<w:pageBreakBefore/><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="1440" w:after="480"/><w:outlineLvl w:val="0"/>', '<w:sz w:val="32"/>') +
     style('FirstParagraph', 'First Paragraph', '', '') +
     style('BodyText', 'Body Text', '<w:ind w:firstLine="360"/>', '') +
-    style('SystemScreen', 'System Screen', '<w:ind w:left="720"/>', '') +
+    // Vellum's own style names (Kyle, 2026-10-31), so a screen imports into Vellum as a block quote with a small-caps title.
+    style('VellumBlockQuote', 'Vellum Block Quote', '<w:ind w:left="720" w:right="720"/>', '') +
+    '<w:style w:type="character" w:styleId="VellumSmallCaps"><w:name w:val="Vellum Small Caps"/><w:rPr><w:smallCaps/></w:rPr></w:style>' +
     style('SceneBreak', 'Scene Break', '<w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/>', '') +
     '</w:styles>';
   const rels = (r: string) => head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + r + '</Relationships>';
