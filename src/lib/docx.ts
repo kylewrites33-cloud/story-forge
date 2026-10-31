@@ -52,7 +52,8 @@ function para(text: string, style: string): string {
 }
 
 /** A System screen (Kyle, 2026-10-28: format C1) is a block of "> " lines. The whole screen is ONE paragraph, each line
- * ended by a line break, so Vellum gives no line a first-line indent (Kyle, 2026-10-31: "a block kind of formatting");
+ * ended by a line break, in the "Vellum Flush Left" style: Vellum imports it as a left Alignment Block with no line indented
+ * (Kyle, 2026-10-31: Block Quote and Verse indented the lines of lists; he turns on Inset in Vellum for the box);
  * a lone ">" an empty line between parts, an all-bold line its title in bold small caps, space before the story goes on. */
 export const isScreen = (p: string) => p.split('\n').every((l) => /^\s*>/.test(l));
 export function screen(p: string): string[] {
@@ -63,7 +64,7 @@ export function screen(p: string): string[] {
     const title = /^\*\*[^*].*\*\*$/.test(l.trim());
     return l.trim() ? runsXml(title ? l.trim().slice(2, -2) : l, title) : '';
   }).join('<w:r><w:br/></w:r>');
-  return ['<w:p><w:pPr><w:pStyle w:val="VellumBlockQuote"/><w:spacing w:before="240" w:after="480"/><w:jc w:val="left"/></w:pPr>' + body + '</w:p>'];
+  return ['<w:p><w:pPr><w:pStyle w:val="VellumFlushLeft"/><w:spacing w:before="240" w:after="480"/><w:jc w:val="left"/></w:pPr>' + body + '</w:p>'];
 }
 
 export interface Manuscript { chapters: { heading: string; parts: string[] }[]; words: number; scenes: number }
@@ -156,8 +157,8 @@ export function buildDocx(title: string, author: string, m: Manuscript, when: Da
     style('Heading1', 'heading 1', '<w:pageBreakBefore/><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="1440" w:after="480"/><w:outlineLvl w:val="0"/>', '<w:sz w:val="32"/>') +
     style('FirstParagraph', 'First Paragraph', '', '') +
     style('BodyText', 'Body Text', '<w:ind w:firstLine="360"/>', '') +
-    // Vellum's own style names (Kyle, 2026-10-31), so a screen imports into Vellum as a block quote with a small-caps title.
-    style('VellumBlockQuote', 'Vellum Block Quote', '<w:ind w:left="720" w:right="720"/>', '') +
+    // Vellum's own style names (Kyle, 2026-10-31), so a screen imports into Vellum as a left Alignment Block with a small-caps title.
+    style('VellumFlushLeft', 'Vellum Flush Left', '<w:ind w:left="720" w:right="720"/>', '') +
     '<w:style w:type="character" w:styleId="VellumSmallCaps"><w:name w:val="Vellum Small Caps"/><w:rPr><w:smallCaps/></w:rPr></w:style>' +
     style('SceneBreak', 'Scene Break', '<w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/>', '') +
     '</w:styles>';
