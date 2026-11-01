@@ -2200,6 +2200,62 @@
       },
       "body": "What needs doing and how to tell it is done."
     },
+    "report": {
+      "description": "A note from one Sparrow agent up the line (Kyle, 2026-11-01): the agents report to Sparrow, the coordinator, and Crow reports to the Story Specialist. Mailbox/<to>/ holds the notes for one reader, named \"YYYY-MM-DD HHMM from <sender>, <topic>\". Notes are never edited or deleted: a reply is a new note in the sender's folder with re naming the note it answers, and the reader logs what it has read in that folder's READ.log. The `report-up` skill has the how.",
+      "scope": "vault",
+      "folder": "Mailbox",
+      "recursive": true,
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "from",
+        "to",
+        "sent",
+        "needs"
+      ],
+      "properties": {
+        "type": {
+          "const": "report"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"YYYY-MM-DD HHMM from <sender>, <short topic>\", the time in UTC, so the folder sorts oldest first."
+        },
+        "from": {
+          "type": "string",
+          "description": "The agent or program that wrote it: Writer, Story Specialist, Contrarian, Market Analyst, Developmental Editor, Line Editor, Beta Reader, Continuity Keeper, Crow, Sparrow."
+        },
+        "to": {
+          "type": "string",
+          "description": "Who reads it, the same as its folder: Sparrow, or Story Specialist for Crow's notes, or the agent a reply goes back to."
+        },
+        "sent": {
+          "type": "datetime",
+          "description": "When it was written, in UTC, like 2026-11-01T14:35Z."
+        },
+        "needs": {
+          "enum": [
+            "answer",
+            "action",
+            "FYI"
+          ],
+          "description": "answer: a question for the reader. action: something for the reader to do or pass on, such as a to-do for Kyle. FYI: nothing to do."
+        },
+        "re": {
+          "type": "string",
+          "description": "In a reply: the title of the note it answers."
+        },
+        "refs": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "What it is about: task ids (T-114), job ids (J-031), idea ids or vault paths."
+        }
+      },
+      "body": "A few plain sentences: what happened or what is needed, and what the reader should do. Kyle's words quoted as he wrote them."
+    },
     "writing-day": {
       "description": "Kyle's Pomodoros on one day, written by the app's timer: how many he finished, the minutes and the words written during them, every word he typed that day (`typed`) and the minutes he spent typing (`typing_minutes`). Lives in Writing Log/ at the vault root, one note per day.",
       "scope": "vault",
