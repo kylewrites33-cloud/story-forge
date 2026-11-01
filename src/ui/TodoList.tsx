@@ -8,6 +8,8 @@ import type { Choice } from '../lib/write-queue.ts';
 import { isBookTodo, todoPlace } from '../lib/todos.ts';
 import { href } from './route.ts';
 import { ProposalCard } from './IdeasBoard.tsx';
+import { TodoMap } from './TodoMap.tsx';
+import { CONTEXTS } from '../lib/todomap.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -66,7 +68,8 @@ export function TaskCard({ index, note, waiting, onDecide }: { index: VaultIndex
 
 function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
   const [open, setOpen] = useState(false);
-  const [t, setT] = useState<NewTask>({ title: '', owner: 'Kyle', due: '', body: '' });
+  const blank: NewTask = { title: '', owner: 'Kyle', due: '', body: '', context: '', priority: 'need' };
+  const [t, setT] = useState<NewTask>(blank);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!open) return <button type="button" onClick={() => setOpen(true)}>Add a to-do</button>;
@@ -76,7 +79,7 @@ function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
     const err = await onAdd(t);
     setBusy(false);
     if (err) { setError(err); return; }
-    setT({ title: '', owner: 'Kyle', due: '', body: '' });
+    setT(blank);
     setOpen(false);
   };
   return (
@@ -88,6 +91,17 @@ function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
           <option value="Claude">Claude</option>
         </select>
       </label>
+      <label>Where does it belong?
+        <select value={t.context} onChange={(e) => setT({ ...t, context: (e.currentTarget as HTMLSelectElement).value })}>
+          <option value="">Let Sparrow guess from the words</option>
+          {CONTEXTS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </select>
+      </label>
+      <div class="tabs" role="radiogroup" aria-label="Need or want">
+        {([['need', 'I need to'], ['want', 'I want to, when there is time']] as const).map(([k, label]) => (
+          <button key={k} type="button" role="radio" aria-selected={t.priority === k} aria-checked={t.priority === k} onClick={() => setT({ ...t, priority: k })}>{label}</button>
+        ))}
+      </div>
       <label>Due (optional)<input type="date" value={t.due} onInput={(e) => setT({ ...t, due: (e.currentTarget as HTMLInputElement).value })} /></label>
       <label>Details (optional)<textarea rows={3} value={t.body} onInput={(e) => setT({ ...t, body: (e.currentTarget as HTMLTextAreaElement).value })} /></label>
       {error && <p class="error">{error}</p>}
@@ -98,6 +112,8 @@ function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
     </div>
   );
 }
+
+const VIEW_KEY = 'story-forge.todo-view';
 
 /** Idea kinds that are notes on written pages rather than story proposals (the old Edit Queue's notes). */
 export const EDIT_KINDS = ['note', 'line', 'scene', 'structure'];
@@ -126,9 +142,32 @@ export function TodoList({ index, waiting, onDecide, onAdd, schema, book, onRewr
     && (!kind || (kind === 'book') === isBookTodo(index, n)));
   const groups = taskGroups(shown);
   const openCount = all.filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length;
+  const [view, setViewState] = useState<string>(() => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'map'; } catch { return 'map'; } });
+  const setView = (v: string) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* this visit only */ } };
+  const switcher = (
+    <div class="tabs view-switch" role="tablist" aria-label="How to show the to-dos">
+      {[{ key: 'map', label: 'Map' }, { key: 'list', label: 'List' }].map((t) => (
+        <button key={t.key} type="button" role="tab" aria-selected={view === t.key} onClick={() => setView(t.key)}>{t.label}</button>
+      ))}
+    </div>
+  );
+  if (view === 'map') {
+    return (
+      <section>
+        <h1>To-do</h1>
+        {switcher}
+        {onAdd && <div class="add-row"><AddTask onAdd={onAdd} /></div>}
+        <TodoMap index={index} waiting={waiting} onDecide={onAdd ? onDecide : undefined} />
+        {schema && book && drafts.length > 0 && (
+          <p class="hint">{drafts.length === 1 ? '1 team note' : drafts.length + ' team notes'} on the draft of {book.title} wait in the <button type="button" class="link inline" onClick={() => setView('list')}>List</button>.</p>
+        )}
+      </section>
+    );
+  }
   return (
     <section>
       <h1>To-do</h1>
+      {switcher}
       <p class="meta">
         {openCount === 1 ? '1 to-do is' : openCount + ' to-dos are'} open. Press Start when you begin one and Done when it is finished; the team reads the same list.
       </p>

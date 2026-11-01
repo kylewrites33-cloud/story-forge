@@ -59,7 +59,9 @@ src/ui/Changes.tsx       the changes on the page (four views), the Changes bar a
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene
-src/ui/TodoList.tsx      the To-do page: every to-do, and the team's notes on the draft of the active book (was the Edit Queue)
+src/ui/TodoList.tsx      the To-do page: Map or List; the List is every to-do by status, and the team's notes on the draft of the active book (was the Edit Queue)
+src/lib/todomap.ts       the To-do map: each to-do's place (context), need or want, lanes with counts, Up next, a published book's leftovers
+src/ui/TodoMap.tsx       the To-do map: tiles per place, Up next, one lane per place, a to-do's moves
 src/ui/EditFields.tsx    a card's words edited in place (board cards and scene cards)
 src/lib/team.ts          the AI team: agents, skills and who loads them, lessons, journals, history, numbers for the Team page
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history

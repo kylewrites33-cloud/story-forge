@@ -751,6 +751,31 @@ fine print and the Note in italics. Two screens with no story between them share
   imports it as a left Alignment Block; Kyle turns on Inset (gear icon) in Vellum to set it in like a box. The vault
   tool's `sf compile --docx` does the same.
 
+## The To-do map (2026-11-01)
+
+Kyle, 2026-11-01: "can you create a to-do visualizer app for me so i can see all the things i need or want to do in
+various contexts related to writing?" and "and publishing, etc". Built inside the To-do page rather than as a separate
+app like Crow, so it uses the same key, sync and offline copy (Claude's choice; Kyle did not choose).
+
+- **Map and List.** The To-do page opens on Map; List is the old page (by status, with the team's notes on the draft).
+  The choice is kept on the device.
+- **Six places** (`src/lib/todomap.ts`, the task schema's `context`): Writing, Publishing, Marketing, Sparrow app, AI
+  team, Setup and upkeep. A tile per place shows how many are open, how many are being done, late and wants, and a bar of
+  how many are done; pressing a tile shows that place alone. Below, one lane per place.
+- **Up next**: being done now, late, or due within a week, across every place.
+- **Need or want** (the task schema's `priority`, need by default). Wants show greyer with a dashed mark; Needs and wants,
+  Needs, Wants filter the map, and Everyone, Yours, The team's filter by owner. Filters are kept on the device.
+- **A to-do on the map**: the circle marks it done. Pressing the words opens its details with Start (or Not started), Make it a
+  want (or need), Drop, Belongs in (moves it to another place, written as `context`), and Open the page / the whole note.
+- **Writing** groups a book's to-dos by book, with "N story calls waiting on you" linking to Decide one at a time. A book
+  whose stage is done (published) folds its leftover to-dos away under "is out", where they no longer count, with Mark
+  all N done.
+- A studio to-do with no `context` is guessed from its title (validation fixes, keys and the Mac mini are Setup and
+  upkeep; KDP, Vellum and covers are Publishing; and so on) until Kyle moves it. A book's to-do is Writing. Add a to-do
+  asks where it belongs and whether it is a need or a want.
+- The vault's 67 open studio to-dos were given their place on 2026-11-01, Quest Declined 1 set to stage done (published
+  that day), and T-113 added for Useless Magic's new edition under Kyle Heath.
+
 ## Crow, the character and plot study app (2026-10-26; first called Character Study)
 
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
