@@ -2141,6 +2141,25 @@
         "owner": {
           "type": "string"
         },
+        "context": {
+          "enum": [
+            "writing",
+            "publishing",
+            "marketing",
+            "sparrow",
+            "team",
+            "admin"
+          ],
+          "description": "Which part of Kyle's work it belongs to, for the To-do map: writing (the books' pages and stories), publishing (KDP, Vellum, covers, editions), marketing (market research, blurbs, keywords, launch), sparrow (the app), team (the AI team and workflow), admin (setup, computers, keys, upkeep). A book's to-dos are writing when left out (Kyle, 2026-11-01)."
+        },
+        "priority": {
+          "enum": [
+            "need",
+            "want"
+          ],
+          "default": "need",
+          "description": "need: something that has to get done. want: something Kyle would like to do when there is time (Kyle, 2026-11-01)."
+        },
         "due": {
           "type": "date"
         },

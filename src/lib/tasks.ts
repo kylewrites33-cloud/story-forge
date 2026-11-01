@@ -63,10 +63,16 @@ export interface NewTask {
   owner: string;
   due: string;
   body: string;
+  /** The To-do map's lane (writing, publishing, marketing, sparrow, team, admin); left out when empty. */
+  context?: string;
+  /** need or want; only want is written, need being the default. */
+  priority?: string;
 }
 
 export function taskText(id: string, t: NewTask, now: Date): string {
   const data: Record<string, unknown> = { type: 'task', id, title: t.title, owner: t.owner || 'Kyle' };
+  if (t.context) data.context = t.context;
+  if (t.priority === 'want') data.priority = 'want';
   if (/^\d{4}-\d{2}-\d{2}$/.test(t.due)) data.due = t.due;
   data.status = 'open';
   data.created = ymd(now);
