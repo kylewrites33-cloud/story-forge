@@ -10,6 +10,7 @@ import {
 import { toNumber } from '../lib/links.ts';
 import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import { buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
+import { kindleFile, loadMatter, matterPath, saveMatterBody, splitNote, starterMatter } from '../lib/epub.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { chaptersDone, storyScenes } from '../lib/overview.ts';
 import { href } from './route.ts';
@@ -160,7 +161,12 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
 
 /** Hand a .docx made on this device to the browser's downloads. */
 export function downloadWord(bytes: Uint8Array<ArrayBuffer>, name: string) {
-  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  downloadFile(bytes, name, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+
+/** Hand a file made on this device to the browser's downloads. */
+export function downloadFile(bytes: Uint8Array<ArrayBuffer>, name: string, type: string) {
+  const blob = new Blob([bytes], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -204,6 +210,106 @@ export function ExportWord({ source, schema, index, book, card }: { source: Vaul
       <button type="button" onClick={run}><Icon name="download" size={18} />Export to Word</button>
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
       {backup && <p class={backup.error ? 'error' : 'hint'} role="status">{backup.text}</p>}
+      <KindleFile source={source} schema={schema} index={index} book={book} />
+    </div>
+  );
+}
+
+/** The Kindle file (Kyle, 2026-11-04, replacing Vellum for the ebook): an EPUB ready for KDP, made on this device and
+ * downloaded, with System screens boxed, the Book Matter note's pages and the cover. Said plainly what is missing. */
+function KindleFile({ source, schema, index, book }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry }) {
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    setSaid({ error: false, text: 'Making the Kindle file…' });
+    try {
+      const k = await kindleFile(source, schema, index, book);
+      downloadFile(k.bytes as Uint8Array<ArrayBuffer>, k.name, 'application/epub+zip');
+      setSaid({
+        error: false,
+        text: 'Made ' + k.name + ': ' + k.chapters + (k.chapters === 1 ? ' chapter, ' : ' chapters, ') + num(k.words) + ' words. Look for it in your downloads.' +
+          (k.missing.length ? ' Not in it yet: ' + k.missing.join(' and ') + '.' : '') +
+          (k.missing.indexOf('the cover') >= 0 ? ' KDP wants the cover inside the file too: add the full-size cover on Book details, then make the file again.' : '')
+      });
+    } catch (e) {
+      setSaid({ error: true, text: 'The Kindle file could not be made: ' + (e instanceof Error ? e.message : String(e)) });
+    }
+    setBusy(false);
+  };
+  return (
+    <>
+      <h2>Kindle file</h2>
+      <p class="hint">The ebook to upload to KDP, with System screens in boxes, the copyright page and back matter from the book matter page, and the cover.</p>
+      <button type="button" onClick={run} disabled={busy}><Icon name="download" size={18} />Make the Kindle file</button>
+      {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
+      <MatterEditor source={source} index={index} book={book} />
+    </>
+  );
+}
+
+/** Front and back matter (Kyle, 2026-11-04): the book's Book Matter note, edited here as plain words. A
+ * `## Front: Copyright` heading starts a page before chapter 1, `## Back: About the Author` one after the last chapter.
+ * Opens with the newest words from the vault and saves them as one commit with Kyle's key. */
+function MatterEditor({ source, index, book }: { source: VaultSource; index: VaultIndex; book: BookEntry }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [sha, setSha] = useState<string | null>(null);
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const show = async () => {
+    setBusy(true);
+    setSaid(null);
+    try {
+      const m = await loadMatter(source, index, book);
+      if (m) { setText(splitNote(m.text).body.replace(/^\n+/, '')); setSha(m.sha); }
+      else {
+        const data = index.notes[book.path] ? index.notes[book.path].data : {};
+        setText(splitNote(starterMatter(typeof data.author === 'string' ? data.author : '')).body);
+        setSha('');
+      }
+      setOpen(true);
+    } catch (e) {
+      setSaid({ error: true, text: 'The front and back matter could not be opened: ' + (e instanceof Error ? e.message : String(e)) });
+    }
+    setBusy(false);
+  };
+  const save = async () => {
+    if (sha == null) return;
+    setBusy(true);
+    try {
+      if (sha === '') {
+        if (!source.write) throw new Error('Saving needs your own vault, not the demo.');
+        const data = index.notes[book.path] ? index.notes[book.path].data : {};
+        const head = splitNote(starterMatter(typeof data.author === 'string' ? data.author : '')).head;
+        setSha(await source.write(matterPath(book), head + text.replace(/\s+$/, '') + '\n', '', 'book matter: start for ' + book.title));
+      } else {
+        setSha(await saveMatterBody(source, book, text, sha));
+      }
+      setSaid({ error: false, text: 'Saved. The next Kindle file has these pages.' });
+    } catch (e) {
+      setSaid({ error: true, text: 'Not saved: ' + (e instanceof Error ? e.message : String(e)) });
+    }
+    setBusy(false);
+  };
+  if (!open) {
+    return (
+      <>
+        <button type="button" class="link" onClick={show} disabled={busy}>Front and back matter</button>
+        {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
+      </>
+    );
+  }
+  return (
+    <div class="matter-editor">
+      <h3>Front and back matter</h3>
+      <p class="hint">Each page starts with a heading: "## Front: Copyright" comes before chapter 1, "## Back: About the Author" after the last chapter, in the order written here. A page with nothing under its heading is left out. Links: [the next book](https://...).</p>
+      <textarea value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} rows={16} spellcheck aria-label="Front and back matter" />
+      <p class="buttons">
+        <button type="button" class="primary" onClick={save} disabled={busy}>Save</button>
+        <button type="button" class="link" onClick={() => setOpen(false)} disabled={busy}>Close</button>
+      </p>
+      {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
     </div>
   );
 }

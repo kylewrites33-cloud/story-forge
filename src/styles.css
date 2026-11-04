@@ -2555,3 +2555,11 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .map-out > button { margin: 6px 0; }
 @media (max-width: 600px) { .map-more { padding-left: 4px; } }
 .map-filters { display: flex; flex-wrap: wrap; column-gap: 24px; }
+
+/* Front and back matter for the Kindle file (2026-11-04). */
+.details-export button.link, .export-card button.link { min-height: 44px; padding: 0; }
+.matter-editor { display: grid; gap: 8px; width: 100%; }
+.matter-editor h3 { margin: 8px 0 0; font-size: 1rem; }
+.matter-editor textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 1rem; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 16em; }
+.matter-editor .buttons { display: flex; gap: 12px; align-items: center; margin: 0; }
+.details-export h2:not(:first-child), .export-card h2:not(:first-child) { margin-top: 16px; }

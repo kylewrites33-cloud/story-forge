@@ -80,6 +80,8 @@ EXTRA_TYPES.push('note', 'session', 'recipe');
 EXTRA_TYPES.push('progression');
 // Chapter title options for the Edit room's Chapter titles page (2026-10-29).
 EXTRA_TYPES.push('chapter-titles');
+// Front and back matter for the Kindle file (2026-11-04).
+EXTRA_TYPES.push('book-matter');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {
