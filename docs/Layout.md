@@ -54,9 +54,11 @@ src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (C
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, keeping, story calls
 src/lib/bookdrafts.ts    a book's saved drafts (Drafts/Draft N/): finding them, saving the next as one commit, a scene's copy
+src/lib/rewrite.ts       the Writer's rewrite (Drafts/Rewrite/): a scene's copy, paragraphs lined up with Kyle's, bringing one over
 src/lib/titles.ts        Chapter Titles.md: the title options per chapter, Kyle's tick, his own title
 src/ui/ChapterTitles.tsx Edit > Chapter titles: tick a title, write your own, or None of these for more
 src/ui/Changes.tsx       the changes on the page (four views), the Changes bar and tab, the Draft button, Edit > Changes
+src/ui/Rewrite.tsx       the Rewrite tab beside the page: the Writer's paragraphs beside Kyle's, Bring over, Put it in, Take it out
 src/lib/beats.ts         a chapter's beats: the Chapter Beats note, laying the prose out under its beats and back
 src/ui/BeatsPage.tsx     BeatsView, the chapter by its beats inside the writing screen: closed rows that open to their prose
 src/ui/Matrix.tsx        who is in which scene

@@ -177,7 +177,7 @@ function markNew(was: string, now: string): string {
     .split('\n').map((line) => line.replace(/^([\uE000\uE001]+)(\s*> ?)/, '$2$1')).join('\n');
 }
 
-function Quote({ text, cls, was }: { text: string; cls: string; /** Draft 1's words, to show which words are new. */ was?: string }) {
+export function Quote({ text, cls, was }: { text: string; cls: string; /** Draft 1's words, to show which words are new. */ was?: string }) {
   if (!text) return <p class={'chg-quote empty ' + cls}>(cut)</p>;
   const html = was == null ? bookHtml(text) : bookHtml(markNew(was, text)).replace(/\uE000/g, '<span class="chg-new">').replace(/\uE001/g, '</span>');
   return <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: html }} />;
@@ -393,8 +393,10 @@ export function DraftMenu({ working, saved, viewing, onView, onSave, onExport, c
 }
 
 /** The Edit room's first page: the story calls waiting, and each chapter with changes from the team to keep or not. */
-export function ChangesOverview({ book, chapters, calls, firstScene }: {
+export function ChangesOverview({ book, chapters, calls, firstScene, rewrite }: {
   book: BookEntry; chapters: { chapter: number; open: number; path: string }[]; calls: number; firstScene: string | null;
+  /** How far the Writer's rewrite has come (2026-11-04). */
+  rewrite?: { done: number; total: number; first: string | null };
 }) {
   const waiting = chapters.filter((c) => c.open > 0);
   const total = waiting.reduce((t, c) => t + c.open, 0);
@@ -403,8 +405,13 @@ export function ChangesOverview({ book, chapters, calls, firstScene }: {
     <section class="changes-overview">
       <p class="crumb"><a href={href.board('overview', book.folder)}>{book.title}</a> · Changes</p>
       <h1>Changes</h1>
-      <p class="hint">Turning draft 1 into the final draft (workflow steps 35 to 42). The editor's story calls come first; then the Writer revises one chapter at a time, and its changes wait on your page for Keep or No, as track changes do in Word.</p>
+      <p class="hint">Turning draft 1 into the final draft (workflow steps 35 to 42). From draft 1 to draft 2, the Writer rewrites the whole book, one chapter at a time, and its rewrite sits beside your page for you to pull from, paragraph by paragraph. The editor's story calls come first. From draft 2 on, the team's changes wait on your page for Accept or Reject, as track changes do in Word.</p>
       <div class="changes-steps">
+        {rewrite && (
+          <a class="changes-step" href={rewrite.first ? href.write(rewrite.first) : firstScene ? href.write(firstScene) : href.board('overview', book.folder)}>
+            <Icon name="pen" size={22} /><span><b>The Writer's rewrite</b><span class="meta">{rewrite.done ? rewrite.done + ' of ' + rewrite.total + ' chapters rewritten, beside your page in the Rewrite tab' : 'None yet: ask for a rewrite in the project chat'}</span></span>
+          </a>
+        )}
         <a class="changes-step" href={href.board('story-calls', book.folder)}>
           <Icon name="cards" size={22} /><span><b>Story calls</b><span class="meta">{calls ? calls + ' waiting for your yes or no' : 'None waiting'}</span></span>
         </a>

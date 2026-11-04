@@ -43,6 +43,7 @@ import { CheckPanel } from './CheckPanel.tsx';
 import { addRules, addSkip, applyChange, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
+import { RewritePanel, type Put } from './Rewrite.tsx';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
@@ -74,19 +75,23 @@ function loadSide(key: string, fallback: boolean): boolean {
 function saveSide(key: string, open: boolean) {
   try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
 }
-type Tab = 'changes' | 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
-const TABS: [Tab, string][] = [['changes', 'Changes'], ['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
+type Tab = 'rewrite' | 'changes' | 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
+const TABS: [Tab, string][] = [['rewrite', 'Rewrite'], ['changes', 'Changes'], ['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
   ['copies', 'Copies'], ['target', 'Target'], ['page', 'Page look'], ['tools', 'Done, split, join'], ['team', 'Ask the team'], ['check', 'Check'], ['options', 'Options']];
 // One row of four tabs and More (Kyle, 2026-10-23: "this design change is good as long as we don't lose any
 // functionality", with To-dos in the row instead of Scrap). Every other tab is one press away in More, by heading.
 const MAIN_TABS: Tab[] = ['chat', 'plan', 'beats', 'todos'];
 // While a chapter has the team's changes (Workflow 1.2, step 41), Changes takes the first place and Beats moves into More.
 const EDIT_TABS: Tab[] = ['changes', 'chat', 'plan', 'todos'];
+// While the Writer's rewrite of the chapter is there (Kyle, 2026-11-04: "in the chamber on the right side at all times"),
+// Rewrite takes the first place; with changes too, To-dos moves into More.
+const REWRITE_TABS: Tab[] = ['rewrite', 'chat', 'plan', 'todos'];
+const REWRITE_EDIT_TABS: Tab[] = ['rewrite', 'changes', 'chat', 'plan'];
 // What the More button says while a part picked from it is open: short, so the row fits beside the page on the iPad.
 const SHORT: Partial<Record<Tab, string>> = { tools: 'Split, join', team: 'Ask', options: 'Options', flow: 'Workflow', notes: 'Braindump', check: 'Check' };
 const MORE_GROUPS: [string, [Tab, string, string][]][] = [
   ['This scene', [['card', 'cards', 'Card and names'], ['marks', 'marker', 'Marks'], ['target', 'gauge', 'Word target'], ['copies', 'history', 'Copies'], ['tools', 'split', 'Done, split, join']]],
-  ['This chapter', [['changes', 'swap', 'Changes from the team'], ['beats', 'beats', 'Beats'], ['scrap', 'note', 'Scrap'], ['flow', 'outline', 'From the workflow']]],
+  ['This chapter', [['rewrite', 'swap', 'The Writer\'s rewrite'], ['changes', 'swap', 'Changes from the team'], ['todos', 'check', 'To-dos'], ['beats', 'beats', 'Beats'], ['scrap', 'note', 'Scrap'], ['flow', 'outline', 'From the workflow']]],
   ['The team', [['team', 'spark', 'Ask the team for a job'], ['options', 'swap', 'Options to pick from']]],
   ['Tools', [['check', 'scan', 'Check for AI phrases'], ['page', 'type', 'Page look'], ['notes', 'idea', 'Braindump (whole book)']]],
 ];
@@ -100,7 +105,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -169,6 +174,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; like?: (pairs: [string, string][]) => number };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
   drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
+  /** The Writer's rewrite of this scene (`Drafts/Rewrite/`), shown beside the page (2026-11-04). */
+  rewrite?: FileEntry | null;
 }) {
   useLockedPage();
   const beatsMode = Boolean(beats);
@@ -904,6 +911,27 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     reload();
   };
   const putSib = (api: SectionApi, t: string) => { api.put(t); setSibTick((n) => n + 1); };
+  // ---- The Writer's rewrite beside the page (Kyle, 2026-11-04) ----
+  const hasRewrite = Boolean(rewrite) && !beatsMode && shownDraft == null;
+  const [caretAt, setCaretAt] = useState<number | null>(null);
+  // Bring over: the rewrite's paragraph goes in place of Kyle's as one step to undo, and the cursor lands after it.
+  const putRewrite = (p: Put) => {
+    wordsNotTyped(bodyWords(p.text) - bodyWords(pageText()));
+    const c = readOnly.current ? null : commands.current;
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
+    else { changed(p.text); reload(); }
+    setCaretAt(p.toEnd);
+  };
+  // Without the writing box (the page shows marks), the words are picked once it is back.
+  const goWords = (a: number, b: number) => { setChView('original'); setTimeout(() => { const c = commands.current; if (c) c.select(a, b); }, 60); };
+  // The first time a scene with a rewrite opens on this device, the column opens on it (Kyle: "at all times").
+  useEffect(() => {
+    if (!hasRewrite || !bookFolder) return;
+    const k = 'story-forge.rewrite-opened.' + bookFolder;
+    let seen = false;
+    try { seen = sessionStorage.getItem(k) === '1'; sessionStorage.setItem(k, '1'); } catch { /* opens once per load */ }
+    if (!seen && tab !== 'rewrite') openTab('rewrite');
+  }, [hasRewrite, bookFolder]);
   const nextOpen = (after: string | null) => {
     const list = chList;
     const i = list.findIndex((p) => p.change.id === after);
@@ -1161,7 +1189,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && tab === 'changes' && chNote ? ' edit-wide' : '')} style={lookStyle(look)}>
+     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && ((tab === 'changes' && chNote) || (tab === 'rewrite' && hasRewrite)) ? ' edit-wide' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
@@ -1498,7 +1526,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               : <p class={'writer-text ' + (oldText && oldText.error ? 'error' : 'hint')}>{!oldText || oldText.key !== oldKey || oldText.text === '' ? 'Opening Draft ' + shownDraft + '…' : oldText.error || 'This scene was not in Draft ' + shownDraft + '.'}</p>
           ) : showMarks
             ? <ChangesPage text={text} placed={chPlace.placed} view={chView} current={chCur} onPick={pickChange} options={styleOpts} label={'Text of ' + title + ' with the team\'s changes'} />
-            : <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); }} label={'Text of ' + title} commands={commands}
+            : <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />}
           </div>
           {below.map((n) => (
@@ -1524,7 +1552,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
                 : k === 'changes' && chOpenHere > 0 ? <span class="count-badge">{chOpenHere}</span>
                 : k === 'chat' && convo && convo.pending ? <span class="job-dot" aria-hidden="true" /> : null);
-              const mainTabs = chNote ? EDIT_TABS : MAIN_TABS;
+              const mainTabs = hasRewrite ? (chNote ? REWRITE_EDIT_TABS : REWRITE_TABS) : chNote ? EDIT_TABS : MAIN_TABS;
               const inMore = mainTabs.indexOf(tab) < 0;
               const moreName = inMore ? SHORT[tab] || (TABS.find(([x]) => x === tab) || [tab, 'More'])[1] : 'More';
               const marks = markList(text).length;
@@ -1550,7 +1578,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       {MORE_GROUPS.map(([g, items]) => (
                         <div key={g} role="group" aria-label={g}>
                           <span class="panel-key">{g}</span>
-                          {items.filter(([k]) => (k !== 'beats' || chNote) && (k !== 'changes' || !chNote)).map(([k, icon, name]) => (
+                          {items.filter(([k]) => (k !== 'beats' || chNote) && (k !== 'changes' || !chNote) && (k !== 'rewrite' || !hasRewrite) && (k !== 'todos' || mainTabs.indexOf('todos') < 0)).map(([k, icon, name]) => (
                             <button key={k} type="button" role="menuitem" aria-current={tab === k ? 'true' : undefined} onClick={() => setTab(k)}>
                               <Icon name={icon} size={20} />{k === 'scrap' && chapterNum != null ? 'Scrap for chapter ' + chapterNum : name}
                               {k === 'marks' && marks > 0 && <span class="meta">{marks}</span>}
@@ -1565,6 +1593,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               );
             })()}
             {!moreList && <>
+            {tab === 'rewrite' && (
+              <RewritePanel source={source} file={hasRewrite ? rewrite : null} text={beatsMode ? '' : text} caret={caretAt} chapter={chapterNum}
+                onPut={putRewrite} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); else goWords(a, b); closeOver(); }} />
+            )}
             {tab === 'changes' && (
               chNote
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} intro={chParsed.intro} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
