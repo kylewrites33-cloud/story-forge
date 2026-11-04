@@ -38,6 +38,18 @@ add a dated line here when you add or change one.
   `series_book_YYYY-MM-DD.docx`, made on the device and downloaded (`src/lib/docx.ts`, the layout of sf's Docx.build;
   italics and bold read with styled.ts, so they come back unchanged through `sf import`). Each export also saves a copy in the vault's
   `Book Backups/<series>/<book>/` (same day replaces that day's file); New series and New book make their backup folders.
+  The Kindle file (Kyle, 2026-11-04: "Start on step 1", the first step of the vault's `Docs/Sparrow/17 Replacing Vellum.md`)
+  sits under Export to Word, on Book details and Publish's first page: Make the Kindle file downloads the book as an EPUB 3
+  named like the Word file with `.epub`, made on the device, ready to upload to KDP with no Vellum (`src/lib/epub.ts`; the vault
+  tool's `sf compile --epub` makes the same file). System screens (format C1) are boxed, left-aligned blocks: bold small-caps
+  title, one line per fact, a gap where the block has a lone `>`, no `>` marks. Chapters start a new page with a small
+  "Chapter N" over the title. The cover is the newest full-size picture in the book's `Cover/` folder, marked as the cover
+  image with no cover page (KDP help G6GTK3T3NUHKLEFX). Front and back matter come from the book's `Book Matter.md` (type
+  `book-matter`): `## Front: <page>` before chapter 1, `## Back: <page>` after the last chapter, in the order written; a
+  page with no words is left out; Copyright, Dedication and Epigraph show without a heading and stay out of the contents.
+  Front and back matter, under the button, opens that note's words in a box to edit and Save (it starts one with the
+  copyright line filled in from the book's author and the year). The message after making the file names what is not in it yet
+  (the cover, or the copyright page). The file passes EPUBCheck 5.1 with no errors (Quest Declined 1, 2026-11-04).
   Since 2026-10-23 the same button is also a card, "Export the whole book", at the top of Publish's first page (the
   Market board), because Kyle could not find Book details behind the top bar's page menu.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and

@@ -2625,6 +2625,33 @@
       },
       "body": "One `## Chapter N` heading per chapter, in order. Under it `Was: <the chapter's name before the first round>`, a blank line, then one `- [ ] <title>` line per option (the app ticks the one Kyle picks as `- [x]`, and only one per chapter), and last `- [ ] None of these`. A new round adds four option lines above None of these, only in chapters where None of these is ticked, and unticks it. Options are never removed. Picking a title in the app also renames the chapter (its scenes' chapter_title); unticking puts the Was name back."
     },
+    "book-matter": {
+      "description": "A book's front and back matter for the Kindle file (Kyle, 2026-11-04, replacing Vellum): the copyright page, dedication, also-by list, the next-book line, newsletter offer, about the author and the like. One note per book. The title page and the contents are made from the book itself and need no section.",
+      "scope": "book",
+      "folder": "",
+      "filename": "Book Matter",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "book-matter"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Book matter\"."
+        },
+        "source": {
+          "type": "string",
+          "description": "Who wrote the first version (Kyle, or an agent)."
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "One `## Front: <page name>` or `## Back: <page name>` heading per page, in reading order: front pages come before chapter 1, back pages after the last chapter. Under it the page's words as plain prose; web links as [words](https://...). Pages named Copyright, Dedication or Epigraph show without a heading. Text above the first heading is a note to the team and is left out of the book."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

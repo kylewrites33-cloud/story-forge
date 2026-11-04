@@ -100,14 +100,14 @@ function crc32(buf: Uint8Array): number {
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
 
-/** A store-only zip, like sf's Zip.store: enough for a .docx. */
-export function zip(files: { name: string; data: string }[], when: Date = new Date()): Uint8Array {
+/** A store-only zip, like sf's Zip.store: enough for a .docx or an .epub (a picture goes in as bytes). */
+export function zip(files: { name: string; data: string | Uint8Array }[], when: Date = new Date()): Uint8Array {
   const time = (when.getHours() << 11) | (when.getMinutes() << 5) | Math.floor(when.getSeconds() / 2);
   const date = ((when.getFullYear() - 1980) << 9) | ((when.getMonth() + 1) << 5) | when.getDate();
   const parts: Uint8Array[] = [], central: Uint8Array[] = [];
   let offset = 0;
   files.forEach((f) => {
-    const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+    const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 10, true); lh.setUint16(10, time, true); lh.setUint16(12, date, true);
     lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true);
