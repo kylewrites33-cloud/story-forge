@@ -30,6 +30,7 @@ import { keepWriting, Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
 import { ChangesOverview } from './Changes.tsx';
+import { rewriteFor, rewriteProgress } from '../lib/rewrite.ts';
 import { decideQueue } from '../lib/overview.ts';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
@@ -666,6 +667,7 @@ export function App() {
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
           changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
+          rewrite={book && book.rewrite ? rewriteFor(book.rewrite, note) : null}
           drafts={book ? {
             saved: book.drafts || [],
             onSave: async () => {
@@ -777,7 +779,8 @@ export function App() {
       else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
-        calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null} />;
+        calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}
+        rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean))} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
         const resume = keepWriting(view, book, source.key);

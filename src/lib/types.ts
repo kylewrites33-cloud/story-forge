@@ -137,6 +137,8 @@ export interface BookEntry {
   archive?: FileEntry[];
   /** The book's saved drafts (Drafts/Draft N/), oldest first. Missing in copies saved before the Edit room. */
   drafts?: SavedDraft[];
+  /** The Writer's rewrite copies (Drafts/Rewrite/), one per rewritten scene (2026-11-04). */
+  rewrite?: FileEntry[];
   /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
   cover?: FileEntry | null;
 }

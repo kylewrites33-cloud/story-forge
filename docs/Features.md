@@ -725,6 +725,36 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
   the text when the page is wide enough, or In the text.
 
+## The Writer's rewrite beside the page (2026-11-04)
+
+Kyle, going through the developmental edit of Quest Declined 2: "this isn't exactly what i need for my final pass. i
+appreciate the card system and it will be really helpful. but i need a full rewrite from the fable writer ... i need a
+way to compare side-by-side, so i can easily bring in changes to each paragraph where necessary. there are simply too
+many things i want subtly tweaked to have to go through and mark them all in curly brackets. i just need a whole
+rewrite of the book in the chamber on the right side at all times to pull from (one thats obviously written
+thoughtfully, just like an edit done by a professional dev, line, and copy editor.)" This is how draft 1 becomes
+draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("the draft 2 to draft 3 process and draft
+3 to 4 is already great").
+
+- **Where the rewrite lives.** The Writer rewrites a chapter as a copy of each of its scenes in the book's
+  `Drafts/Rewrite/` folder, the same file name as the scene, with a `Rewrite.md` note beside the folder. The scene
+  files are never touched; the index and `sf` skip `Drafts/`, so the copies never clash with the real scenes. The
+  Writer works in Claude (the vault skill `rewrite-book`), one chapter per call, on the model Kyle asked for.
+- **The Rewrite tab.** While the open scene has a rewrite, Rewrite is the first tab in the side column (then Chat,
+  Plan, To-dos; with the team's changes too, Rewrite, Changes, Chat, Plan, and To-dos moves into More). The column
+  takes a third of a wide screen, as Changes does, and opens on the Rewrite tab the first time a scene with a rewrite
+  opens on the device. It shows the rewrite paragraph by paragraph, each lined up with Kyle's paragraph by how many
+  words they share (`align`); a paragraph the Writer added or left out gets a row of its own. New words are darker,
+  Kyle's own greyer, as on a change card. A paragraph that reads the same as his is quiet, with "Hide paragraphs that
+  match yours" to fold them. The row his cursor is in is marked and the column scrolls to it as he moves through the
+  page; tapping a paragraph in the column picks his paragraph on the page.
+- **Bring over** puts the rewrite's paragraph in place of Kyle's, as one step to undo, and leaves the cursor after it;
+  **Put it in** adds a paragraph the Writer added, after the paragraph before it; **Take it out** removes a paragraph
+  the Writer left out. Every one is Kyle's own save, like typing: the rewrite file never changes from the app, so he
+  can go back to it at any time. On the iPad in portrait the column is the usual sheet over the page.
+- **Edit > Changes** opens with "The Writer's rewrite: N of M chapters rewritten", linking to the first chapter with
+  one, before the story calls and the changes.
+
 ## Chapter titles (2026-10-29)
 
 Kyle: "it would be helpful to have an actual interface in the app where I can select the chapter titles I like ... tap a

@@ -2563,3 +2563,20 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .matter-editor textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 1rem; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 16em; }
 .matter-editor .buttons { display: flex; gap: 12px; align-items: center; margin: 0; }
 .details-export h2:not(:first-child), .export-card h2:not(:first-child) { margin-top: 16px; }
+
+/* The Writer's rewrite beside the page (2026-11-04): one row per paragraph, lined up with Kyle's; Bring over puts
+   one in place of his. The row his cursor is in is marked; a paragraph that reads the same as his is quiet. */
+.rewrite-head { margin: 0; }
+.rewrite-same-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 0.95em; color: var(--muted); }
+.rewrite-rows { display: grid; gap: 10px; }
+.rewrite-row { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.rewrite-row.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.rewrite-row.same { opacity: 0.6; padding: 6px 12px; }
+.rewrite-row.same.folded { min-height: 0; padding: 0; height: 6px; border-style: dashed; background: none; }
+.rewrite-row.same .chg-quote { border-left-color: transparent; }
+.rewrite-row.added { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.rewrite-row.cut .chg-quote.was-soft { color: var(--muted); border-left-color: var(--danger); }
+.rewrite-words { cursor: pointer; border-radius: 8px; }
+.rewrite-words:hover, .rewrite-words:focus-visible { background: var(--hover); outline: none; }
+.rewrite-row .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.rewrite-row .buttons button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
