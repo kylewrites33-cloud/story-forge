@@ -14,7 +14,7 @@ test('the demo build has four premises and none picked', () => {
   assert.equal(b.picked, '');
   assert.equal(b.lane, 'Comedy LitRPG + smart, competent OP hero');
   assert.equal(b.premises.length, 4);
-  assert.ok(b.premises.every((p) => p.lines.some(([k]) => k === 'Our turn')));
+  assert.ok(b.premises.every((p) => p.lines.some(([k]) => k === 'Hook')));
 });
 
 test('picking writes only the picked line, and picking again clears it', () => {
