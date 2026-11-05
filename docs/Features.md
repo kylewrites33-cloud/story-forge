@@ -839,6 +839,11 @@ app like Crow, so it uses the same key, sync and offline copy (Claude's choice; 
   premise with Kind, Hook, Readers expect, Our turn and The engine lines. Each premise is a card with a box to tick.
   Ticking one writes its title to the note's `picked` line (a commit with Kyle's key; only that line changes) and
   unticks the others; ticking it again clears it. The team's next step reads `picked`.
+  The build's `lane` (Kyle, 2026-11-05: "let's cement down 4 as our target") shows above the list.
+- **Saved premises** (Kyle, 2026-11-05: "create some kind of place where you can store these permanently so that we can
+  always go back to them"). In the Menu. Shows the vault's `Studies/Builds/Premise Bank.md` (type `premise-bank`): every
+  premise Kyle wanted kept, with its lane and when it was saved, whatever a build picks later. The team adds to it when
+  Kyle asks; the app only reads it.
 
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
 these stories scene by scene and build out the characters", with "various views that we can cycle through", and the

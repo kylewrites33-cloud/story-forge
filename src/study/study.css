@@ -345,3 +345,6 @@ a.cs-card:hover { box-shadow: var(--shadow-lift); }
 .cs-premise .cs-reading { margin: 4px 0 0 42px; }
 @media (max-width: 600px) { .cs-premise .cs-reading { margin-left: 0; } }
 .cs-lane { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 4px 0 8px; font-size: 1.1rem; }
+.cs-premise-saved { cursor: default; }
+.cs-premise .cs-saved-meta { margin: 0 0 4px; }
+.cs-premise-saved ~ .cs-reading { margin-left: 0; }

@@ -30,3 +30,11 @@ test('picking writes only the picked line, and picking again clears it', () => {
 test('a build is not a study', () => {
   assert.equal(studyFolder('Studies/Builds/LitRPG/Premises.md'), '');
 });
+
+test('the Premise Bank lists every saved premise with its lane', async () => {
+  const { parseBank, BANK_PATH } = await import('../src/lib/build.ts');
+  const text = fs.readFileSync(path.join(import.meta.dirname, '..', 'demo-vault', 'Studies', 'Builds', 'Premise Bank.md'), 'utf8');
+  const bank = parseBank(new Map([[BANK_PATH, text]]));
+  assert.equal(bank.length, 4);
+  assert.ok(bank.every((p) => p.lines.some(([k]) => k === 'Lane')));
+});

@@ -41,3 +41,14 @@ export function setPicked(text: string, title: string): string {
   else lines.splice(end, 0, 'picked: ' + value);
   return lines.join('\n');
 }
+
+/** The Premise Bank (Kyle, 2026-11-05: "create some kind of place where you can store these permanently so that we can
+ *  always go back to them"): Studies/Builds/Premise Bank.md, type premise-bank, one ## section per premise. */
+export const BANK_PATH = BUILD_FOLDER + 'Premise Bank.md';
+export function parseBank(texts: Map<string, string>): Premise[] {
+  const text = texts.get(BANK_PATH);
+  if (!text) return [];
+  const p = Frontmatter.parse(text);
+  if (p.error || str(((p.data || {}) as Record<string, unknown>).type) !== 'premise-bank') return [];
+  return sections(p.body, 2).parts.map((s) => ({ title: s.heading, lines: fieldLines(s.text) }));
+}

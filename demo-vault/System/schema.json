@@ -3110,6 +3110,28 @@
         }
       },
       "body": "A lead line, then one ## section per premise (its title) with - Kind, - Hook, - Readers expect, - Our turn and - The engine lines."
+    },
+    "premise-bank": {
+      "description": "Premises Kyle wants kept for good, whatever the current build picks; Crow shows them on its Saved premises page. One note, Studies/Builds/Premise Bank.md (Kyle, 2026-11-05: \"create some kind of place where you can store these permanently so that we can always go back to them\").",
+      "scope": "vault",
+      "folder": "Studies/Builds",
+      "filename": "Premise Bank",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "premise-bank"
+        },
+        "title": {
+          "type": "string"
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "A lead line, then one ## section per premise (its title) with - Saved (date and why), - Lane, - Kind, - Hook, - Readers expect, - Our turn and - The engine lines. Add new premises at the end; never remove one without Kyle's word."
     }
   },
   "boards": {

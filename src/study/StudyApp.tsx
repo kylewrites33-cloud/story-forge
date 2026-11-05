@@ -14,7 +14,7 @@ import {
   ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
   type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
-import { parseBuilds, setPicked, type Build } from '../lib/build.ts';
+import { parseBank, parseBuilds, setPicked, type Build, type Premise } from '../lib/build.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
 
@@ -69,12 +69,13 @@ type PlotViewName = 'board' | 'drivers' | 'lenses';
 /** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
 type SceneTab = 'read' | 'beats' | 'lenses';
 
-interface Route { page: 'premises' | 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
+interface Route { page: 'premises' | 'saved' | 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
   if (!parts.length) return { page: 'premises' };
   if (parts[0] === 'studies') return { page: 'home' };
+  if (parts[0] === 'saved') return { page: 'saved' };
   if (parts[0] === 'lenses') return { page: 'lenses' };
   if (parts[0] === 'settings') return { page: 'settings' };
   if (parts[0] !== 's' || !parts[1]) return { page: 'home' };
@@ -133,6 +134,7 @@ export function StudyApp() {
   }, []);
 
   const lib = useMemo(() => (cached ? libraryFrom(cached) : null), [cached]);
+  const bank = useMemo(() => (cached ? parseBank(new Map(Object.entries(cached.texts).map(([p, [, t]]) => [p, t]))) : []), [cached]);
   const builds = useMemo(() => (cached ? parseBuilds(new Map(Object.entries(cached.texts).map(([p, [, t]]) => [p, t]))) : []), [cached]);
   const [menu, setMenu] = useState(false);
   useEffect(() => { setMenu(false); }, [route]);
@@ -146,6 +148,7 @@ export function StudyApp() {
   let body: ComponentChildren;
   if (route.page === 'settings') body = <SettingsPage settings={settings} onSave={(s) => { setSettings(saveSettings(s)); location.hash = '#/'; }} />;
   else if (!lib) body = state === 'error' ? <p class="cs-note">{error}</p> : <p class="cs-note">Reading the studies…</p>;
+  else if (route.page === 'saved') body = <SavedPage bank={bank} />;
   else if (route.page === 'premises') body = <PremisesPage builds={builds} source={source} afterSave={sync} />;
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
@@ -319,6 +322,7 @@ function Menu({ lib, onRefresh, onClose }: { lib: StudyLibrary | null; onRefresh
       <div class="cs-menu-shade" onClick={onClose} />
       <nav class="cs-menu" id="cs-menu" aria-label="Menu">
         <a class="cs-menu-main" href="#/">Premises</a>
+        <a class="cs-menu-main" href="#/saved">Saved premises</a>
         <p class="cs-menu-label">Everything we built so far</p>
         <a href="#/studies">Studies</a>
         {lib && lib.studies.map((s) => (
@@ -390,7 +394,6 @@ function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: 
               {b.premises.map((pr) => {
                 const on = picked === pr.title;
                 const kind = pr.lines.find(([k]) => k === 'Kind');
-                const rest = pr.lines.filter(([k]) => k !== 'Kind').sort((x, y) => rank(x[0]) - rank(y[0]));
                 return (
                   <li key={pr.title} class={'cs-premise' + (on ? ' on' : '')}>
                     <label class="cs-premise-head">
@@ -401,7 +404,7 @@ function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: 
                       </span>
                       {on && <span class="cs-premise-badge">Picked</span>}
                     </label>
-                    <dl class="cs-reading">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>
+                    <PremiseLines p={pr} />
                   </li>
                 );
               })}
@@ -409,6 +412,40 @@ function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: 
           </div>
         );
       })}
+    </section>
+  );
+}
+
+/** A premise's lines other than Kind, Hook first and The engine last. */
+function PremiseLines({ p, skip = [] }: { p: Premise; skip?: string[] }) {
+  const rest = p.lines.filter(([k]) => k !== 'Kind' && !skip.includes(k)).sort((x, y) => rank(x[0]) - rank(y[0]));
+  return <dl class="cs-reading">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>;
+}
+
+/** Saved premises (Kyle, 2026-11-05): every premise in the Premise Bank, kept for good, newest last. */
+function SavedPage({ bank }: { bank: Premise[] }) {
+  return (
+    <section class="cs-premises">
+      <h1>Saved premises</h1>
+      <p class="cs-quiet">Premises you liked, kept for good. To save one, say so in the Crow chat.</p>
+      {!bank.length && <p class="cs-note">None saved yet.</p>}
+      <ol class="cs-premise-list">
+        {bank.map((pr) => {
+          const get = (k: string) => (pr.lines.find(([x]) => x === k) || ['', ''])[1];
+          return (
+            <li key={pr.title} class="cs-premise">
+              <div class="cs-premise-head cs-premise-saved">
+                <span>
+                  <strong>{pr.title}</strong>
+                  {get('Kind') && <span class="cs-quiet">{get('Kind')}</span>}
+                </span>
+              </div>
+              <p class="cs-quiet cs-saved-meta">{[get('Lane'), get('Saved')].filter(Boolean).join(' · ')}</p>
+              <PremiseLines p={pr} skip={['Lane', 'Saved']} />
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
