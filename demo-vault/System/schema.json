@@ -3074,6 +3074,38 @@
         }
       },
       "body": "A lead paragraph with the short answer, then ## sections in the order Crow shows them: The short answer; What matters about each character (one ### per character with - Gift, - Cost, - Pride, - Pattern, - Decoration lines); What the world does for the plot; Where the scenes come from; Why they work; How each scene is built; To build one ourselves; Open questions."
+    },
+    "build-premises": {
+      "description": "The premises for a story Kyle builds step by step in Crow, one ## section per premise; Kyle ticks one in Crow and the app writes its title to picked. Lives at Studies/Builds/<Build>/Premises.md (Kyle, 2026-11-05).",
+      "scope": "vault",
+      "folder": "Studies/Builds",
+      "recursive": true,
+      "filename": "Premises",
+      "required": [
+        "type",
+        "build",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "build-premises"
+        },
+        "build": {
+          "type": "string",
+          "description": "The build's folder name"
+        },
+        "title": {
+          "type": "string"
+        },
+        "picked": {
+          "type": "string",
+          "description": "The title of the premise Kyle ticked in Crow, or empty"
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "A lead line, then one ## section per premise (its title) with - Kind, - Hook, - Readers expect, - Our turn and - The engine lines."
     }
   },
   "boards": {

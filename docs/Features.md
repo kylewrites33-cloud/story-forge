@@ -827,6 +827,19 @@ app like Crow, so it uses the same key, sync and offline copy (Claude's choice; 
 
 ## Crow, the character and plot study app (2026-10-26; first called Character Study)
 
+- **A fresh front page and the Menu** (Kyle, 2026-11-05: "take everything we've built so far and just put it inside a
+  button menu in the app, so that the main area in the app is fresh when we go into it ... we're going to experiment
+  with a brand new interface now"). Crow opens on **Premises**. Everything below this list, unchanged, is behind the
+  **Menu** button at the top right: Studies (the old front page, now `#/studies`), each study with its Character, Plot,
+  Engine, Kishōtenketsu and Trait table, the testing zone (SC-001 every beat), Lenses, Refresh and Settings. Tapping
+  outside or Escape closes it.
+- **Premises** (Kyle, 2026-11-05: "a list that says "Premises" in the app that has the four, and then there will be a
+  checkbox that I can put on one of them to say that's the premise I want us to work with. I want us to slowly build out
+  a story step by step"). The vault's `Studies/Builds/<Build>/Premises.md` (type `build-premises`): one `##` section per
+  premise with Kind, Hook, Readers expect, Our turn and The engine lines. Each premise is a card with a box to tick.
+  Ticking one writes its title to the note's `picked` line (a commit with Kyle's key; only that line changes) and
+  unticks the others; ticking it again clears it. The team's next step reads `picked`.
+
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
 these stories scene by scene and build out the characters", with "various views that we can cycle through", and the
 plot studied beside it: "tabs so that I am focusing on just character or just plot". Its own page at

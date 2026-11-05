@@ -14,6 +14,7 @@ import {
   ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
   type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
+import { parseBuilds, setPicked, type Build } from '../lib/build.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
 
@@ -57,7 +58,7 @@ async function faceUrl(source: VaultSource, f: FileEntry): Promise<string | null
   return url;
 }
 
-// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot[/drivers|/lenses]|/engine|/kishotenketsu],
+// ------------------------------------------------------------------ routes: #/ (the premises), #/studies, #/lenses, #/s/<study>[/plot[/drivers|/lenses]|/engine|/kishotenketsu],
 // #/s/<study>/c/<name>, #/s/<study>/scene/<id>[/beats|/lenses]
 
 /** A study's tabs: Character, Plot, and Engine (Kyle, 2026-10-27: the distilled method, what actually matters). */
@@ -68,10 +69,12 @@ type PlotViewName = 'board' | 'drivers' | 'lenses';
 /** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
 type SceneTab = 'read' | 'beats' | 'lenses';
 
-interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
+interface Route { page: 'premises' | 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
+  if (!parts.length) return { page: 'premises' };
+  if (parts[0] === 'studies') return { page: 'home' };
   if (parts[0] === 'lenses') return { page: 'lenses' };
   if (parts[0] === 'settings') return { page: 'settings' };
   if (parts[0] !== 's' || !parts[1]) return { page: 'home' };
@@ -130,6 +133,9 @@ export function StudyApp() {
   }, []);
 
   const lib = useMemo(() => (cached ? libraryFrom(cached) : null), [cached]);
+  const builds = useMemo(() => (cached ? parseBuilds(new Map(Object.entries(cached.texts).map(([p, [, t]]) => [p, t]))) : []), [cached]);
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [route]);
   const setLens = (side: Side, name: string) => {
     const next = { ...lens, [side]: name };
     setLensState(next);
@@ -140,6 +146,7 @@ export function StudyApp() {
   let body: ComponentChildren;
   if (route.page === 'settings') body = <SettingsPage settings={settings} onSave={(s) => { setSettings(saveSettings(s)); location.hash = '#/'; }} />;
   else if (!lib) body = state === 'error' ? <p class="cs-note">{error}</p> : <p class="cs-note">Reading the studies…</p>;
+  else if (route.page === 'premises') body = <PremisesPage builds={builds} source={source} afterSave={sync} />;
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
@@ -151,12 +158,11 @@ export function StudyApp() {
     <div class="cs">
       <header class="cs-top">
         <a class="cs-brand" href="#/"><img src="./icons/icon.svg" alt="" width="28" height="28" />Crow</a>
-        <nav class="cs-topnav">
-          <a href="#/lenses">Lenses</a>
-          <button type="button" class="cs-sync" onClick={sync}>Refresh</button>
-          <a href="#/settings">Settings</a>
-        </nav>
+        <button type="button" class="cs-menu-btn" aria-expanded={menu} aria-controls="cs-menu" onClick={() => setMenu(!menu)}>
+          <span class="cs-burger" aria-hidden="true"><i /><i /><i /></span>Menu
+        </button>
       </header>
+      {menu && <Menu lib={lib} onRefresh={() => { setMenu(false); sync(); }} onClose={() => setMenu(false)} />}
       {demo && route.page !== 'settings' && <p class="cs-banner">This is a made-up sample. To see your own studies, <a href="#/settings">paste your key in Settings</a>.</p>}
       {error && lib && <p class="cs-banner">{error}</p>}
       <main class="cs-main">{body}</main>
@@ -296,6 +302,116 @@ function Tallies({ study, name }: { study: Study; name: string }) {
   );
 }
 
+// ------------------------------------------------------------------ the menu and the premises
+
+/** Everything built before 2026-11-05, behind one button (Kyle, 2026-11-05: "take everything we've built so far and just
+ *  put it inside a button menu in the app, so that the main area in the app is fresh"). */
+function Menu({ lib, onRefresh, onClose }: { lib: StudyLibrary | null; onRefresh: () => void; onClose: () => void }) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, []);
+  const lab = lib ? lib.studies.find((s) => /konosuba/i.test(s.folder)) || lib.studies.find((s) => s.scenes.length) : undefined;
+  const first = lab && lab.scenes[0];
+  return (
+    <Fragment>
+      <div class="cs-menu-shade" onClick={onClose} />
+      <nav class="cs-menu" id="cs-menu" aria-label="Menu">
+        <a class="cs-menu-main" href="#/">Premises</a>
+        <p class="cs-menu-label">Everything we built so far</p>
+        <a href="#/studies">Studies</a>
+        {lib && lib.studies.map((s) => (
+          <div class="cs-menu-study" key={s.folder}>
+            <a href={studyHref(s)}><strong>{s.title}</strong></a>
+            <div class="cs-menu-sub">
+              <a href={studyHref(s)}>Character</a>
+              <a href={studyHref(s, 'plot')}>Plot</a>
+              <a href={studyHref(s, 'engine')}>Engine</a>
+              <a href={kishoHref(s)}>Kishōtenketsu</a>
+              <a href={traitsHref(s)}>Trait table</a>
+            </div>
+          </div>
+        ))}
+        {lab && first && <a href={sceneHref(lab, first.id, 'beats')}>Testing zone: {first.id} every beat</a>}
+        <a href="#/lenses">Lenses</a>
+        <button type="button" onClick={onRefresh}>Refresh</button>
+        <a href="#/settings">Settings</a>
+      </nav>
+    </Fragment>
+  );
+}
+
+const PREMISE_ORDER = ['Hook', 'Readers expect', 'Our turn', 'The engine'];
+const rank = (k: string): number => (PREMISE_ORDER.indexOf(k) < 0 ? 99 : PREMISE_ORDER.indexOf(k));
+
+/** The fresh front page (Kyle, 2026-11-05): the premises of the story we build step by step, each with a box to tick.
+ *  Ticking one writes its title to the note's `picked` line, so the next step can read it; ticking it again clears it. */
+function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: VaultSource; afterSave: () => Promise<void> }) {
+  const [saving, setSaving] = useState('');
+  const [note, setNote] = useState('');
+  const [mine, setMine] = useState<Record<string, string>>({});
+  const canSave = !!source.write && !!source.readFresh;
+  if (!builds.length) return (
+    <section class="cs-premises">
+      <h1>Premises</h1>
+      <p class="cs-note">No premises yet. Ask in the Crow project's chat and they appear here.</p>
+    </section>
+  );
+  const pick = async (b: Build, title: string) => {
+    const was = b.folder in mine ? mine[b.folder] : b.picked;
+    const next = was === title ? '' : title;
+    setMine({ ...mine, [b.folder]: next });
+    setSaving(b.folder);
+    setNote('Saving your pick…');
+    try {
+      const fresh = await source.readFresh!(b.path);
+      await source.write!(b.path, setPicked(fresh.text, next), fresh.sha, next ? 'build: pick the premise "' + next + '"' : 'build: clear the picked premise');
+      await afterSave();
+      setNote(next ? 'Saved. We build ' + next + ' next.' : 'Cleared. Tick the one you want.');
+    } catch (e) {
+      setMine({ ...mine, [b.folder]: was });
+      setNote(((e as Error).message || 'The pick could not be saved.') + ' Try again in a minute.');
+    } finally {
+      setSaving('');
+    }
+  };
+  return (
+    <section class="cs-premises">
+      <h1>Premises</h1>
+      {note && <p class="cs-note" role="status">{note}</p>}
+      {builds.map((b) => {
+        const picked = b.folder in mine ? mine[b.folder] : b.picked;
+        return (
+          <div key={b.folder}>
+            <p class="cs-quiet">{b.name}: tick the one we build out, step by step.</p>
+            <ol class="cs-premise-list">
+              {b.premises.map((pr) => {
+                const on = picked === pr.title;
+                const kind = pr.lines.find(([k]) => k === 'Kind');
+                const rest = pr.lines.filter(([k]) => k !== 'Kind').sort((x, y) => rank(x[0]) - rank(y[0]));
+                return (
+                  <li key={pr.title} class={'cs-premise' + (on ? ' on' : '')}>
+                    <label class="cs-premise-head">
+                      <input type="checkbox" checked={on} disabled={!canSave || saving === b.folder} onChange={() => pick(b, pr.title)} />
+                      <span>
+                        <strong>{pr.title}</strong>
+                        {kind && <span class="cs-quiet">{kind[1]}</span>}
+                      </span>
+                      {on && <span class="cs-premise-badge">Picked</span>}
+                    </label>
+                    <dl class="cs-reading">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------ pages
 
 /** The testing zone (Kyle, 2026-10-28: "bring this view one button click away from the front page"): the first scene's
@@ -337,7 +453,7 @@ function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
 function StudyHead({ study, tab }: { study: Study; tab: Tab }) {
   return (
     <div class="cs-head">
-      <a class="cs-back" href="#/">Studies</a>
+      <a class="cs-back" href="#/studies">Studies</a>
       <h1>{study.title}</h1>
       <p class="cs-quiet">{[study.author, study.medium].filter(Boolean).join(', ')}</p>
       <Tabs study={study} tab={tab} />

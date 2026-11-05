@@ -6,6 +6,8 @@ import type { FileEntry } from './types.ts';
 
 export const ROOT = 'Studies/';
 export const LENS_FOLDER = 'Studies/Lenses/';
+/** Story builds (Kyle, 2026-11-05), read by build.ts; not a study. */
+export const BUILDS_FOLDER = 'Studies/Builds/';
 
 export type Side = 'character' | 'plot';
 
@@ -314,9 +316,9 @@ export function parseLens(data: Record<string, unknown>, body: string): Lens {
   };
 }
 
-/** The study folder a path is in ("Studies/Konosuba"), or '' for the Lenses folder and paths outside Studies. */
+/** The study folder a path is in ("Studies/Konosuba"), or '' for the Lenses and Builds folders and paths outside Studies. */
 export function studyFolder(path: string): string {
-  if (!path.startsWith(ROOT) || path.startsWith(LENS_FOLDER)) return '';
+  if (!path.startsWith(ROOT) || path.startsWith(LENS_FOLDER) || path.startsWith(BUILDS_FOLDER)) return '';
   const name = path.slice(ROOT.length).split('/')[0];
   return name && path.slice(ROOT.length).includes('/') ? ROOT + name : '';
 }
