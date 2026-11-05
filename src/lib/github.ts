@@ -171,7 +171,25 @@ export class GitHubSource implements VaultSource {
     return res.blob();
   }
 
+  /** Save one file. GitHub also answers 409 when another save lands on the branch at the same moment, even for a
+   * different file (2026-11-05: Done with this chapter failed on Book.md while the chapter's cards, a snapshot and the
+   * writing log were saving). So on a 409 the app looks at the file: if it is still the version we started from, it
+   * saves again; only a file that really changed is a conflict. */
   private async put(path: string, content: string, sha: string, message: string): Promise<string> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.putOnce(path, content, sha, message);
+      } catch (e) {
+        if (!(e instanceof GitHubError && e.status === 409 && sha && attempt < 3)) throw e;
+        let now: string | null = null;
+        try { now = (await this.readFresh(path)).sha; } catch { throw e; }
+        if (now !== sha) throw e;
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+  }
+
+  private async putOnce(path: string, content: string, sha: string, message: string): Promise<string> {
     let res: Response;
     try {
       res = await this.fetch(this.contentsUrl(path), {
