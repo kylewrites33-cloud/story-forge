@@ -40,6 +40,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # GitHub names each Pages deployment after its commit. If one stalls and is cancelled (2026-11-05: "updating_pages"
+    # for ten minutes, then a timeout), re-running the same commit is cancelled at once; a new commit on main deploys.
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
