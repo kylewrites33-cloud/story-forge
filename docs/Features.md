@@ -770,6 +770,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   rewritten chapters" and its link opens the next chapter not yet through. When the last rewritten chapter is
   through, the app saves the next draft by itself (the `Drafts/Draft N/` copies, as Book details' Save a draft does)
   and says so.
+- **The light on the page and Done at the end (2026-11-05).** Putting the cursor in a box lights Kyle's paragraph with
+  boxes drawn over the page from the words' own rectangles; the browser's highlight feature painted it a few words off
+  on the iPad ("something's a little funny about how the text in the middle gets selected"). Done with this chapter is
+  also at the end of the page, under the last scene, with the same "You are through chapter N" and Open it again
+  (Kyle: "is there an option for me to mark the draft 2 chapter as done at the bottom of the page").
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.

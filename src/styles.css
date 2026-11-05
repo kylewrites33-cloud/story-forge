@@ -2586,11 +2586,16 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .rewrite-count { margin: 0; }
 .rewrite-through { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; color: var(--accent); font-weight: 600; }
 .rewrite-through button.link { min-height: 44px; }
+.page-through { display: grid; justify-items: center; gap: 8px; margin: 24px 16px 8px; }
+.page-through .primary { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+.page-through .rewrite-through { justify-content: center; }
+.page-through .hint { margin: 0; text-align: center; }
 .rewrite-done { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .rewrite-done .primary { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; justify-self: start; }
 .rewrite-done .hint { margin: 0; }
 /* The words on the page that the column's box stands for, lit while Kyle types there. */
-::highlight(shown-words) { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+.shown-words { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.shown-words > div { position: fixed; border-radius: 3px; background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .rewrite-words:hover, .rewrite-words:focus-visible { background: var(--hover); outline: none; }
 .rewrite-row .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .rewrite-row .buttons button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
