@@ -23,10 +23,11 @@ export const CHANGES_FOLDER = 'Changes';
 export const CHANGES_TYPE = 'chapter-changes';
 
 export type ChangeKind = 'small' | 'line' | 'story' | 'new';
-/** open: waiting on Kyle. kept: the Now words went in. other: the second version went in. no: refused. mine: Kyle wrote his own. */
-export type ChangeStatus = 'open' | 'kept' | 'other' | 'no' | 'mine';
+/** open: waiting on Kyle. kept: the Now words went in. other: the second version went in. no: refused. mine: Kyle wrote his own.
+ * rewrite: the Writer's rewrite carried it and Kyle brought that paragraph over, or he finished the chapter in the Rewrite tab (2026-11-05). */
+export type ChangeStatus = 'open' | 'kept' | 'other' | 'no' | 'mine' | 'rewrite';
 export const KINDS: ChangeKind[] = ['small', 'line', 'story', 'new'];
-const STATUSES: ChangeStatus[] = ['open', 'kept', 'other', 'no', 'mine'];
+const STATUSES: ChangeStatus[] = ['open', 'kept', 'other', 'no', 'mine', 'rewrite'];
 
 export interface Change {
   id: string;
@@ -262,6 +263,12 @@ export function findWords(text: string, words: string, from = 0): { at: number; 
 
 export interface Placed { change: Change; at: number; end: number }
 
+/** The open changes whose words lie in these characters of the page: the ones a paragraph brought over from the rewrite
+ * stands in for (Kyle, 2026-11-05: the rewrite already carries the cards, so one place for draft 1 to 2). */
+export function changesIn(placed: Placed[], at: number, end: number): Change[] {
+  return placed.filter((p) => p.at < end && at < p.end).map((p) => p.change);
+}
+
 /** The open changes of one scene placed on its text, in reading order, none overlapping. `lost` are open changes whose
  * words are no longer there (Kyle changed them, or the change was put in somewhere else). */
 export function placeChanges(text: string, changes: Change[], scene: string): { placed: Placed[]; lost: Change[] } {
@@ -338,7 +345,7 @@ export function withChoices(changes: Change[], path: string, sourceKey: string, 
   return mine ? changes.map((c) => (mine[c.id] ? { ...c, status: mine[c.id] } : c)) : changes;
 }
 
-const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for' };
+const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for', rewrite: 'took the rewrite for' };
 
 /** Save Kyle's choices on one changes note: kept on this device first, then written to the vault as one commit. */
 export async function saveChoices(source: VaultSource, path: string, choices: Record<string, ChangeStatus>, s: Store | null = store()): Promise<void> {
@@ -458,7 +465,7 @@ export function todoIds(c: Change): string[] {
   return (c.why.match(/\bT-\d{3}\b/g) || []).filter((id, i, a) => a.indexOf(id) === i);
 }
 
-const DID: Record<string, string> = { kept: 'kept', other: 'other version kept', mine: 'your own words' };
+const DID: Record<string, string> = { kept: 'kept', other: 'other version kept', mine: 'your own words', rewrite: 'in the rewrite' };
 
 /** What the chapter's to-dos become once these changes are decided (Kyle, 2026-10-28: "as those changes go through in edit
  * mode, those to-do items you should tick off automatically"). A to-do is done when every change naming it is decided

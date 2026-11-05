@@ -761,6 +761,18 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   box lights his paragraph on the page and scrolls to it without taking the cursor away. Bring over then uses the box's
   words; "Changed by you" marks a tweaked box and "Back to the Writer's words" drops the tweak. Tweaks are kept per
   rewrite file on the device until the browser tab closes (sessionStorage), so a change of tab or a reload keeps them.
+- **One place for draft 1 to 2 (2026-11-05).** Kyle asked how the rewrite and the Edit room's cards relate and chose
+  to link them: the rewrite already carries the cards' fixes, so Bring over (and Take it out) closes the open cards
+  whose words lay in that paragraph with the status `rewrite` ("In the rewrite" on the card; it counts as went in, so
+  the to-dos those cards name tick off). **Done with this chapter**, at the end of the Rewrite column, saves the page,
+  closes the chapter's leftover open cards the same way and lists the chapter in the book note's `rewrite_done`;
+  "You are through this chapter" shows at the top, with Open it again. Edit > Changes says "You are through N of M
+  rewritten chapters" and its link opens the next chapter not yet through. When the last rewritten chapter is
+  through, the app saves the next draft by itself (the `Drafts/Draft N/` copies, as Book details' Save a draft does)
+  and says so.
+- **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
+  divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
+  its scene name, with Bring over and the boxes working on that scene's part of the page.
 
 ## Chapter titles (2026-10-29)
 

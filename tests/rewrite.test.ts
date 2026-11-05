@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import { changesIn } from '../src/lib/changes.ts';
 import { test } from 'node:test';
-import { align, bringOver, paragraphs, rewriteFiles, rewriteFor, rewriteProgress, rowAt, similarity, takeOut } from '../src/lib/rewrite.ts';
+import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, rowAt, similarity, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
 
 const B = 'Series/S/Books/1 B';
 
@@ -72,6 +73,27 @@ test('the rewrite\'s progress counts chapters with a rewritten scene', () => {
     { path: B + '/Scenes/S-001 Opening.md', data: { id: 'S-001', chapter: 1 } },
     { path: B + '/Scenes/S-002 Barn.md', data: { id: 'S-002', chapter: 2 } }
   ];
-  assert.deepEqual(rewriteProgress(copies, scenes), { done: 1, total: 2, first: B + '/Scenes/S-001 Opening.md' });
-  assert.deepEqual(rewriteProgress([], scenes), { done: 0, total: 2, first: null });
+  assert.deepEqual(rewriteProgress(copies, scenes), { done: 1, total: 2, first: B + '/Scenes/S-001 Opening.md', through: 0, next: B + '/Scenes/S-001 Opening.md' });
+  assert.deepEqual(rewriteProgress(copies, scenes, [1]), { done: 1, total: 2, first: B + '/Scenes/S-001 Opening.md', through: 1, next: null });
+  assert.deepEqual(rewriteProgress([], scenes), { done: 0, total: 2, first: null, through: 0, next: null });
+});
+
+test('the chapters Kyle is through live in the book note as a list of numbers', () => {
+  const book = '---\ntype: book\ntitle: Ash Bell\nwords: 10\n---\nPitch.\n';
+  const one = withRewriteDone(book, 2, true);
+  assert.equal(one, '---\ntype: book\ntitle: Ash Bell\nwords: 10\nrewrite_done: [2]\n---\nPitch.\n');
+  const two = withRewriteDone(one, 1, true);
+  assert.equal(two, '---\ntype: book\ntitle: Ash Bell\nwords: 10\nrewrite_done: [1, 2]\n---\nPitch.\n');
+  assert.deepEqual(rewriteDone({ data: { rewrite_done: [1, 2] } }), [1, 2]);
+  assert.deepEqual(rewriteDone({ data: {} }), []);
+  assert.equal(withRewriteDone(two, 2, false), one.replace('[2]', '[1]'));
+  assert.equal(withRewriteDone(withRewriteDone(two, 1, false), 2, false), book);
+});
+
+test('a paragraph brought over stands in for the open changes whose words lay in it', () => {
+  const c = (id: string) => ({ id, kind: 'line' as const, scene: 'S-001', why: '', status: 'open' as const, was: '', now: '', other: null });
+  const placed = [{ change: c('C-01'), at: 0, end: 10 }, { change: c('C-02'), at: 12, end: 20 }, { change: c('C-03'), at: 30, end: 40 }];
+  assert.deepEqual(changesIn(placed, 11, 25).map((x) => x.id), ['C-02']);
+  assert.deepEqual(changesIn(placed, 5, 35).map((x) => x.id), ['C-01', 'C-02', 'C-03']);
+  assert.deepEqual(changesIn(placed, 20, 20).map((x) => x.id), []);
 });
