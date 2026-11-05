@@ -272,9 +272,10 @@ export interface EditorCommands {
   highlight: () => void;
   /** Select these characters and bring them into view (Find, a mark in the list). */
   select: (start: number, end: number) => void;
-  /** Bring these characters into view and light them for a moment, without taking the cursor or the focus (the
-   * Rewrite column, while Kyle types in it). */
+  /** Bring these characters into view and light them, without taking the cursor or the focus (the Rewrite column,
+   * while Kyle types in it). The light stays until hide or the next show. */
   show: (start: number, end: number) => void;
+  hide: () => void;
   /** Replace these characters, as one step to undo. */
   replaceRange: (start: number, end: number, text: string) => void;
   /** Replace the whole text, as one step to undo (Replace all). */
@@ -344,7 +345,9 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   const ref = useRef<HTMLDivElement>(null);
   // The last selection in the page. A button press can move focus away first, so bold and italic fall back to it.
   const lastSel = useRef<{ start: number; end: number } | null>(null);
-  const shownTimer = useRef<number | undefined>(undefined);
+  const shownOff = useRef<(() => void) | null>(null);
+  const hideShown = () => { if (shownOff.current) { shownOff.current(); shownOff.current = null; } };
+  useEffect(() => hideShown, []);
   const shown = useRef<string | null>(null);
   const html = useRef('');
   const composing = useRef(false);
@@ -653,24 +656,31 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         const bb = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
         if (rect.top < bb.top + 40 || rect.bottom > bb.top + bb.height - 40) box.scrollTop += rect.top - bb.top - bb.height / 3;
         // A soft light on the words, drawn as boxes over the page from the range's own rectangles. The CSS Highlight API
-        // painted it a few words off on the iPad (Kyle, 2026-11-05), so it is not used.
+        // painted it a few words off on the iPad (Kyle, 2026-11-05), so it is not used. It stays while Kyle works in the
+        // column's box ("once i select in the right side box to edit, the highlight on the left disappears ... difficult
+        // for me to track which location im working in") and follows the page as it scrolls, until hide.
+        hideShown();
         const lit = document.createElement('div');
         lit.className = 'shown-words';
         lit.setAttribute('aria-hidden', 'true');
-        Array.from(r.getClientRects()).forEach((q) => {
-          if (q.width < 1 || q.height < 1) return;
-          const d = document.createElement('div');
-          d.style.cssText = 'left:' + q.left + 'px;top:' + q.top + 'px;width:' + q.width + 'px;height:' + q.height + 'px';
-          lit.appendChild(d);
-        });
-        const off = () => { lit.remove(); box.removeEventListener('scroll', off); window.removeEventListener('resize', off); };
-        document.querySelectorAll('.shown-words').forEach((x) => x.remove());
+        const draw = () => {
+          lit.textContent = '';
+          Array.from(r.getClientRects()).forEach((q) => {
+            if (q.width < 1 || q.height < 1) return;
+            const d = document.createElement('div');
+            d.style.cssText = 'left:' + q.left + 'px;top:' + q.top + 'px;width:' + q.width + 'px;height:' + q.height + 'px';
+            lit.appendChild(d);
+          });
+        };
+        draw();
         document.body.appendChild(lit);
-        // The scroll just made (to bring the words into view) fires its event later; only Kyle's own scrolling takes the light off.
-        requestAnimationFrame(() => requestAnimationFrame(() => { if (lit.isConnected) { box.addEventListener('scroll', off, { passive: true }); window.addEventListener('resize', off); } }));
-        clearTimeout(shownTimer.current);
-        shownTimer.current = window.setTimeout(off, 2200);
+        let queued = false;
+        const again = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; if (lit.isConnected) draw(); }); };
+        box.addEventListener('scroll', again, { passive: true });
+        window.addEventListener('resize', again);
+        shownOff.current = () => { lit.remove(); box.removeEventListener('scroll', again); window.removeEventListener('resize', again); };
       },
+      hide: () => hideShown(),
       replaceRange: (a, b, t) => {
         const el = ref.current;
         if (!el) return;

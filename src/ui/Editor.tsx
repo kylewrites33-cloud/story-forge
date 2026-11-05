@@ -947,13 +947,16 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const rewriteSections: RewriteSection[] = !hasRewrite ? [] : [
     ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
-      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); } })),
+      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
+      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
     { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, caret: caretAt, onPut: putRewrite,
       onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
-      onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); } },
+      onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); },
+      onHide: () => { const c = commands.current; if (c) c.hide(); } },
     ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
-      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); } })),
+      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
+      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
   ];
   // The same button at the end of the page (Kyle, 2026-11-05: "is there an option for me to mark the draft 2 chapter as
   // done at the bottom of the page").

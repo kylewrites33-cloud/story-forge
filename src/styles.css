@@ -2449,7 +2449,10 @@ button, .button { border-radius: 12px; }
 .writer-page { container-type: inline-size; }
 @container (min-width: 760px) {
   .writer.asks-margin :is(.main-section .writer-text.styled, .changes-page, .draft-readonly):has(.md-ask) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
-  .writer.asks-margin :is(.main-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: right; clear: right; width: 12rem; margin-right: -13rem; margin-top: 0.2em; padding: 4px 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.8em; line-height: 1.4; white-space: normal; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+  /* A chapter of several scenes keeps one left edge: when any scene has a note in the margin, every scene's text and
+     name take the wider column (Kyle, 2026-11-05: "the next scene on the screen seems staggered differently"). */
+  .writer.asks-margin .writer-page:has(.writer-text.styled .md-ask) :is(.page-head, .writer-text.styled, .section-name) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
+  .writer.asks-margin :is(.main-section .writer-text.styled, .chapter-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: right; clear: right; width: 12rem; margin-right: -13rem; margin-top: 0.2em; padding: 4px 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.8em; line-height: 1.4; white-space: normal; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
   .changes-page:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
   .changes-page .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
   .changes-page .chg-tag.on { border-left-color: var(--accent); }

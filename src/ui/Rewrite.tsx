@@ -35,7 +35,7 @@ function saveEdits(key: string, edits: Record<number, string>) {
 
 /** One of the Writer's paragraphs as a box Kyle can type in straight away (no button): the words he can already see on
  * his page stay greyer behind the text, the Writer's new words and his own typing darker. */
-function RewriteBox({ was, words, onInput, onFocus }: { was?: string; words: string; onInput: (w: string) => void; onFocus: () => void }) {
+function RewriteBox({ was, words, onInput, onFocus, onBlur }: { was?: string; words: string; onInput: (w: string) => void; onFocus: () => void; onBlur: () => void }) {
   const back = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const parts = was == null ? [{ kind: 'ins', text: words }] : wordDiff(was, words).filter((d) => d.kind !== 'del');
@@ -47,7 +47,7 @@ function RewriteBox({ was, words, onInput, onFocus }: { was?: string; words: str
         {parts.map((d) => d.kind === 'ins' ? <span class="chg-new">{d.text}</span> : d.text)}{'\n'}
       </div>
       <textarea ref={box} class="chg-tweak" rows={2} value={words} aria-label="The Writer's paragraph; change it here before you bring it over"
-        onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)} onFocus={onFocus}
+        onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)} onFocus={onFocus} onBlur={onBlur}
         onScroll={(e) => { if (back.current) back.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }} />
     </div>
   );
@@ -69,8 +69,10 @@ export interface RewriteSection {
   onPut: (p: Put) => void;
   /** Show these characters of the page (a tap on a paragraph in the column). */
   onGo: (at: number, end: number) => void;
-  /** Bring these characters of the page into view without taking the cursor (Kyle's cursor is in the column). */
+  /** Bring these characters of the page into view and light them without taking the cursor (Kyle's cursor is in the column). */
   onShow: (at: number, end: number) => void;
+  /** Take the light off the page (the cursor left the column's box). */
+  onHide: () => void;
 }
 
 /** The side column's Rewrite tab: the Writer's version of this chapter, scene by scene and paragraph by paragraph beside Kyle's. */
@@ -127,7 +129,8 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
 
 /** One scene's rewrite, paragraph by paragraph beside Kyle's. */
 function RewriteScene({ source, section, hideSame, named }: { source: VaultSource; section: RewriteSection; hideSame: boolean; named: boolean }) {
-  const { file, text, caret, onPut, onGo, onShow } = section;
+  const { file, text, caret, onPut, onGo, onShow, onHide } = section;
+  useEffect(() => () => onHide(), []);
   const [theirs, setTheirs] = useState<{ key: string; text: string | null; error?: string }>({ key: '', text: null });
   const key = file ? file.path + '@' + file.sha : '';
   useEffect(() => {
@@ -223,7 +226,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
                       <Quote text={words} cls="same" />
                     </div>
                   ) : (
-                    <RewriteBox words={words} was={row.mine != null ? mine[row.mine].text : undefined} onInput={(w) => edit(row.theirs!, w)} onFocus={show} />
+                    <RewriteBox words={words} was={row.mine != null ? mine[row.mine].text : undefined} onInput={(w) => edit(row.theirs!, w)} onFocus={show} onBlur={onHide} />
                   )}
                   {!same && (
                     <div class="buttons">
