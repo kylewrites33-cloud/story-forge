@@ -772,7 +772,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   and says so.
 - **The light on the page and Done at the end (2026-11-05).** Putting the cursor in a box lights Kyle's paragraph with
   boxes drawn over the page from the words' own rectangles; the browser's highlight feature painted it a few words off
-  on the iPad ("something's a little funny about how the text in the middle gets selected"). Done with this chapter is
+  on the iPad ("something's a little funny about how the text in the middle gets selected"). The light stays while the cursor
+  is in the box and follows the page as it scrolls, and goes when the cursor leaves the box (Kyle: "once i select in
+  the right side box to edit, the highlight on the left disappears ... difficult for me to track which location im
+  working in"). A chapter of several scenes keeps one left edge when a scene has a { } note in the margin ("the next
+  scene on the screen seems staggered differently when i close the left side chapters pane"). Done with this chapter is
   also at the end of the page, under the last scene, with the same "You are through chapter N" and Open it again
   (Kyle: "is there an option for me to mark the draft 2 chapter as done at the bottom of the page").
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
