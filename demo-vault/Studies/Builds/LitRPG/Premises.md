@@ -1,37 +1,33 @@
 ---
 type: build-premises
 build: LitRPG
-title: LitRPG premises, round 2
+title: LitRPG premises, round 3 (common premises)
 lane: Comedy LitRPG + smart, competent OP hero
 picked: ''
 created: 2026-11-05
 ---
-**The lane** (Kyle, 2026-11-05: "let's cement down 4 as our target"): comedy LitRPG with a smart, competent, overpowered hero. Evidence, from Kyle's Rocket keyword tab (estimates; the day pulled is not recorded): "litrpg competent mc" 14,257 searches a month, 311 competitors, $7,734 average earnings; "op mc litrpg with jokes" 2,438 searches, 10 competitors; "funny litrpg with a smart mc" $10,765 average earnings. What readers of this lane want: a hero who is strong early and wins by thinking, rules he bends on the page, a System with a voice, and a joke on most pages. Tick one premise to build out.
+Round 3 (Kyle, 2026-11-05: "come up with four common premises, and we can look at those together and decide ways to twist those premises"). Each is the plain version the lane already sells, built from the firmest tropes in Tropes.md, with books that use it. No twist yet: that is the next step, together.
 
-## Tutorial Boss
-- Kind: comedy LitRPG, System apocalypse, dungeon
-- Hook: The System makes Dev, a bored night-shift security guard, the final boss of Earth's tutorial dungeon. If nobody beats him in thirty days, everyone inside dies.
-- Readers expect: an overpowered hero, level-ups, a dungeon and a big boss fight.
-- Our turn: he is already the strongest thing in the dungeon, so he spends the month secretly coaching hopeless players to beat him, without the System noticing he is throwing the fight.
-- The engine: each chapter a new party fails in a funnier way, Dev fixes one thing about them, and the clock runs down.
+## The Hidden Archmage
+- Kind: returner or reincarnation, hidden strength
+- Hook: The strongest mage alive dies and wakes up as a level 1 nobody, with every memory and skill intact. He hides his power and climbs again, smarter this time.
+- Tropes: OP early, underleveled but overpowered, hides his true strength, smart and competent, school or academy arc.
+- Seen in: Archmage Reborn, Return of the Archmage, Return of the Strongest Healer, New Life as a Max Level Archmage (Kyle's competition tabs).
 
-## Terms and Conditions
-- Kind: comedy LitRPG, isekai, system exploiter
-- Hook: Nina, an insurance claims adjuster, is pulled into a game world. She is the only person who reads the System's full terms of service.
-- Readers expect: a clever hero who finds the broken build and outsmarts everyone.
-- Our turn: her power is the fine print. Every loophole she finds is real, and the System starts patching them out of spite.
-- The engine: each chapter she finds a new loophole, wins big with it, and the System answers with a new rule.
+## The Useless Class
+- Kind: isekai, weak class that is secretly broken
+- Hook: A gamer is pulled into a world run by a System and gets the class everyone laughs at. He reads the rules closer than anyone and finds out it is the strongest class there is.
+- Tropes: "bad" power that is overpowered, rare class, exploits, snarky System, genre-savvy hero.
+- Seen in: The Unranked Healer, Reincarnated With An S-Rank Class That Can Steal Your Abilities (Kyle's competition tabs).
 
-## Level 1 Tour Guide
-- Kind: comedy LitRPG, hidden OP hero, guild
-- Hook: The strongest adventurer alive wants a quiet life, so he takes a job as a level 1 tour guide, leading rookies through the safe first floor of a dungeon.
-- Readers expect: an OP hero hiding his strength, rookies who get stronger, and the moment everyone finds out.
-- Our turn: the rookies think they are carrying him, and he quietly kills everything dangerous before they see it.
-- The engine: each tour goes wrong in a new way, and he has to save everyone while keeping up the act.
+## The Retired Legend
+- Kind: retired OP hero, slice of life
+- Hook: The hero who killed the Demon Lord retires to a quiet town to live an ordinary life. Trouble keeps finding him, and he keeps solving it without meaning to show off.
+- Tropes: wants an ordinary life and fails, hides his true strength, accidental mentor, found family, jokes on most pages.
+- Seen in: Overpowered Demon Lord Slayer, Overpowered Level 1 Mage, Retired Archmage Starts a Town (Kyle's competition tabs).
 
-## Dungeon Inspector
-- Kind: comedy LitRPG, dungeon, workplace
-- Hook: Marco is an overpowered fighter who works as the kingdom's dungeon safety inspector. Dungeons that fail inspection get shut down.
-- Readers expect: an OP hero, dungeon crawls, bosses and loot.
-- Our turn: he walks into deadly dungeons with a clipboard, and the bosses have to pass his inspection or lose their dungeon.
-- The engine: one dungeon per chapter, one boss trying to bribe, trick or fight its way past the inspection.
+## The System Arrives
+- Kind: system apocalypse, gamer hero
+- Hook: The System comes to Earth and turns it into a game with monsters and levels. The one person who treats it like the games he has played for years gets ahead of everyone.
+- Tropes: snarky System, OP early, exploits, smart and competent, dungeons, tutorial.
+- Seen in: Return of the Archmage (Kyle's tabs); the wider genre's Dungeon Crawler Carl and Hell Difficulty Tutorial (not in Kyle's tabs).
