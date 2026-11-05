@@ -2577,6 +2577,12 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .rewrite-row.added { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
 .rewrite-row.cut .chg-quote.was-soft { color: var(--muted); border-left-color: var(--danger); }
 .rewrite-words { cursor: pointer; border-radius: 8px; }
+/* The Writer's paragraph is a box Kyle types in straight away (2026-11-05); it grows with its words. */
+.rewrite-box .chg-tweak { resize: none; overflow: hidden; min-height: 44px; border-color: var(--line); }
+.rewrite-box textarea.chg-tweak:focus { border-color: var(--accent); outline: none; }
+.rewrite-row.added .rewrite-box .chg-tweak-back { color: var(--text); }
+/* The words on the page that the column's box stands for, lit while Kyle types there. */
+::highlight(shown-words) { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 .rewrite-words:hover, .rewrite-words:focus-visible { background: var(--hover); outline: none; }
 .rewrite-row .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .rewrite-row .buttons button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }

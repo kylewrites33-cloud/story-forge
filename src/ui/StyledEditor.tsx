@@ -272,6 +272,9 @@ export interface EditorCommands {
   highlight: () => void;
   /** Select these characters and bring them into view (Find, a mark in the list). */
   select: (start: number, end: number) => void;
+  /** Bring these characters into view and light them for a moment, without taking the cursor or the focus (the
+   * Rewrite column, while Kyle types in it). */
+  show: (start: number, end: number) => void;
   /** Replace these characters, as one step to undo. */
   replaceRange: (start: number, end: number, text: string) => void;
   /** Replace the whole text, as one step to undo (Replace all). */
@@ -341,6 +344,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
   const ref = useRef<HTMLDivElement>(null);
   // The last selection in the page. A button press can move focus away first, so bold and italic fall back to it.
   const lastSel = useRef<{ start: number; end: number } | null>(null);
+  const shownTimer = useRef<number | undefined>(undefined);
   const shown = useRef<string | null>(null);
   const html = useRef('');
   const composing = useRef(false);
@@ -633,6 +637,29 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         showSelection();
         // The iPad's keyboard slides up after the focus and can push the spot out of sight; show it again once it has.
         setTimeout(showSelection, 400);
+      },
+      show: (a, b) => {
+        const el = ref.current;
+        if (!el) return;
+        if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
+        const find = locator(el);
+        const r = document.createRange();
+        const [sn, so] = find(a), [en, eo] = find(b);
+        r.setStart(sn, so);
+        r.setEnd(en, eo);
+        let rect = r.getBoundingClientRect();
+        if (!rect.height && !rect.width) { const n = (sn.nodeType === 3 ? sn.parentElement : sn) as HTMLElement | null; if (n) rect = n.getBoundingClientRect(); }
+        const box = scroller(el);
+        const bb = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
+        if (rect.top < bb.top + 40 || rect.bottom > bb.top + bb.height - 40) box.scrollTop += rect.top - bb.top - bb.height / 3;
+        // A soft light on the words, where the browser can paint one without touching the selection.
+        const H = (window as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight;
+        const reg = (CSS as unknown as { highlights?: Map<string, unknown> }).highlights;
+        if (H && reg) {
+          reg.set('shown-words', new H(r));
+          clearTimeout(shownTimer.current);
+          shownTimer.current = window.setTimeout(() => reg.delete('shown-words'), 1800);
+        }
       },
       replaceRange: (a, b, t) => {
         const el = ref.current;

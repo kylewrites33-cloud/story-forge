@@ -1595,7 +1595,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {!moreList && <>
             {tab === 'rewrite' && (
               <RewritePanel source={source} file={hasRewrite ? rewrite : null} text={beatsMode ? '' : text} caret={caretAt} chapter={chapterNum}
-                onPut={putRewrite} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); else goWords(a, b); closeOver(); }} />
+                onPut={putRewrite} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); else goWords(a, b); closeOver(); }}
+                onShow={(a, b) => { const c = cmd(); if (c) c.show(a, b); }} />
             )}
             {tab === 'changes' && (
               chNote
