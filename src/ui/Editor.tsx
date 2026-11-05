@@ -955,6 +955,17 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); } })),
   ];
+  // The same button at the end of the page (Kyle, 2026-11-05: "is there an option for me to mark the draft 2 chapter as
+  // done at the bottom of the page").
+  const [throughBusy, setThroughBusy] = useState(false);
+  const [throughSaid, setThroughSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const markThrough = async (done: boolean) => {
+    if (!onRewriteThrough || throughBusy) return;
+    setThroughBusy(true);
+    setThroughSaid(null);
+    try { const m = await onRewriteThrough(done); setThroughSaid(m ? { error: !/saved|through/i.test(m), text: m } : null); } catch (e) { setThroughSaid({ error: true, text: (e as Error).message }); }
+    setThroughBusy(false);
+  };
   // Done with this chapter: the chapter's open changes close as handled by the rewrite, and the book note marks it.
   const rewriteThrough = rewrite && chapterNum != null ? rewrite.done.indexOf(chapterNum) >= 0 : false;
   const onRewriteThrough = rewrite && rewrite.onThrough && chapterNum != null ? async (done: boolean) => {
@@ -1582,6 +1593,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
             </div>
           ))}
+          {hasRewrite && onRewriteThrough && (
+            <div class="page-through">
+              {rewriteThrough
+                ? <p class="hint rewrite-through"><Icon name="check" size={16} /> You are through chapter {chapterNum}. <button type="button" class="link" disabled={throughBusy} onClick={() => markThrough(false)}>Open it again</button></p>
+                : <button type="button" class="primary" disabled={throughBusy} onClick={() => markThrough(true)}><Icon name="check" size={16} />Done with this chapter</button>}
+              {throughSaid && <p class={throughSaid.error ? 'error' : 'hint'} role="status">{throughSaid.text}</p>}
+            </div>
+          )}
           <nav class="writer-done side-arrows" aria-label="Previous and next section">
             {prevGo
               ? <a class="side-go" {...link(href.write(prevGo.path))} aria-label={'Previous section: ' + sideName(prevGo)} title={'Previous: ' + sideName(prevGo)}><Icon name="left" size={22} /></a>

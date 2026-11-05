@@ -652,14 +652,24 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         const box = scroller(el);
         const bb = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
         if (rect.top < bb.top + 40 || rect.bottom > bb.top + bb.height - 40) box.scrollTop += rect.top - bb.top - bb.height / 3;
-        // A soft light on the words, where the browser can paint one without touching the selection.
-        const H = (window as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight;
-        const reg = (CSS as unknown as { highlights?: Map<string, unknown> }).highlights;
-        if (H && reg) {
-          reg.set('shown-words', new H(r));
-          clearTimeout(shownTimer.current);
-          shownTimer.current = window.setTimeout(() => reg.delete('shown-words'), 1800);
-        }
+        // A soft light on the words, drawn as boxes over the page from the range's own rectangles. The CSS Highlight API
+        // painted it a few words off on the iPad (Kyle, 2026-11-05), so it is not used.
+        const lit = document.createElement('div');
+        lit.className = 'shown-words';
+        lit.setAttribute('aria-hidden', 'true');
+        Array.from(r.getClientRects()).forEach((q) => {
+          if (q.width < 1 || q.height < 1) return;
+          const d = document.createElement('div');
+          d.style.cssText = 'left:' + q.left + 'px;top:' + q.top + 'px;width:' + q.width + 'px;height:' + q.height + 'px';
+          lit.appendChild(d);
+        });
+        const off = () => { lit.remove(); box.removeEventListener('scroll', off); window.removeEventListener('resize', off); };
+        document.querySelectorAll('.shown-words').forEach((x) => x.remove());
+        document.body.appendChild(lit);
+        // The scroll just made (to bring the words into view) fires its event later; only Kyle's own scrolling takes the light off.
+        requestAnimationFrame(() => requestAnimationFrame(() => { if (lit.isConnected) { box.addEventListener('scroll', off, { passive: true }); window.addEventListener('resize', off); } }));
+        clearTimeout(shownTimer.current);
+        shownTimer.current = window.setTimeout(off, 2200);
       },
       replaceRange: (a, b, t) => {
         const el = ref.current;
