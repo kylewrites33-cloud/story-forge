@@ -27,18 +27,6 @@ export function noteRecent(source: string, path: string, now: Date = new Date())
   try { localStorage.setItem(recentKey(source), JSON.stringify(addRecent(loadRecent(source), path, now))); } catch { /* the list is a convenience */ }
 }
 
-/** The scenes to offer under "Continue where you left off": still in the vault, at most `max`, newest first. */
-export function continueList(index: VaultIndex, recent: Recent[], max = 3): { note: NoteRecord; book: BookEntry; at: string }[] {
-  const out: { note: NoteRecord; book: BookEntry; at: string }[] = [];
-  for (const r of recent) {
-    const note = index.notes[r.path];
-    const book = note && index.books.find((b) => b.scenes.indexOf(r.path) >= 0);
-    if (note && book) out.push({ note, book, at: r.at });
-    if (out.length >= max) break;
-  }
-  return out;
-}
-
 /** When Kyle last wrote in each book, from the recent list. */
 export function lastWorked(index: VaultIndex, recent: Recent[]): Record<string, string> {
   const out: Record<string, string> = {};

@@ -618,6 +618,8 @@ details.group[open] > summary h2::before { content: '▾ '; }
 }
 .continue a:hover { border-color: var(--accent); }
 .continue .meta { margin: 0; }
+.continue .continue-stage { margin-top: 2px; font-weight: 600; font-size: 0.98rem; }
+.continue .book-progress { margin: 4px 0 4px; }
 .continue .go { margin-top: 6px; color: var(--accent); font-weight: 600; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 4px; }
 .book-title { font-weight: 650; font-size: 1.15rem; line-height: 1.25; font-family: var(--serif); }
 .home-tools, .grid-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 1rem; }
@@ -640,6 +642,7 @@ details.group[open] > summary h2::before { content: '▾ '; }
 .dot-done { background: var(--st-final); }
 .book-progress { display: block; height: 5px; margin-top: 4px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .book-progress span { display: block; height: 100%; background: var(--accent); }
+.book-progress.done span { background: var(--st-final); }
 .book-rows { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .book-row > a {
   display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--radius); background: var(--surface);

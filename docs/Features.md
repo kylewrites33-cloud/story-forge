@@ -405,7 +405,8 @@ add a dated line here when you add or change one.
   `target_words`, whoever wrote them first, so a burst of team text moves nothing until Kyle has edited the chapter and
   marked it done (the Writer and the team only ever set drafted). Home's Progress card leads with "N of M chapters
   done", then words in done chapters against the target with its bar, then all words on the page; the Books page's
-  cards say "N of M chapters done" and fill their bar from done chapters; the Chapter Grid adds a Chapters done number;
+  cards said "N of M chapters done" until 2026-11-05 (now the stage and its percent, see "The Books page knows the
+  stage"); the Chapter Grid adds a Chapters done number;
   the writing screen's chapter list ticks done chapters. Kyle marks it in the writing screen (••• menu, Mark as done,
   or the Done, split, join tab): "Mark this chapter done" sets the scene to revised ("Mark this scene done" when the
   chapter has several scenes), and "Not done yet" puts it back to drafted. The Pomodoro and Writing Log stay Kyle's own
@@ -782,6 +783,26 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.
+
+## The Books page knows the stage (2026-11-05)
+
+Kyle, 2026-11-05: "wouldnt continue where you left off for QD2 recognize the phase im in, and then take me to the draft 2
+editing mode at my most recent chapter? also, why are there 2 cards for 1 project, and why does QD1 have anything to work
+on in that section? ... Maybe that area should recognize what mode we're in, and give a progress % based on how much of
+the current stage has been completed?"
+
+- Each book has one stage, worked out in `src/lib/bookstatus.ts` (`bookStatus`): Published (the book's stage is done),
+  "Draft 1 to 2: the rewrite" while the Writer's rewrite is in and Kyle has not been through every chapter (percent =
+  chapters marked with Done with this chapter), "Draft N to N+1: changes" while the team's changes wait (percent =
+  changes decided), "Draft 1: writing" (percent = words in chapters Kyle marked done against the target, the 2026-10-22
+  rule), or Planning with the workflow stage it is in (percent = steps kept).
+- Continue where you left off shows one card per book still being worked on (never a published one), the book opened
+  last first, at most three. The card names the stage, its percent and bar, the chapter, and opens the right place:
+  in the rewrite, the last chapter Kyle opened, or the next chapter not through yet if he already finished that one;
+  with changes waiting, the last chapter he opened if it has some, else the first that does; while writing, the last
+  scene he opened.
+- The book cards and rows say the stage, its percent, what it counts and the words, and fill their bar from the
+  percent (a published book's bar is full, in the done colour).
 
 ## Chapter titles (2026-10-29)
 

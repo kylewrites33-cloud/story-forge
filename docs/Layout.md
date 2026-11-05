@@ -27,6 +27,7 @@ src/lib/scenes.ts        new scenes, split and join: next free ID, order between
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
 src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
+src/lib/bookstatus.ts    where each book is for the Books page: stage, percent of it done, where Continue opens
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/search.ts        the Chapter Grid search: chapter and scene numbers, chapter titles, codex names, near misses, best first
 src/lib/covers.ts        book covers: keep the full-size picture in Cover/, shrink on the device, save as Cover.jpg, keep on the device by blob sha
