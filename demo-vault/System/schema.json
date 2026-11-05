@@ -3103,6 +3103,10 @@
         },
         "created": {
           "type": "date"
+        },
+        "lane": {
+          "type": "string",
+          "description": "The exact lane Kyle set for the build, as stacked tags"
         }
       },
       "body": "A lead line, then one ## section per premise (its title) with - Kind, - Hook, - Readers expect, - Our turn and - The engine lines."

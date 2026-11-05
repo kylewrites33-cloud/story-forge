@@ -5,7 +5,7 @@ import { Frontmatter } from './frontmatter.js';
 import { BUILDS_FOLDER as BUILD_FOLDER, fieldLines, sections, type Reading } from './study.ts';
 
 export interface Premise { title: string; lines: Reading; }
-export interface Build { folder: string; name: string; path: string; title: string; about: string; picked: string; premises: Premise[]; }
+export interface Build { folder: string; name: string; path: string; title: string; lane: string; about: string; picked: string; premises: Premise[]; }
 
 const str = (v: unknown): string => (v === undefined || v === null ? '' : String(v)).trim();
 
@@ -21,7 +21,7 @@ export function parseBuilds(texts: Map<string, string>): Build[] {
     const name = path.slice(BUILD_FOLDER.length).split('/')[0];
     const sec = sections(p.body, 2);
     out.push({
-      folder: BUILD_FOLDER + name, name: str(data.build) || name, path, title: str(data.title) || name, about: sec.lead, picked: str(data.picked),
+      folder: BUILD_FOLDER + name, name: str(data.build) || name, path, title: str(data.title) || name, lane: str(data.lane), about: sec.lead, picked: str(data.picked),
       premises: sec.parts.map((s) => ({ title: s.heading, lines: fieldLines(s.text) }))
     });
   }

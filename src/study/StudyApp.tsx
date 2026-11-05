@@ -384,6 +384,7 @@ function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: 
         const picked = b.folder in mine ? mine[b.folder] : b.picked;
         return (
           <div key={b.folder}>
+            {b.lane && <p class="cs-lane"><span class="cs-quiet">Lane</span> <strong>{b.lane}</strong></p>}
             <p class="cs-quiet">{b.name}: tick the one we build out, step by step.</p>
             <ol class="cs-premise-list">
               {b.premises.map((pr) => {

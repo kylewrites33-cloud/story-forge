@@ -1,36 +1,37 @@
 ---
 type: build-premises
 build: LitRPG
-title: LitRPG premises
+title: LitRPG premises, round 2
+lane: Comedy LitRPG + smart, competent OP hero
 picked: ''
 created: 2026-11-05
 ---
-Four LitRPG premises for the step-by-step build (Kyle, 2026-11-05: "a list of four interesting lit RPG premises ... a checkbox that I can put on one of them"). Each keeps a promise LitRPG readers already know and turns it one way. Kyle ticks one in Crow and the next step builds from it.
+**The lane** (Kyle, 2026-11-05: "let's cement down 4 as our target"): comedy LitRPG with a smart, competent, overpowered hero. Evidence, from Kyle's Rocket keyword tab (estimates; the day pulled is not recorded): "litrpg competent mc" 14,257 searches a month, 311 competitors, $7,734 average earnings; "op mc litrpg with jokes" 2,438 searches, 10 competitors; "funny litrpg with a smart mc" $10,765 average earnings. What readers of this lane want: a hero who is strong early and wins by thinking, rules he bends on the page, a System with a voice, and a joke on most pages. Tick one premise to build out.
 
 ## Tutorial Boss
-- Kind: System apocalypse, dungeon crawl
-- Hook: On Day One the System pulls everyone on Earth into a tutorial dungeon. Dev, a 34-year-old night-shift security guard, is drafted as its final boss.
-- Readers expect: a status screen, level-ups, a dungeon floor by floor, and a boss fight at the end.
-- Our turn: the hero is the boss. The System's rule is plain: if nobody beats him in thirty days, the tutorial fails and everyone inside dies. He levels each time a party fights him well, so he has to coach strangers into killing him.
-- The engine: every chapter he tries to lose well without being seen to throw the fight, because a boss who throws a fight is deleted.
+- Kind: comedy LitRPG, System apocalypse, dungeon
+- Hook: The System makes Dev, a bored night-shift security guard, the final boss of Earth's tutorial dungeon. If nobody beats him in thirty days, everyone inside dies.
+- Readers expect: an overpowered hero, level-ups, a dungeon and a big boss fight.
+- Our turn: he is already the strongest thing in the dungeon, so he spends the month secretly coaching hopeless players to beat him, without the System noticing he is throwing the fight.
+- The engine: each chapter a new party fails in a funnier way, Dev fixes one thing about them, and the clock runs down.
 
-## Ninety Days to Shutdown
-- Kind: game world, VRMMO, crafting
-- Hook: Hollis is the blacksmith in the starting town of an online game. The servers close in ninety days. The night the last players log out, he gets the status screen they used to have.
-- Readers expect: classes, quests, crafting trees, loot and the level cap.
-- Our turn: the hero is an NPC, and the quests he handed out for years are now the only way he can level. A blacksmith has to clear the raids he used to sell swords for.
-- The engine: a countdown on screen every chapter, and one goal: make the world worth keeping before the deletion date.
+## Terms and Conditions
+- Kind: comedy LitRPG, isekai, system exploiter
+- Hook: Nina, an insurance claims adjuster, is pulled into a game world. She is the only person who reads the System's full terms of service.
+- Readers expect: a clever hero who finds the broken build and outsmarts everyone.
+- Our turn: her power is the fine print. Every loophole she finds is real, and the System starts patching them out of spite.
+- The engine: each chapter she finds a new loophole, wins big with it, and the System answers with a new rule.
 
-## Reroll
-- Kind: tower climb, build-crafting
-- Hook: Every dawn the Tower gives each climber a new class at random. Mara keeps one skill from each class she gets.
-- Readers expect: careful builds, min-maxed stats and a party climbing floor by floor to a prize at the top.
-- Our turn: nobody can plan a build, so climbers treat each dawn as a dice roll. Mara's build is made of leftovers: a cook's knife skill, a bard's taunt and a thief's lockpick, and she makes them fit.
-- The engine: each chapter opens on the new class, so every floor is a puzzle with a different set of tools.
+## Level 1 Tour Guide
+- Kind: comedy LitRPG, hidden OP hero, guild
+- Hook: The strongest adventurer alive wants a quiet life, so he takes a job as a level 1 tour guide, leading rookies through the safe first floor of a dungeon.
+- Readers expect: an OP hero hiding his strength, rookies who get stronger, and the moment everyone finds out.
+- Our turn: the rookies think they are carrying him, and he quietly kills everything dangerous before they see it.
+- The engine: each tour goes wrong in a new way, and he has to save everyone while keeping up the act.
 
-## XP Is Money
-- Kind: System apocalypse, comedy, economy
-- Hook: The System pays in experience points, and XP can be traded. A year later it is the world's money. Priya is a tax auditor at level 1, because she spends all her XP on rent.
-- Readers expect: grinding, stat points and a power fantasy where the weak hero becomes strong.
-- Our turn: the richest people are level 300 and have never fought. Priya climbs by finding out where the XP went, and finds that the System is about to call in its loans.
-- The engine: every audit ends in a fight the rich people can't win, because their levels were bought.
+## Dungeon Inspector
+- Kind: comedy LitRPG, dungeon, workplace
+- Hook: Marco is an overpowered fighter who works as the kingdom's dungeon safety inspector. Dungeons that fail inspection get shut down.
+- Readers expect: an OP hero, dungeon crawls, bosses and loot.
+- Our turn: he walks into deadly dungeons with a clipboard, and the bosses have to pass his inspection or lose their dungeon.
+- The engine: one dungeon per chapter, one boss trying to bribe, trick or fight its way past the inspection.

@@ -12,6 +12,7 @@ test('the demo build has four premises and none picked', () => {
   const [b] = parseBuilds(texts);
   assert.equal(b.name, 'LitRPG');
   assert.equal(b.picked, '');
+  assert.equal(b.lane, 'Comedy LitRPG + smart, competent OP hero');
   assert.equal(b.premises.length, 4);
   assert.ok(b.premises.every((p) => p.lines.some(([k]) => k === 'Our turn')));
 });

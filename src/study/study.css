@@ -344,3 +344,4 @@ a.cs-card:hover { box-shadow: var(--shadow-lift); }
 .cs-premise-badge { flex: none; font-size: 0.85rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: var(--on-accent); }
 .cs-premise .cs-reading { margin: 4px 0 0 42px; }
 @media (max-width: 600px) { .cs-premise .cs-reading { margin-left: 0; } }
+.cs-lane { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 4px 0 8px; font-size: 1.1rem; }
