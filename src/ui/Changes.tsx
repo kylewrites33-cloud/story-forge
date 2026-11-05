@@ -149,7 +149,7 @@ export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }:
 }
 
 // Accept and Reject, as in Word (Kyle, 2026-10-28: "keep this change is throwing me off. why not the language accept this change").
-const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Accepted the other version', no: 'Rejected', mine: 'Your own words' };
+const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Accepted the other version', no: 'Rejected', mine: 'Your own words', rewrite: 'In the rewrite' };
 
 // The page as a Kindle shows it (Kyle, 2026-10-28: "when we're in editing mode, the document automatically converts to
 // the form that it's going to show up as in Kindle"): paragraphs indented with no blank lines between them, System
@@ -396,7 +396,7 @@ export function DraftMenu({ working, saved, viewing, onView, onSave, onExport, c
 export function ChangesOverview({ book, chapters, calls, firstScene, rewrite }: {
   book: BookEntry; chapters: { chapter: number; open: number; path: string }[]; calls: number; firstScene: string | null;
   /** How far the Writer's rewrite has come (2026-11-04). */
-  rewrite?: { done: number; total: number; first: string | null };
+  rewrite?: { done: number; total: number; first: string | null; through: number; next: string | null };
 }) {
   const waiting = chapters.filter((c) => c.open > 0);
   const total = waiting.reduce((t, c) => t + c.open, 0);
@@ -408,8 +408,10 @@ export function ChangesOverview({ book, chapters, calls, firstScene, rewrite }: 
       <p class="hint">Turning draft 1 into the final draft (workflow steps 35 to 42). From draft 1 to draft 2, the Writer rewrites the whole book, one chapter at a time, and its rewrite sits beside your page for you to pull from, paragraph by paragraph. The editor's story calls come first. From draft 2 on, the team's changes wait on your page for Accept or Reject, as track changes do in Word.</p>
       <div class="changes-steps">
         {rewrite && (
-          <a class="changes-step" href={rewrite.first ? href.write(rewrite.first) : firstScene ? href.write(firstScene) : href.board('overview', book.folder)}>
-            <Icon name="pen" size={22} /><span><b>The Writer's rewrite</b><span class="meta">{rewrite.done ? rewrite.done + ' of ' + rewrite.total + ' chapters rewritten, beside your page in the Rewrite tab' : 'None yet: ask for a rewrite in the project chat'}</span></span>
+          <a class="changes-step" href={rewrite.next ? href.write(rewrite.next) : rewrite.first ? href.write(rewrite.first) : firstScene ? href.write(firstScene) : href.board('overview', book.folder)}>
+            <Icon name="pen" size={22} /><span><b>The Writer's rewrite</b><span class="meta">{!rewrite.done ? 'None yet: ask for a rewrite in the project chat'
+              : rewrite.through >= rewrite.done && rewrite.done >= rewrite.total ? 'You are through all ' + rewrite.total + ' chapters'
+              : 'You are through ' + rewrite.through + ' of ' + rewrite.done + ' rewritten chapters' + (rewrite.done < rewrite.total ? ' (' + rewrite.total + ' in the book)' : '') + '; Done with this chapter at the end of the Rewrite tab marks the next'}</span></span>
           </a>
         )}
         <a class="changes-step" href={href.board('story-calls', book.folder)}>

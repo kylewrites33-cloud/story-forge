@@ -257,6 +257,13 @@
         "words": {
           "type": "integer",
           "computed": true
+        },
+        "rewrite_done": {
+          "type": "list",
+          "items": {
+            "type": "integer"
+          },
+          "description": "The chapters Kyle has been through in the app's Rewrite tab (Done with this chapter, 2026-11-05). When every rewritten chapter is listed, the app saves the next draft."
         }
       },
       "body": "Pitch, synopsis and working notes for the book."

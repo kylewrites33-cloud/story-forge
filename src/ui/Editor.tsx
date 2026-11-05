@@ -40,10 +40,11 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, changesIn, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
-import { RewritePanel, type Put } from './Rewrite.tsx';
+import { RewritePanel, type Put, type RewriteSection } from './Rewrite.tsx';
+import { rewriteFor } from '../lib/rewrite.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
@@ -174,8 +175,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; like?: (pairs: [string, string][]) => number };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
   drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
-  /** The Writer's rewrite of this scene (`Drafts/Rewrite/`), shown beside the page (2026-11-04). */
-  rewrite?: FileEntry | null;
+  /** The Writer's rewrite of the book (the copies in `Drafts/Rewrite/`), shown beside the page (2026-11-04); the chapters
+   * Kyle is through; and Done with this chapter, which marks one (2026-11-05). */
+  rewrite?: { files: FileEntry[]; done: number[]; onThrough?: (chapter: number, done: boolean) => Promise<string | null> } | null;
 }) {
   useLockedPage();
   const beatsMode = Boolean(beats);
@@ -912,16 +914,60 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const putSib = (api: SectionApi, t: string) => { api.put(t); setSibTick((n) => n + 1); };
   // ---- The Writer's rewrite beside the page (Kyle, 2026-11-04) ----
-  const hasRewrite = Boolean(rewrite) && !beatsMode && shownDraft == null;
+  const copies = rewrite ? rewrite.files : [];
+  const myRewrite = rewrite ? rewriteFor(copies, note) : null;
+  const hasRewrite = (Boolean(myRewrite) || sibNotes.some((n) => rewriteFor(copies, n))) && !beatsMode && shownDraft == null;
   const [caretAt, setCaretAt] = useState<number | null>(null);
+  // A paragraph brought over stands in for the open changes whose words lay in it: they close as handled by the rewrite
+  // and their to-dos tick (Kyle, 2026-11-05: one place for draft 1 to 2).
+  const closeUnder = (placed: Placed[], at: number, end: number) => {
+    const hit = changesIn(placed, at, end);
+    if (hit.length) record(Object.fromEntries(hit.map((c) => [c.id, 'rewrite' as ChangeStatus])));
+  };
   // Bring over: the rewrite's paragraph goes in place of Kyle's as one step to undo, and the cursor lands after it.
   const putRewrite = (p: Put) => {
+    closeUnder(chPlace.placed, p.at, p.end);
     wordsNotTyped(bodyWords(p.text) - bodyWords(pageText()));
     const c = readOnly.current ? null : commands.current;
     if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
     else { changed(p.text); reload(); }
     setCaretAt(p.toEnd);
   };
+  // The same for another scene of the chapter when the page shows the whole chapter.
+  const putRewriteSib = (n: NoteRecord, p: Put) => {
+    closeUnder(sibPlace.get(n.path) || [], p.at, p.end);
+    const api = sibs.current.get(n.path);
+    if (!api) return;
+    wordsNotTyped(bodyWords(p.text) - bodyWords(api.text()));
+    const c = api.commands.current;
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
+    else api.put(p.text);
+    setSibTick((k) => k + 1);
+  };
+  const rewriteSections: RewriteSection[] = !hasRewrite ? [] : [
+    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
+      onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
+      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); } })),
+    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, caret: caretAt, onPut: putRewrite,
+      onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
+      onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); } },
+    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
+      onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
+      onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); } })),
+  ];
+  // Done with this chapter: the chapter's open changes close as handled by the rewrite, and the book note marks it.
+  const rewriteThrough = rewrite && chapterNum != null ? rewrite.done.indexOf(chapterNum) >= 0 : false;
+  const onRewriteThrough = rewrite && rewrite.onThrough && chapterNum != null ? async (done: boolean) => {
+    if (done) {
+      const open = chCards.filter((c) => c.status === 'open');
+      if (open.length) record(Object.fromEntries(open.map((c) => [c.id, 'rewrite' as ChangeStatus])));
+      // The page reaches the vault first, so a draft saved after the last chapter holds every paragraph brought over.
+      if (quiet.current) clearTimeout(quiet.current);
+      if (!(await save(false)) || isUnsaved(draftRef.current)) return 'This scene did not reach the vault yet, so the chapter is not marked. Try again in a moment.';
+      if (!(await saveSiblings(false))) return 'Another scene of this chapter did not save yet. Try again in a moment.';
+    }
+    return rewrite.onThrough!(chapterNum, done);
+  } : undefined;
   // Without the writing box (the page shows marks), the words are picked once it is back.
   const goWords = (a: number, b: number) => { setChView('original'); setTimeout(() => { const c = commands.current; if (c) c.select(a, b); }, 60); };
   // The first time a scene with a rewrite opens on this device, the column opens on it (Kyle: "at all times").
@@ -1594,9 +1640,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             })()}
             {!moreList && <>
             {tab === 'rewrite' && (
-              <RewritePanel source={source} file={hasRewrite ? rewrite : null} text={beatsMode ? '' : text} caret={caretAt} chapter={chapterNum}
-                onPut={putRewrite} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); else goWords(a, b); closeOver(); }}
-                onShow={(a, b) => { const c = cmd(); if (c) c.show(a, b); }} />
+              <RewritePanel source={source} sections={rewriteSections} chapter={chapterNum} through={rewriteThrough} openCards={chOpenHere} onThrough={onRewriteThrough} />
             )}
             {tab === 'changes' && (
               chNote

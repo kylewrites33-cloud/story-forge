@@ -30,7 +30,7 @@ import { keepWriting, Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
 import { ChangesOverview } from './Changes.tsx';
-import { rewriteFor, rewriteProgress } from '../lib/rewrite.ts';
+import { rewriteDone, rewriteProgress, withRewriteDone } from '../lib/rewrite.ts';
 import { decideQueue } from '../lib/overview.ts';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
@@ -49,6 +49,7 @@ import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
 import { changesNoteFor, chapterChanges, countLike, flushChoices, isStoryCall } from '../lib/changes.ts';
 import { copyFor, saveBookDraft } from '../lib/bookdrafts.ts';
+import { Frontmatter } from '../lib/frontmatter.js';
 import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { optionJobsFor } from '../lib/options.ts';
@@ -468,6 +469,30 @@ export function App() {
     } catch (e) { return (e as Error).message; }
   }, [source, runSync]);
 
+  /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
+   * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
+  const onRewriteThrough = useCallback(async (book: BookEntry, chapter: number, done: boolean): Promise<string | null> => {
+    if (!navigator.onLine) return 'Connect to the internet to mark the chapter.';
+    if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
+    try {
+      const fresh = await source.readFresh(book.path);
+      const next = withRewriteDone(fresh.text, chapter, done);
+      await source.write(book.path, next, fresh.sha, 'rewrite: chapter ' + chapter + (done ? ' through' : ' opened again') + ' in the Rewrite tab');
+      const cur = snapRef.current;
+      const scenes = cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [];
+      const after = rewriteProgress(book.rewrite || [], scenes, rewriteDone({ data: Frontmatter.parse(next).data as Record<string, unknown> }));
+      if (!done || !after.total || after.through < after.done || after.done < after.total) { await runSync(); return null; }
+      // The last chapter: Draft 2 is saved (the copies in Drafts/Draft N/), and the scene files go on as the next draft.
+      if (!cur || !scenes.length) { await runSync(); return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details.'; }
+      const d = await saveBookDraft(source, book.folder, scenes, new Date());
+      await runSync();
+      return 'Chapter ' + chapter + ' is through, the last one. Draft ' + d.number + ' is saved; your pages are now draft ' + (d.number + 1) + '.';
+    } catch (e) {
+      await runSync().catch(() => undefined);
+      return (e as Error).message;
+    }
+  }, [source, runSync]);
+
   /** Workflow mode: results Kyle brought in or wrote, saved as idea notes in the book's Ideas folder, then a sync so every screen has them. */
   const onResults = useCallback(async (book: BookEntry, list: NewResult[]): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to save results.';
@@ -667,7 +692,7 @@ export function App() {
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
           changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
-          rewrite={book && book.rewrite ? rewriteFor(book.rewrite, note) : null}
+          rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.write ? (ch, done) => onRewriteThrough(book, ch, done) : undefined } : null}
           drafts={book ? {
             saved: book.drafts || [],
             onSave: async () => {
@@ -780,7 +805,7 @@ export function App() {
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
         calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}
-        rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean))} />;
+        rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean), rewriteDone(view.notes[book.path]))} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
         const resume = keepWriting(view, book, source.key);

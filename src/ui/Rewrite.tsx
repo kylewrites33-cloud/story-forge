@@ -53,22 +53,81 @@ function RewriteBox({ was, words, onInput, onFocus }: { was?: string; words: str
   );
 }
 
-/** The side column's Rewrite tab: the Writer's version of this scene, paragraph by paragraph beside Kyle's. */
-export function RewritePanel({ source, file, text, caret, chapter, onPut, onGo, onShow }: {
-  source: VaultSource;
+/** One scene of the chapter in the Rewrite column: Kyle's page, its rewrite copy, and how to change the page. The
+ * whole chapter shows when the page does (Kyle, 2026-11-05: "for chapter 2, i dont see anything rewritten after the
+ * first scene divider"). */
+export interface RewriteSection {
+  key: string;
+  /** The scene's name, shown over its rows when the chapter has more than one scene. */
+  label: string | null;
   /** The scene's copy in `Drafts/Rewrite/`, or null when the Writer has not rewritten it yet. */
   file: FileEntry | null;
   /** Kyle's page as it stands. */
   text: string;
-  /** Where his cursor is, so the column follows the page. */
+  /** Where his cursor is, so the column follows the page; null when it is not in this scene. */
   caret: number | null;
-  chapter: number | null;
   onPut: (p: Put) => void;
   /** Show these characters of the page (a tap on a paragraph in the column). */
   onGo: (at: number, end: number) => void;
   /** Bring these characters of the page into view without taking the cursor (Kyle's cursor is in the column). */
   onShow: (at: number, end: number) => void;
+}
+
+/** The side column's Rewrite tab: the Writer's version of this chapter, scene by scene and paragraph by paragraph beside Kyle's. */
+export function RewritePanel({ source, sections, chapter, through = false, openCards = 0, onThrough }: {
+  source: VaultSource;
+  sections: RewriteSection[];
+  chapter: number | null;
+  /** Kyle has finished this chapter in the Rewrite tab. */
+  through?: boolean;
+  /** The chapter's changes still open, which Done with this chapter closes as handled by the rewrite. */
+  openCards?: number;
+  /** Done with this chapter (or open it again): marks it in the book note and says what else happened. */
+  onThrough?: (done: boolean) => Promise<string | null>;
 }) {
+  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const mark = async (done: boolean) => {
+    if (!onThrough || busy) return;
+    setBusy(true);
+    setSaid(null);
+    try { const m = await onThrough(done); setSaid(m ? { error: !/saved|through/i.test(m), text: m } : null); } catch (e) { setSaid({ error: true, text: (e as Error).message }); }
+    setBusy(false);
+  };
+  const [hideSame, setHideSame] = useState(() => { try { return localStorage.getItem('story-forge.rewrite.hide-same') === '1'; } catch { return false; } });
+  const toggleSame = () => { setHideSame(!hideSame); try { localStorage.setItem('story-forge.rewrite.hide-same', hideSame ? '0' : '1'); } catch { /* lasts until reload */ } };
+  const any = sections.some((x) => x.file);
+  if (!any) {
+    return (
+      <div class="writer-panel rewrite-panel">
+        <p class="hint">The Writer has not rewritten {chapter != null ? 'chapter ' + chapter : 'this scene'} yet. When it has, its version sits here, paragraph by paragraph beside yours, and Bring over puts a paragraph in place of yours.</p>
+      </div>
+    );
+  }
+  return (
+    <div class="writer-panel rewrite-panel changes-panel">
+      <p class="hint rewrite-head">
+        The Writer's rewrite{chapter != null ? ' of chapter ' + chapter : ''}. New words are darker. Tap a paragraph to see yours on the page and to change the Writer's words before you bring them over; Bring over puts it in place of yours (Undo takes it back).
+      </p>
+      {through && (
+        <p class="hint rewrite-through"><Icon name="check" size={16} /> You are through this chapter.{onThrough && <> <button type="button" class="link" disabled={busy} onClick={() => mark(false)}>Open it again</button></>}</p>
+      )}
+      {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
+      <label class="rewrite-same-toggle"><input type="checkbox" checked={hideSame} onChange={toggleSame} /> Hide paragraphs that match yours</label>
+      {sections.map((x) => <RewriteScene key={x.key} source={source} section={x} hideSame={hideSame} named={sections.length > 1} />)}
+      {onThrough && !through && (
+        <div class="rewrite-done">
+          <button type="button" class="primary" disabled={busy} onClick={() => mark(true)}><Icon name="check" size={16} />Done with this chapter</button>
+          <p class="hint">{chapter != null ? 'Chapter ' + chapter : 'This chapter'} counts as through on Edit &gt; Changes{openCards ? ', and its ' + (openCards === 1 ? 'one open change closes' : openCards + ' open changes close') + ' as handled by the rewrite' : ''}. When the last chapter is through, Draft 2 is saved by itself.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One scene's rewrite, paragraph by paragraph beside Kyle's. */
+function RewriteScene({ source, section, hideSame, named }: { source: VaultSource; section: RewriteSection; hideSame: boolean; named: boolean }) {
+  const { file, text, caret, onPut, onGo, onShow } = section;
   const [theirs, setTheirs] = useState<{ key: string; text: string | null; error?: string }>({ key: '', text: null });
   const key = file ? file.path + '@' + file.sha : '';
   useEffect(() => {
@@ -80,12 +139,12 @@ export function RewritePanel({ source, file, text, caret, chapter, onPut, onGo, 
       .catch((e) => { if (live) setTheirs({ key, text: null, error: offlineError(e) ? 'Connect to the internet to see the rewrite of this chapter.' : (e as Error).message }); });
     return () => { live = false; };
   }, [key]);
-  const [hideSame, setHideSame] = useState(() => { try { return localStorage.getItem('story-forge.rewrite.hide-same') === '1'; } catch { return false; } });
-  const toggleSame = () => { setHideSame(!hideSame); try { localStorage.setItem('story-forge.rewrite.hide-same', hideSame ? '0' : '1'); } catch { /* lasts until reload */ } };
 
   const mine = useMemo(() => paragraphs(text), [text]);
   const rewrite = theirs.key === key && theirs.text != null ? theirs.text : null;
   const other = useMemo(() => (rewrite == null ? [] : paragraphs(rewrite)), [rewrite]);
+  const rows: Row[] = useMemo(() => (rewrite == null ? [] : align(mine.map((p) => p.text), other.map((p) => p.text))), [mine, other]);
+  const differ = rows.filter((r) => r.score < 1).length;
   // Kyle's tweaks, by the rewrite's paragraph index; they survive a change of tab and a reload of the page.
   const [edits, setEdits] = useState<Record<number, string>>(() => loadEdits(key));
   useEffect(() => { setEdits(loadEdits(key)); }, [key]);
@@ -93,8 +152,6 @@ export function RewritePanel({ source, file, text, caret, chapter, onPut, onGo, 
   const unedit = (j: number) => { const next = { ...edits }; delete next[j]; setEdits(next); saveEdits(key, next); };
   /** The Writer's paragraph as it stands: with Kyle's tweak when he made one. */
   const wordsOf = (j: number) => (edits[j] != null ? edits[j] : other[j].text);
-  const rows: Row[] = useMemo(() => (rewrite == null ? [] : align(mine.map((p) => p.text), other.map((p) => p.text))), [mine, other]);
-  const differ = rows.filter((r) => r.score < 1).length;
   // The row Kyle's cursor is in is marked and brought into view in the column when it changes.
   const cur = caret == null ? -1 : rowAt(rows, mine, caret);
   const list = useRef<HTMLDivElement>(null);
@@ -107,15 +164,10 @@ export function RewritePanel({ source, file, text, caret, chapter, onPut, onGo, 
     if (r.top < b.top || r.bottom > b.bottom) el.scrollIntoView({ block: 'nearest' });
   }, [cur]);
 
-  if (!file) {
-    return (
-      <div class="writer-panel rewrite-panel">
-        <p class="hint">The Writer has not rewritten {chapter != null ? 'chapter ' + chapter : 'this scene'} yet. When it has, its version sits here, paragraph by paragraph beside yours, and Bring over puts a paragraph in place of yours.</p>
-      </div>
-    );
-  }
-  if (theirs.key === key && theirs.error) return <div class="writer-panel rewrite-panel"><p class="error" role="status">{theirs.error}</p></div>;
-  if (rewrite == null) return <div class="writer-panel rewrite-panel"><p class="hint">Reading the rewrite…</p></div>;
+  const name = named && section.label ? <p class="rewrite-scene-name">{section.label}</p> : null;
+  if (!file) return <div class="rewrite-scene">{name}<p class="hint">The Writer has not rewritten this scene yet.</p></div>;
+  if (theirs.key === key && theirs.error) return <div class="rewrite-scene">{name}<p class="error" role="status">{theirs.error}</p></div>;
+  if (rewrite == null) return <div class="rewrite-scene">{name}<p class="hint">Reading the rewrite…</p></div>;
 
   const put = (index: number) => {
     const row = rows[index];
@@ -141,14 +193,9 @@ export function RewritePanel({ source, file, text, caret, chapter, onPut, onGo, 
   };
 
   return (
-    <div class="writer-panel rewrite-panel changes-panel">
-      <p class="hint rewrite-head">
-        The Writer's rewrite{chapter != null ? ' of chapter ' + chapter : ''}: {differ ? (differ === 1 ? '1 paragraph differs' : differ + ' paragraphs differ') + ' from yours' : 'the same as your page'}.
-        {' '}New words are darker. Tap a paragraph to see yours on the page and to change the Writer's words before you bring them over; Bring over puts it in place of yours (Undo takes it back).
-      </p>
-      {rows.some((r) => r.score === 1) && (
-        <label class="rewrite-same-toggle"><input type="checkbox" checked={hideSame} onChange={toggleSame} /> Hide paragraphs that match yours</label>
-      )}
+    <div class="rewrite-scene">
+      {name}
+      <p class="hint rewrite-count">{differ ? (differ === 1 ? '1 paragraph differs' : differ + ' paragraphs differ') + ' from yours' : 'The same as your page'}.</p>
       <div class="rewrite-rows" ref={list}>
         {rows.map((row, k) => {
           const same = row.score === 1;

@@ -3,9 +3,41 @@
 // `Drafts/Rewrite/` folder, the same file name as the scene, and never touches the scene itself. The index and `sf`
 // skip the Drafts folder, so the copies never clash with the real scenes. The app lines the rewrite's paragraphs up
 // with Kyle's and lets him bring one over at a time; the rewrite file never changes from the app.
+import { Frontmatter } from './frontmatter.js';
 import type { FileEntry } from './types.ts';
 
 export const REWRITE_FOLDER = 'Drafts/Rewrite';
+
+/** The chapters Kyle has been through in the Rewrite tab: the book note's `rewrite_done` list (Kyle, 2026-11-05:
+ * "Done with this chapter"). */
+export function rewriteDone(book: { data: Record<string, unknown> } | null | undefined): number[] {
+  const v = book ? book.data.rewrite_done : null;
+  const list = Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : [];
+  return list.map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0).filter((n, i, a) => a.indexOf(n) === i).sort((a, b) => a - b);
+}
+
+/** The book note's text with chapter `chapter` marked through (or not), every other line as it was. */
+export function withRewriteDone(text: string, chapter: number, done: boolean): string {
+  const s = Frontmatter.split(text);
+  if (!s.hasFm) throw new Error('The book note has no properties, so the app cannot mark the chapter. Ask the team to fix it.');
+  const parsed = Frontmatter.parse(text);
+  if (parsed.error) throw new Error('The book note\'s properties cannot be read (' + parsed.error + '). Ask the team to fix it, then try again.');
+  const now = rewriteDone({ data: parsed.data as Record<string, unknown> });
+  const next = done ? now.concat(now.indexOf(chapter) < 0 ? [chapter] : []).sort((a, b) => a - b) : now.filter((n) => n !== chapter);
+  const eol = s.yaml && s.yaml.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
+  const lines = s.yaml ? s.yaml.split(/\r?\n/) : [];
+  let at = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^rewrite_done[ \t]*:/.test(lines[i])) continue;
+    let j = i + 1;
+    while (j < lines.length && (/^[ \t]+\S/.test(lines[j]) || /^-([ \t]|$)/.test(lines[j]))) j++;
+    lines.splice(i, j - i);
+    at = i;
+    break;
+  }
+  if (next.length) lines.splice(at < 0 ? lines.length : at, 0, 'rewrite_done: [' + next.join(', ') + ']');
+  return s.open + lines.join(eol) + s.close + s.body;
+}
 
 const fileName = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
@@ -133,8 +165,9 @@ export function rowAt(rows: Row[], mine: Para[], caret: number): number {
   return best;
 }
 
-/** How far the rewrite has come: the chapters that have a rewritten scene, and the first scene with one. */
-export function rewriteProgress(copies: FileEntry[], scenes: { path: string; data: Record<string, unknown> }[]): { done: number; total: number; first: string | null } {
+/** How far the rewrite has come: the chapters that have a rewritten scene, the first scene with one, and how many
+ * chapters Kyle is through (the first chapter not yet through is `next`). */
+export function rewriteProgress(copies: FileEntry[], scenes: { path: string; data: Record<string, unknown> }[], through: number[] = []): { done: number; total: number; first: string | null; through: number; next: string | null } {
   const chapters = new Map<number, { any: boolean; first: string }>();
   scenes.forEach((s) => {
     const ch = typeof s.data.chapter === 'number' ? s.data.chapter : null;
@@ -145,5 +178,6 @@ export function rewriteProgress(copies: FileEntry[], scenes: { path: string; dat
   });
   const all = Array.from(chapters.entries()).sort((a, b) => a[0] - b[0]);
   const done = all.filter(([, e]) => e.any);
-  return { done: done.length, total: all.length, first: done.length ? done[0][1].first : null };
+  const left = done.filter(([ch]) => through.indexOf(ch) < 0);
+  return { done: done.length, total: all.length, first: done.length ? done[0][1].first : null, through: done.length - left.length, next: left.length ? left[0][1].first : null };
 }
