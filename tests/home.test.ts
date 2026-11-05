@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Frontmatter } from '../src/lib/frontmatter.js';
-import { addRecent, bookProgress, continueList, labelHue, labelsOf, lastWorked, parseOutline, readingLine, sceneMatches, sortBooks } from '../src/lib/home.ts';
+import { addRecent, bookProgress, labelHue, labelsOf, lastWorked, parseOutline, readingLine, sceneMatches, sortBooks } from '../src/lib/home.ts';
 import { applyToData, applyToText, editChange } from '../src/lib/ideas.ts';
 import { sceneHeader } from '../src/lib/format.ts';
 import { cleanLook, DEFAULT_LOOK } from '../src/lib/page.ts';
@@ -21,12 +21,11 @@ test('the recent list keeps one entry per scene, newest first, and at most twelv
   assert.equal(list.length, 12);
 });
 
-test('Continue where you left off skips scenes no longer in the vault, and books sort by last worked on', () => {
+test('books sort by last worked on, and scenes no longer in the vault are skipped', () => {
   const b1 = book('Series/Q/Books/1 One', 'One', 'Q', 1, ['s1']);
   const b2 = book('Series/Q/Books/2 Two', 'Two', 'Q', 2, ['s2']);
   const index = { books: [b1, b2], notes: { s1: scene('s1', {}), s2: scene('s2', {}) } } as unknown as VaultIndex;
   const recent = [{ path: 'gone', at: '2026-10-18T05:00:00Z' }, { path: 's1', at: '2026-10-18T04:00:00Z' }, { path: 's2', at: '2026-10-17T04:00:00Z' }];
-  assert.deepEqual(continueList(index, recent).map((c) => c.book.title), ['One', 'Two']);
   const worked = lastWorked(index, recent);
   assert.deepEqual(sortBooks([b2, b1], '', 'recent', worked).map((b) => b.title), ['One', 'Two']);
   assert.deepEqual(sortBooks([b1, b2], '', 'name', {}).map((b) => b.title), ['One', 'Two']);

@@ -1,18 +1,22 @@
 // The home page, like Novelcrafter's "Your Novels": Books or Series at the top, the scenes Kyle wrote in last,
 // then every book as a cover card (or a list), with search and sort. A series page shows its books and its notes.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { bookStatus, continueBooks, type BookStatus, type PlanningStage } from '../lib/bookstatus.ts';
+import { bookSigns, currentStage, flowStages, stageProgress, taskStatuses, flowResults } from '../lib/flow.ts';
+import { jobNotes } from '../lib/jobs.ts';
+import { parseWorkflow } from '../lib/workflow.ts';
+import { useTeam } from './Team.tsx';
 import { sceneLabel } from '../lib/board.ts';
 import { coverUrl } from '../lib/covers.ts';
 import { timeAgo } from '../lib/format.ts';
 import {
-  bookChapters, bookWords, continueList, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
+  bookWords, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
 import { toNumber } from '../lib/links.ts';
 import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import { buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
 import { kindleFile, loadMatter, matterPath, saveMatterBody, splitNote, starterMatter } from '../lib/epub.ts';
 import { activeBook } from '../lib/vault-index.ts';
-import { chaptersDone, storyScenes } from '../lib/overview.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { IdeasLink, Warnings } from './screens.tsx';
@@ -314,26 +318,52 @@ function MatterEditor({ source, index, book }: { source: VaultSource; index: Vau
   );
 }
 
-const STAGE_DONE = ['publish', 'done'];
+function phaseDot(st: BookStatus): string {
+  return st.phase === 'published' ? 'dot-done' : st.phase === 'planning' ? 'dot-early' : 'dot-going';
+}
 
-function stageDot(stage: string): string {
-  return STAGE_DONE.indexOf(stage) >= 0 ? 'dot-done' : stage === 'draft' || stage === 'revise' || stage === 'polish' ? 'dot-going' : 'dot-early';
+/** Where every book is (lib/bookstatus.ts), worked out once for the page: the stage, the percent of it done, where to
+ * carry on. A book with no prose yet takes its stage from the workflow. */
+export function useBookStatuses(source: VaultSource, index: VaultIndex): (book: BookEntry) => BookStatus {
+  const team = useTeam(index);
+  const names = useMemo(() => team.members.map((m) => m.name), [team]);
+  const stages = useMemo(() => flowStages(parseWorkflow(team.workflow, names)), [team.workflow, names]);
+  return useMemo(() => {
+    const recent = loadRecent(source.key);
+    const active = activeBook(index);
+    const jobs = jobNotes(index);
+    const cache = new Map<string, BookStatus>();
+    return (book: BookEntry) => {
+      let st = cache.get(book.folder);
+      if (st) return st;
+      let planning: PlanningStage | null = null;
+      if (stages.length) {
+        const statuses = taskStatuses(stages, flowResults(index, book), jobs, book.folder);
+        const cur = currentStage(stages, statuses, bookSigns(index, book));
+        const stage = cur >= 0 && cur < stages.length ? stages[cur] : null;
+        if (stage) {
+          const p = stageProgress(stage, statuses);
+          const colon = stage.title.indexOf(':');
+          planning = { name: (colon >= 0 ? stage.title.slice(colon + 1) : stage.title).trim(), done: p.done, total: p.total };
+        }
+      }
+      st = bookStatus(index, book, recent, planning, active ? active.folder : '');
+      cache.set(book.folder, st);
+      return st;
+    };
+  }, [source.key, index, stages]);
+}
+
+/** "Draft 1 to 2: the rewrite · 5% done". */
+function stageLine(st: BookStatus): string {
+  return st.stage + (st.percent != null && st.phase !== 'published' ? ' · ' + st.percent + '% done' : '');
 }
 
 /** One book as a tall cover card (or a row in the list). */
-function BookCard({ source, index, book, list }: { source: VaultSource; index: VaultIndex; book: BookEntry; list: boolean }) {
+function BookCard({ source, index, book, list, status }: { source: VaultSource; index: VaultIndex; book: BookEntry; list: boolean; status: BookStatus }) {
   const words = bookWords(index, book);
-  const chapters = bookChapters(index, book);
-  const data = index.notes[book.path] ? index.notes[book.path].data : {};
-  const target = toNumber(data.target_words);
   const active = activeBook(index);
-  // Progress counts only chapters Kyle has marked done (Kyle, 2026-10-22).
-  const done = chaptersDone(storyScenes(index, book));
-  const line = [
-    'stage ' + book.stage,
-    chapters ? done.done + ' of ' + chapters + (chapters === 1 ? ' chapter' : ' chapters') + ' done' : book.scenes.length + (book.scenes.length === 1 ? ' scene' : ' scenes'),
-    words ? num(words) + ' words' : ''
-  ].filter(Boolean).join(' · ');
+  const line = [stageLine(status), status.detail, words ? num(words) + ' words' : ''].filter(Boolean).join(' · ');
   return (
     <li class={list ? 'book-row' : 'book-card'}>
       <a href={href.board('overview', book.folder)}>
@@ -341,8 +371,8 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
         <span class="book-text">
           <span class="meta">{book.seriesName}{book.number != null ? ' · Book ' + book.number : ''}{active && active.folder === book.folder ? ' · active book' : ''}</span>
           <span class="book-title">{book.title}</span>
-          <span class="meta"><span class={'dot ' + stageDot(book.stage)} />{line}</span>
-          {target && words ? <span class="book-progress" title={num(done.words) + ' of ' + num(target) + ' words in done chapters'}><span style={{ width: Math.min(100, Math.round(done.words * 100 / target)) + '%' }} /></span> : null}
+          <span class="meta"><span class={'dot ' + phaseDot(status)} />{line}</span>
+          {status.percent != null ? <span class={'book-progress' + (status.phase === 'published' ? ' done' : '')} title={status.stage + ': ' + status.percent + '% done'}><span style={{ width: status.percent + '%' }} /></span> : null}
         </span>
       </a>
       <IdeasLink index={index} book={book} />
@@ -351,6 +381,7 @@ function BookCard({ source, index, book, list }: { source: VaultSource; index: V
 }
 
 function BookGrid({ source, index, books, list, onNew }: { source: VaultSource; index: VaultIndex; books: BookEntry[]; list: boolean; onNew?: () => void }) {
+  const statusOf = useBookStatuses(source, index);
   return (
     <ul class={list ? 'book-rows' : 'book-cards'}>
       {onNew && !list && (
@@ -358,7 +389,7 @@ function BookGrid({ source, index, books, list, onNew }: { source: VaultSource; 
           <button type="button" onClick={onNew}><span class="new-cover"><Icon name="plus" size={28} /><span>New book</span></span></button>
         </li>
       )}
-      {books.map((b) => <BookCard key={b.folder} source={source} index={index} book={b} list={list} />)}
+      {books.map((b) => <BookCard key={b.folder} source={source} index={index} book={b} list={list} status={statusOf(b)} />)}
     </ul>
   );
 }
@@ -386,7 +417,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
   const [view, setView] = useState<'covers' | 'list'>(() => loadPref('home-view', VIEWS, 'covers'));
   const recent = loadRecent(source.key);
   const worked = lastWorked(index, recent);
-  const rates = loadRates();
+  const statusOf = useBookStatuses(source, index);
 
   if (!index.books.length) {
     return (
@@ -443,8 +474,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
     );
   }
 
-  const go = continueList(index, recent);
-  const active = activeBook(index);
+  const go = continueBooks(index.books.map((book) => ({ book, status: statusOf(book) })));
   const books = sortBooks(index.books.slice(), query, sort, worked);
   return (
     <section class="home">
@@ -452,31 +482,29 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
       <p class="home-sub">Which one do you want to work on today?</p></div>{!creating && create}</div>
       {creating && create}
       <Tabs series={false} />
-      {(go.length > 0 || active) && (
+      {go.length > 0 && (
         <>
           <p class="home-label">Continue where you left off</p>
           <ul class="continue">
-            {go.length ? go.map(({ note, book, at }) => {
-              const named = sceneLabel(book.scenes.map((p) => index.notes[p]).filter(Boolean), note);
+            {go.map(({ book, status }) => {
+              const scenes = book.scenes.map((p) => index.notes[p]).filter(Boolean);
+              const note = status.go ? index.notes[status.go] : null;
+              const named = note ? sceneLabel(scenes, note) : null;
+              const to = status.go ? href.write(status.go) : status.phase === 'planning' ? href.flow(book.folder) : href.board('overview', book.folder);
               return (
-                <li key={note.path}>
-                  <a href={href.write(note.path)}>
+                <li key={book.folder}>
+                  <a href={to}>
                     <span class="book-title">{book.title}</span>
-                    <span class="meta">{[named.chapter, named.scene].filter(Boolean).join(' · ')}</span>
-                    <span class="meta">{timeAgo(at)}</span>
-                    <span class="go">Keep writing <Icon name="right" size={16} /></span>
+                    <span class="continue-stage">{stageLine(status)}</span>
+                    {status.percent != null && <span class="book-progress"><span style={{ width: status.percent + '%' }} /></span>}
+                    {status.detail && <span class="meta">{status.detail}</span>}
+                    {named && named.chapter && <span class="meta">{named.chapter}</span>}
+                    {status.at && <span class="meta">{timeAgo(status.at)}</span>}
+                    <span class="go">{status.goLabel} <Icon name="right" size={16} /></span>
                   </a>
                 </li>
               );
-            }) : active && (
-              <li>
-                <a href={href.board('overview', active.folder)}>
-                  <span class="book-title">{active.title}</span>
-                  <span class="meta">The active book · {readingLine(bookWords(index, active), rates) || 'no words yet'}</span>
-                  <span class="go">Open the book <Icon name="right" size={16} /></span>
-                </a>
-              </li>
-            )}
+            })}
           </ul>
         </>
       )}
