@@ -754,6 +754,13 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   can go back to it at any time. On the iPad in portrait the column is the usual sheet over the page.
 - **Edit > Changes** opens with "The Writer's rewrite: N of M chapters rewritten", linking to the first chapter with
   one, before the story calls and the changes.
+- **Change it first (2026-11-05).** Kyle: "can i put my cursor in there on the right and adjust it before i move it
+  over? that would be ideal. (esp if i dont have to push a button to begin typing on the right side)". Every paragraph
+  of the Writer's that differs from his is a box he can type in straight away, no button: his own words greyer behind
+  the text, the Writer's new words and his typing darker, and the box grows with its words. Putting the cursor in a
+  box lights his paragraph on the page and scrolls to it without taking the cursor away. Bring over then uses the box's
+  words; "Changed by you" marks a tweaked box and "Back to the Writer's words" drops the tweak. Tweaks are kept per
+  rewrite file on the device until the browser tab closes (sessionStorage), so a change of tab or a reload keeps them.
 
 ## Chapter titles (2026-10-29)
 
