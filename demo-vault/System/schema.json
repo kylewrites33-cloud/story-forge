@@ -243,6 +243,10 @@
           "type": "date",
           "description": "The day Kyle plans to publish the book, set on its Overview (Kyle, 2026-11-06)."
         },
+        "publish_estimate": {
+          "type": "date",
+          "description": "The app's estimated publish day from the stage dates, written when it moves by more than three days; the daily mailbox check passes changes to the Chief of Staff (Kyle, 2026-11-06)."
+        },
         "market_start": {
           "type": "date",
           "description": "The day market research started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
