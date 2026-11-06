@@ -484,7 +484,7 @@ handled in to do? this could allow us to change manuscript to Write, and get us 
 of a button. i know scrivener gets you in there with minimal steps", then "then maybe we can do Plan Write Edit Publish for
 the list below home. and codex can move down to the section witht eh team and to dos".
 
-- **The sidebar** (`src/lib/rooms.ts`, `Shell.tsx`): Home, Plan, Write, Edit, Publish under the book; lower down, with Team
+- **The sidebar** (`src/lib/rooms.ts`, `Shell.tsx`): Home, Market, Plan, Write, Edit, Publish under the book (Market since 2026-11-06, see "The Overview made simpler"); lower down, with Team
   and To-do, the Codex (its pages open beneath it as before). Edit is the old Review room (Tension and Pacing, Themes,
   Sessions, Taste) under a new name.
 - **Write** has no pages. Pressing it opens the writing screen straight away at the scene last opened on this device; on
@@ -944,3 +944,33 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.
+
+## The Overview made simpler, and a Market room (2026-11-06)
+
+Kyle, 2026-11-06: "I want to work on the overview screen to make it more useful to me ... making it clean and simple".
+The book's Overview (Home) now holds, top to bottom:
+- **Publish date** under the title: the day he plans to publish, set or changed in place with a date picker and shown as
+  "Tue, Dec 15, 2026 · 39 days away". Saved as the book's `publish_date` (vault schema). Before this the only date on the
+  page was the workflow's "Publishing (proposed 2026-10-31, not yet kept)", which is when that workflow stage was proposed,
+  not a release date.
+- **Keep writing** (Keep editing while a draft is being edited): the same scene the Books page's Continue opens
+  (`bookStatus`), so both pages agree. A book still in planning gets Keep planning, which opens the workflow.
+- **Where the book is**, six stages with a percent each (`src/lib/bookstages.ts`; Kyle: "the market research, the planning,
+  the outlining, which maybe would involve both the outline and the beats, the writing, the editing, the publishing"):
+  Market research = the workflow's market steps kept (or the Market board's thesis, comps, keywords and title, whichever
+  is further); Planning = the premise, test drive and cast steps kept; Outlining = half the outline (outline steps, or the
+  beat sheet's beats kept) and half the chapters with beats or a chapter plan; Writing = 100% once a draft is saved or
+  editing has begun, else the Books page's count; Editing = three passes (draft 1 to 2, 2 to 3, 3 to 4), the one under
+  way counted as far as it has got; Publishing = the workflow's publishing steps, 100% once published. Each stage opens
+  its room. The stage the book is in is lit, with its detail beside the heading.
+- **Progress**: the stage it is in and its percent in the Books page's style, then words in the book, chapters, words
+  Kyle typed in the last seven days with minutes of typing (Writing Log), and the word target with Change. The old card
+  (chapters marked done, scene statuses) is gone: it said 0 of 37 for a book in its rewrite.
+- **Waiting on you**, with the story checks' warnings folded in as one row that opens the list.
+- The guided **Next step** is gone from the Overview: it overlapped Keep writing and pointed at drafting while the book
+  was in its rewrite. The **Release runway** is hidden until a chapter is posted or a posting pace is set (for Royal Road).
+
+**Market room** (Kyle, 2026-11-06: "I kind of like the idea of separating the marketing work from the planning work: They're
+two very large stages. We have different AI agents responsible for those steps"): a room between Home and Plan with the
+Market board and Research steps (the workflow's market research stage). Publish keeps Book details, which already holds
+Export to Word and the Kindle file, so the Market board no longer repeats the Export card.

@@ -1,6 +1,7 @@
-// A book's Overview (Writers Room's book page, Kyle 2026-10-18): the stage strip, the one next step as a big button, words
-// against the target and scenes by status, what is waiting on Kyle, warnings from every check, and the Release runway.
-// The stage strip also sits at the top of the Chapter Grid.
+// A book's Overview (Writers Room's book page, Kyle 2026-10-18; made simpler 2026-11-06): the publish date, Keep writing,
+// where the book is in six stages with a percent each, Progress for the stage it is in, and Waiting on you with the story
+// checks' warnings folded in. The Release runway shows only once a chapter is posted or a posting pace is set.
+// The stage strip and the guided next step live on here for other pages; the Overview no longer shows them.
 import { useState } from 'preact/hooks';
 import type { Decision } from '../lib/ideas.ts';
 import type { OnJob } from '../lib/jobs.ts';
@@ -11,7 +12,10 @@ import {
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { bookWarnings } from '../lib/warnings.ts';
 import { Icon } from './Icon.tsx';
-import { BookPath } from './Flow.tsx';
+import { useFlow } from './Flow.tsx';
+import { useBookStatuses } from './Home.tsx';
+import { publishDate, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
+import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
@@ -127,61 +131,138 @@ function NumberSetting({ label, value, unit, onSave }: { label: string; value: n
   );
 }
 
-export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, keep }: {
+/** The planned publish date under the book's title (Kyle, 2026-11-06), with Change. Written to the book's `publish_date`. */
+function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState(value || '');
+  if (!open) {
+    return (
+      <p class="ov-pubdate">
+        <Icon name="upload" size={18} /> <span>Publish date: <b>{value ? publishLine(value, new Date()) : 'not set'}</b></span>
+        {onSave && <button type="button" class="link" onClick={() => { setV(value || ''); setOpen(true); }}>{value ? 'Change' : 'Set it'}</button>}
+      </p>
+    );
+  }
+  const ok = /^\d{4}-\d{2}-\d{2}$/.test(v);
+  return (
+    <form class="ov-setting-form ov-pubdate-form" onSubmit={(e) => { e.preventDefault(); if (ok && onSave) { onSave(v); setOpen(false); } }}>
+      <label class="reason">Publish date
+        <input type="date" value={v} onInput={(e) => setV((e.currentTarget as HTMLInputElement).value)} />
+      </label>
+      <div class="buttons">
+        <button type="submit" class="primary" disabled={!ok}>Save</button>
+        <button type="button" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+/** Where the book is, in Kyle's six stages, each with its percent (lib/bookstages.ts). Each opens the room it lives in. */
+function SixStages({ stages, folder }: { stages: SixStage[]; folder: string }) {
+  const to: Record<StageKey, string> = {
+    market: href.board('market', folder), planning: href.flow(folder), outlining: href.board('beat-sheet', folder),
+    writing: href.book(folder), editing: href.board('changes', folder), publishing: href.board('details', folder)
+  };
+  const cur = stages.find((s) => s.current);
+  return (
+    <section class="book-path six-stages" aria-label="Where the book is">
+      <div class="book-path-head">
+        <h2>Where the book is</h2>
+        <p class="meta">{cur ? cur.name + ': ' + cur.detail : 'Published.'}</p>
+      </div>
+      <ol class="book-path-row">
+        {stages.map((s) => (
+          <li key={s.key} class={s.percent >= 100 ? 'done' : s.current ? 'current' : ''}>
+            <a href={to[s.key]} aria-current={s.current ? 'step' : undefined} title={s.detail}>
+              <span class="book-path-name">{s.name}</span>
+              <span class="book-path-bar"><span style={{ width: s.percent + '%' }} /></span>
+              <span class="six-pct">{s.percent >= 100 && <Icon name="check" size={14} />} {s.percent}%</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** Words typed and minutes of typing over the last seven days, from the Writing Log (Kyle's own typing only). */
+function weekTyping(index: VaultIndex, sourceKey: string, now: Date): { typed: number; minutes: number } {
+  let typed = 0, minutes = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const day = today(index, i === 0 ? loadLog(sourceKey) : [], d, i === 0 ? loadTyped() : undefined, i === 0 ? loadTyping() : undefined);
+    typed += day.typed;
+    minutes += day.typing;
+  }
+  return { typed, minutes: Math.round(minutes) };
+}
+
+const hours = (m: number) => (m < 60 ? m + ' minutes' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min');
+
+export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor }: {
   schema: Schema; index: VaultIndex; book: BookEntry; sourceKey: string; onJob?: OnJob; onDecide?: OnDecide;
-  /** The scene to keep writing, shown as the big button at the top of Home. */
-  keep?: { to: string; title: string; where: string } | null;
+  /** The words for the big button: the chapter's name and where in it, for a scene's path. */
+  keepFor?: (path: string) => { title: string; where: string } | null;
 }) {
   const [seen, setSeen] = useState(() => loadSeenJobs(sourceKey));
+  const [showWarnings, setShowWarnings] = useState(false);
   const nums = bookNumbers(schema, index, book);
+  const status = useBookStatuses({ key: sourceKey }, index)(book);
+  const flow = useFlow(index, book);
+  const six = sixStages({ index, book, stages: flow.stages, statuses: flow.statuses, status });
   const waiting = waitingOnKyle(index, book, seen);
   const warnings = bookWarnings(index, book.folder);
   const run = runway(index, book);
   const note = bookNote(index, book);
   const save = note && onDecide && !note.error ? (key: string) => (v: string) => onDecide(note.path, 'edit', '', { [key]: v }) : null;
   const jobs = finishedJobs(index, book).filter((j) => seen.indexOf(j.path) < 0);
+  const keep = status.go && keepFor ? keepFor(status.go) : null;
+  const week = weekTyping(index, sourceKey, new Date());
+  const decide = waiting.some((w) => w.key === 'ideas' || w.key === 'beats' || w.key === 'conflicts');
   return (
     <section class="overview">
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Home</p>
       <h1>{book.title}</h1>
-      {keep && (
-        <a class="hero-card" href={keep.to}>
+      <PublishDate value={publishDate(note)} onSave={save ? save('publish_date') : undefined} />
+      {status.go && keep ? (
+        <a class="hero-card" href={href.write(status.go)}>
           <span class="hero-text">
-            <small>Keep writing</small>
+            <small>{status.goLabel}</small>
             <b>{keep.title}</b>
             <span>{keep.where}</span>
           </span>
           <span class="hero-go"><Icon name="pen" size={20} /> Open</span>
         </a>
-      )}
-      <BookPath index={index} book={book} />
-      <NextStepCard schema={schema} index={index} book={book} onJob={onJob} onDecide={onDecide} />
+      ) : status.phase === 'planning' ? (
+        <a class="hero-card" href={href.flow(book.folder)}>
+          <span class="hero-text"><small>Keep planning</small><b>{status.stage}</b><span>{status.detail || 'The workflow, step by step'}</span></span>
+          <span class="hero-go"><Icon name="right" size={20} /> Open</span>
+        </a>
+      ) : null}
+      <SixStages stages={six} folder={book.folder} />
       <div class="ov-grid">
         <section class="ov-panel" aria-labelledby="ov-words">
           <h2 id="ov-words"><Icon name="pen" size={20} /> Progress</h2>
-          <p class="ov-big">{nums.chaptersDone}<span class="meta"> of {nums.chapters === 1 ? '1 chapter' : nums.chapters + ' chapters'} done</span></p>
-          <p class="ov-done-words">{nums.doneWords.toLocaleString('en-US')}{nums.target ? ' of ' + nums.target.toLocaleString('en-US') : ''} words in done chapters</p>
-          {nums.target != null && (
-            <div class="ov-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={nums.percent} aria-label="Words in done chapters against the target">
-              <span style={{ width: nums.percent + '%' }} />
+          <p class="ov-stage">{status.stage}{status.percent != null && status.phase !== 'published' ? <span class="ov-stage-pct"> · {status.percent}% done</span> : null}</p>
+          {status.percent != null && (
+            <div class="ov-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={status.percent} aria-label={status.stage}>
+              <span style={{ width: status.percent + '%' }} />
             </div>
           )}
-          <p class="meta">{nums.words.toLocaleString('en-US')} words on the page in all, the team's drafts included. Mark a chapter done from the writing screen's ••• menu.</p>
-          <NumberSetting label="Target" value={nums.target} unit="words" onSave={save ? save('target_words') : undefined} />
-          <ul class="ov-status">
-            {nums.counts.map((c) => (
-              <li key={c.status} class={'st-' + c.status.replace(/[^a-z-]/gi, '')}><span class="ov-count">{c.count}</span> {c.status}</li>
-            ))}
+          {status.detail && <p class="meta ov-stage-detail">{status.detail}</p>}
+          <ul class="ov-facts">
+            <li><span class="ov-count">{nums.words.toLocaleString('en-US')}</span> words in the book</li>
+            <li><span class="ov-count">{nums.chapters}</span> {nums.chapters === 1 ? 'chapter' : 'chapters'}</li>
+            <li><span class="ov-count">{week.typed.toLocaleString('en-US')}</span> words you typed in the last 7 days{week.minutes ? ', in ' + hours(week.minutes) + ' of typing' : ''}</li>
           </ul>
-          <p class="meta">{nums.scenes === 1 ? '1 scene' : nums.scenes + ' scenes'}. <a href={href.book(book.folder)}>Open the Chapter Grid</a></p>
+          <NumberSetting label="Target" value={nums.target} unit="words" onSave={save ? save('target_words') : undefined} />
+          <p class="meta"><a href={href.book(book.folder)}>Open the Chapter Grid</a></p>
         </section>
 
         <section class="ov-panel" aria-labelledby="ov-wait">
           <h2 id="ov-wait"><Icon name="todo" size={20} /> Waiting on you</h2>
-          {waiting.some((w) => w.key === 'ideas' || w.key === 'beats' || w.key === 'conflicts') && (
-            <a class="button primary decide-go" href={href.board('decide', book.folder)}>Decide one at a time</a>
-          )}
-          {!waiting.length ? <p class="ov-clear"><Icon name="check" size={20} /> Nothing is waiting on you.</p> : (
+          {decide && <a class="button primary decide-go" href={href.board('decide', book.folder)}>Decide one at a time</a>}
+          {!waiting.length && !warnings.length ? <p class="ov-clear"><Icon name="check" size={20} /> Nothing is waiting on you.</p> : (
             <ul class="ov-list">
               {waiting.map((w) => (
                 <li key={w.key}>
@@ -191,34 +272,39 @@ export function OverviewPage({ schema, index, book, sourceKey, onJob, onDecide, 
                   )}
                 </li>
               ))}
+              {warnings.length > 0 && (
+                <li>
+                  <button type="button" class="ov-warn-row" aria-expanded={showWarnings} onClick={() => setShowWarnings(!showWarnings)}>
+                    <span class="ov-count">{warnings.length}</span><span>{warnings.length === 1 ? 'warning from the story checks' : 'warnings from the story checks'}</span><Icon name={showWarnings ? 'up' : 'down'} size={18} />
+                  </button>
+                  {showWarnings && (
+                    <ul class="ov-list ov-warnings">
+                      {warnings.map((w, i) => <li key={i}><a href={w.href}><span>{w.text}</span><Icon name="right" size={18} /></a></li>)}
+                    </ul>
+                  )}
+                </li>
+              )}
             </ul>
           )}
         </section>
 
-        <section class={'ov-panel ov-runway' + (run.low ? ' low' : '')} aria-labelledby="ov-run">
-          <h2 id="ov-run"><Icon name="upload" size={20} /> Release runway</h2>
-          <div class="ov-stats">
-            <div><span class="ov-big">{run.posted}</span><span class="meta">{run.posted === 1 ? 'chapter posted' : 'chapters posted'}</span></div>
-            <div><span class="ov-big">{run.ready}</span><span class="meta">{run.ready === 1 ? 'chapter ready' : 'chapters ready'}</span></div>
-            <div class="ov-buffer"><span class="ov-big">{run.weeks == null ? '—' : run.weeks}</span><span class="meta">{run.weeks === 1 ? 'week of buffer' : 'weeks of buffer'}</span></div>
-          </div>
-          {run.weeks != null && run.low && <p class="ov-warn">Under two weeks of buffer. Finish {run.cadence && run.cadence * 2 - run.ready > 0 ? (run.cadence * 2 - run.ready === 1 ? '1 more chapter' : (run.cadence * 2 - run.ready) + ' more chapters') : 'more chapters'} to get back to two weeks.</p>}
-          <NumberSetting label="Posting pace" value={run.cadence} unit={run.cadence === 1 ? 'chapter a week' : 'chapters a week'} onSave={save ? save('cadence') : undefined} />
-          <p class="meta">
-            {run.lastPosted ? 'Last posted ' + run.lastPosted + '. ' : 'Nothing posted yet. '}
-            {run.nextReady ? run.nextReady + ' is next to post. ' : ''}
-            A chapter is posted when a scene in it has a published date, and ready when every scene in it is final.
-          </p>
-        </section>
-
-        <section class="ov-panel" aria-labelledby="ov-warn">
-          <h2 id="ov-warn"><Icon name="eye" size={20} /> Warnings</h2>
-          {!warnings.length ? <p class="ov-clear"><Icon name="check" size={20} /> No warnings. Every check is happy with this book.</p> : (
-            <ul class="ov-list ov-warnings">
-              {warnings.map((w, i) => <li key={i}><a href={w.href}><span>{w.text}</span><Icon name="right" size={18} /></a></li>)}
-            </ul>
-          )}
-        </section>
+        {(run.posted > 0 || run.cadence != null) && (
+          <section class={'ov-panel ov-runway' + (run.low ? ' low' : '')} aria-labelledby="ov-run">
+            <h2 id="ov-run"><Icon name="upload" size={20} /> Release runway</h2>
+            <div class="ov-stats">
+              <div><span class="ov-big">{run.posted}</span><span class="meta">{run.posted === 1 ? 'chapter posted' : 'chapters posted'}</span></div>
+              <div><span class="ov-big">{run.ready}</span><span class="meta">{run.ready === 1 ? 'chapter ready' : 'chapters ready'}</span></div>
+              <div class="ov-buffer"><span class="ov-big">{run.weeks == null ? '—' : run.weeks}</span><span class="meta">{run.weeks === 1 ? 'week of buffer' : 'weeks of buffer'}</span></div>
+            </div>
+            {run.weeks != null && run.low && <p class="ov-warn">Under two weeks of buffer. Finish {run.cadence && run.cadence * 2 - run.ready > 0 ? (run.cadence * 2 - run.ready === 1 ? '1 more chapter' : (run.cadence * 2 - run.ready) + ' more chapters') : 'more chapters'} to get back to two weeks.</p>}
+            <NumberSetting label="Posting pace" value={run.cadence} unit={run.cadence === 1 ? 'chapter a week' : 'chapters a week'} onSave={save ? save('cadence') : undefined} />
+            <p class="meta">
+              {run.lastPosted ? 'Last posted ' + run.lastPosted + '. ' : 'Nothing posted yet. '}
+              {run.nextReady ? run.nextReady + ' is next to post. ' : ''}
+              A chapter is posted when a scene in it has a published date, and ready when every scene in it is final.
+            </p>
+          </section>
+        )}
       </div>
     </section>
   );

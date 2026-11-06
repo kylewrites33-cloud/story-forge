@@ -808,12 +808,14 @@ export function App() {
         rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean), rewriteDone(view.notes[book.path]))} />;
       else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
       else if (boardKey === 'overview') {
-        const resume = keepWriting(view, book, source.key);
-        const rn = resume ? view.notes[resume] : null;
-        const named = rn ? sceneLabel(book.scenes.map((p) => view.notes[p]).filter(Boolean), rn) : null;
-        const keep = rn && named ? { to: href.write(rn.path), title: named.chapter || named.scene || 'Your scene',
-          where: [named.chapter ? named.scene : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
-        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keep={keep} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
+        const scenesOf = book.scenes.map((p) => view.notes[p]).filter(Boolean);
+        const keepFor = (path: string) => {
+          const rn = view.notes[path];
+          const named = rn ? sceneLabel(scenesOf, rn) : null;
+          return rn && named ? { title: named.chapter || named.scene || 'Your scene',
+            where: [named.chapter ? named.scene : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
+        };
+        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keepFor={keepFor} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
       }
       else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;
       else if (boardKey === 'sessions') screen = <SessionsScreen index={view} book={book} />;
@@ -823,7 +825,7 @@ export function App() {
       else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
       else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} exportCard={boardKey === 'market' ? <ExportWord source={source} schema={schema} index={view} book={book} card /> : undefined} onRewrite={source.write ? onRewrite : undefined} />;
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
       } else if (boardKey === 'chapter-grid') {
         screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
           onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}

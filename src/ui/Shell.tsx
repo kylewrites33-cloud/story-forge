@@ -14,6 +14,7 @@ import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts
 import { Cover } from './Home.tsx';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
+import { sixOf } from '../lib/bookstages.ts';
 import { LOWER_ROOMS, ROOMS, roomOf, isTeamPlace, TEAM_PLACES, type Room } from '../lib/rooms.ts';
 import { jobNotes } from '../lib/jobs.ts';
 import { taskNotes } from '../lib/tasks.ts';
@@ -113,9 +114,13 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   const links = book && schema ? roomLinks(schema, book.folder, false) : {};
   const running = index ? jobNotes(index).some((n) => n.data.status === 'running') : false;
   const openTodos = index ? taskNotes(index).filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length : 0;
-  const onSteps = Boolean(book) && hash.indexOf(href.flow(book ? book.folder : '')) === 0;
-  const inRoom = onSteps ? roomOf('steps') : roomOf(board);
-  const pageKey = onSteps ? 'steps' : board;
+  // The workflow's market research stage belongs to the Market room; the rest of the steps to Plan.
+  const marketAt = flow.stages.findIndex((st) => sixOf(st.title) === 'market');
+  if (book && marketAt >= 0 && links['market-steps']) links['market-steps'] = { ...links['market-steps'], to: href.flowStage(book.folder, marketAt + 1) };
+  const onMarketSteps = Boolean(book) && marketAt >= 0 && hash === href.flowStage(book ? book.folder : '', marketAt + 1);
+  const onSteps = !onMarketSteps && Boolean(book) && hash.indexOf(href.flow(book ? book.folder : '')) === 0;
+  const inRoom = onMarketSteps ? roomOf('market-steps') : onSteps ? roomOf('steps') : roomOf(board);
+  const pageKey = onMarketSteps ? 'market-steps' : onSteps ? 'steps' : board;
   const teamTo: Record<string, string> = { chat: href.chat(), jobs: href.jobs(), team: href.team(), skills: href.skills(), recipes: href.recipes(), workflow: href.workflow() };
   const teamOn = place === 'history' ? 'team' : place;
   const inTeam = isTeamPlace(place);

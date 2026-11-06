@@ -324,7 +324,7 @@ function phaseDot(st: BookStatus): string {
 
 /** Where every book is (lib/bookstatus.ts), worked out once for the page: the stage, the percent of it done, where to
  * carry on. A book with no prose yet takes its stage from the workflow. */
-export function useBookStatuses(source: VaultSource, index: VaultIndex): (book: BookEntry) => BookStatus {
+export function useBookStatuses(source: { key: string }, index: VaultIndex): (book: BookEntry) => BookStatus {
   const team = useTeam(index);
   const names = useMemo(() => team.members.map((m) => m.name), [team]);
   const stages = useMemo(() => flowStages(parseWorkflow(team.workflow, names)), [team.workflow, names]);

@@ -2605,3 +2605,27 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .rewrite-words:hover, .rewrite-words:focus-visible { background: var(--hover); outline: none; }
 .rewrite-row .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .rewrite-row .buttons button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+
+/* The Overview made simpler (Kyle, 2026-11-06): publish date under the title, six stages with a percent each, the stage
+   in Progress, warnings folded into Waiting on you. */
+.ov-pubdate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: -4px 0 14px; color: var(--muted); font-size: 1rem; }
+.ov-pubdate .icon { color: var(--accent); }
+.ov-pubdate b { color: var(--text); font-weight: 600; }
+.ov-pubdate button.link { min-height: 44px; padding: 0 4px; }
+.ov-pubdate-form { margin: 0 0 14px; }
+.six-stages .book-path-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 699px) { .six-stages .book-path-row { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; } }
+.six-stages .book-path-name { min-height: 2.4em; align-items: flex-end; }
+.six-pct { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+.six-stages li.current .six-pct { color: var(--accent); font-weight: 700; }
+.six-stages li.done .six-pct { color: var(--text); }
+.ov-stage { margin: 0; font-size: 1.15rem; font-weight: 650; line-height: 1.3; }
+.ov-stage-pct { color: var(--accent); }
+.ov-stage-detail { margin: 0 0 8px; }
+.ov-facts { list-style: none; padding: 0; margin: 10px 0 4px; display: grid; gap: 6px; font-size: 0.97rem; }
+.ov-warn-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; border-radius: 10px; cursor: pointer; box-shadow: none; font-size: 1rem; font-weight: 400; }
+.ov-warn-row:hover { background: var(--hover); }
+.ov-warn-row > span:not(.ov-count) { flex: 1 1 auto; min-width: 0; }
+.ov-warn-row .ov-count { min-width: 2ch; text-align: right; color: var(--accent); }
+.ov-warn-row .icon { color: var(--muted); flex: none; }
+.ov-list .ov-warnings { margin: 4px 0 6px 20px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 0.95rem; }

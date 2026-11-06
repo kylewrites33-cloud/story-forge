@@ -14,8 +14,9 @@ test('every board the sidebar used to list sits in exactly one room', () => {
   assert.ok(isTeamPlace('history') && isTeamPlace('workflow') && !isTeamPlace('todo'));
 });
 
-test('the sidebar reads Home, Plan, Write, Edit, Publish, with the Codex lower down (Kyle, 2026-10-22)', () => {
-  assert.deepEqual(ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) < 0).map((r) => r.title), ['Home', 'Plan', 'Write', 'Edit', 'Publish']);
+test('the sidebar reads Home, Market, Plan, Write, Edit, Publish, with the Codex lower down (Kyle, 2026-10-22 and 2026-11-06)', () => {
+  assert.deepEqual(ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) < 0).map((r) => r.title), ['Home', 'Market', 'Plan', 'Write', 'Edit', 'Publish']);
+  assert.deepEqual(ROOMS.find((r) => r.key === 'market')!.boards, ['market', 'market-steps']);
   assert.deepEqual(LOWER_ROOMS, ['codex']);
   assert.deepEqual(ROOMS.find((r) => r.key === 'write')!.boards, []);
 });

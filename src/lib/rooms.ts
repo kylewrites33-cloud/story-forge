@@ -4,15 +4,19 @@
 // Kyle, 2026-10-22: the rooms under Home are Plan, Write, Edit (was Review) and Publish; the Codex sits lower, with
 // Team and To-do. Write (was Manuscript) has no pages: it opens the writing screen at the scene he was last in. The
 // Chapter Grid moved into Plan and the Edit Queue into To-do.
+// Kyle, 2026-11-06: Market is its own room, between Home and Plan ("They're two very large stages. We have different AI
+// agents responsible for those steps"): the Market board and the workflow's market research steps. Publish keeps Book
+// details, which holds Export to Word and the Kindle file.
 
 export interface Room { key: string; title: string; icon: string; boards: string[] }
 
 export const ROOMS: Room[] = [
   { key: 'home', title: 'Home', icon: 'home', boards: ['overview', 'decide'] },
+  { key: 'market', title: 'Market', icon: 'market', boards: ['market', 'market-steps'] },
   { key: 'plan', title: 'Plan', icon: 'threads', boards: ['steps', 'chapter-grid', 'ideas', 'story-juice', 'beat-sheet', 'conflict-matrix', 'promises', 'plot-grid', 'timeline', 'arcs', 'notes'] },
   { key: 'write', title: 'Write', icon: 'pen', boards: [] },
   { key: 'review', title: 'Edit', icon: 'scan', boards: ['changes', 'story-calls', 'chapter-titles', 'tension', 'themes', 'sessions', 'taste'] },
-  { key: 'publish', title: 'Publish', icon: 'upload', boards: ['market', 'details'] },
+  { key: 'publish', title: 'Publish', icon: 'upload', boards: ['details'] },
   { key: 'codex', title: 'Codex', icon: 'people', boards: ['characters', 'places', 'items', 'lore', 'matrix', 'cast-web'] }
 ];
 

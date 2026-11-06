@@ -239,6 +239,10 @@
         "release": {
           "type": "string"
         },
+        "publish_date": {
+          "type": "date",
+          "description": "The day Kyle plans to publish the book, set on its Overview (Kyle, 2026-11-06)."
+        },
         "cadence": {
           "type": "integer"
         },
@@ -3081,6 +3085,102 @@
         }
       },
       "body": "A lead paragraph with the short answer, then ## sections in the order Crow shows them: The short answer; What matters about each character (one ### per character with - Gift, - Cost, - Pride, - Pattern, - Decoration lines); What the world does for the plot; Where the scenes come from; Why they work; How each scene is built; To build one ourselves; Open questions."
+    },
+    "build-premises": {
+      "description": "The premises for a story Kyle builds step by step in Crow, one ## section per premise; Kyle ticks one in Crow and the app writes its title to picked. Lives at Studies/Builds/<Build>/Premises.md (Kyle, 2026-11-05).",
+      "scope": "vault",
+      "folder": "Studies/Builds",
+      "recursive": true,
+      "filename": "Premises",
+      "required": [
+        "type",
+        "build",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "build-premises"
+        },
+        "build": {
+          "type": "string",
+          "description": "The build's folder name"
+        },
+        "title": {
+          "type": "string"
+        },
+        "picked": {
+          "type": "string",
+          "description": "The title of the premise Kyle ticked in Crow, or empty"
+        },
+        "created": {
+          "type": "date"
+        },
+        "lane": {
+          "type": "string",
+          "description": "The exact lane Kyle set for the build, as stacked tags"
+        }
+      },
+      "body": "A lead line, then one ## section per premise (its title) with - Kind, - Hook, - Readers expect, - Our turn and - The engine lines."
+    },
+    "premise-bank": {
+      "description": "Premises Kyle wants kept for good, whatever the current build picks; Crow shows them on its Saved premises page. One note, Studies/Builds/Premise Bank.md (Kyle, 2026-11-05: \"create some kind of place where you can store these permanently so that we can always go back to them\").",
+      "scope": "vault",
+      "folder": "Studies/Builds",
+      "filename": "Premise Bank",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "premise-bank"
+        },
+        "title": {
+          "type": "string"
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "A lead line, then one ## section per premise (its title) with - Saved (date and why), - Lane, - Kind, - Hook, - Readers expect, - Our turn and - The engine lines. Add new premises at the end; never remove one without Kyle's word."
+    },
+    "build-step": {
+      "description": "One step's work for a story Kyle builds step by step in Crow (tropes, characters, outline...), beside the build's Premises.md. Studies/Builds/<Build>/<Step>.md (Kyle, 2026-11-05).",
+      "scope": "vault",
+      "folder": "Studies/Builds",
+      "recursive": true,
+      "filename": "{title}",
+      "required": [
+        "type",
+        "build",
+        "step",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "build-step"
+        },
+        "build": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "description": "The step's name, such as Tropes"
+        },
+        "title": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "What the step found, with sources named, then what the next step takes from it."
     }
   },
   "boards": {
