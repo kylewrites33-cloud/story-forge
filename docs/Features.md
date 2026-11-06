@@ -786,6 +786,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   replaces all of them, and the light covers all of them. A paragraph the Writer really cut keeps its own "left out"
   row. A row counts as the same only when it reads exactly the same, marks and all, so a change of only a stop, a
   colon, an italic or a screen's `>` marks still gets its Bring over.
+- **Bring over reads the page as it is (2026-11-06).** Kyle: "this happened too (see after "silence")": after typing in
+  the second scene of a chapter, Bring over put the Writer's paragraph inside Poppy's line, because the column still
+  had that scene's words from before he typed. Bring over, Take it out and the light now read the page that moment
+  and line the rows up again first; Take it out does nothing if Kyle has changed that paragraph since. Typing in any
+  scene of the chapter redraws the column a moment after the last key.
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.
