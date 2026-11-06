@@ -3,7 +3,7 @@
 // column shows the rewrite paragraph by paragraph, each lined up with Kyle's own, and Bring over puts one in place of
 // his. His page is the only thing that changes; the rewrite file is read only.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { align, bringOver, paragraphs, rowAt, takeOut, type Row } from '../lib/rewrite.ts';
+import { align, bringOver, paragraphs, rowAt, span, takeOut, type Row } from '../lib/rewrite.ts';
 import { wordDiff } from '../lib/changes.ts';
 import { splitLead } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
@@ -178,7 +178,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     const words = wordsOf(row.theirs).replace(/\s+$/, '');
     if (!words.trim()) return;
     const r = bringOver(text, mine, rows, index, words);
-    if (row.mine != null) { const p = mine[row.mine]; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end }); return; }
+    if (row.mine != null) { const p = span(mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end }); return; }
     // A paragraph put in: the old page's characters it replaces are none, at the spot where it now begins.
     const lead = r.at === 0 ? words + '\n\n' : '\n\n' + words;
     const at = r.at === 0 ? 0 : r.at - 2;
@@ -205,8 +205,8 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
           if (same && hideSame) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '')} aria-label="Same as yours" />;
           const words = row.theirs != null ? wordsOf(row.theirs) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
-          const go = () => { if (row.mine != null) { const p = mine[row.mine]; onGo(p.at, p.end); } };
-          const show = () => { if (row.mine != null) { const p = mine[row.mine]; onShow(p.at, p.end); } };
+          const go = () => { if (row.mine != null) { const p = span(mine, row)!; onGo(p.at, p.end); } };
+          const show = () => { if (row.mine != null) { const p = span(mine, row)!; onShow(p.at, p.end); } };
           return (
             <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
               {row.theirs == null ? (
@@ -226,7 +226,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
                       <Quote text={words} cls="same" />
                     </div>
                   ) : (
-                    <RewriteBox words={words} was={row.mine != null ? mine[row.mine].text : undefined} onInput={(w) => edit(row.theirs!, w)} onFocus={show} onBlur={onHide} />
+                    <RewriteBox words={words} was={row.mine != null ? span(mine, row)!.text : undefined} onInput={(w) => edit(row.theirs!, w)} onFocus={show} onBlur={onHide} />
                   )}
                   {!same && (
                     <div class="buttons">

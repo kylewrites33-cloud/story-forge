@@ -95,10 +95,19 @@ export function similarity(a: string, b: string): number {
 export interface Row {
   /** The index of Kyle's paragraph, or null when the rewrite adds one here. */
   mine: number | null;
+  /** The last of Kyle's paragraphs in this row, when the Writer made one paragraph of several of his (a screen's title
+   * line and its words, say); the row then runs from `mine` to `mineEnd`. */
+  mineEnd?: number;
   /** The index of the rewrite's paragraph, or null when the rewrite leaves Kyle's out. */
   theirs: number | null;
   /** How alike the two are; 1 when they read the same. */
   score: number;
+}
+
+/** A row's score: 1 only when the two read exactly the same, marks and all, so a change of only a stop, a colon, an
+ * italic or a screen's > marks still gets its Bring over (the word count alone would call them the same). */
+function likeness(a: string, b: string): number {
+  return a.trim() === b.trim() ? 1 : Math.min(0.999, similarity(a, b));
 }
 
 /** The least alike two paragraphs can be and still sit side by side. */
@@ -111,7 +120,7 @@ export function align(mine: string[], theirs: string[]): Row[] {
   // Best total likeness of the first i of Kyle's against the first j of the rewrite's (Needleman-Wunsch, gaps free).
   const S: Float64Array[] = Array.from({ length: n + 1 }, () => new Float64Array(m + 1));
   const sim: Float64Array[] = Array.from({ length: n }, () => new Float64Array(m));
-  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) sim[i][j] = mine[i].trim() === theirs[j].trim() ? 1 : similarity(mine[i], theirs[j]);
+  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) sim[i][j] = likeness(mine[i], theirs[j]);
   for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
     const s = sim[i - 1][j - 1];
     const pair = s >= MATCH ? S[i - 1][j - 1] + s : -Infinity;
@@ -125,7 +134,55 @@ export function align(mine: string[], theirs: string[]): Row[] {
     else if (j > 0 && (i === 0 || S[i][j] === S[i][j - 1])) { rows.push({ mine: null, theirs: j - 1, score: 0 }); j--; }
     else { rows.push({ mine: i - 1, theirs: null, score: 0 }); i--; }
   }
-  return rows.reverse();
+  return joinParts(rows.reverse(), mine, theirs);
+}
+
+/** How many of `part`'s words the paragraph `whole` has. */
+function share(part: string, whole: string): number {
+  const wp = words(part);
+  if (!wp.length) return 1;
+  const count = new Map<string, number>();
+  words(whole).forEach((w) => count.set(w, (count.get(w) || 0) + 1));
+  let got = 0;
+  wp.forEach((w) => { const c = count.get(w) || 0; if (c > 0) { got++; count.set(w, c - 1); } });
+  return got / wp.length;
+}
+
+/** Where the Writer joined two or more of Kyle's paragraphs into one (Kyle, 2026-11-06: a screen's plain title line
+ * stayed on his page after Bring over), the "left out" paragraph beside the joined one goes into the same row, so
+ * Bring over replaces all of them. */
+function joinParts(rows: Row[], mine: string[], theirs: string[]): Row[] {
+  const out = rows.map((r) => ({ ...r }));
+  const joined = (r: Row) => mine.slice(r.mine!, (r.mineEnd ?? r.mine!) + 1).join('\n\n');
+  const absorbs = (r: Row, cut: number, before: boolean): boolean => {
+    const t = theirs[r.theirs!];
+    if (share(mine[cut], t) < 0.6) return false;
+    const now = similarity(joined(r), t);
+    const both = before ? mine[cut] + '\n\n' + joined(r) : joined(r) + '\n\n' + mine[cut];
+    return similarity(both, t) > now + 0.02;
+  };
+  for (let k = 0; k < out.length; k++) {
+    const r = out[k];
+    if (r.mine == null || r.theirs == null) continue;
+    // Kyle's paragraphs just before it, left out by the Writer.
+    while (k > 0 && out[k - 1].theirs == null && out[k - 1].mine === r.mine - 1 && absorbs(r, r.mine - 1, true)) {
+      if (r.mineEnd == null) r.mineEnd = r.mine;
+      r.mine--; out.splice(k - 1, 1); k--;
+    }
+    // And just after it.
+    while (k + 1 < out.length && out[k + 1].theirs == null && out[k + 1].mine === (r.mineEnd ?? r.mine) + 1 && absorbs(r, out[k + 1].mine!, false)) {
+      r.mineEnd = out[k + 1].mine!; out.splice(k + 1, 1);
+    }
+    if (r.mineEnd != null) r.score = likeness(joined(r), theirs[r.theirs]);
+  }
+  return out;
+}
+
+/** The stretch of Kyle's page a row covers: his paragraph, or the run of them the Writer joined. */
+export function span(mine: Para[], row: Row): { at: number; end: number; text: string } | null {
+  if (row.mine == null) return null;
+  const a = mine[row.mine], b = mine[row.mineEnd ?? row.mine];
+  return { at: a.at, end: b.end, text: mine.slice(row.mine, (row.mineEnd ?? row.mine) + 1).map((p) => p.text).join('\n\n') };
 }
 
 /** Kyle's page with one of the rewrite's paragraphs brought over: in place of his paragraph when the row has one, or
@@ -135,11 +192,11 @@ export function bringOver(text: string, mine: Para[], rows: Row[], index: number
   const t = theirs.replace(/\s+$/, '');
   const row = rows[index];
   if (row.mine != null) {
-    const p = mine[row.mine];
+    const p = span(mine, row)!;
     return { text: text.slice(0, p.at) + t + text.slice(p.end), at: p.at, end: p.at + t.length };
   }
   let before: Para | null = null;
-  for (let k = index - 1; k >= 0 && !before; k--) { const r = rows[k]; if (r.mine != null) before = mine[r.mine]; }
+  for (let k = index - 1; k >= 0 && !before; k--) { const r = rows[k]; if (r.mine != null) before = mine[r.mineEnd ?? r.mine]; }
   if (!before) {
     const first = mine[0];
     if (!first) { const body = text.trim() ? t + '\n\n' + text.replace(/^\s+/, '') : t; return { text: body, at: 0, end: t.length }; }

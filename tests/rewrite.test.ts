@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { changesIn } from '../src/lib/changes.ts';
 import { test } from 'node:test';
-import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, rowAt, similarity, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
+import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, rowAt, similarity, span, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
 
 const B = 'Series/S/Books/1 B';
 
@@ -96,4 +96,24 @@ test('a paragraph brought over stands in for the open changes whose words lay in
   assert.deepEqual(changesIn(placed, 11, 25).map((x) => x.id), ['C-02']);
   assert.deepEqual(changesIn(placed, 5, 35).map((x) => x.id), ['C-01', 'C-02', 'C-03']);
   assert.deepEqual(changesIn(placed, 20, 20).map((x) => x.id), []);
+});
+
+test('a screen the Writer made of two of Kyle\'s paragraphs is one row, and Bring over replaces both', () => {
+  const text = 'Basil looked.\n\nFlame Atronach - 100 MP\n\n*Summon a demon sheathed in fire to do your bidding.*\n\n"That seems promising."\n';
+  const mine = paragraphs(text);
+  const screen = '> **Flame Atronach - 100 MP**\n>\n> *Summon a demon sheathed in fire to do your bidding.*';
+  const rows = align(mine.map((p) => p.text), ['Basil looked:', screen, '"That seems promising."']);
+  assert.deepEqual(rows.map((r) => [r.mine, r.mineEnd, r.theirs]), [[0, undefined, 0], [1, 2, 1], [3, undefined, 2]]);
+  assert.ok(rows[0].score < 1, 'a colon for a stop still counts as a change');
+  assert.ok(rows[1].score < 1);
+  assert.equal(rows[2].score, 1);
+  const r = bringOver(text, mine, rows, 1, screen);
+  assert.equal(r.text, 'Basil looked.\n\n' + screen + '\n\n"That seems promising."\n');
+  assert.equal(r.text.slice(r.at, r.end), screen);
+  assert.equal(span(mine, rows[1])!.text, 'Flame Atronach - 100 MP\n\n*Summon a demon sheathed in fire to do your bidding.*');
+});
+
+test('a paragraph the Writer really cut stays its own row', () => {
+  const rows = align(['Basil looked.', 'The wind was cold on the hill that night.', 'Rue laughed.'], ['Basil looked.', 'Rue laughed.']);
+  assert.deepEqual(rows.map((r) => [r.mine, r.mineEnd, r.theirs]), [[0, undefined, 0], [1, undefined, null], [2, undefined, 1]]);
 });
