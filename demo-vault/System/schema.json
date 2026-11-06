@@ -243,6 +243,78 @@
           "type": "date",
           "description": "The day Kyle plans to publish the book, set on its Overview (Kyle, 2026-11-06)."
         },
+        "market_start": {
+          "type": "date",
+          "description": "The day market research started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "market_end": {
+          "type": "date",
+          "description": "The day market research finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "market_paused": {
+          "type": "integer",
+          "description": "Days during market research when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
+        "planning_start": {
+          "type": "date",
+          "description": "The day planning started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "planning_end": {
+          "type": "date",
+          "description": "The day planning finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "planning_paused": {
+          "type": "integer",
+          "description": "Days during planning when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
+        "outlining_start": {
+          "type": "date",
+          "description": "The day outlining (outline and beats) started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "outlining_end": {
+          "type": "date",
+          "description": "The day outlining (outline and beats) finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "outlining_paused": {
+          "type": "integer",
+          "description": "Days during outlining when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
+        "writing_start": {
+          "type": "date",
+          "description": "The day writing draft 1 started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "writing_end": {
+          "type": "date",
+          "description": "The day writing draft 1 finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "writing_paused": {
+          "type": "integer",
+          "description": "Days during writing draft 1 when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
+        "editing_start": {
+          "type": "date",
+          "description": "The day editing (drafts 2 to 4) started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "editing_end": {
+          "type": "date",
+          "description": "The day editing (drafts 2 to 4) finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "editing_paused": {
+          "type": "integer",
+          "description": "Days during editing when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
+        "publishing_start": {
+          "type": "date",
+          "description": "The day publishing started for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "publishing_end": {
+          "type": "date",
+          "description": "The day publishing finished for this book. The app fills it in as the book moves on; Kyle can change it on the Overview (Kyle, 2026-11-06)."
+        },
+        "publishing_paused": {
+          "type": "integer",
+          "description": "Days during publishing when the book sat waiting (for example while Kyle worked on another book). Taken off the days the stage took (Kyle, 2026-11-06)."
+        },
         "cadence": {
           "type": "integer"
         },

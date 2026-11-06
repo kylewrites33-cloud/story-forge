@@ -980,3 +980,23 @@ The book's Overview (Home) now holds, top to bottom:
 two very large stages. We have different AI agents responsible for those steps"): a room between Home and Plan with the
 Market board and Research steps (the workflow's market research stage). Publish keeps Book details, which already holds
 Export to Word and the Kindle file, so the Market board no longer repeats the Export card.
+
+## Stage times and the estimated publish date (2026-11-06)
+
+Kyle, 2026-11-06: "I want us to automate this a little bit and for you to estimate the publishing date yourself. This is
+part of an overall aim of mine to, number one, track how long it takes me to go through these steps. Number two, to be able
+to anticipate and guess how long it's going to take to finish each step. And number three, for me to systematically speed
+up how long it takes for me to finish these steps."
+
+- **Stage dates** live on the book note as `market_start`, `market_end`, `planning_start` ... `publishing_end`
+  (vault schema), one start and one end per Overview stage. Stages may overlap (Book 1's planning and outlining ran together).
+  Quest Declined 1 and 2 were filled in from Kyle's answers and the vault's history.
+- **The record keeps itself** (`datesToRecord`): when the Overview opens, the stage the book is in gets today as its start
+  if it has none, every earlier stage that was started but not finished ends today, and a published book's publishing
+  ends today. Stages done outside the app with no start stay blank.
+- **Estimated publish date** under the title, above Kyle's own date (now "Your publish date"). The stage the book is in
+  finishes at his pace so far (days spent ÷ percent done, once a tenth is done and three days have passed), or early on
+  as long as it took in his other books; every later stage takes its average from his other books; a stage no book has
+  dates for gets a first guess (`FIRST_GUESS`) and the page says so.
+- **How long each stage takes** panel: each stage's dates and days, the current one's days so far, days to go and finish
+  day, and the other books' average. Change dates opens a date picker for every start and finish.
