@@ -2439,6 +2439,23 @@
       },
       "body": "The voice in plain words, with short approved examples."
     },
+    "timeline": {
+      "description": "Every step of the book with its time (Kyle, 2026-11-06: \"I want you to be really granular with this. I want you to keep timestamps for like every step of the process ... it's the agent's responsibility to manage and track this stuff based on conversations and based on Sparrow app usage\"). Append-only, oldest first. Agents add a line when Kyle or they start or finish a step; System/Tools/timeline.mjs adds the app's work from the vault's history. The six stage boundaries also go on Book.md as <stage>_start and <stage>_end.",
+      "scope": "book",
+      "folder": "",
+      "filename": "Timeline",
+      "required": ["type"],
+      "body": "One line per event, oldest first: `- <YYYY-MM-DDTHH:MMZ>[ to <HH:MMZ>] · <stage> · <what happened> · <who>`. Stage is market, planning, outlining, writing, editing or publishing. Who is Kyle, an agent's name, or app. Never edit or delete a line; a correction is a new line that says so.",
+      "properties": {
+        "type": {
+          "const": "timeline"
+        },
+        "updated": {
+          "type": "string",
+          "description": "The last commit timeline.mjs read, so the next run starts after it."
+        }
+      }
+    },
     "story-so-far": {
       "description": "The rolling summary the Writer reads before drafting.",
       "scope": "book",
