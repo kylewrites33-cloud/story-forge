@@ -17,7 +17,7 @@ import type { BookStatus } from '../lib/bookstatus.ts';
 import { publishDate, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
-import { datesToRecord, estimate, localDay, shortDay, stageDates, type Estimate } from '../lib/stagetimes.ts';
+import { datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type Estimate } from '../lib/stagetimes.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -247,6 +247,9 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   const est = estimate(six, dates, others, day);
   // Keep the record up by itself: the stage the book is in gets a start day, finished stages an end day.
   const toWrite = datesToRecord(six, dates, status.phase === 'published', day);
+  // The estimate goes on the book note too, so the team and the Chief of Staff see it, when it moves by more than three days.
+  const saved = note ? dayOf(note.data.publish_estimate) : null;
+  if (est.date && (!saved || Math.abs(daysBetween(saved, est.date)) > 3)) toWrite.publish_estimate = est.date;
   const writeKey = book.path + ' ' + Object.keys(toWrite).sort().join(',');
   useEffect(() => {
     if (!note || note.error || !onDecide || !Object.keys(toWrite).length || recorded.has(writeKey)) return;

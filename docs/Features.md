@@ -1003,3 +1003,5 @@ up how long it takes for me to finish these steps."
   continually track this going forward and remember it. And then I want you to display an estimated completion date over
   whatever step I'm in"). The "How long each stage takes" panel built earlier the same day was taken out; the dates stay on
   the book note, kept up by the app and read by the team (vault `Docs/Sparrow/18 Stage Times.md`).
+- The estimate is also written to the book note as `publish_estimate` whenever it moves by more than three days, so the
+  team and Kyle's Chief of Staff can read it (Kyle, 2026-11-06: the Chief of Staff tells him day to day what is due).
