@@ -278,6 +278,8 @@ export interface EditorCommands {
   hide: () => void;
   /** The page's words as the editor holds them this moment. */
   text: () => string;
+  /** Where on screen character `at` sits (a zero-width box), or null when the page is not drawn. */
+  rectAt: (at: number) => DOMRect | null;
   /** Replace these characters, as one step to undo. */
   replaceRange: (start: number, end: number, text: string) => void;
   /** Replace the whole text, as one step to undo (Replace all). */
@@ -684,6 +686,20 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
       },
       hide: () => hideShown(),
       text: () => shown.current ?? '',
+      rectAt: (a) => {
+        const el = ref.current;
+        if (!el || !el.isConnected) return null;
+        // Never repaints (that would move Kyle's cursor while he types); a spot off by a key for a moment is fine.
+        const [n, o] = locator(el)(a);
+        const r = document.createRange();
+        r.setStart(n, o); r.collapse(true);
+        const rs = r.getClientRects();
+        if (rs.length) return rs[rs.length - 1];
+        // An empty spot (the end of a line) has no box of its own: take the character before it.
+        if (n.nodeType === 3 && o > 0) { r.setStart(n, o - 1); r.setEnd(n, o); const b = r.getClientRects(); if (b.length) return b[b.length - 1]; }
+        const p = (n.nodeType === 3 ? n.parentElement : n) as HTMLElement | null;
+        return p ? p.getBoundingClientRect() : null;
+      },
       replaceRange: (a, b, t) => {
         const el = ref.current;
         if (!el) return;

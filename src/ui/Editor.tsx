@@ -43,8 +43,8 @@ import { CheckPanel } from './CheckPanel.tsx';
 import { addRules, addSkip, applyChange, changesIn, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
-import { RewritePanel, type Put, type RewriteSection } from './Rewrite.tsx';
-import { rewriteFor } from '../lib/rewrite.ts';
+import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
+import { findSpot, rewriteFor, spotOf, type Spot } from '../lib/rewrite.ts';
 import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
@@ -262,7 +262,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const findQ = findOpen ? query : '';
   const styleOpts = useMemo(() => ({ names, find: findQ, asks: true, asking: askingMarkers, added: dotSet }), [names, findQ, askingMarkers, dotSet]);
   const beatOpts = useMemo(() => ({ names, find: findQ, asks: true }), [names, findQ]);
-  const sibOpts = useMemo(() => ({ names }), [names]);
+  // The other scenes of the chapter style { } asks too, so they sit in the margin like the open scene's (2026-11-06).
+  const sibOpts = useMemo(() => ({ names, asks: true, asking: askingMarkers }), [names, askingMarkers]);
   // The chapter's other scenes on the same page (Kyle, 2026-10-22). Each saves itself; these are their handles.
   const sibs = useRef(new Map<string, SectionApi>());
   const [sibFocus, setSibFocus] = useState<string | null>(null);
@@ -347,6 +348,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     quiet.current = setTimeout(() => { typingSince.current = null; save(false); }, QUIET_SAVE_MS);
     if (typingSince.current == null) typingSince.current = Date.now();
     else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; save(false); }
+    spotSoon(note.path);
   };
 
   // While the scene is open, only this page saves it (the 30-second sync leaves it alone).
@@ -922,6 +924,28 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [caretIn, setCaretIn] = useState<{ path: string; at: number } | null>(null);
   const setCaretAt = (at: number, path: string = note.path) => setCaretIn((c) => (c && c.path === path && c.at === at ? c : { path, at }));
   const caretFor = (path: string) => (caretIn && caretIn.path === path ? caretIn.at : null);
+  // Where Kyle left off in draft 2: the last paragraph he brought over or typed in while the chapter has a rewrite,
+  // kept on this device per book, and marked with a small arrow on the page and in the column (Kyle, 2026-11-06).
+  const bookOf = note.path.indexOf('/Scenes/') >= 0 ? note.path.slice(0, note.path.indexOf('/Scenes/')) : note.path;
+  const [leftOff, setLeftOff] = useState<Spot | null>(() => loadLeftOff(bookOf));
+  useEffect(() => { setLeftOff(loadLeftOff(bookOf)); }, [bookOf]);
+  const lastCaret = useRef<{ path: string; at: number } | null>(null);
+  const spotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (spotTimer.current) clearTimeout(spotTimer.current); }, []);
+  const keepSpot = (s: Spot | null) => { if (!s) return; saveLeftOff(bookOf, s); setLeftOff((o) => (o && o.path === s.path && o.head === s.head && o.index === s.index ? o : s)); };
+  /** After Kyle stops typing in a scene, the paragraph his cursor is in becomes where he left off. */
+  const spotSoon = (path: string) => {
+    if (!hasRewrite) return;
+    if (spotTimer.current) clearTimeout(spotTimer.current);
+    spotTimer.current = setTimeout(() => {
+      spotTimer.current = null;
+      const at = path === note.path ? caret.current : lastCaret.current && lastCaret.current.path === path ? lastCaret.current.at : null;
+      if (at == null) return;
+      const api = path === note.path ? null : sibs.current.get(path);
+      const t = path === note.path ? pageText() : api ? api.text() : null;
+      if (t != null) keepSpot(spotOf(path, t, at));
+    }, 700);
+  };
   // A paragraph brought over stands in for the open changes whose words lay in it: they close as handled by the rewrite
   // and their to-dos tick (Kyle, 2026-11-05: one place for draft 1 to 2).
   const closeUnder = (placed: Placed[], at: number, end: number) => {
@@ -936,6 +960,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
     else { changed(p.text); reload(); }
     setCaretAt(p.toEnd);
+    keepSpot(spotOf(note.path, p.text, p.to));
   };
   // The same for another scene of the chapter when the page shows the whole chapter.
   const putRewriteSib = (n: NoteRecord, p: Put) => {
@@ -948,25 +973,30 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     else api.put(p.text);
     setSibTick((k) => k + 1);
     setCaretAt(p.toEnd, n.path);
+    keepSpot(spotOf(n.path, p.text, p.to));
   };
   // Typing in another scene of the chapter lines the Rewrite tab's rows up again, a moment after the last key.
   const sibTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (sibTimer.current) clearTimeout(sibTimer.current); }, []);
-  const sibTyped = () => {
+  const sibTyped = (path: string) => {
     if (!hasRewrite) return;
+    spotSoon(path);
     if (sibTimer.current) clearTimeout(sibTimer.current);
     sibTimer.current = setTimeout(() => { sibTimer.current = null; setSibTick((k) => k + 1); }, 400);
   };
+  // The scenes below keep the first handlers they were given, so they call through this to reach the latest.
+  const sibTypedRef = useRef(sibTyped);
+  sibTypedRef.current = sibTyped;
   const rewriteSections: RewriteSection[] = !hasRewrite ? [] : [
-    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), onPut: (p) => putRewriteSib(n, p),
+    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), spot: leftOff && leftOff.path === n.path ? leftOff : null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
-    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretFor(note.path), onPut: putRewrite,
+    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretFor(note.path), spot: leftOff && leftOff.path === note.path ? leftOff : null, onPut: putRewrite,
       onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
       onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); },
       onHide: () => { const c = commands.current; if (c) c.hide(); } },
-    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), onPut: (p) => putRewriteSib(n, p),
+    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), spot: leftOff && leftOff.path === n.path ? leftOff : null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
@@ -984,6 +1014,30 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   // Done with this chapter: the chapter's open changes close as handled by the rewrite, and the book note marks it.
   const rewriteThrough = rewrite && chapterNum != null ? rewrite.done.indexOf(chapterNum) >= 0 : false;
+  // The small arrow under the paragraph where Kyle left off, drawn in the page's own scroll, so it moves with the words.
+  const [leftMark, setLeftMark] = useState<{ top: number; left: number } | null>(null);
+  const leftShown = hasRewrite && !rewriteThrough && leftOff != null && (leftOff.path === note.path || sibNotes.some((n) => n.path === leftOff.path));
+  useEffect(() => {
+    if (!leftShown || !leftOff) { setLeftMark(null); return; }
+    let frame = 0;
+    const place = () => {
+      frame = 0;
+      const pageEl = mainRef.current ? mainRef.current.closest('.writer-page') as HTMLElement | null : null;
+      const api = leftOff.path === note.path ? null : sibs.current.get(leftOff.path);
+      const c = leftOff.path === note.path ? (readOnly.current ? null : commands.current) : api ? api.commands.current : null;
+      if (!pageEl || !c) { setLeftMark(null); return; }
+      const p = findSpot(c.text(), leftOff);
+      const end = p ? c.rectAt(p.end) : null, start = p ? c.rectAt(p.at) : null;
+      if (!end || !start) { setLeftMark(null); return; }
+      const pr = pageEl.getBoundingClientRect();
+      const next = { top: Math.round(end.bottom - pr.top + pageEl.scrollTop + 2), left: Math.round(start.left - pr.left + pageEl.scrollLeft) };
+      setLeftMark((o) => (o && o.top === next.top && o.left === next.left ? o : next));
+    };
+    const later = () => { if (!frame) frame = requestAnimationFrame(place); };
+    later();
+    window.addEventListener('resize', later);
+    return () => { window.removeEventListener('resize', later); if (frame) cancelAnimationFrame(frame); };
+  });
   const onRewriteThrough = rewrite && rewrite.onThrough && chapterNum != null ? async (done: boolean) => {
     if (done) {
       const open = chCards.filter((c) => c.status === 'open');
@@ -1262,7 +1316,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && ((tab === 'changes' && chNote) || (tab === 'rewrite' && hasRewrite)) ? ' edit-wide' : '')} style={lookStyle(look)}>
+     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : look.asks === 'left' ? ' asks-margin asks-left' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && ((tab === 'changes' && chNote) || (tab === 'rewrite' && hasRewrite)) ? ' edit-wide' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
@@ -1472,6 +1526,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         )}
         <div class={'writer-page' + (beatsMode ? ' beats-mode' : '')}>
           <ListenBar l={listen} />
+          {leftShown && leftMark && <span class="left-off-mark page-left-off" role="img" aria-label="You left off here" title="You left off here" style={{ top: leftMark.top + 'px', left: leftMark.left + 'px' }}><Icon name="down" size={16} /></span>}
           {selBox && !beatsMode && (
             <div class="sel-menu" role="toolbar" aria-label="For the words you picked" style={{ top: selBox.top + 'px', left: selBox.left + 'px' }}>
               <button type="button" {...keepFocus} disabled={Boolean(asked && asked.busy)} onClick={() => askTeam('rewrite')}><Icon name="swap" size={18} />{asked && asked.busy === 'rewrite' ? 'Sending…' : 'Rewrite'}</button>
@@ -1587,7 +1642,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} onCaret={(k) => { if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={() => sibTypedRef.current(n.path)} onCaret={(k) => { lastCaret.current = { path: n.path, at: k }; if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
               <div class="scene-break" aria-hidden="true" />
             </div>
@@ -1605,7 +1660,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {below.map((n) => (
             <div key={n.path}>
               <div class="scene-break" aria-hidden="true" />
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} onCaret={(k) => { if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={() => sibTypedRef.current(n.path)} onCaret={(k) => { lastCaret.current = { path: n.path, at: k }; if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
             </div>
           ))}

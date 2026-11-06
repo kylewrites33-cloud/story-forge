@@ -238,3 +238,30 @@ export function rewriteProgress(copies: FileEntry[], scenes: { path: string; dat
   const left = done.filter(([ch]) => through.indexOf(ch) < 0);
   return { done: done.length, total: all.length, first: done.length ? done[0][1].first : null, through: done.length - left.length, next: left.length ? left[0][1].first : null };
 }
+
+/** Where Kyle left off in draft 2 (Kyle, 2026-11-06: "a subtle little arrow ... underneath the last paragraph ... that
+ * we changed"): the scene, the start of that paragraph's words, and which paragraph it was. */
+export interface Spot { path: string; head: string; index: number }
+
+const HEAD = 80;
+
+/** The spot for the paragraph of `text` that holds character `at` (or the one just before it, between paragraphs). */
+export function spotOf(path: string, text: string, at: number): Spot | null {
+  const ps = paragraphs(text);
+  if (!ps.length) return null;
+  let k = -1;
+  ps.forEach((p, i) => { if (p.at <= at) k = i; });
+  if (k < 0) k = 0;
+  return { path, head: ps[k].text.slice(0, HEAD), index: k };
+}
+
+/** That paragraph on the page as it stands: the one that starts with the same words (nearest the old place when
+ * several do), else the one that was there, as long as the page has that many. */
+export function findSpot(text: string, spot: Spot): Para | null {
+  const ps = paragraphs(text);
+  if (!ps.length) return null;
+  let best = -1;
+  ps.forEach((p, i) => { if (p.text.slice(0, HEAD) === spot.head && (best < 0 || Math.abs(i - spot.index) < Math.abs(best - spot.index))) best = i; });
+  if (best < 0) best = Math.min(spot.index, ps.length - 1);
+  return ps[best];
+}

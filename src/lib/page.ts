@@ -10,8 +10,9 @@ export interface PageLook {
   /** Character, place and item names underlined in their colour. */
   names: 'on' | 'off';
   /** Asks for the team in {braces}: beside the text in the margin where the page has room, or in the text (Kyle,
-   * 2026-10-23: "ideally these curly bars wouldn't be a part of the text document. They would be tangential to it"). */
-  asks: 'margin' | 'inline';
+   * 2026-10-23: "ideally these curly bars wouldn't be a part of the text document. They would be tangential to it"),
+   * in the left margin so the text sits next to the Rewrite column (Kyle, 2026-11-06), or in the text. */
+  asks: 'left' | 'margin' | 'inline';
 }
 
 export const DEFAULT_LOOK: PageLook = { size: 'medium', spacing: 'normal', width: 'normal', font: 'serif', paper: 'white', names: 'on', asks: 'margin' };
@@ -24,7 +25,7 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'font', label: 'Font', options: [['serif', 'Book (Georgia)'], ['sans', 'Plain'], ['readable', 'Easy to read (Verdana)'], ['typewriter', 'Typewriter (Space Mono)']] },
   { key: 'paper', label: 'Paper', options: [['white', 'Theme colour'], ['cream', 'Cream'], ['dark', 'Dark']] },
   { key: 'names', label: 'Names of characters, places and items', options: [['on', 'Light up'], ['off', 'Plain']] },
-  { key: 'asks', label: 'Asks for the team in { }', options: [['margin', 'In the margin'], ['inline', 'In the text']] }
+  { key: 'asks', label: 'Asks for the team in { }', options: [['left', 'Left margin'], ['margin', 'Right margin'], ['inline', 'In the text']] }
 ];
 
 const KEY = 'story-forge.page-look';
@@ -40,7 +41,13 @@ export function cleanLook(v: unknown): PageLook {
 }
 
 export function loadLook(): PageLook {
-  try { return cleanLook(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch { return DEFAULT_LOOK; }
+  try {
+    const l = cleanLook(JSON.parse(localStorage.getItem(KEY) || 'null'));
+    // Kyle, 2026-11-06: "I want to experiment with these green curly notes showing on the left side". Once per device,
+    // notes in the margin move to the left margin; Page, Asks for the team, Right margin puts them back.
+    if (l.asks === 'margin' && !localStorage.getItem(KEY + '.asks-left')) { l.asks = 'left'; localStorage.setItem(KEY + '.asks-left', '1'); saveLook(l); }
+    return l;
+  } catch { return DEFAULT_LOOK; }
 }
 
 export function saveLook(l: PageLook): void {
