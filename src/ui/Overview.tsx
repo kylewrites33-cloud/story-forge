@@ -7,10 +7,9 @@ import type { Decision } from '../lib/ideas.ts';
 import type { OnJob } from '../lib/jobs.ts';
 import { nextStep, nextStepJob, type NextStep } from '../lib/nextstep.ts';
 import {
-  bookNote, bookNumbers, bookStage, bookStages, finishedJobs, loadSeenJobs, markJobsSeen, runway, waitingOnKyle
+  bookNote, bookNumbers, bookStage, bookStages, decideQueue, runway
 } from '../lib/overview.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
-import { bookWarnings } from '../lib/warnings.ts';
 import { Icon } from './Icon.tsx';
 import { useFlow } from './Flow.tsx';
 import { useBookStatuses } from './Home.tsx';
@@ -217,21 +216,15 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   /** The words for the big button: the chapter's name and where in it, for a scene's path. */
   keepFor?: (path: string) => { title: string; where: string } | null;
 }) {
-  const [seen, setSeen] = useState(() => loadSeenJobs(sourceKey));
-  const [showWarnings, setShowWarnings] = useState(false);
   const nums = bookNumbers(schema, index, book);
   const status = useBookStatuses({ key: sourceKey }, index)(book);
   const flow = useFlow(index, book);
   const six = sixStages({ index, book, stages: flow.stages, statuses: flow.statuses, status });
-  const waiting = waitingOnKyle(index, book, seen);
-  const warnings = bookWarnings(index, book.folder);
   const run = runway(index, book);
   const note = bookNote(index, book);
   const save = note && onDecide && !note.error ? (key: string) => (v: string) => onDecide(note.path, 'edit', '', { [key]: v }) : null;
-  const jobs = finishedJobs(index, book).filter((j) => seen.indexOf(j.path) < 0);
   const keep = status.go && keepFor ? keepFor(status.go) : null;
   const week = weekTyping(index, sourceKey, new Date());
-  const decide = waiting.some((w) => w.key === 'ideas' || w.key === 'beats' || w.key === 'conflicts');
   return (
     <section class="overview">
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Home</p>
@@ -272,33 +265,11 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
           <p class="meta"><a href={href.book(book.folder)}>Open the Chapter Grid</a></p>
         </section>
 
-        <section class="ov-panel" aria-labelledby="ov-wait">
+        <section class="ov-panel ov-wait-small" aria-labelledby="ov-wait">
           <h2 id="ov-wait"><Icon name="todo" size={20} /> Waiting on you</h2>
-          {decide && <a class="button primary decide-go" href={href.board('decide', book.folder)}>Decide one at a time</a>}
-          {!waiting.length && !warnings.length ? <p class="ov-clear"><Icon name="check" size={20} /> Nothing is waiting on you.</p> : (
-            <ul class="ov-list">
-              {waiting.map((w) => (
-                <li key={w.key}>
-                  <a href={w.href}><span class="ov-count">{w.count}</span><span>{w.label.replace(/^\d+ /, '')}</span><Icon name="right" size={18} /></a>
-                  {w.key === 'jobs' && (
-                    <button type="button" class="link" onClick={() => setSeen(markJobsSeen(sourceKey, jobs.map((j) => j.path)))}>Mark {jobs.length === 1 ? 'it' : 'them'} as seen</button>
-                  )}
-                </li>
-              ))}
-              {warnings.length > 0 && (
-                <li>
-                  <button type="button" class="ov-warn-row" aria-expanded={showWarnings} onClick={() => setShowWarnings(!showWarnings)}>
-                    <span class="ov-count">{warnings.length}</span><span>{warnings.length === 1 ? 'warning from the story checks' : 'warnings from the story checks'}</span><Icon name={showWarnings ? 'up' : 'down'} size={18} />
-                  </button>
-                  {showWarnings && (
-                    <ul class="ov-list ov-warnings">
-                      {warnings.map((w, i) => <li key={i}><a href={w.href}><span>{w.text}</span><Icon name="right" size={18} /></a></li>)}
-                    </ul>
-                  )}
-                </li>
-              )}
-            </ul>
-          )}
+          {decideQueue(index, book).length
+            ? <a class="button primary decide-go" href={href.board('decide', book.folder)}>Decide one at a time</a>
+            : <p class="ov-clear"><Icon name="check" size={20} /> Nothing to decide right now.</p>}
         </section>
 
         {(run.posted > 0 || run.cadence != null) && (

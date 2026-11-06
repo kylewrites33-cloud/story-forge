@@ -969,7 +969,10 @@ The book's Overview (Home) now holds, top to bottom:
 - **Progress**: the stage it is in and its percent in the Books page's style, then words in the book, chapters, words
   Kyle typed in the last seven days with minutes of typing (Writing Log), and the word target with Change. The old card
   (chapters marked done, scene statuses) is gone: it said 0 of 37 for a book in its rewrite.
-- **Waiting on you**, with the story checks' warnings folded in as one row that opens the list.
+- **Waiting on you**: a small box with only Decide one at a time (or "Nothing to decide right now"), no counts (Kyle,
+  2026-11-06: "the waiting on you section is distracting ... a small box that says waiting on you with the box that says
+  decide one at a time, without any numbers or anything"). Earlier the same day it listed counts with the warnings folded
+  in; to-dos, notes, questions and jobs are on their own pages, and the warnings on each check's page.
 - The guided **Next step** is gone from the Overview: it overlapped Keep writing and pointed at drafting while the book
   was in its rewrite. The **Release runway** is hidden until a chapter is posted or a posting pace is set (for Royal Road).
 
