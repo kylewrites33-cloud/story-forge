@@ -2632,3 +2632,4 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .six-stages li.elsewhere .book-path-bar span { opacity: 0.35; }
 .six-stages li.elsewhere .six-pct { color: var(--muted); }
 .six-status { flex: 1 1 260px; margin: 0; font-weight: 600; color: var(--text); }
+.ov-wait-small .decide-go { margin: 0; }
