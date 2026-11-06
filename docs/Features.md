@@ -723,8 +723,13 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   ("fix can be a verb too"), bolds each answer's letter and short version, spaces its paragraphs, and the buttons
   are just A, B, C ("why not A?"); the note keeps its "Fix A:" lines (2026-10-27).
 - **Edit > Changes** lists the story calls waiting, each chapter with changes, and the saved drafts.
-- **{ } asks in the margin.** Page look has "Asks for the team in { }": In the margin (the default) floats them beside
-  the text when the page is wide enough, or In the text.
+- **{ } asks in the margin.** Page look has "Asks for the team in { }": Left margin, Right margin (the default
+  before 2026-11-06) or In the text. A margin floats them beside the text when the page is wide enough. The note stays
+  in the text exactly where Kyle typed it; only how it shows changes, so the team still sees its place.
+  Left margin (2026-11-06, Kyle: "I want to experiment with these green curly notes showing on the left side instead of
+  the right, so that the main text gets shoved to the right. That way it's closer to the writer's text"): the text moves
+  right, next to the Rewrite column. Every device switched to it once; Right margin puts them back. Every scene of a
+  chapter shows its notes this way (before, only the open scene did).
 
 ## The Writer's rewrite beside the page (2026-11-04)
 
@@ -795,6 +800,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   right column up to the approximate location of the corrected paragraphs". Putting the cursor in any scene of the
   chapter (before, only the first scene) marks the Writer's matching paragraph and, when it is out of sight, scrolls
   the column so it sits in the middle. Only the column scrolls, never the page.
+- **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
+  body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
+  typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits
+  under it on the page and under its row in the column, and when the column opens it scrolls that row into view. The
+  arrow goes when the chapter is marked Done.
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.

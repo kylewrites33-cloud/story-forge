@@ -3,7 +3,7 @@
 // column shows the rewrite paragraph by paragraph, each lined up with Kyle's own, and Bring over puts one in place of
 // his. His page is the only thing that changes; the rewrite file is read only.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { align, bringOver, paragraphs, rowAt, span, takeOut, type Row } from '../lib/rewrite.ts';
+import { align, bringOver, findSpot, paragraphs, rowAt, span, takeOut, type Row, type Spot } from '../lib/rewrite.ts';
 import { wordDiff } from '../lib/changes.ts';
 import { splitLead } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
@@ -19,6 +19,15 @@ export interface Put {
   at: number; end: number; words: string;
   /** Where the new words sit afterwards. */
   to: number; toEnd: number;
+}
+
+/** Where Kyle left off in draft 2 of a book, kept on this device (Kyle, 2026-11-06: "so we can sort of quickly get a
+ * glance at where we're supposed to be when I open it up again on a new session"). */
+export function loadLeftOff(book: string): Spot | null {
+  try { const raw = localStorage.getItem('story-forge.rewrite-left-off.' + book); const s = raw ? JSON.parse(raw) : null; return s && typeof s.path === 'string' && typeof s.head === 'string' && typeof s.index === 'number' ? s : null; } catch { return null; }
+}
+export function saveLeftOff(book: string, spot: Spot) {
+  try { localStorage.setItem('story-forge.rewrite-left-off.' + book, JSON.stringify(spot)); } catch { /* lasts until reload */ }
 }
 
 /** Kyle's tweaks to the Writer's paragraphs before he brings them over (Kyle, 2026-11-05: "can i put my cursor in there
@@ -70,6 +79,8 @@ export interface RewriteSection {
   read: () => string;
   /** Where his cursor is, so the column follows the page; null when it is not in this scene. */
   caret: number | null;
+  /** Where Kyle left off, when it is in this scene: a small arrow under that row. */
+  spot?: Spot | null;
   onPut: (p: Put) => void;
   /** Show these characters of the page (a tap on a paragraph in the column). */
   onGo: (at: number, end: number) => void;
@@ -131,9 +142,14 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
   );
 }
 
+/** The small arrow under the paragraph where Kyle left off. */
+function LeftOff() {
+  return <span class="left-off-mark" role="img" aria-label="You left off here" title="You left off here"><Icon name="down" size={16} /></span>;
+}
+
 /** One scene's rewrite, paragraph by paragraph beside Kyle's. */
 function RewriteScene({ source, section, hideSame, named }: { source: VaultSource; section: RewriteSection; hideSame: boolean; named: boolean }) {
-  const { file, text, caret, onPut, onGo, onShow, onHide, read } = section;
+  const { file, text, caret, onPut, onGo, onShow, onHide, read, spot } = section;
   useEffect(() => () => onHide(), []);
   const [theirs, setTheirs] = useState<{ key: string; text: string | null; error?: string }>({ key: '', text: null });
   const key = file ? file.path + '@' + file.sha : '';
@@ -161,6 +177,14 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
   const wordsOf = (j: number) => (edits[j] != null ? edits[j] : other[j].text);
   // The row Kyle's cursor is in is marked and brought into view in the column when it changes.
   const cur = caret == null ? -1 : rowAt(rows, mine, caret);
+  // The row where Kyle left off: the one that holds his paragraph there.
+  const leftAt = useMemo(() => {
+    if (!spot) return -1;
+    const p = findSpot(text, spot);
+    if (!p) return -1;
+    const i = mine.findIndex((q) => q.at === p.at);
+    return rows.findIndex((r) => r.mine != null && r.mine <= i && i <= (r.mineEnd ?? r.mine));
+  }, [spot, text, rows]);
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (cur < 0 || !list.current) return;
@@ -174,6 +198,18 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
     else el.scrollIntoView({ block: 'center' });
   }, [cur, caret]);
+  // Opening the column: bring the row where Kyle left off into the middle, once, unless his cursor is already here.
+  const placed = useRef(false);
+  useEffect(() => {
+    if (placed.current || leftAt < 0 || cur >= 0 || !list.current) return;
+    const el = list.current.querySelector<HTMLElement>('[data-row="' + leftAt + '"]');
+    if (!el) return;
+    placed.current = true;
+    const box = list.current.closest('.writer-right') || list.current;
+    const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (r.top >= b.top && r.bottom <= b.bottom) return;
+    if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
+  }, [leftAt, rows]);
 
   const name = named && section.label ? <p class="rewrite-scene-name">{section.label}</p> : null;
   if (!file) return <div class="rewrite-scene">{name}<p class="hint">The Writer has not rewritten this scene yet.</p></div>;
@@ -234,13 +270,13 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
       <div class="rewrite-rows" ref={list}>
         {rows.map((row, k) => {
           const same = row.score === 1;
-          if (same && hideSame) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '')} aria-label="Same as yours" />;
+          if (same && hideSame) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '')} aria-label="Same as yours">{k === leftAt && <LeftOff />}</div>;
           const words = row.theirs != null ? wordsOf(row.theirs) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
           const go = () => { const p = where(row); if (p) onGo(p.at, p.end); };
           const show = () => { const p = where(row); if (p) onShow(p.at, p.end); };
           return (
-            <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
+            <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
               {row.theirs == null ? (
                 <>
                   <span class="panel-key">The Writer left this out</span>
@@ -268,6 +304,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
                   )}
                 </>
               )}
+              {k === leftAt && <LeftOff />}
             </div>
           );
         })}

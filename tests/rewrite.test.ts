@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { changesIn } from '../src/lib/changes.ts';
 import { test } from 'node:test';
-import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, rowAt, similarity, span, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
+import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, findSpot, rowAt, similarity, span, spotOf, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
 
 const B = 'Series/S/Books/1 B';
 
@@ -116,4 +116,15 @@ test('a screen the Writer made of two of Kyle\'s paragraphs is one row, and Brin
 test('a paragraph the Writer really cut stays its own row', () => {
   const rows = align(['Basil looked.', 'The wind was cold on the hill that night.', 'Rue laughed.'], ['Basil looked.', 'Rue laughed.']);
   assert.deepEqual(rows.map((r) => [r.mine, r.mineEnd, r.theirs]), [[0, undefined, 0], [1, undefined, null], [2, undefined, 1]]);
+});
+
+test('the spot where Kyle left off is found again after the page changes', () => {
+  const text = 'One.\n\nTwo is here.\n\nThree.\n';
+  const s = spotOf('a.md', text, 8)!;
+  assert.deepEqual(s, { path: 'a.md', head: 'Two is here.', index: 1 });
+  assert.equal(spotOf('a.md', text, 5)!.index, 0, 'between paragraphs: the one before');
+  assert.equal(findSpot('Zero.\n\nOne.\n\nTwo is here.\n\nThree.\n', s)!.text, 'Two is here.');
+  assert.equal(findSpot('One.\n\nTwo was changed.\n\nThree.\n', s)!.text, 'Two was changed.', 'else the same place');
+  assert.equal(findSpot('One.\n', s)!.text, 'One.');
+  assert.equal(findSpot('', s), null);
 });

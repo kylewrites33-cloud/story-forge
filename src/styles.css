@@ -2456,6 +2456,11 @@ button, .button { border-radius: 12px; }
      name take the wider column (Kyle, 2026-11-05: "the next scene on the screen seems staggered differently"). */
   .writer.asks-margin .writer-page:has(.writer-text.styled .md-ask) :is(.page-head, .writer-text.styled, .section-name) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
   .writer.asks-margin :is(.main-section .writer-text.styled, .chapter-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: right; clear: right; width: 12rem; margin-right: -13rem; margin-top: 0.2em; padding: 4px 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.8em; line-height: 1.4; white-space: normal; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+  /* Or in the left margin, so the text sits next to the Rewrite column (Kyle, 2026-11-06: "the main text gets shoved to
+     the right. That way it's closer to the writer's text"). */
+  .writer.asks-left :is(.main-section .writer-text.styled, .changes-page, .draft-readonly):has(.md-ask),
+  .writer.asks-left .writer-page:has(.writer-text.styled .md-ask) :is(.page-head, .writer-text.styled, .section-name) { padding-right: clamp(16px, 4vw, 48px); padding-left: calc(clamp(16px, 4vw, 48px) + 13rem); margin-left: auto; margin-right: 0; }
+  .writer.asks-left :is(.main-section .writer-text.styled, .chapter-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: left; clear: left; margin-right: 0; margin-left: -13rem; text-align: right; border-left: 0; border-right: 3px solid var(--accent); border-radius: 6px 0 0 6px; }
   .changes-page:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
   .changes-page .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
   .changes-page .chg-tag.on { border-left-color: var(--accent); }
@@ -2641,3 +2646,12 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .six-due { display: block; font-size: 0.8rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
 .six-stages li:has(.six-due) .book-path-name { min-height: 0; }
 .six-stages .book-path-row { align-items: end; }
+
+/* Where Kyle left off in draft 2 (Kyle, 2026-11-06): a small arrow under that paragraph, on the page and in the
+   Rewrite column. Quiet: the accent at half strength, no box, never in the way of a tap. */
+.writer-page { position: relative; }
+.left-off-mark { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; color: var(--accent); opacity: 0.6; pointer-events: none; }
+.page-left-off { position: absolute; z-index: 1; margin-left: -2px; }
+.rewrite-row.left-off { position: relative; margin-bottom: 14px; }
+.rewrite-row .left-off-mark { position: absolute; left: 10px; bottom: -22px; }
+.rewrite-row.folded.left-off { min-height: 10px; }
