@@ -172,11 +172,11 @@ function SixStages({ stages, folder }: { stages: SixStage[]; folder: string }) {
       </div>
       <ol class="book-path-row">
         {stages.map((s) => (
-          <li key={s.key} class={s.percent >= 100 ? 'done' : s.current ? 'current' : ''}>
+          <li key={s.key} class={(s.percent >= 100 ? 'done' : s.current ? 'current' : '') + (s.elsewhere ? ' elsewhere' : '')}>
             <a href={to[s.key]} aria-current={s.current ? 'step' : undefined} title={s.detail}>
               <span class="book-path-name">{s.name}</span>
               <span class="book-path-bar"><span style={{ width: s.percent + '%' }} /></span>
-              <span class="six-pct">{s.percent >= 100 && <Icon name="check" size={14} />} {s.percent}%</span>
+              <span class="six-pct">{s.percent >= 100 && <Icon name="check" size={14} />} {s.elsewhere ? 'Done' : s.percent + '%'}</span>
             </a>
           </li>
         ))}

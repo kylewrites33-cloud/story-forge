@@ -2629,3 +2629,5 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .ov-warn-row .ov-count { min-width: 2ch; text-align: right; color: var(--accent); }
 .ov-warn-row .icon { color: var(--muted); flex: none; }
 .ov-list .ov-warnings { margin: 4px 0 6px 20px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 0.95rem; }
+.six-stages li.elsewhere .book-path-bar span { opacity: 0.35; }
+.six-stages li.elsewhere .six-pct { color: var(--muted); }

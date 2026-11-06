@@ -21,6 +21,10 @@ export interface SixStage {
   detail: string;
   /** The stage the book is in now. */
   current: boolean;
+  /** An earlier stage the book has moved past without finishing it in the app: taken as done off the app, drawn in a
+   * lighter colour (Kyle, 2026-11-06: "can we assume that if im in a further stage, that the previous stages are implicity
+   * complete"; "im not sure i like saying its skipped. maybe it just happened off-app"). */
+  elsewhere: boolean;
 }
 
 export const STAGE_NAMES: Record<StageKey, string> = {
@@ -139,7 +143,12 @@ export function sixStages({ index, book, stages, statuses, status }: StageInput)
     current = 'market';
     (['market', 'planning', 'outlining'] as StageKey[]).forEach((k) => { if (all[k].percent > 0) current = all[k].percent >= 100 ? ORDER[ORDER.indexOf(k) + 1] : k; });
   }
-  return ORDER.map((key) => ({ key, name: STAGE_NAMES[key], percent: all[key].percent, detail: all[key].detail, current: key === current }));
+  const at = current ? ORDER.indexOf(current) : -1;
+  return ORDER.map((key, i) => {
+    const elsewhere = i < at && all[key].percent < 100;
+    return { key, name: STAGE_NAMES[key], percent: elsewhere ? 100 : all[key].percent,
+      detail: elsewhere ? 'Done outside the app (in the app: ' + all[key].detail + ')' : all[key].detail, current: key === current, elsewhere };
+  });
 }
 
 // ---- The publish date ----
