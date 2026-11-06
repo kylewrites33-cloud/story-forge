@@ -36,14 +36,17 @@ test('a book in the rewrite: writing done, editing a third of the way through pa
   assert.equal(by.writing.percent, 100);
   assert.equal(by.editing.current, true);
   assert.equal(by.editing.percent, 17); // half of pass 1 of 3
-  assert.equal(by.outlining.percent, 13); // no outline, beats for 1 of 4 chapters
+  assert.equal(by.outlining.percent, 100); // earlier stages count as done once the book has moved on
+  assert.equal(by.outlining.elsewhere, true);
+  assert.match(by.outlining.detail, /beats or a plan for 1 of 4 chapters/);
+  assert.equal(by.writing.elsewhere, false);
   assert.equal(by.publishing.percent, 0);
 });
 
 test('a published book is 100% everywhere with nothing current', () => {
   const { book, index } = setup('done');
   const six = sixStages({ index, book, stages: [], statuses: {}, status: bookStatus(index, book, []) });
-  assert.ok(six.every((s) => s.percent === 100 && !s.current));
+  assert.ok(six.every((s) => s.percent === 100 && !s.current && !s.elsewhere));
 });
 
 test('the publish date reads YYYY-MM-DD and counts the days', () => {

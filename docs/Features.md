@@ -962,7 +962,10 @@ The book's Overview (Home) now holds, top to bottom:
   beat sheet's beats kept) and half the chapters with beats or a chapter plan; Writing = 100% once a draft is saved or
   editing has begun, else the Books page's count; Editing = three passes (draft 1 to 2, 2 to 3, 3 to 4), the one under
   way counted as far as it has got; Publishing = the workflow's publishing steps, 100% once published. Each stage opens
-  its room. The stage the book is in is lit, with its detail beside the heading.
+  its room. The stage the book is in is lit, with its detail beside the heading. Stages before it that were not finished
+  in the app count as done outside the app: a full bar in a lighter colour marked Done (Kyle, 2026-11-06: "can we assume that if im in
+  a further stage, that the previous stages are implicity complete (even if we mark the filled in bar with a different
+  color or something?)"; then "im not sure i like saying its skipped. maybe it just happened off-app").
 - **Progress**: the stage it is in and its percent in the Books page's style, then words in the book, chapters, words
   Kyle typed in the last seven days with minutes of typing (Writing Log), and the word target with Change. The old card
   (chapters marked done, scene statuses) is gone: it said 0 of 37 for a book in its rewrite.
