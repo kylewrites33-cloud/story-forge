@@ -168,8 +168,12 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     if (!el) return;
     const box = list.current.closest('.writer-right') || list.current;
     const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
-    if (r.top < b.top || r.bottom > b.bottom) el.scrollIntoView({ block: 'nearest' });
-  }, [cur]);
+    // Out of sight: bring it to the middle of the column, so the rows around it show too.
+    if (r.top >= b.top && r.bottom <= b.bottom) return;
+    // Scroll the column only, never the page around it.
+    if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
+    else el.scrollIntoView({ block: 'center' });
+  }, [cur, caret]);
 
   const name = named && section.label ? <p class="rewrite-scene-name">{section.label}</p> : null;
   if (!file) return <div class="rewrite-scene">{name}<p class="hint">The Writer has not rewritten this scene yet.</p></div>;

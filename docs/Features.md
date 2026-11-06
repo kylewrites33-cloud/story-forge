@@ -791,6 +791,10 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   had that scene's words from before he typed. Bring over, Take it out and the light now read the page that moment
   and line the rows up again first; Take it out does nothing if Kyle has changed that paragraph since. Typing in any
   scene of the chapter redraws the column a moment after the last key.
+- **The column follows your tap (2026-11-06).** Kyle: "tapping in the main writing area might automatically pull the
+  right column up to the approximate location of the corrected paragraphs". Putting the cursor in any scene of the
+  chapter (before, only the first scene) marks the Writer's matching paragraph and, when it is out of sight, scrolls
+  the column so it sits in the middle. Only the column scrolls, never the page.
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.

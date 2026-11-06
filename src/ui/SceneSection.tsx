@@ -27,7 +27,7 @@ export interface SectionApi {
 /** The team's changes marked on this scene, when the Edit room shows the whole chapter. */
 export interface SectionMarks { placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void }
 
-export function SceneSection({ source, note, options, onSaved, onFocus, onLook, onText, register, marks }: {
+export function SceneSection({ source, note, options, onSaved, onFocus, onLook, onText, onCaret, register, marks }: {
   source: VaultSource; note: NoteRecord; options: StyleOptions;
   onSaved: (n: NoteRecord) => void;
   /** Kyle's cursor went into this scene: the tool row works on it. */
@@ -35,6 +35,8 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
   onLook?: (l: { i: boolean; b: boolean; h: boolean }) => void;
   /** Kyle typed in this scene (the Rewrite tab lines its rows up again). */
   onText?: () => void;
+  /** Kyle's cursor moved in this scene (the Rewrite tab brings the Writer's paragraph there into view). */
+  onCaret?: (offset: number) => void;
   register: (path: string, api: SectionApi | null) => void;
   marks?: SectionMarks | null;
 }) {
@@ -131,7 +133,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     <section class="chapter-section" data-section={note.path} onFocusCapture={onFocus}>
       {marks ? <ChangesPage text={splitLead(draft.body).text} placed={marks.placed} view={marks.view} current={marks.current} onPick={marks.onPick} options={options}
         label={'Text of ' + String(note.data.title || note.data.id || '') + ' with the team\'s changes'} />
-      : <StyledEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={() => {}} onLook={onLook}
+      : <StyledEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
         label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options} />}
       {error && <p class="note-line section-error">{error}</p>}
     </section>
