@@ -2,7 +2,7 @@
 // where the book is in six stages with a percent each, Progress for the stage it is in, and Waiting on you with the story
 // checks' warnings folded in. The Release runway shows only once a chapter is posted or a posting pace is set.
 // The stage strip and the guided next step live on here for other pages; the Overview no longer shows them.
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { Decision } from '../lib/ideas.ts';
 import type { OnJob } from '../lib/jobs.ts';
 import { nextStep, nextStepJob, type NextStep } from '../lib/nextstep.ts';
@@ -17,6 +17,9 @@ import type { BookStatus } from '../lib/bookstatus.ts';
 import { publishDate, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
+import {
+  STAGE_KEYS, datesToRecord, daysWords, estimate, localDay, shortDay, stageDates, type Estimate, type StageTime
+} from '../lib/stagetimes.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -138,7 +141,7 @@ function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: str
   if (!open) {
     return (
       <p class="ov-pubdate">
-        <Icon name="upload" size={18} /> <span>Publish date: <b>{value ? publishLine(value, new Date()) : 'not set'}</b></span>
+        <span>Your publish date: <b>{value ? publishLine(value, new Date()) : 'not set'}</b></span>
         {onSave && <button type="button" class="link" onClick={() => { setV(value || ''); setOpen(true); }}>{value ? 'Change' : 'Set it'}</button>}
       </p>
     );
@@ -146,7 +149,7 @@ function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: str
   const ok = /^\d{4}-\d{2}-\d{2}$/.test(v);
   return (
     <form class="ov-setting-form ov-pubdate-form" onSubmit={(e) => { e.preventDefault(); if (ok && onSave) { onSave(v); setOpen(false); } }}>
-      <label class="reason">Publish date
+      <label class="reason">Your publish date
         <input type="date" value={v} onInput={(e) => setV((e.currentTarget as HTMLInputElement).value)} />
       </label>
       <div class="buttons">
@@ -156,6 +159,88 @@ function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: str
     </form>
   );
 }
+
+/** The team's estimate of the publish day, from how long each stage has taken (lib/stagetimes.ts), above Kyle's own date. */
+function EstimatedDate({ est }: { est: Estimate }) {
+  if (!est.date) return null;
+  return (
+    <p class="ov-pubdate ov-estimate">
+      <Icon name="upload" size={18} /> <span>Estimated publish date: <b>{publishLine(est.date, new Date())}</b></span>
+      <a class="link" href="#ov-times">How</a>
+    </p>
+  );
+}
+
+const BASIS: Record<StageTime['basis'], string> = {
+  done: '', behind: '', pace: 'at your pace so far', past: 'as long as it took before', guess: 'a first guess'
+};
+
+/** One stage's line: when it started and ended and how long it took, or how long it has gone and when it should end. */
+function timeLine(t: StageTime, now: Date): string {
+  const d = (x: string) => shortDay(x, now);
+  if (t.current) {
+    return (t.start ? 'Started ' + d(t.start) + (t.days != null ? ', ' + daysWords(Math.max(1, t.days)) + ' so far' : '') + '. ' : 'Started, day not known. ')
+      + 'About ' + daysWords(t.left) + ' to go, ' + BASIS[t.basis] + ': done by ' + (t.due ? d(t.due) : '?') + '.';
+  }
+  if (t.due) return (t.start ? 'Started ' + d(t.start) + '. ' : '') + 'About ' + daysWords(t.left) + ', ' + BASIS[t.basis] + ': done by ' + d(t.due) + '.';
+  if (t.start && t.end) return d(t.start) + ' to ' + d(t.end) + ': ' + daysWords(t.days || 1) + (t.paused ? ' of work, not counting ' + daysWords(t.paused) + ' waiting' : '') + '.';
+  if (t.end) return 'Finished ' + d(t.end) + ', start not known.';
+  if (t.start) return 'Started ' + d(t.start) + ', end not known.';
+  return 'Done, days not known.';
+}
+
+/** How long each stage took and will take, with the other books' average; Change dates fixes any day. */
+function StageTimes({ est, dates, onSave }: { est: Estimate; dates: Record<string, string>; onSave?: (f: Record<string, string>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState<Record<string, string>>({});
+  const now = new Date();
+  if (open) {
+    const changed = Object.keys(v).filter((k) => (v[k] || '') !== (dates[k] || ''));
+    return (
+      <section class="ov-panel ov-times" id="ov-times" aria-labelledby="ov-times-h">
+        <h2 id="ov-times-h"><Icon name="timer" size={20} /> Change stage dates</h2>
+        <form onSubmit={(e) => { e.preventDefault(); if (onSave && changed.length) { const f: Record<string, string> = {}; changed.forEach((k) => { f[k] = v[k] || ''; }); onSave(f); } setOpen(false); }}>
+          {est.stages.map((t) => (
+            <fieldset key={t.key} class="ov-times-row">
+              <legend>{t.name}</legend>
+              {(['start', 'end'] as const).map((w) => (
+                <label key={w}>{w === 'start' ? 'Started' : 'Finished'}
+                  <input type="date" value={v[t.key + '_' + w] || ''} onInput={(e) => { const x = (e.currentTarget as HTMLInputElement).value; setV((o) => ({ ...o, [t.key + '_' + w]: x })); }} />
+                </label>
+              ))}
+              <label>Days it sat waiting
+                <input type="number" inputMode="numeric" min={0} step={1} value={v[t.key + '_paused'] || ''} onInput={(e) => { const x = (e.currentTarget as HTMLInputElement).value; setV((o) => ({ ...o, [t.key + '_paused']: x })); }} />
+              </label>
+            </fieldset>
+          ))}
+          <div class="buttons">
+            <button type="submit" class="primary" disabled={!changed.length}>Save</button>
+            <button type="button" onClick={() => setOpen(false)}>Cancel</button>
+          </div>
+        </form>
+      </section>
+    );
+  }
+  return (
+    <section class="ov-panel ov-times" id="ov-times" aria-labelledby="ov-times-h">
+      <h2 id="ov-times-h"><Icon name="timer" size={20} /> How long each stage takes</h2>
+      <ol class="ov-times-list">
+        {est.stages.map((t) => (
+          <li key={t.key} class={t.current ? 'current' : t.due ? 'ahead' : 'done'}>
+            <b>{t.name}</b>
+            <span>{timeLine(t, now)}</span>
+            {t.typical && <span class="meta">Your other {t.typical.books === 1 ? 'book' : 'books'}: {daysWords(t.typical.days)}.</span>}
+          </li>
+        ))}
+      </ol>
+      {est.guessed && <p class="meta">A first guess is used for a stage none of your books has dates for yet. It gets better with every book.</p>}
+      {onSave && <button type="button" class="link" onClick={() => { const o: Record<string, string> = {}; STAGE_KEYS.forEach((k) => { ['_start', '_end', '_paused'].forEach((w) => { o[k + w] = dates[k + w] || ''; }); }); setV(o); setOpen(true); }}>Change dates</button>}
+    </section>
+  );
+}
+
+/** Stage dates already written this session, so a page drawn again before the next sync does not write them twice. */
+const recorded = new Set<string>();
 
 /** The status line (Kyle, 2026-11-06: "Status Editing: Rewrite (Draft 2) - 6/37 chapters compete"): the stage, the pass
  * it is in, and how far, with "6 of 37" written 6/37. */
@@ -225,10 +310,25 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   const save = note && onDecide && !note.error ? (key: string) => (v: string) => onDecide(note.path, 'edit', '', { [key]: v }) : null;
   const keep = status.go && keepFor ? keepFor(status.go) : null;
   const week = weekTyping(index, sourceKey, new Date());
+  const dates = stageDates(note ? note.data : null);
+  const others = index.books.filter((b) => b.path !== book.path).map((b) => stageDates(index.notes[b.path] ? index.notes[b.path].data : null));
+  const day = localDay(new Date());
+  const est = estimate(six, dates, others, day);
+  const rawDates: Record<string, string> = {};
+  STAGE_KEYS.forEach((k) => { if (dates[k].start) rawDates[k + '_start'] = dates[k].start as string; if (dates[k].end) rawDates[k + '_end'] = dates[k].end as string; if (dates[k].paused) rawDates[k + '_paused'] = String(dates[k].paused); });
+  // Keep the record up by itself: the stage the book is in gets a start day, finished stages an end day.
+  const toWrite = datesToRecord(six, dates, status.phase === 'published', day);
+  const writeKey = book.path + ' ' + Object.keys(toWrite).sort().join(',');
+  useEffect(() => {
+    if (!note || note.error || !onDecide || !Object.keys(toWrite).length || recorded.has(writeKey)) return;
+    recorded.add(writeKey);
+    onDecide(note.path, 'edit', '', toWrite);
+  }, [writeKey]);
   return (
     <section class="overview">
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Home</p>
       <h1>{book.title}</h1>
+      <EstimatedDate est={est} />
       <PublishDate value={publishDate(note)} onSave={save ? save('publish_date') : undefined} />
       {status.go && keep ? (
         <a class="hero-card" href={href.write(status.go)}>
@@ -264,6 +364,8 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
           <NumberSetting label="Target" value={nums.target} unit="words" onSave={save ? save('target_words') : undefined} />
           <p class="meta"><a href={href.book(book.folder)}>Open the Chapter Grid</a></p>
         </section>
+
+        <StageTimes est={est} dates={rawDates} onSave={note && onDecide && !note.error ? (f) => onDecide(note.path, 'edit', '', f) : undefined} />
 
         <section class="ov-panel ov-wait-small" aria-labelledby="ov-wait">
           <h2 id="ov-wait"><Icon name="todo" size={20} /> Waiting on you</h2>
