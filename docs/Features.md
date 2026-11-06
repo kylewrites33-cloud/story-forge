@@ -780,6 +780,12 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   scene on the screen seems staggered differently when i close the left side chapters pane"). Done with this chapter is
   also at the end of the page, under the last scene, with the same "You are through chapter N" and Open it again
   (Kyle: "is there an option for me to mark the draft 2 chapter as done at the bottom of the page").
+- **Joined paragraphs (2026-11-06).** Kyle: "when i accepted this paragraph, it didn't remove the top line of the
+  original". Where the Writer made one paragraph of two or more of Kyle's (a screen's plain title line and its words
+  turned into one `>` block, or two lines of dialogue run together), the column shows them as one row: Bring over
+  replaces all of them, and the light covers all of them. A paragraph the Writer really cut keeps its own "left out"
+  row. A row counts as the same only when it reads exactly the same, marks and all, so a change of only a stop, a
+  colon, an italic or a screen's `>` marks still gets its Bring over.
 - **The whole chapter (2026-11-05).** Kyle: "for chapter 2, i dont see anything rewritten after the first scene
   divider". When the page shows the whole chapter, the Rewrite column shows every scene of it in order, each under
   its scene name, with Bring over and the boxes working on that scene's part of the page.
