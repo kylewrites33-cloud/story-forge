@@ -17,6 +17,10 @@ export function roomLinks(schema: Schema, folder: string, workflow: boolean): Re
   out['story-calls'] = { key: 'story-calls', title: 'Story calls', to: href.board('story-calls', folder), icon: 'cards' };
   out['chapter-titles'] = { key: 'chapter-titles', title: 'Chapter titles', to: href.board('chapter-titles', folder), icon: 'pen' };
   out.steps = { key: 'steps', title: 'Steps', to: href.flow(folder), icon: 'outline' };
+  // The Market room (Kyle, 2026-11-06): the board and the workflow's market research steps (stage 1 unless the Shell
+  // finds it elsewhere in the workflow).
+  if (out.market) out.market = { ...out.market, title: 'Market board' };
+  out['market-steps'] = { key: 'market-steps', title: 'Research steps', to: href.flowStage(folder, 1), icon: 'outline' };
   if (out.characters) {
     out.places = { key: 'places', title: 'Places', to: href.board('places', folder), icon: 'map' };
     out.items = { key: 'items', title: 'Items', to: href.board('items', folder), icon: 'item' };
