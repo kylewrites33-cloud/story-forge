@@ -2612,7 +2612,6 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .ov-pubdate .icon { color: var(--accent); }
 .ov-pubdate b { color: var(--text); font-weight: 600; }
 .ov-pubdate button.link { min-height: 44px; padding: 0 4px; }
-.ov-pubdate-form { margin: 0 0 14px; }
 .six-stages .book-path-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 @media (max-width: 699px) { .six-stages .book-path-row { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; } }
 .six-stages .book-path-name { min-height: 2.4em; align-items: flex-end; }
@@ -2635,8 +2634,6 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .ov-wait-small .decide-go { margin: 0; }
 
 /* Stage times and the estimated publish date (Kyle, 2026-11-06: "for you to estimate the publishing date yourself"). */
-.ov-estimate { margin-bottom: 2px; }
-.ov-pubdate:not(.ov-estimate) { font-size: 0.95rem; }
 
 .six-due { display: block; font-size: 0.8rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
 .six-stages li:has(.six-due) .book-path-name { min-height: 0; }

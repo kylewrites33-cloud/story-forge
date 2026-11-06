@@ -14,7 +14,7 @@ import { Icon } from './Icon.tsx';
 import { useFlow } from './Flow.tsx';
 import { useBookStatuses } from './Home.tsx';
 import type { BookStatus } from '../lib/bookstatus.ts';
-import { publishDate, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
+import { publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
 import { datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type Estimate } from '../lib/stagetimes.ts';
@@ -132,32 +132,6 @@ function NumberSetting({ label, value, unit, onSave }: { label: string; value: n
   );
 }
 
-/** The planned publish date under the book's title (Kyle, 2026-11-06), with Change. Written to the book's `publish_date`. */
-function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [v, setV] = useState(value || '');
-  if (!open) {
-    return (
-      <p class="ov-pubdate">
-        <span>Your publish date: <b>{value ? publishLine(value, new Date()) : 'not set'}</b></span>
-        {onSave && <button type="button" class="link" onClick={() => { setV(value || ''); setOpen(true); }}>{value ? 'Change' : 'Set it'}</button>}
-      </p>
-    );
-  }
-  const ok = /^\d{4}-\d{2}-\d{2}$/.test(v);
-  return (
-    <form class="ov-setting-form ov-pubdate-form" onSubmit={(e) => { e.preventDefault(); if (ok && onSave) { onSave(v); setOpen(false); } }}>
-      <label class="reason">Your publish date
-        <input type="date" value={v} onInput={(e) => setV((e.currentTarget as HTMLInputElement).value)} />
-      </label>
-      <div class="buttons">
-        <button type="submit" class="primary" disabled={!ok}>Save</button>
-        <button type="button" onClick={() => setOpen(false)}>Cancel</button>
-      </div>
-    </form>
-  );
-}
-
 /** The team's estimate of the publish day, from how long each stage has taken (lib/stagetimes.ts), above Kyle's own date. */
 function EstimatedDate({ est }: { est: Estimate }) {
   if (!est.date) return null;
@@ -261,7 +235,6 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
       <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · Home</p>
       <h1>{book.title}</h1>
       <EstimatedDate est={est} />
-      <PublishDate value={publishDate(note)} onSave={save ? save('publish_date') : undefined} />
       {status.go && keep ? (
         <a class="hero-card" href={href.write(status.go)}>
           <span class="hero-text">

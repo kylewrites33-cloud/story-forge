@@ -1009,3 +1009,6 @@ up how long it takes for me to finish these steps."
   the book note, kept up by the app and read by the team (vault `Docs/Sparrow/18 Stage Times.md`).
 - The estimate is also written to the book note as `publish_estimate` whenever it moves by more than three days, so the
   team and Kyle's Chief of Staff can read it (Kyle, 2026-11-06: the Chief of Staff tells him day to day what is due).
+- Kyle's own publish date line ("Your publish date", Set it or Change) was taken out the same day (Kyle, 2026-11-06:
+  "remove the your published date thing, because we just came up with a better solution"). Only the estimate shows; the
+  book's `publish_date` property stays in the schema and is no longer shown.
