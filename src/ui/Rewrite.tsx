@@ -64,6 +64,10 @@ export interface RewriteSection {
   file: FileEntry | null;
   /** Kyle's page as it stands. */
   text: string;
+  /** Kyle's page this moment, read at the time of a Bring over or Take it out, so a change always lands on the words he
+   * sees even when he typed in this scene since the column last drew (Kyle, 2026-11-06: a paragraph landed inside
+   * Poppy's line). */
+  read: () => string;
   /** Where his cursor is, so the column follows the page; null when it is not in this scene. */
   caret: number | null;
   onPut: (p: Put) => void;
@@ -129,7 +133,7 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
 
 /** One scene's rewrite, paragraph by paragraph beside Kyle's. */
 function RewriteScene({ source, section, hideSame, named }: { source: VaultSource; section: RewriteSection; hideSame: boolean; named: boolean }) {
-  const { file, text, caret, onPut, onGo, onShow, onHide } = section;
+  const { file, text, caret, onPut, onGo, onShow, onHide, read } = section;
   useEffect(() => () => onHide(), []);
   const [theirs, setTheirs] = useState<{ key: string; text: string | null; error?: string }>({ key: '', text: null });
   const key = file ? file.path + '@' + file.sha : '';
@@ -172,27 +176,51 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
   if (theirs.key === key && theirs.error) return <div class="rewrite-scene">{name}<p class="error" role="status">{theirs.error}</p></div>;
   if (rewrite == null) return <div class="rewrite-scene">{name}<p class="hint">Reading the rewrite…</p></div>;
 
+  /** The page, its paragraphs and the rows this moment: the drawn ones when the page is as drawn, else lined up again. */
+  const now = () => {
+    const t = read();
+    if (t === text) return { text, mine, rows };
+    const m = paragraphs(t);
+    return { text: t, mine: m, rows: align(m.map((p) => p.text), other.map((p) => p.text)) };
+  };
   const put = (index: number) => {
-    const row = rows[index];
-    if (row.theirs == null) return;
-    const words = wordsOf(row.theirs).replace(/\s+$/, '');
+    const drawn = rows[index];
+    if (drawn.theirs == null) return;
+    const words = wordsOf(drawn.theirs).replace(/\s+$/, '');
     if (!words.trim()) return;
-    const r = bringOver(text, mine, rows, index, words);
-    if (row.mine != null) { const p = span(mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end }); return; }
+    const f = now();
+    const at = f.rows.findIndex((r) => r.theirs === drawn.theirs);
+    if (at < 0) return;
+    const row = f.rows[at];
+    const r = bringOver(f.text, f.mine, f.rows, at, words);
+    if (row.mine != null) { const p = span(f.mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end }); return; }
     // A paragraph put in: the old page's characters it replaces are none, at the spot where it now begins.
     const lead = r.at === 0 ? words + '\n\n' : '\n\n' + words;
-    const at = r.at === 0 ? 0 : r.at - 2;
-    onPut({ text: r.text, at, end: at, words: lead, to: r.at, toEnd: r.end });
+    const from = r.at === 0 ? 0 : r.at - 2;
+    onPut({ text: r.text, at: from, end: from, words: lead, to: r.at, toEnd: r.end });
   };
   const cut = (index: number) => {
-    const row = rows[index];
-    if (row.mine == null) return;
-    const p = mine[row.mine];
-    const next = takeOut(text, p);
+    const drawn = rows[index];
+    if (drawn.mine == null) return;
+    const was = mine[drawn.mine].text;
+    const f = now();
+    // His paragraph as it stands now; if he has changed it since, nothing is taken.
+    const p = f.mine.find((q) => q.text === was);
+    if (!p) return;
+    const next = takeOut(f.text, p);
     // Take the paragraph and the blank line before it (or after it, at the start).
-    const at = p.at > 0 ? text.slice(0, p.at).replace(/\s+$/, '').length : 0;
-    const end = p.at > 0 ? p.end : Math.min(text.length, p.end + (text.slice(p.end).match(/^\s*/) || [''])[0].length);
+    const at = p.at > 0 ? f.text.slice(0, p.at).replace(/\s+$/, '').length : 0;
+    const end = p.at > 0 ? p.end : Math.min(f.text.length, p.end + (f.text.slice(p.end).match(/^\s*/) || [''])[0].length);
     onPut({ text: next, at, end, words: '', to: at, toEnd: at });
+  };
+  /** Where a row's words of Kyle's sit on the page this moment. */
+  const where = (row: Row) => {
+    const s = span(mine, row);
+    if (!s) return null;
+    const f = now();
+    if (f.text === text) return s;
+    const k = f.text.indexOf(s.text);
+    return k < 0 ? null : { at: k, end: k + s.text.length };
   };
 
   return (
@@ -205,8 +233,8 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
           if (same && hideSame) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '')} aria-label="Same as yours" />;
           const words = row.theirs != null ? wordsOf(row.theirs) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
-          const go = () => { if (row.mine != null) { const p = span(mine, row)!; onGo(p.at, p.end); } };
-          const show = () => { if (row.mine != null) { const p = span(mine, row)!; onShow(p.at, p.end); } };
+          const go = () => { const p = where(row); if (p) onGo(p.at, p.end); };
+          const show = () => { const p = where(row); if (p) onShow(p.at, p.end); };
           return (
             <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
               {row.theirs == null ? (

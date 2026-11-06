@@ -27,12 +27,14 @@ export interface SectionApi {
 /** The team's changes marked on this scene, when the Edit room shows the whole chapter. */
 export interface SectionMarks { placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void }
 
-export function SceneSection({ source, note, options, onSaved, onFocus, onLook, register, marks }: {
+export function SceneSection({ source, note, options, onSaved, onFocus, onLook, onText, register, marks }: {
   source: VaultSource; note: NoteRecord; options: StyleOptions;
   onSaved: (n: NoteRecord) => void;
   /** Kyle's cursor went into this scene: the tool row works on it. */
   onFocus: () => void;
   onLook?: (l: { i: boolean; b: boolean; h: boolean }) => void;
+  /** Kyle typed in this scene (the Rewrite tab lines its rows up again). */
+  onText?: () => void;
   register: (path: string, api: SectionApi | null) => void;
   marks?: SectionMarks | null;
 }) {
@@ -120,6 +122,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     trackWords(note.path, String(note.data.id || ''), bodyWords(d.body), bodyWords(body));
     setDraft({ ...d, body, updatedAt: new Date().toISOString() });
     later();
+    if (onText) onText();
     if (typingSince.current == null) typingSince.current = Date.now();
     else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; save(false); }
   };

@@ -276,6 +276,8 @@ export interface EditorCommands {
    * while Kyle types in it). The light stays until hide or the next show. */
   show: (start: number, end: number) => void;
   hide: () => void;
+  /** The page's words as the editor holds them this moment. */
+  text: () => string;
   /** Replace these characters, as one step to undo. */
   replaceRange: (start: number, end: number, text: string) => void;
   /** Replace the whole text, as one step to undo (Replace all). */
@@ -681,6 +683,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         shownOff.current = () => { lit.remove(); box.removeEventListener('scroll', again); window.removeEventListener('resize', again); };
       },
       hide: () => hideShown(),
+      text: () => shown.current ?? '',
       replaceRange: (a, b, t) => {
         const el = ref.current;
         if (!el) return;

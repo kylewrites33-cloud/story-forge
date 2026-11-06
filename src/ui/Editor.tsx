@@ -944,16 +944,24 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     else api.put(p.text);
     setSibTick((k) => k + 1);
   };
+  // Typing in another scene of the chapter lines the Rewrite tab's rows up again, a moment after the last key.
+  const sibTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (sibTimer.current) clearTimeout(sibTimer.current); }, []);
+  const sibTyped = () => {
+    if (!hasRewrite) return;
+    if (sibTimer.current) clearTimeout(sibTimer.current);
+    sibTimer.current = setTimeout(() => { sibTimer.current = null; setSibTick((k) => k + 1); }, 400);
+  };
   const rewriteSections: RewriteSection[] = !hasRewrite ? [] : [
-    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
+    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
-    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, caret: caretAt, onPut: putRewrite,
+    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretAt, onPut: putRewrite,
       onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
       onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); },
       onHide: () => { const c = commands.current; if (c) c.hide(); } },
-    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), caret: null, onPut: (p) => putRewriteSib(n, p),
+    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
@@ -1574,7 +1582,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
               <div class="scene-break" aria-hidden="true" />
             </div>
@@ -1592,7 +1600,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {below.map((n) => (
             <div key={n.path}>
               <div class="scene-break" aria-hidden="true" />
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
             </div>
           ))}
