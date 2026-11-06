@@ -955,7 +955,7 @@ The book's Overview (Home) now holds, top to bottom:
   not a release date.
 - **Keep writing** (Keep editing while a draft is being edited): the same scene the Books page's Continue opens
   (`bookStatus`), so both pages agree. A book still in planning gets Keep planning, which opens the workflow.
-- **Where the book is**, six stages with a percent each (`src/lib/bookstages.ts`; Kyle: "the market research, the planning,
+- **Status** (called Where the book is until Kyle renamed it the same day: "Status Editing: Rewrite (Draft 2) - 6/37 chapters compete"), six stages with a percent each (`src/lib/bookstages.ts`; Kyle: "the market research, the planning,
   the outlining, which maybe would involve both the outline and the beats, the writing, the editing, the publishing"):
   Market research = the workflow's market steps kept (or the Market board's thesis, comps, keywords and title, whichever
   is further); Planning = the premise, test drive and cast steps kept; Outlining = half the outline (outline steps, or the

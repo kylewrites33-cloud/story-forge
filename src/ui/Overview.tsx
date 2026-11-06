@@ -14,6 +14,7 @@ import { bookWarnings } from '../lib/warnings.ts';
 import { Icon } from './Icon.tsx';
 import { useFlow } from './Flow.tsx';
 import { useBookStatuses } from './Home.tsx';
+import type { BookStatus } from '../lib/bookstatus.ts';
 import { publishDate, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
@@ -157,18 +158,30 @@ function PublishDate({ value, onSave }: { value: string | null; onSave?: (v: str
   );
 }
 
+/** The status line (Kyle, 2026-11-06: "Status Editing: Rewrite (Draft 2) - 6/37 chapters compete"): the stage, the pass
+ * it is in, and how far, with "6 of 37" written 6/37. */
+function statusLine(cur: SixStage | undefined, status: BookStatus): string {
+  if (!cur) return 'Published';
+  const short = (t: string) => t.replace(/(\d+) of (\d+)/g, '$1/$2').replace(/ through\b/, ' complete').replace(/ \(pass \d of 3\)$/, '');
+  const m = /Draft (\d+) to (\d+)/.exec(status.stage);
+  if (cur.key === 'editing' && m && (status.phase === 'rewrite' || status.phase === 'changes')) {
+    return 'Editing: ' + (status.phase === 'rewrite' ? 'Rewrite' : 'Changes') + ' (Draft ' + m[2] + ') · ' + short(status.detail);
+  }
+  return cur.name + ': ' + short(cur.detail);
+}
+
 /** Where the book is, in Kyle's six stages, each with its percent (lib/bookstages.ts). Each opens the room it lives in. */
-function SixStages({ stages, folder }: { stages: SixStage[]; folder: string }) {
+function SixStages({ stages, folder, status }: { stages: SixStage[]; folder: string; status: BookStatus }) {
   const to: Record<StageKey, string> = {
     market: href.board('market', folder), planning: href.flow(folder), outlining: href.board('beat-sheet', folder),
     writing: href.book(folder), editing: href.board('changes', folder), publishing: href.board('details', folder)
   };
   const cur = stages.find((s) => s.current);
   return (
-    <section class="book-path six-stages" aria-label="Where the book is">
+    <section class="book-path six-stages" aria-label="Status">
       <div class="book-path-head">
-        <h2>Where the book is</h2>
-        <p class="meta">{cur ? cur.name + ': ' + cur.detail : 'Published.'}</p>
+        <h2>Status</h2>
+        <p class="six-status">{statusLine(cur, status)}</p>
       </div>
       <ol class="book-path-row">
         {stages.map((s) => (
@@ -239,7 +252,7 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
           <span class="hero-go"><Icon name="right" size={20} /> Open</span>
         </a>
       ) : null}
-      <SixStages stages={six} folder={book.folder} />
+      <SixStages stages={six} folder={book.folder} status={status} />
       <div class="ov-grid">
         <section class="ov-panel" aria-labelledby="ov-words">
           <h2 id="ov-words"><Icon name="pen" size={20} /> Progress</h2>
