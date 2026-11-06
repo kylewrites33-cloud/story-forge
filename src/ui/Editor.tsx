@@ -917,7 +917,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const copies = rewrite ? rewrite.files : [];
   const myRewrite = rewrite ? rewriteFor(copies, note) : null;
   const hasRewrite = (Boolean(myRewrite) || sibNotes.some((n) => rewriteFor(copies, n))) && !beatsMode && shownDraft == null;
-  const [caretAt, setCaretAt] = useState<number | null>(null);
+  // Where Kyle's cursor is, and in which scene of the chapter, so the Rewrite tab follows it (Kyle, 2026-11-06: tapping
+  // the page brings the Writer's paragraph there into view in the column).
+  const [caretIn, setCaretIn] = useState<{ path: string; at: number } | null>(null);
+  const setCaretAt = (at: number, path: string = note.path) => setCaretIn((c) => (c && c.path === path && c.at === at ? c : { path, at }));
+  const caretFor = (path: string) => (caretIn && caretIn.path === path ? caretIn.at : null);
   // A paragraph brought over stands in for the open changes whose words lay in it: they close as handled by the rewrite
   // and their to-dos tick (Kyle, 2026-11-05: one place for draft 1 to 2).
   const closeUnder = (placed: Placed[], at: number, end: number) => {
@@ -943,6 +947,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
     else api.put(p.text);
     setSibTick((k) => k + 1);
+    setCaretAt(p.toEnd, n.path);
   };
   // Typing in another scene of the chapter lines the Rewrite tab's rows up again, a moment after the last key.
   const sibTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -953,15 +958,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     sibTimer.current = setTimeout(() => { sibTimer.current = null; setSibTick((k) => k + 1); }, 400);
   };
   const rewriteSections: RewriteSection[] = !hasRewrite ? [] : [
-    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: null, onPut: (p) => putRewriteSib(n, p),
+    ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
-    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretAt, onPut: putRewrite,
+    { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretFor(note.path), onPut: putRewrite,
       onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
       onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); },
       onHide: () => { const c = commands.current; if (c) c.hide(); } },
-    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: null, onPut: (p) => putRewriteSib(n, p),
+    ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
       onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
@@ -1582,7 +1587,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} onCaret={(k) => { if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
               <div class="scene-break" aria-hidden="true" />
             </div>
@@ -1600,7 +1605,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           {below.map((n) => (
             <div key={n.path}>
               <div class="scene-break" aria-hidden="true" />
-              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} register={registerSib}
+              <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={sibTyped} onCaret={(k) => { if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
             </div>
           ))}
