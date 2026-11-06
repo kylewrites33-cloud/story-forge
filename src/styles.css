@@ -2636,19 +2636,8 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 
 /* Stage times and the estimated publish date (Kyle, 2026-11-06: "for you to estimate the publishing date yourself"). */
 .ov-estimate { margin-bottom: 2px; }
-.ov-estimate a.link { min-height: 44px; display: inline-flex; align-items: center; padding: 0 4px; }
 .ov-pubdate:not(.ov-estimate) { font-size: 0.95rem; }
-.ov-times { grid-column: 1 / -1; }
-.ov-times-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px; }
-.ov-times-list li { display: grid; gap: 2px; padding-left: 12px; border-left: 3px solid var(--line); }
-.ov-times-list li.current { border-left-color: var(--accent); }
-.ov-times-list li.ahead { opacity: 0.85; }
-.ov-times-list li.ahead b { color: var(--muted); }
-.ov-times button.link { min-height: 44px; padding: 0 4px; }
-.ov-times-row { border: 0; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.ov-times-row legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
-.ov-times-row label { display: grid; gap: 4px; color: var(--muted); font-size: 0.9rem; }
-.ov-times-row input { min-height: 44px; font-size: 1rem; }
-.ov-times-row input[type="number"] { width: 7em; }
-.ov-times-list li span { font-size: 0.95rem; }
-.ov-times-list li b { font-size: 1rem; }
+
+.six-due { display: block; font-size: 0.8rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.six-stages li:has(.six-due) .book-path-name { min-height: 0; }
+.six-stages .book-path-row { align-items: end; }

@@ -998,5 +998,8 @@ up how long it takes for me to finish these steps."
   finishes at his pace so far (days spent ÷ percent done, once a tenth is done and three days have passed), or early on
   as long as it took in his other books; every later stage takes its average from his other books; a stage no book has
   dates for gets a first guess (`FIRST_GUESS`) and the page says so.
-- **How long each stage takes** panel: each stage's dates and days, the current one's days so far, days to go and finish
-  day, and the other books' average. Change dates opens a date picker for every start and finish.
+- **Done by** over the stage the book is in, in the Status row: the day that stage should finish, from the same estimate
+  (Kyle, 2026-11-06: "I don't think we need the Sparrow app to tell how long each of these steps take. I just need you to
+  continually track this going forward and remember it. And then I want you to display an estimated completion date over
+  whatever step I'm in"). The "How long each stage takes" panel built earlier the same day was taken out; the dates stay on
+  the book note, kept up by the app and read by the team (vault `Docs/Sparrow/18 Stage Times.md`).
