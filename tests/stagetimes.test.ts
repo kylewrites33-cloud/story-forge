@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { SixStage, StageKey } from '../src/lib/bookstages.ts';
-import { addDays, datesToRecord, daysBetween, estimate, stageDates, typicalDays } from '../src/lib/stagetimes.ts';
+import { addDays, afterDraft, datesToRecord, daysBetween, estimate, stageDates, typicalDays } from '../src/lib/stagetimes.ts';
 
 const KEYS: StageKey[] = ['market', 'planning', 'outlining', 'writing', 'editing', 'publishing'];
 const six = (current: StageKey | null, percent = 0): SixStage[] => {
@@ -64,4 +64,14 @@ test('days the book sat waiting come off the days a stage took', () => {
 test('a stage that overlapped the one before counts only the days after it', () => {
   const b = stageDates({ editing_start: '2026-08-05', editing_end: '2026-10-29', publishing_start: '2026-09-05', publishing_end: '2026-11-01' });
   assert.equal(typicalDays([b]).publishing!.days, 3);
+});
+
+test('editing in a pass: this pass at its own pace, then the rest of editing as it went before', () => {
+  const others = [{ draft2_end: '2026-09-05', editing_end: '2026-10-29', editing_paused: 52 }];
+  assert.equal(afterDraft(others, 2), 2);
+  const dates = stageDates({ editing_start: '2026-10-29' });
+  // 11 of 37 chapters (30%) since Nov 5: three days for 30%, so 7 more, then 2 days of proofreads, then 3 to publish.
+  const est = estimate(six('editing', 10), dates, [book1], '2026-11-07', { to: 2, percent: 30, start: '2026-11-05', after: afterDraft(others, 2) });
+  assert.equal(est.stages[4].left, 9);
+  assert.equal(est.date, '2026-11-19');
 });

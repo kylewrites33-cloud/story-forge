@@ -1027,3 +1027,9 @@ up how long it takes for me to finish these steps."
 - Kyle's own publish date line ("Your publish date", Set it or Change) was taken out the same day (Kyle, 2026-11-06:
   "remove the your published date thing, because we just came up with a better solution"). Only the estimate shows; the
   book's `publish_date` property stays in the schema and is no longer shown.
+- **Editing is timed pass by pass** (2026-11-07, Kyle: "Why is it estimating Quest Decline 2's publish date as so far
+  away?"). It had timed all of editing from its first day (Oct 29, before the Rewrite tab) and counted the rewrite as a
+  third of editing, so 9 days for 10% read as 81 more days. Now the pass under way runs at Kyle's pace since the pass
+  began (`editing_pass_start`, which the app sets when a pass begins, counting that day), and the rest of editing takes
+  what it took in his other books after the same draft was done (`draft2_end`, `draft3_end` to `editing_end`, less
+  waiting days). With no book to go by, each pass still to come is a first guess of a week.

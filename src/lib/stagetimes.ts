@@ -122,7 +122,46 @@ function leftInCurrent(percent: number, elapsed: number | null, typical: Typical
 }
 
 /** Every stage's dates and days, and the publish day they add up to. */
-export function estimate(six: SixStage[], dates: BookDates, others: BookDates[], today: string): Estimate {
+/** The editing pass under way (Kyle's drafts: draft 1 to 2 is the developmental and line edit, 2 to 3 the proofreads,
+ * 3 to 4 the final pass), with how far it has got and the day it began (`editing_pass_start`). */
+export interface EditPass {
+  /** The draft the pass makes: 2, 3 or 4. */
+  to: number;
+  /** 0 to 100, of this pass only. */
+  percent: number;
+  start: string | null;
+  /** Days the rest of editing took in Kyle's other books after this pass's draft was done, or null if none has it. */
+  after: number | null;
+}
+
+/** Days from `draft<to>_end` to `editing_end` in each other book, less the days it sat waiting, averaged; null if none. */
+export function afterDraft(others: Record<string, unknown>[], to: number): number | null {
+  const list: number[] = [];
+  others.forEach((d) => {
+    const from = dayOf(d['draft' + to + '_end']), end = dayOf(d.editing_end);
+    if (!from || !end || end < from) return;
+    const paused = Number(d.editing_paused) || 0;
+    list.push(Math.max(1, daysBetween(from, end) - paused));
+  });
+  return list.length ? Math.round(list.reduce((a, b) => a + b, 0) / list.length) : null;
+}
+
+/** A first guess in days for each editing pass still to come after the current one, until a book has the dates. */
+export const PASS_GUESS = 7;
+
+/** Days left in editing while a pass is under way: this pass at the pace Kyle has kept since it began (counting the day
+ * it began), then the rest of editing as it went in his other books. Measuring from the pass's own start keeps the
+ * days spent on other editing work (a card pass, the Writer's rewrite) out of the pace (Kyle, 2026-11-07: "Why is it
+ * estimating Quest Decline 2's publish date as so far away?"). */
+function leftInPass(pass: EditPass, today: string): { left: number; guessed: boolean } {
+  const days = pass.start ? Math.max(1, daysBetween(pass.start, today) + 1) : 1;
+  const p = Math.max(0, Math.min(100, pass.percent));
+  const here = p >= 100 ? 0 : p > 0 ? Math.max(1, Math.round((days * (100 - p)) / p)) : PASS_GUESS;
+  const later = pass.after != null ? pass.after : Math.max(0, 4 - pass.to) * PASS_GUESS;
+  return { left: here + later, guessed: pass.after == null && pass.to < 4 };
+}
+
+export function estimate(six: SixStage[], dates: BookDates, others: BookDates[], today: string, pass: EditPass | null = null): Estimate {
   const typical = typicalDays(others);
   const at = six.findIndex((s) => s.current);
   let cursor = today;
@@ -137,6 +176,12 @@ export function estimate(six: SixStage[], dates: BookDates, others: BookDates[],
     }
     if (i === at) {
       const elapsed = d.start ? Math.max(0, daysBetween(d.start, today) - d.paused) : null;
+      if (s.key === 'editing' && pass && pass.start) {
+        const r = leftInPass(pass, today);
+        if (r.guessed) guessed = true;
+        cursor = addDays(cursor, r.left);
+        return { ...base, days: elapsed, left: r.left, due: cursor, basis: 'pace' as Basis };
+      }
       const r = leftInCurrent(s.percent, elapsed, t, s.key);
       if (r.basis === 'guess') guessed = true;
       cursor = addDays(cursor, r.left);
