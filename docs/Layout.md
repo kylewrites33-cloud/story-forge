@@ -37,7 +37,7 @@ src/lib/page.ts          the writing page's look per device (size, spacing, widt
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name
 src/lib/epub.ts          the Kindle file: the book as an EPUB 3 for KDP (screens boxed, Book Matter pages, cover), the matter page's editing
 src/lib/theme.ts         colour themes per device: Match this device, eight light, six dark (colours in styles.css)
-src/fonts/               Space Mono and Space Grotesk (Marigold theme, Typewriter page font), Pixelify Sans and DotGothic16 (Lo-Fi theme), VT323 (Retro OS theme), Literata (Library), Nunito (Pebble), Archivo (Poster); woff2, SIL OFL licences beside them
+src/fonts/               Space Mono and Space Grotesk (Marigold theme, Typewriter page font), Pixelify Sans and DotGothic16 (Lo-Fi theme), VT323 (Retro OS theme), Literata (Library), Nunito (Pebble), Archivo (Prism); woff2, SIL OFL licences beside them
 src/lib/topbar.ts        room at the top for the iPad clock bar and window button (ios-app, ios-window), Settings override
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
 src/ui/Jobs.tsx          the Jobs screen: what Kyle asked the team for, with results and Cancel
