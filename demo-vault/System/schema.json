@@ -243,6 +243,22 @@
           "type": "date",
           "description": "The day Kyle plans to publish the book, set on its Overview (Kyle, 2026-11-06)."
         },
+        "editing_pass": {
+          "type": "string",
+          "description": "The editing pass under way, as the app names it (\"Draft 1 to 2: the rewrite\"); the app sets it when a pass begins (Kyle, 2026-11-07)."
+        },
+        "editing_pass_start": {
+          "type": "date",
+          "description": "The day the editing pass under way began. The publish estimate times the pass from here, so earlier editing work does not slow its pace."
+        },
+        "draft2_end": {
+          "type": "date",
+          "description": "The day draft 2 was finished (the developmental and line edit done). Set by the app when the next pass begins."
+        },
+        "draft3_end": {
+          "type": "date",
+          "description": "The day draft 3 was finished (the proofreads done). Set by the app when the next pass begins."
+        },
         "publish_estimate": {
           "type": "date",
           "description": "The app's estimated publish day from the stage dates, written when it moves by more than three days; the daily mailbox check passes changes to the Chief of Staff (Kyle, 2026-11-06)."

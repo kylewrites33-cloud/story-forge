@@ -17,7 +17,7 @@ import type { BookStatus } from '../lib/bookstatus.ts';
 import { publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from './route.ts';
-import { datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type Estimate } from '../lib/stagetimes.ts';
+import { afterDraft, datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type EditPass, type Estimate } from '../lib/stagetimes.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -218,9 +218,26 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   const dates = stageDates(note ? note.data : null);
   const others = index.books.filter((b) => b.path !== book.path).map((b) => stageDates(index.notes[b.path] ? index.notes[b.path].data : null));
   const day = localDay(new Date());
-  const est = estimate(six, dates, others, day);
+  // The editing pass under way, timed from its own first day (`editing_pass_start`, kept by the app below).
+  const passM = /Draft (\d+) to (\d+)/.exec(status.stage);
+  const editing = (status.phase === 'rewrite' || status.phase === 'changes') && passM;
+  const passSame = note && String(note.data.editing_pass || '') === status.stage;
+  const otherData = index.books.filter((b) => b.path !== book.path).map((b) => (index.notes[b.path] ? index.notes[b.path].data : {}) as Record<string, unknown>);
+  const pass: EditPass | null = editing && passM ? {
+    to: parseInt(passM[2], 10), percent: status.percent || 0,
+    start: passSame ? dayOf(note!.data.editing_pass_start) || day : day,
+    after: afterDraft(otherData, parseInt(passM[2], 10))
+  } : null;
+  const est = estimate(six, dates, others, day, pass);
   // Keep the record up by itself: the stage the book is in gets a start day, finished stages an end day.
   const toWrite = datesToRecord(six, dates, status.phase === 'published', day);
+  // A new editing pass: note its name and first day, and the day the previous pass's draft was finished.
+  if (editing && note && !passSame) {
+    toWrite.editing_pass = status.stage;
+    toWrite.editing_pass_start = day;
+    const was = /Draft (\d+) to (\d+)/.exec(String(note.data.editing_pass || ''));
+    if (was && parseInt(was[2], 10) < parseInt(passM![2], 10)) toWrite['draft' + was[2] + '_end'] = day;
+  }
   // The estimate goes on the book note too, so the team and the Chief of Staff see it, when it moves by more than three days.
   const saved = note ? dayOf(note.data.publish_estimate) : null;
   if (est.date && (!saved || Math.abs(daysBetween(saved, est.date)) > 3)) toWrite.publish_estimate = est.date;
