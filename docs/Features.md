@@ -625,6 +625,16 @@ Grotesk headings, buttons that press in, and a title marker stroke, but quiet li
 pages, grey outlines, bone-white main buttons and chosen tabs, teal only in words, counts, ticks and the title stroke.
 The word under the percent in the progress ring uses the heading font in Marigold and Typewriter so it fits.
 
+2026-11-07: three more dark themes (Kyle: "three more totally different color swatches for dark mode so I have some more
+variation"). Each stays quiet (near-black, colour only in words and small marks, white or grey main buttons) but has its
+own shapes and font. **Library**: an old reading room. Warm brown-black, the Literata book font everywhere, italic page
+titles with a short gold rule under them, small-caps kickers, gold words, chosen tabs underlined in gold, parchment main
+buttons on Keep writing and Next step. **Pebble**: soft and round. Cool black, the Nunito rounded font, pill buttons and
+round-cornered cards with no outlines, round checkboxes, white main buttons and pink in the words. **Poster**: a Swiss
+poster. Near-black, heavy Archivo titles with a thick white bar above them, sharp corners, a white bar across the top of
+Keep writing and Next step, white main buttons, red only in kickers, ticks, counts and the underline under a chosen tab.
+The fonts ship with the app (src/fonts, SIL OFL) and load only when their theme is on.
+
 ## Code audit (2026-10-23)
 
 Kyle asked for an audit of the app's code for places to simplify or improve. Nothing a screen does changed. Typing in a
