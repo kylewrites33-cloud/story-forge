@@ -635,6 +635,14 @@ poster. Near-black, heavy Archivo titles with a thick white bar above them, shar
 Keep writing and Next step, white main buttons, red only in kickers, ticks, counts and the underline under a chosen tab.
 The fonts ship with the app (src/fonts, SIL OFL) and load only when their theme is on.
 
+Same day, Kyle: "for library, though, can you make the darks as dark as most of the other dark modes? Also, i dont think
+i'll use that last squared off one you did. could you replace it with something that is like, ULTRA colorful dark mode?"
+Library's page, panels and lines are now as dark as Graphite's. Poster is gone (a device that had it chosen goes back to
+Match this device). In its place, **Prism**, the one loud dark theme: a deep indigo-black page, page titles in a pink,
+orange, cyan and violet gradient, main buttons and chosen tabs in a pink-to-orange gradient, Keep writing on a
+purple-to-blue glow with a lime-to-cyan Open button, cyan kickers and links, lime counts and ticks, a rainbow line under
+the top bar, each sidebar icon in its own colour and rainbow progress bars. Heavy Archivo titles, round corners.
+
 ## Code audit (2026-10-23)
 
 Kyle asked for an audit of the app's code for places to simplify or improve. Nothing a screen does changed. Typing in a

@@ -1374,9 +1374,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
    variation"). Each is quiet like the others, near-black with colour only in words and small marks, but each has its own
    shapes and font. Library: an old reading room, warm brown-black, Literata everywhere, gold in the words, gold underlines
    for chosen tabs and a short gold rule under titles. Pebble: soft and round, cool black, Nunito, pill buttons, round
-   checkboxes, white main buttons and pink in the words. Poster: a Swiss poster, true near-black, heavy Archivo titles with
-   a thick white bar above them, sharp corners, white main buttons and signal red only in kickers, ticks and chosen tabs.
-   The fonts ship with the app (src/fonts, SIL OFL) and load only when their theme is on. */
+   checkboxes, white main buttons and pink in the words. Kyle then asked for Library to be as dark as the others, and
+   swapped the third, Poster, for Prism (below). The fonts ship with the app (src/fonts, SIL OFL) and load only when their theme is on. */
 @font-face { font-family: "Literata"; font-weight: 400; font-style: normal; font-display: swap; src: url("./fonts/literata-latin-400-normal.woff2") format("woff2"); }
 @font-face { font-family: "Literata"; font-weight: 400; font-style: italic; font-display: swap; src: url("./fonts/literata-latin-400-italic.woff2") format("woff2"); }
 @font-face { font-family: "Literata"; font-weight: 700; font-style: normal; font-display: swap; src: url("./fonts/literata-latin-700-normal.woff2") format("woff2"); }
@@ -1389,12 +1388,12 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 
 /* Library */
 :root[data-theme="library"], .theme-card[data-theme="library"] {
-  --bg: #13100d; --surface: #1b1713; --rail: #100d0b; --hover: #26201a; --text: #ece3d2; --muted: #a99b85; --line: #362d24;
-  --accent: #d4b06a; --accent-soft: #2c2416; --on-accent: #13100d;
+  --bg: #0e0c0a; --surface: #171411; --rail: #0b0a08; --hover: #221d18; --text: #ece3d2; --muted: #a99b85; --line: #2e2720;
+  --accent: #d4b06a; --accent-soft: #2c2416; --on-accent: #0e0c0a;
   --fill: var(--hover); --fill-line: #5c4b33; --on-fill: var(--accent);
-  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #13100d;
-  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--text); --next-go-line: var(--text); --on-next-go: #13100d;
-  --badge: var(--accent); --on-badge: #13100d;
+  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #0e0c0a;
+  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--text); --next-go-line: var(--text); --on-next-go: #0e0c0a;
+  --badge: var(--accent); --on-badge: #0e0c0a;
   --shadow: none; --shadow-lift: 0 6px 24px rgba(0, 0, 0, 0.5); --radius: 6px;
   --serif: "Literata", Georgia, serif;
 }
@@ -1421,7 +1420,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 }
 :root[data-theme="library"] input[type="checkbox"]:checked {
   background-color: var(--accent); border-color: var(--accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%2313100d' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%230e0c0a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 :root[data-theme="library"] ::selection { background: #4a3a20; color: var(--text); }
 .theme-card[data-theme="library"] { font-family: "Literata", Georgia, serif; border-radius: 6px; }
@@ -1472,53 +1471,66 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .theme-card[data-theme="pebble"] .tp-rail i.on { background: #f5a8b9; }
 .theme-card[data-theme="pebble"] .tp-page em { background: #eef0f4; border-radius: 99px; }
 
-/* Poster */
-:root[data-theme="poster"], .theme-card[data-theme="poster"] {
-  --bg: #0b0b0b; --surface: #141414; --rail: #0b0b0b; --hover: #1f1f1f; --text: #f4f4f0; --muted: #94948e; --line: #2d2d2b;
-  --accent: #ff5c47; --accent-soft: #2b1512; --on-accent: #0b0b0b;
-  --fill: var(--text); --fill-line: var(--text); --on-fill: #0b0b0b;
-  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #0b0b0b;
-  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--text); --next-go-line: var(--text); --on-next-go: #0b0b0b;
-  --badge: var(--accent); --on-badge: #0b0b0b;
-  --shadow: none; --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.6); --radius: 2px;
+/* Prism (Kyle, 2026-11-07, in place of Poster: "something that is like, ULTRA colorful dark mode"). The one loud dark theme:
+   a deep indigo-black page with every colour turned up. Page titles in a pink, orange, cyan and violet gradient, main
+   buttons and chosen tabs in a pink-to-orange gradient, Keep writing on a purple-to-blue glow, cyan kickers, lime counts and
+   ticks, a rainbow line under the top bar, sidebar icons each in their own colour and rainbow progress bars. Heavy Archivo
+   titles, round corners. */
+:root[data-theme="prism"], .theme-card[data-theme="prism"] {
+  --bg: #0b0914; --surface: #151126; --rail: #08070f; --hover: #221b3a; --text: #f7f3ff; --muted: #b3a9d1; --line: #2f2752;
+  --accent: #ff4fae; --accent-soft: #3a1033; --on-accent: #0b0914;
+  --rainbow: linear-gradient(90deg, #ff4fae, #ff9a3d, #ffe14d, #7dff6a, #3de0ff, #a46bff);
+  --fill: linear-gradient(135deg, #ff4fae, #ff8a3d); --fill-line: transparent; --on-fill: #0b0914;
+  --hero-bg: linear-gradient(135deg, #4a1470 0%, #1c1f6e 55%, #0b4a6e 100%); --on-hero: #ffffff; --hero-line: #6b3fd1; --hero-kicker: #3de0ff;
+  --hero-go: linear-gradient(135deg, #7dff6a, #3de0ff); --on-hero-go: #0b0914;
+  --next-bg: var(--surface); --kicker: #3de0ff; --next-go: linear-gradient(135deg, #ff4fae, #ff8a3d); --next-go-line: transparent; --on-next-go: #0b0914;
+  --badge: #b6ff3d; --on-badge: #0b0914;
+  --shadow: none; --shadow-lift: 0 10px 34px rgba(164, 107, 255, 0.28); --radius: 14px;
   --serif: "Archivo", "Helvetica Neue", Arial, sans-serif;
 }
-:root[data-theme="poster"] body { font-family: var(--serif); font-size: 17px; }
-:root[data-theme="poster"] *, :root[data-theme="poster"] *::before { border-radius: 2px !important; }
-:root[data-theme="poster"] :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar) { border-radius: 50% !important; }
-:root[data-theme="poster"] :is(h1, .home-title) {
-  font-family: var(--serif); font-weight: 900; font-size: 2.7rem; line-height: 1.02; letter-spacing: -0.035em;
-  padding-top: 14px; background: linear-gradient(var(--text), var(--text)) left top / 44px 5px no-repeat;
+:root[data-theme="prism"] :is(h1, .home-title) {
+  font-family: var(--serif); font-weight: 900; font-size: 2.6rem; line-height: 1.08; letter-spacing: -0.03em;
+  width: fit-content; max-width: 100%; background: linear-gradient(90deg, #ff4fae, #ff9a3d 35%, #3de0ff 70%, #a46bff);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
-:root[data-theme="poster"] :is(h2, h3, .card-title, .hero-text b, .book-title) { font-weight: 900; letter-spacing: -0.02em; }
-:root[data-theme="poster"] :is(.next-kicker, .hero-text small) { font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.72rem; }
-:root[data-theme="poster"] button.primary { font-weight: 700; }
-:root[data-theme="poster"] :is(.hero-card, .next-step, .book-link) { border: 1px solid var(--line); border-top: 3px solid var(--text); }
-:root[data-theme="poster"] button.soft, :root[data-theme="poster"] :is(.top-team, .bar-team) { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
-:root[data-theme="poster"] :is(.top-team.on, .bar-team.on) { border-color: var(--accent); color: var(--accent); }
-:root[data-theme="poster"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: none; font-weight: 700; color: var(--muted); }
-:root[data-theme="poster"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"]) { background: none; border-color: transparent; color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
-:root[data-theme="poster"] button.chip.on { background: var(--text); border-color: var(--text); color: #0b0b0b; }
-:root[data-theme="poster"] :is(.view-seg) { background: none; padding: 0; gap: 4px; }
-:root[data-theme="poster"] :is(.view-seg button[aria-pressed="true"]) { background: none; color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
-:root[data-theme="poster"] .rail-item[aria-current="page"] { background: none; color: var(--text); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
-:root[data-theme="poster"] .hero-card:hover { filter: none; border-color: var(--muted); border-top-color: var(--accent); }
-:root[data-theme="poster"] input[type="checkbox"] {
+:root[data-theme="prism"] :is(h2, h3, .card-title, .hero-text b, .book-title) { font-family: var(--serif); font-weight: 900; letter-spacing: -0.015em; }
+:root[data-theme="prism"] :is(.next-kicker, .hero-text small) { letter-spacing: 0.12em; }
+:root[data-theme="prism"] :is(button.primary, a.button.primary) { border-color: transparent; font-weight: 700; }
+:root[data-theme="prism"] button.soft, :root[data-theme="prism"] :is(.top-team, .bar-team) { background: #1f1636; border: 1px solid #3d2c6e; color: #3de0ff; }
+:root[data-theme="prism"] :is(.top-team.on, .bar-team.on) { background: linear-gradient(135deg, #3de0ff, #a46bff); color: #0b0914; border-color: transparent; }
+:root[data-theme="prism"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"]) { background: linear-gradient(135deg, #ff4fae, #ff8a3d); border-color: transparent; color: #0b0914; }
+:root[data-theme="prism"] :is(.view-seg button[aria-pressed="true"]) { background: linear-gradient(135deg, #3de0ff, #a46bff); color: #0b0914; }
+:root[data-theme="prism"] :is(.top-bar, .writer-bar) { border-bottom: 0; box-shadow: none; background-image: linear-gradient(90deg, #ff4fae, #ff9a3d, #ffe14d, #7dff6a, #3de0ff, #a46bff); background-size: 100% 3px; background-position: bottom; background-repeat: no-repeat; background-color: var(--bg); }
+:root[data-theme="prism"] .rail-item[aria-current="page"] { background: #2a1640; color: #ff4fae; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+1) .icon { color: #ff4fae; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+2) .icon { color: #ff9a3d; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+3) .icon { color: #ffe14d; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+4) .icon { color: #7dff6a; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+5) .icon { color: #3de0ff; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n) .icon { color: #a46bff; }
+:root[data-theme="prism"] :is(.writer-progress span, .book-progress span) { background: var(--rainbow); }
+:root[data-theme="prism"] :is(.card, .idea, .next-step, .ov-panel, .book-link) { border-color: #2f2752; }
+:root[data-theme="prism"] .hero-card:hover { filter: brightness(1.12); }
+:root[data-theme="prism"] a:not(.button):not(.rail-item):not(.hero-card):not(.book-link) { color: #3de0ff; }
+:root[data-theme="prism"] input[type="checkbox"] {
   -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; margin: 0; cursor: pointer; vertical-align: middle;
-  background: none no-repeat center / 16px 16px; border: 2px solid var(--text); display: inline-grid;
+  background: #1f1636 no-repeat center / 16px 16px; border: 2px solid #a46bff; border-radius: 6px; display: inline-grid;
 }
-:root[data-theme="poster"] input[type="checkbox"]:checked {
-  background-color: var(--accent); border-color: var(--accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='%230b0b0b' stroke-width='3.6' stroke-linecap='square'/%3E%3C/svg%3E");
+:root[data-theme="prism"] input[type="checkbox"]:checked {
+  background-color: #b6ff3d; border-color: #b6ff3d;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%230b0914' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
-:root[data-theme="poster"] input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-:root[data-theme="poster"] ::selection { background: var(--accent); color: #0b0b0b; }
-.theme-card[data-theme="poster"] { font-family: "Archivo", sans-serif; border-radius: 2px; }
-.theme-card[data-theme="poster"] .theme-name { font-weight: 900; letter-spacing: -0.02em; }
-.theme-card[data-theme="poster"] :is(.theme-preview, .tp-rail i, .tp-page b, .tp-page i, .tp-page em) { border-radius: 1px; }
-.theme-card[data-theme="poster"] .tp-page b { height: 10px; }
-.theme-card[data-theme="poster"] .tp-page em { background: #f4f4f0; }
-.theme-card[data-theme="poster"] .tp-rail i.on { background: #ff5c47; }
+:root[data-theme="prism"] input[type="checkbox"]:focus-visible { outline: 2px solid #3de0ff; outline-offset: 2px; }
+:root[data-theme="prism"] ::selection { background: #ff4fae; color: #0b0914; }
+.theme-card[data-theme="prism"] { font-family: "Archivo", sans-serif; border-color: #6b3fd1; }
+.theme-card[data-theme="prism"] .theme-name { font-weight: 900; background: linear-gradient(90deg, #ff4fae, #ff9a3d, #3de0ff); -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(1) { background: #ff4fae; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(2) { background: #ffe14d; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(3) { background: #3de0ff; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(4) { background: #a46bff; }
+.theme-card[data-theme="prism"] .tp-page b { background: linear-gradient(90deg, #ff4fae, #ff9a3d, #3de0ff); }
+.theme-card[data-theme="prism"] .tp-page i { background: linear-gradient(90deg, #a46bff, #3de0ff); opacity: 0.7; }
+.theme-card[data-theme="prism"] .tp-page em { background: linear-gradient(135deg, #ff4fae, #ff8a3d); }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
 .theme-card {

@@ -28,9 +28,9 @@ export const THEMES: Theme[] = [
   { id: 'forest', name: 'Claude', mode: 'dark', line: 'Like the Claude app: dark green and blue shapes, orange touches, white buttons', bar: '#151515' },
   { id: 'black', name: 'True Black', mode: 'dark', line: 'Black for OLED screens, white buttons', bar: '#000000' },
   { id: 'typewriter', name: 'Typewriter', mode: 'dark', line: "Marigold's square shapes and typewriter font in the dark: near-black, white buttons, teal words", bar: '#0e0e0d' },
-  { id: 'library', name: 'Library', mode: 'dark', line: 'An old reading room: warm brown-black, a book font, gold in the words', bar: '#13100d' },
+  { id: 'library', name: 'Library', mode: 'dark', line: 'An old reading room: warm brown-black, a book font, gold in the words', bar: '#0e0c0a' },
   { id: 'pebble', name: 'Pebble', mode: 'dark', line: 'Soft and round: cool black, pill buttons, white main buttons, pink in the words', bar: '#0f1013' },
-  { id: 'poster', name: 'Poster', mode: 'dark', line: 'A bold poster: black, heavy titles, sharp corners, white buttons, red marks', bar: '#0b0b0b' }
+  { id: 'prism', name: 'Prism', mode: 'dark', line: 'Ultra colourful: deep indigo-black with rainbow titles, glowing cards and bright buttons', bar: '#0b0914' }
 ];
 
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */
