@@ -98,6 +98,9 @@ export interface Row {
   /** The last of Kyle's paragraphs in this row, when the Writer made one paragraph of several of his (a screen's title
    * line and its words, say); the row then runs from `mine` to `mineEnd`. */
   mineEnd?: number;
+  /** The last of the Writer's paragraphs in this row, when the Writer split one of Kyle's into several (three lines of
+   * dialogue in one paragraph of his, say); Bring over then puts all of them in place of his. */
+  theirsEnd?: number;
   /** The index of the rewrite's paragraph, or null when the rewrite leaves Kyle's out. */
   theirs: number | null;
   /** How alike the two are; 1 when they read the same. */
@@ -175,7 +178,36 @@ function joinParts(rows: Row[], mine: string[], theirs: string[]): Row[] {
     }
     if (r.mineEnd != null) r.score = likeness(joined(r), theirs[r.theirs]);
   }
+  // The other way round (Kyle, 2026-11-07: "Why is it doing this weird duplication"): where the Writer made several
+  // paragraphs of one of Kyle's, the ones it "added" beside the row go into it, so they replace his paragraph together
+  // instead of going in beside it.
+  const theirsJoined = (r: Row) => theirs.slice(r.theirs!, (r.theirsEnd ?? r.theirs!) + 1).join('\n\n');
+  const splits = (r: Row, add: number, before: boolean): boolean => {
+    const m = joined(r);
+    if (share(theirs[add], m) < 0.6) return false;
+    const now = similarity(m, theirsJoined(r));
+    const both = before ? theirs[add] + '\n\n' + theirsJoined(r) : theirsJoined(r) + '\n\n' + theirs[add];
+    return similarity(m, both) > now + 0.02;
+  };
+  for (let k = 0; k < out.length; k++) {
+    const r = out[k];
+    if (r.mine == null || r.theirs == null || r.mineEnd != null) continue;
+    let grew = false;
+    while (k > 0 && out[k - 1].mine == null && out[k - 1].theirs === r.theirs - 1 && splits(r, r.theirs - 1, true)) {
+      if (r.theirsEnd == null) r.theirsEnd = r.theirs;
+      r.theirs--; out.splice(k - 1, 1); k--; grew = true;
+    }
+    while (k + 1 < out.length && out[k + 1].mine == null && out[k + 1].theirs === (r.theirsEnd ?? r.theirs) + 1 && splits(r, out[k + 1].theirs!, false)) {
+      r.theirsEnd = out[k + 1].theirs!; out.splice(k + 1, 1); grew = true;
+    }
+    if (grew) r.score = likeness(joined(r), theirsJoined(r));
+  }
   return out;
+}
+
+/** The Writer's words for a row: its paragraph, or the run of them it made of one of Kyle's. */
+export function theirWords(theirs: string[], row: Row): string {
+  return row.theirs == null ? '' : theirs.slice(row.theirs, (row.theirsEnd ?? row.theirs) + 1).join('\n\n');
 }
 
 /** The stretch of Kyle's page a row covers: his paragraph, or the run of them the Writer joined. */

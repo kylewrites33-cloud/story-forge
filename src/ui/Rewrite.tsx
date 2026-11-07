@@ -3,7 +3,7 @@
 // column shows the rewrite paragraph by paragraph, each lined up with Kyle's own, and Bring over puts one in place of
 // his. His page is the only thing that changes; the rewrite file is read only.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { align, bringOver, findSpot, paragraphs, rowAt, span, takeOut, type Row, type Spot } from '../lib/rewrite.ts';
+import { align, bringOver, findSpot, paragraphs, rowAt, span, takeOut, theirWords, type Row, type Spot } from '../lib/rewrite.ts';
 import { wordDiff } from '../lib/changes.ts';
 import { splitLead } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
@@ -171,10 +171,11 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
   // Kyle's tweaks, by the rewrite's paragraph index; they survive a change of tab and a reload of the page.
   const [edits, setEdits] = useState<Record<number, string>>(() => loadEdits(key));
   useEffect(() => { setEdits(loadEdits(key)); }, [key]);
-  const edit = (j: number, w: string) => { const next = { ...edits, [j]: w }; if (w === other[j].text) delete next[j]; setEdits(next); saveEdits(key, next); };
+  const plain = (row: Row) => theirWords(other.map((p) => p.text), row);
+  const edit = (row: Row, w: string) => { const j = row.theirs!; const next = { ...edits, [j]: w }; if (w === plain(row)) delete next[j]; setEdits(next); saveEdits(key, next); };
   const unedit = (j: number) => { const next = { ...edits }; delete next[j]; setEdits(next); saveEdits(key, next); };
   /** The Writer's paragraph as it stands: with Kyle's tweak when he made one. */
-  const wordsOf = (j: number) => (edits[j] != null ? edits[j] : other[j].text);
+  const wordsOf = (row: Row) => (row.theirs != null && edits[row.theirs] != null ? edits[row.theirs] : plain(row));
   // The row Kyle's cursor is in is marked and brought into view in the column when it changes.
   const cur = caret == null ? -1 : rowAt(rows, mine, caret);
   // The row where Kyle left off: the one that holds his paragraph there.
@@ -226,7 +227,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
   const put = (index: number) => {
     const drawn = rows[index];
     if (drawn.theirs == null) return;
-    const words = wordsOf(drawn.theirs).replace(/\s+$/, '');
+    const words = wordsOf(drawn).replace(/\s+$/, '');
     if (!words.trim()) return;
     const f = now();
     const at = f.rows.findIndex((r) => r.theirs === drawn.theirs);
@@ -270,8 +271,8 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
       <div class="rewrite-rows" ref={list}>
         {rows.map((row, k) => {
           const same = row.score === 1;
-          if (same && hideSame) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '')} aria-label="Same as yours">{k === leftAt && <LeftOff />}</div>;
-          const words = row.theirs != null ? wordsOf(row.theirs) : '';
+          if (same && hideSame && k !== cur) return <div key={k} data-row={k} class={'rewrite-row same folded' + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '')} aria-label="Same as yours">{k === leftAt && <LeftOff />}</div>;
+          const words = row.theirs != null ? wordsOf(row) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
           const go = () => { const p = where(row); if (p) onGo(p.at, p.end); };
           const show = () => { const p = where(row); if (p) onShow(p.at, p.end); };
@@ -294,7 +295,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
                       <Quote text={words} cls="same" />
                     </div>
                   ) : (
-                    <RewriteBox words={words} was={row.mine != null ? span(mine, row)!.text : undefined} onInput={(w) => edit(row.theirs!, w)} onFocus={show} onBlur={onHide} />
+                    <RewriteBox words={words} was={row.mine != null ? span(mine, row)!.text : undefined} onInput={(w) => edit(row, w)} onFocus={show} onBlur={onHide} />
                   )}
                   {!same && (
                     <div class="buttons">

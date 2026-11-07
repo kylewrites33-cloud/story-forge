@@ -791,6 +791,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   replaces all of them, and the light covers all of them. A paragraph the Writer really cut keeps its own "left out"
   row. A row counts as the same only when it reads exactly the same, marks and all, so a change of only a stop, a
   colon, an italic or a screen's `>` marks still gets its Bring over.
+- **Split paragraphs (2026-11-07).** Kyle: "Why is it doing this weird duplication for this set of paragraphs?" Kyle
+  had three lines of dialogue in one paragraph; the Writer made three paragraphs of them, and the column offered two
+  as "Added by the Writer", so putting them in left his own lines below. Now the Writer's paragraphs that came from one
+  of Kyle's sit in one row, and Bring over replaces his paragraph with all of them. A matching row the cursor is in
+  shows in full even when "Hide paragraphs that match yours" is on (it was an empty dashed card).
 - **Bring over reads the page as it is (2026-11-06).** Kyle: "this happened too (see after "silence")": after typing in
   the second scene of a chapter, Bring over put the Writer's paragraph inside Poppy's line, because the column still
   had that scene's words from before he typed. Bring over, Take it out and the light now read the page that moment
