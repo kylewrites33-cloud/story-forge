@@ -1,4 +1,4 @@
-// The app's colours: eight light themes and seven dark ones, or Match this device (Violet by day, Violet Night by night).
+// The app's colours: eight light themes and ten dark ones, or Match this device (Violet by day, Violet Night by night).
 // The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
 // Some dark ids are older than their names (midnight is Graphite, ember Warm Clay, forest Claude) so a saved choice still works.
 
@@ -27,7 +27,10 @@ export const THEMES: Theme[] = [
   { id: 'ink', name: 'Ink', mode: 'dark', line: 'Near-black, white buttons, a touch of indigo', bar: '#0f1011' },
   { id: 'forest', name: 'Claude', mode: 'dark', line: 'Like the Claude app: dark green and blue shapes, orange touches, white buttons', bar: '#151515' },
   { id: 'black', name: 'True Black', mode: 'dark', line: 'Black for OLED screens, white buttons', bar: '#000000' },
-  { id: 'typewriter', name: 'Typewriter', mode: 'dark', line: "Marigold's square shapes and typewriter font in the dark: near-black, white buttons, teal words", bar: '#0e0e0d' }
+  { id: 'typewriter', name: 'Typewriter', mode: 'dark', line: "Marigold's square shapes and typewriter font in the dark: near-black, white buttons, teal words", bar: '#0e0e0d' },
+  { id: 'library', name: 'Library', mode: 'dark', line: 'An old reading room: warm brown-black, a book font, gold in the words', bar: '#13100d' },
+  { id: 'pebble', name: 'Pebble', mode: 'dark', line: 'Soft and round: cool black, pill buttons, white main buttons, pink in the words', bar: '#0f1013' },
+  { id: 'poster', name: 'Poster', mode: 'dark', line: 'A bold poster: black, heavy titles, sharp corners, white buttons, red marks', bar: '#0b0b0b' }
 ];
 
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */

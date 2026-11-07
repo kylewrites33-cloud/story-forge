@@ -1370,6 +1370,155 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .theme-card[data-theme="typewriter"] :is(.theme-preview, .tp-rail i, .tp-page b, .tp-page i) { border-radius: 0; border-color: #4a4741; }
 .theme-card[data-theme="typewriter"] .tp-rail { border-color: #4a4741; }
 .theme-card[data-theme="typewriter"] .tp-page em { border-radius: 0; background: #f0ece3; border: 1px solid #f0ece3; }
+/* Three more dark themes (Kyle, 2026-11-07: "three more totally different color swatches for dark mode so I have some more
+   variation"). Each is quiet like the others, near-black with colour only in words and small marks, but each has its own
+   shapes and font. Library: an old reading room, warm brown-black, Literata everywhere, gold in the words, gold underlines
+   for chosen tabs and a short gold rule under titles. Pebble: soft and round, cool black, Nunito, pill buttons, round
+   checkboxes, white main buttons and pink in the words. Poster: a Swiss poster, true near-black, heavy Archivo titles with
+   a thick white bar above them, sharp corners, white main buttons and signal red only in kickers, ticks and chosen tabs.
+   The fonts ship with the app (src/fonts, SIL OFL) and load only when their theme is on. */
+@font-face { font-family: "Literata"; font-weight: 400; font-style: normal; font-display: swap; src: url("./fonts/literata-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Literata"; font-weight: 400; font-style: italic; font-display: swap; src: url("./fonts/literata-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Literata"; font-weight: 700; font-style: normal; font-display: swap; src: url("./fonts/literata-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 400; font-style: normal; font-display: swap; src: url("./fonts/nunito-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 700; font-style: normal; font-display: swap; src: url("./fonts/nunito-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 800; font-style: normal; font-display: swap; src: url("./fonts/nunito-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Archivo"; font-weight: 400; font-style: normal; font-display: swap; src: url("./fonts/archivo-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Archivo"; font-weight: 700; font-style: normal; font-display: swap; src: url("./fonts/archivo-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Archivo"; font-weight: 900; font-style: normal; font-display: swap; src: url("./fonts/archivo-latin-900-normal.woff2") format("woff2"); }
+
+/* Library */
+:root[data-theme="library"], .theme-card[data-theme="library"] {
+  --bg: #13100d; --surface: #1b1713; --rail: #100d0b; --hover: #26201a; --text: #ece3d2; --muted: #a99b85; --line: #362d24;
+  --accent: #d4b06a; --accent-soft: #2c2416; --on-accent: #13100d;
+  --fill: var(--hover); --fill-line: #5c4b33; --on-fill: var(--accent);
+  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #13100d;
+  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--text); --next-go-line: var(--text); --on-next-go: #13100d;
+  --badge: var(--accent); --on-badge: #13100d;
+  --shadow: none; --shadow-lift: 0 6px 24px rgba(0, 0, 0, 0.5); --radius: 6px;
+  --serif: "Literata", Georgia, serif;
+}
+:root[data-theme="library"] body { font-family: var(--serif); font-size: 17px; }
+:root[data-theme="library"] :is(button, select, input, textarea, a.button, .bar-button) { border-radius: 6px; }
+:root[data-theme="library"] :is(h1, .home-title) {
+  font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.01em;
+  padding-bottom: 12px; background: linear-gradient(var(--accent), var(--accent)) left bottom / 56px 1px no-repeat;
+}
+:root[data-theme="library"] :is(h2, h3, .card-title) { font-weight: 700; }
+:root[data-theme="library"] :is(.next-kicker, .hero-text small, .theme-group) { font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.1em; font-size: 0.92rem; }
+:root[data-theme="library"] button.soft, :root[data-theme="library"] :is(.top-team, .bar-team) { background: none; border: 1px solid var(--line); color: var(--accent); }
+:root[data-theme="library"] :is(.top-team.on, .bar-team.on) { border-color: var(--accent); }
+:root[data-theme="library"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: none; border-radius: 0; }
+:root[data-theme="library"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"]) { background: none; border-color: transparent; color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 700; }
+:root[data-theme="library"] button.chip.on { background: none; border-color: var(--accent); color: var(--accent); }
+:root[data-theme="library"] :is(.view-seg) { background: none; padding: 0; gap: 6px; }
+:root[data-theme="library"] :is(.view-seg button[aria-pressed="true"]) { background: none; color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+:root[data-theme="library"] .rail-item[aria-current="page"] { background: none; color: var(--accent); font-style: italic; }
+:root[data-theme="library"] .hero-card:hover { filter: none; border-color: #5c4b33; }
+:root[data-theme="library"] input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; margin: 0; cursor: pointer; vertical-align: middle;
+  background: var(--surface) no-repeat center / 16px 16px; border: 1.5px solid #6e5c40; border-radius: 4px; display: inline-grid;
+}
+:root[data-theme="library"] input[type="checkbox"]:checked {
+  background-color: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%2313100d' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-theme="library"] ::selection { background: #4a3a20; color: var(--text); }
+.theme-card[data-theme="library"] { font-family: "Literata", Georgia, serif; border-radius: 6px; }
+.theme-card[data-theme="library"] .theme-name { font-style: italic; font-weight: 400; }
+.theme-card[data-theme="library"] .tp-page b { background: none; border-bottom: 1px solid #d4b06a; border-radius: 0; height: 7px; width: 30%; }
+.theme-card[data-theme="library"] .tp-page em { background: none; border: 1px solid #5c4b33; border-radius: 3px; }
+
+/* Pebble */
+:root[data-theme="pebble"], .theme-card[data-theme="pebble"] {
+  --bg: #0f1013; --surface: #181a1f; --rail: #0c0d10; --hover: #23262d; --text: #eef0f4; --muted: #9da2ae; --line: #2a2d35;
+  --accent: #f5a8b9; --accent-soft: #2d1c22; --on-accent: #0f1013;
+  --fill: var(--text); --fill-line: var(--text); --on-fill: #0f1013;
+  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--surface); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #0f1013;
+  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--hover); --next-go-line: var(--hover); --on-next-go: var(--text);
+  --badge: var(--accent); --on-badge: #0f1013;
+  --shadow: none; --shadow-lift: 0 10px 30px rgba(0, 0, 0, 0.55); --radius: 22px;
+  --serif: "Nunito", -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="pebble"] body { font-family: var(--serif); font-size: 17px; }
+:root[data-theme="pebble"] :is(button, select, input, a.button, .bar-button, .top-find, .rail-item) { border-radius: 22px; }
+:root[data-theme="pebble"] textarea { border-radius: 18px; }
+:root[data-theme="pebble"] :is(.card, .book-link, .next-step, .hero-card, .idea, .ov-panel, .book-path, .theme-preview) { border-radius: 22px; }
+:root[data-theme="pebble"] :is(.card, .book-link, .next-step, .hero-card, .idea) { border-color: transparent; }
+:root[data-theme="pebble"] :is(h1, .home-title) { font-family: var(--serif); font-weight: 800; font-size: 2.3rem; letter-spacing: -0.02em; }
+:root[data-theme="pebble"] :is(h2, h3, .card-title, .hero-text b) { font-weight: 800; }
+:root[data-theme="pebble"] :is(.next-kicker, .hero-text small) { letter-spacing: 0.02em; text-transform: none; font-size: 0.9rem; font-weight: 800; }
+:root[data-theme="pebble"] button.soft, :root[data-theme="pebble"] :is(.top-team, .bar-team) { background: var(--hover); border-color: transparent; color: var(--accent); }
+:root[data-theme="pebble"] :is(.top-team.on, .bar-team.on) { background: var(--accent-soft); }
+:root[data-theme="pebble"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: var(--surface); }
+:root[data-theme="pebble"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"], button.chip.on) { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+:root[data-theme="pebble"] .view-seg { border-radius: 22px; }
+:root[data-theme="pebble"] .view-seg button { border-radius: 18px; }
+:root[data-theme="pebble"] .rail-item[aria-current="page"] { background: var(--hover); color: var(--accent); }
+:root[data-theme="pebble"] .hero-card:hover { filter: brightness(1.12); }
+:root[data-theme="pebble"] input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 24px; height: 24px; margin: 0; cursor: pointer; vertical-align: middle;
+  background: var(--hover) no-repeat center / 15px 15px; border: 2px solid #4a4e59; border-radius: 50%; display: inline-grid;
+}
+:root[data-theme="pebble"] input[type="checkbox"]:checked {
+  background-color: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%230f1013' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-theme="pebble"] input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:root[data-theme="pebble"] ::selection { background: #4a2a35; color: var(--text); }
+.theme-card[data-theme="pebble"] { font-family: "Nunito", sans-serif; border-radius: 22px; }
+.theme-card[data-theme="pebble"] .theme-preview { border-radius: 16px; border-color: transparent; }
+.theme-card[data-theme="pebble"] .tp-rail { border-color: transparent; }
+.theme-card[data-theme="pebble"] .tp-rail i.on { background: #f5a8b9; }
+.theme-card[data-theme="pebble"] .tp-page em { background: #eef0f4; border-radius: 99px; }
+
+/* Poster */
+:root[data-theme="poster"], .theme-card[data-theme="poster"] {
+  --bg: #0b0b0b; --surface: #141414; --rail: #0b0b0b; --hover: #1f1f1f; --text: #f4f4f0; --muted: #94948e; --line: #2d2d2b;
+  --accent: #ff5c47; --accent-soft: #2b1512; --on-accent: #0b0b0b;
+  --fill: var(--text); --fill-line: var(--text); --on-fill: #0b0b0b;
+  --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line); --hero-kicker: var(--accent); --hero-go: var(--text); --on-hero-go: #0b0b0b;
+  --next-bg: var(--surface); --kicker: var(--accent); --next-go: var(--text); --next-go-line: var(--text); --on-next-go: #0b0b0b;
+  --badge: var(--accent); --on-badge: #0b0b0b;
+  --shadow: none; --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.6); --radius: 2px;
+  --serif: "Archivo", "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="poster"] body { font-family: var(--serif); font-size: 17px; }
+:root[data-theme="poster"] *, :root[data-theme="poster"] *::before { border-radius: 2px !important; }
+:root[data-theme="poster"] :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar) { border-radius: 50% !important; }
+:root[data-theme="poster"] :is(h1, .home-title) {
+  font-family: var(--serif); font-weight: 900; font-size: 2.7rem; line-height: 1.02; letter-spacing: -0.035em;
+  padding-top: 14px; background: linear-gradient(var(--text), var(--text)) left top / 44px 5px no-repeat;
+}
+:root[data-theme="poster"] :is(h2, h3, .card-title, .hero-text b, .book-title) { font-weight: 900; letter-spacing: -0.02em; }
+:root[data-theme="poster"] :is(.next-kicker, .hero-text small) { font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.72rem; }
+:root[data-theme="poster"] button.primary { font-weight: 700; }
+:root[data-theme="poster"] :is(.hero-card, .next-step, .book-link) { border: 1px solid var(--line); border-top: 3px solid var(--text); }
+:root[data-theme="poster"] button.soft, :root[data-theme="poster"] :is(.top-team, .bar-team) { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+:root[data-theme="poster"] :is(.top-team.on, .bar-team.on) { border-color: var(--accent); color: var(--accent); }
+:root[data-theme="poster"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: none; font-weight: 700; color: var(--muted); }
+:root[data-theme="poster"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"]) { background: none; border-color: transparent; color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+:root[data-theme="poster"] button.chip.on { background: var(--text); border-color: var(--text); color: #0b0b0b; }
+:root[data-theme="poster"] :is(.view-seg) { background: none; padding: 0; gap: 4px; }
+:root[data-theme="poster"] :is(.view-seg button[aria-pressed="true"]) { background: none; color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+:root[data-theme="poster"] .rail-item[aria-current="page"] { background: none; color: var(--text); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+:root[data-theme="poster"] .hero-card:hover { filter: none; border-color: var(--muted); border-top-color: var(--accent); }
+:root[data-theme="poster"] input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; margin: 0; cursor: pointer; vertical-align: middle;
+  background: none no-repeat center / 16px 16px; border: 2px solid var(--text); display: inline-grid;
+}
+:root[data-theme="poster"] input[type="checkbox"]:checked {
+  background-color: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='%230b0b0b' stroke-width='3.6' stroke-linecap='square'/%3E%3C/svg%3E");
+}
+:root[data-theme="poster"] input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:root[data-theme="poster"] ::selection { background: var(--accent); color: #0b0b0b; }
+.theme-card[data-theme="poster"] { font-family: "Archivo", sans-serif; border-radius: 2px; }
+.theme-card[data-theme="poster"] .theme-name { font-weight: 900; letter-spacing: -0.02em; }
+.theme-card[data-theme="poster"] :is(.theme-preview, .tp-rail i, .tp-page b, .tp-page i, .tp-page em) { border-radius: 1px; }
+.theme-card[data-theme="poster"] .tp-page b { height: 10px; }
+.theme-card[data-theme="poster"] .tp-page em { background: #f4f4f0; }
+.theme-card[data-theme="poster"] .tp-rail i.on { background: #ff5c47; }
 .theme-group { font-size: 1rem; margin: 1.2em 0 0.5em; color: var(--muted); }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; max-width: 60rem; }
 .theme-card {
