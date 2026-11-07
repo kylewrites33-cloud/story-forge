@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { changesIn } from '../src/lib/changes.ts';
 import { test } from 'node:test';
-import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, findSpot, rowAt, similarity, span, spotOf, takeOut, withRewriteDone } from '../src/lib/rewrite.ts';
+import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, findSpot, rowAt, similarity, span, spotOf, takeOut, theirWords, withRewriteDone } from '../src/lib/rewrite.ts';
 
 const B = 'Series/S/Books/1 B';
 
@@ -127,4 +127,16 @@ test('the spot where Kyle left off is found again after the page changes', () =>
   assert.equal(findSpot('One.\n\nTwo was changed.\n\nThree.\n', s)!.text, 'Two was changed.', 'else the same place');
   assert.equal(findSpot('One.\n', s)!.text, 'One.');
   assert.equal(findSpot('', s), null);
+});
+
+test('a paragraph of Kyle\'s the Writer split in three is one row, and Bring over replaces it with all three', () => {
+  const text = 'Then he stopped.\n\n"Down, derry down," he sang.\n"Someone is coming down the road," Basil said.\n"How can you see so far?" Cothbert said.\n\nThe end.\n';
+  const mine = paragraphs(text);
+  const theirs = ['Then he stopped.', '"Down, derry down," he sang.', '"Someone is coming down the road," Basil said.', '"How can you see so far?" Cothbert said.', 'The end.'];
+  const rows = align(mine.map((p) => p.text), theirs);
+  assert.deepEqual(rows.map((r) => [r.mine, r.theirs, r.theirsEnd]), [[0, 0, undefined], [1, 1, 3], [2, 4, undefined]]);
+  const words = theirWords(theirs, rows[1]);
+  assert.equal(words, theirs.slice(1, 4).join('\n\n'));
+  const r = bringOver(text, mine, rows, 1, words);
+  assert.equal(r.text, 'Then he stopped.\n\n' + words + '\n\nThe end.\n');
 });
