@@ -2633,7 +2633,8 @@ button, .button { border-radius: 12px; }
 .chg-tweak { width: 100%; box-sizing: border-box; margin: 0; font-family: var(--page-font, Georgia, serif); font-size: max(16px, 0.98rem); line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; white-space: pre-wrap; overflow-wrap: break-word; scrollbar-gutter: stable; }
 .chg-tweak-wrap { position: relative; }
 .chg-tweak-wrap textarea.chg-tweak { position: relative; background: transparent; color: transparent; caret-color: var(--text); display: block; }
-.chg-tweak-back { position: absolute; inset: 0; overflow: hidden; color: color-mix(in srgb, var(--text) 68%, transparent); pointer-events: none; }
+/* Words the page already has, a little paler than the new ones (Kyle, 2026-11-08: "slightly closer to white ... still distinguishable"). */
+.chg-tweak-back { position: absolute; inset: 0; overflow: hidden; color: color-mix(in srgb, var(--text) 80%, transparent); pointer-events: none; }
 .writer.edit-wide .changes-panel .chg-tweak { font-size: max(16px, 1em); }
 /* Kyle's own words in the team's version, a little greyer than the team's new words (Kyle, 2026-10-30). */
 .chg-quote.now { color: color-mix(in srgb, var(--text) 68%, transparent); }
@@ -2743,7 +2744,7 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .rewrite-rows { display: grid; gap: 10px; }
 .rewrite-row { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .rewrite-row.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-.rewrite-row.same { opacity: 0.6; padding: 6px 12px; }
+.rewrite-row.same { opacity: 0.72; padding: 6px 12px; }
 .rewrite-row.same.folded { min-height: 0; padding: 0; height: 6px; border-style: dashed; background: none; }
 .rewrite-row.same .chg-quote { border-left-color: transparent; }
 .rewrite-row.added { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
