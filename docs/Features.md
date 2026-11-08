@@ -809,6 +809,9 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   replaces all of them, and the light covers all of them. A paragraph the Writer really cut keeps its own "left out"
   row. A row counts as the same only when it reads exactly the same, marks and all, so a change of only a stop, a
   colon, an italic or a screen's `>` marks still gets its Bring over.
+- **Easier to read (2026-11-08).** Kyle: "bring the gray text on the right slightly closer to white ... while still
+  distinguishable". The Writer's words that match the page are now at 80% of the text colour (was 68%), and matching
+  rows at 72% (was 60%); new words stay full strength.
 - **Split paragraphs (2026-11-07).** Kyle: "Why is it doing this weird duplication for this set of paragraphs?" Kyle
   had three lines of dialogue in one paragraph; the Writer made three paragraphs of them, and the column offered two
   as "Added by the Writer", so putting them in left his own lines below. Now the Writer's paragraphs that came from one
