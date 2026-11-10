@@ -313,6 +313,8 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
   const put = (index: number) => {
     const drawn = rows[index];
     if (drawn.theirs == null) return;
+    // The page keeps its place after a Bring over, and the column does not chase that.
+    hush();
     const words = wordsOf(drawn).replace(/\s+$/, '');
     if (!words.trim()) return;
     const f = now();

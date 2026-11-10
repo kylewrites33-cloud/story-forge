@@ -271,7 +271,9 @@ export interface EditorCommands {
   plain: () => void;
   highlight: () => void;
   /** Select these characters and bring them into view (Find, a mark in the list). */
-  select: (start: number, end: number) => void;
+  /** Put the selection here. `stay`: the page keeps its place (words brought over from the Rewrite tab), even where the
+   * iPad would scroll the cursor into sight. */
+  select: (start: number, end: number, stay?: boolean) => void;
   /** Bring these characters into view and light them, without taking the cursor or the focus (the Rewrite column,
    * while Kyle types in it). The light stays until hide or the next show. */
   /** Light these characters; with `top`, scroll the page so they sit level with that spot on the screen. */
@@ -634,14 +636,22 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         lastSel.current = { start: r.start, end: r.end };
       },
       selection: () => { const el = ref.current; return (el && document.activeElement === el && selectionOffsets(el)) || lastSel.current; },
-      select: (a, b) => {
+      select: (a, b, stay) => {
         const el = ref.current;
         if (!el) return;
+        const box = scroller(el), y = box.scrollTop;
         el.focus({ preventScroll: true });
         if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
         setSelection(el, a, b);
         lastSel.current = { start: a, end: b };
         onCaret(a);
+        if (stay) {
+          // Kyle, 2026-11-10, after a Bring over: "the middle section submission went straight to the bottom". The page
+          // stays where he had it; Safari's own scroll to the cursor is undone once it has happened.
+          const back = () => { if (box.scrollTop !== y) box.scrollTop = y; };
+          back(); requestAnimationFrame(back); setTimeout(back, 120); setTimeout(back, 400);
+          return;
+        }
         showSelection();
         // The iPad's keyboard slides up after the focus and can push the spot out of sight; show it again once it has.
         setTimeout(showSelection, 400);
