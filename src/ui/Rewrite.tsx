@@ -88,6 +88,39 @@ export interface RewriteSection {
   onShow: (at: number, end: number) => void;
   /** Take the light off the page (the cursor left the column's box). */
   onHide: () => void;
+  /** Where a spot of this scene's page sits on the screen, so the column can follow the page as Kyle scrolls it. */
+  rectAt?: (at: number) => DOMRect | null;
+}
+
+// ---- The column follows the page as Kyle scrolls it (Kyle, 2026-11-10: "At the beginning of a chapter, when I tap a
+// line on the right, even if I've already scrolled down on the left side, a lot of times it bumps the left side back a
+// lot so that I lose my place"). The column only followed his cursor, so after scrolling the page it still showed the
+// chapter's first paragraphs, and tapping one of those brought the page back up to them. Now, a moment after the page
+// stops scrolling, the row of the first paragraph in sight comes to the top of the column. Each scene of the chapter
+// offers its first paragraph in sight and the highest one wins. Only the page's own scrolling counts, and never while
+// Kyle's cursor is in a box of the column.
+type Follower = () => { top: number; go: () => void } | null;
+const followers = new Set<Follower>();
+let followTimer = 0;
+function pageScrolled(e: Event) {
+  const from = e.target;
+  if (!(from instanceof Element) || !from.classList.contains('writer-page')) return;
+  clearTimeout(followTimer);
+  followTimer = window.setTimeout(() => {
+    const a = document.activeElement;
+    if (a && a.closest('.writer-right') && /^(TEXTAREA|INPUT)$/.test(a.tagName)) return;
+    let best: { top: number; go: () => void } | null = null;
+    for (const f of followers) { const c = f(); if (c && (!best || c.top < best.top)) best = c; }
+    if (best) best.go();
+  }, 200);
+}
+function follow(f: Follower): () => void {
+  if (!followers.size && typeof document !== 'undefined') document.addEventListener('scroll', pageScrolled, true);
+  followers.add(f);
+  return () => {
+    followers.delete(f);
+    if (!followers.size && typeof document !== 'undefined') { document.removeEventListener('scroll', pageScrolled, true); clearTimeout(followTimer); }
+  };
 }
 
 /** The side column's Rewrite tab: the Writer's version of this chapter, scene by scene and paragraph by paragraph beside Kyle's. */
@@ -196,6 +229,35 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
     else el.scrollIntoView({ block: 'center' });
   }, [cur, caret]);
+  // As Kyle scrolls the page: his first paragraph in sight, and how to bring its row to the top of the column.
+  const latest = useRef({ rows, mine, rectAt: section.rectAt });
+  latest.current = { rows, mine, rectAt: section.rectAt };
+  useEffect(() => follow(() => {
+    const { rows, mine, rectAt } = latest.current;
+    const page = document.querySelector('.writer-page');
+    if (!rectAt || !list.current || !page) return null;
+    const pb = page.getBoundingClientRect();
+    for (let k = 0; k < rows.length; k++) {
+      const row = rows[k];
+      if (row.mine == null) continue;
+      const q = rectAt(mine[row.mineEnd ?? row.mine].end);
+      if (!q || q.bottom <= pb.top + 8) continue;
+      if (q.top >= pb.bottom) return null;
+      return {
+        top: q.top,
+        go: () => {
+          const el = list.current && list.current.querySelector<HTMLElement>('[data-row="' + k + '"]');
+          const box = list.current && list.current.closest('.writer-right');
+          if (!el || !box || box.scrollHeight <= box.clientHeight) return;
+          const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+          // Already near the top of the column: leave it.
+          if (r.top >= b.top && r.top <= b.top + b.height / 3) return;
+          box.scrollTop += r.top - b.top - 12;
+        }
+      };
+    }
+    return null;
+  }), []);
   // Opening the column: bring the row where Kyle left off into the middle, once, unless his cursor is already here.
   const placed = useRef(false);
   useEffect(() => {

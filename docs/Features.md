@@ -833,6 +833,13 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   right column up to the approximate location of the corrected paragraphs". Putting the cursor in any scene of the
   chapter (before, only the first scene) marks the Writer's matching paragraph and, when it is out of sight, scrolls
   the column so it sits in the middle. Only the column scrolls, never the page.
+- **The column follows the page as you scroll (2026-11-10).** Kyle: "At the beginning of a chapter, when I tap a line
+  on the right, even if I've already scrolled down on the left side, a lot of times it bumps the left side back a lot so
+  that I lose my place." The column only followed the cursor, so after scrolling the page it still showed the chapter's
+  first paragraphs, and tapping one brought the page back up to it. Now, a moment after the page stops scrolling, the
+  row of the first paragraph in sight moves to the top of the column, so the boxes beside the page are the ones for
+  what is on screen. Only the page's own scrolling counts. Scrolling the column yourself, or having the cursor in one of
+  its boxes, leaves it where it is.
 - **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
   body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
   typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits
