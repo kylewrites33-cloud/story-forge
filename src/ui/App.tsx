@@ -899,7 +899,6 @@ export function App() {
   const showSide = Boolean(view) && place !== 'chat' && place !== 'settings';
   const side = showSide && view ? (close: () => void) => {
     return <TeamSide index={view} sourceKey={source.key} book={sideBook ? sideBook.folder : ''} page={pageContext(pageView())}
-      where={where}
       onChat={source.write ? onChat : undefined} onClose={close} />;
   } : null;
 

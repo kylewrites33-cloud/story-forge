@@ -2555,7 +2555,6 @@ button, .button { border-radius: 12px; }
 .writer.edit-wide .changes-panel { font-size: calc(var(--page-size, 1.2rem) - 1pt); line-height: 1.5; }
 .writer.edit-wide .changes-panel :is(p, blockquote, button, b, summary, .chg-why, .chg-quote, .panel-key, .hint) { font-size: 1em; }
 .writer.edit-wide .changes-panel .meta { font-size: 0.85em; }
-.chg-intro { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--hover); font-size: 0.94rem; white-space: pre-wrap; }
 .chg-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .chg-card.decided { opacity: 0.8; }
@@ -2722,7 +2721,6 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 
 /* The Writer's rewrite beside the page (2026-11-04): one row per paragraph, lined up with Kyle's; Bring over puts
    one in place of his. The row his cursor is in is marked; a paragraph that reads the same as his is quiet. */
-.rewrite-head { margin: 0; }
 .rewrite-same-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 0.95em; color: var(--muted); }
 .rewrite-rows { display: grid; gap: 10px; }
 .rewrite-row { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }

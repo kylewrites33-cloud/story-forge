@@ -123,9 +123,6 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
   }
   return (
     <div class="writer-panel rewrite-panel changes-panel">
-      <p class="hint rewrite-head">
-        The Writer's rewrite{chapter != null ? ' of chapter ' + chapter : ''}. New words are darker. Tap a paragraph to see yours on the page and to change the Writer's words before you bring them over; Bring over puts it in place of yours (Undo takes it back).
-      </p>
       {through && (
         <p class="hint rewrite-through"><Icon name="check" size={16} /> You are through this chapter.{onThrough && <> <button type="button" class="link" disabled={busy} onClick={() => mark(false)}>Open it again</button></>}</p>
       )}

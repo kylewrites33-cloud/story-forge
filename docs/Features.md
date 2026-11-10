@@ -1069,3 +1069,13 @@ Kyle, after the audit of 2026-11-09 (vault `Docs/Sparrow/19 Audit 2026-11-09.md`
   warnings list (`bookWarnings`), `loadMode`, `saveMode`, `BookPath`, `bookChapters`, `daysWords`, `changesPath`,
   `PASSAGE_TOOLS`, and their styles. Nothing on any screen changed.
 - `tsconfig.json` now has `noUnusedLocals`, so the typecheck fails on an import or local nothing reads.
+
+## No intro lines in the side column (2026-11-10)
+
+Kyle, 2026-11-10: "in the right column: ditch these explanatory lines at the top in the various sections." Gone from the
+top of each part: the changes note's summary box above "N waiting · Accept all" in Changes, the line above the Writer's
+rewrite in Rewrite, the line above the box in Plan and Scrap, the starter line in Chat (the box still says "Ask the
+team"), "The team sees you are on …" under the team column's heading on other pages, the instructions above Marks (one
+short line now sits in the empty list instead), "Tick one off when it is fixed" after the to-do count, and the score key
+under the Check score. Options with nothing waiting says one short line, "No options yet. Pick some words and press
+Options in the tool row." The changes note's summary is still in the note itself (Open the changes note).

@@ -93,7 +93,6 @@ export function CheckPanel({ sections, opts, onJump, deeper }: {
         <span class="check-grade">{all.grade}</span>
         <span class="check-words">AI-tell score for {num(all.words)} words{many ? ' in ' + sections.length + ' scenes' : ''}</span>
       </div>
-      <p class="hint">Under 2 is clean, under 5 light, under 10 noticeable, 10 or more heavy (the same score as the team's sf lint). A flag is a prompt to look, never a verdict.</p>
       <dl class="check-stats">
         <div><dt>Sentences</dt><dd>{num(all.sentences)}</dd></div>
         <div><dt>Average length</dt><dd>{all.mean} words</dd></div>
