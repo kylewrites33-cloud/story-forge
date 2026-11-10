@@ -91,9 +91,16 @@ export function savePick(moment: Moment, id: string): void {
 }
 
 const players = new Map<string, HTMLAudioElement>();
-/** Players asked to sing, which the silent start must not stop. */
-const real = new Set<HTMLAudioElement>();
+/** Each bird's sound file, kept apart from its player so the player can hold the silent file while it is unlocked. */
+const songs = new Map<string, string>();
 const unlocked = new Set<string>();
+let hush = '';
+
+/** A tenth of a second of silence: what the unlock plays, so no bird can ever be heard from it. */
+function silence(): string {
+  if (!hush) hush = URL.createObjectURL(wav([], 0.1));
+  return hush;
+}
 
 function player(id: string): HTMLAudioElement | null {
   const known = players.get(id);
@@ -102,14 +109,18 @@ function player(id: string): HTMLAudioElement | null {
   if (!bird || typeof Audio === 'undefined' || typeof URL === 'undefined') return null;
   try {
     const end = Math.max(...bird.notes.map(([t, d]) => t + d)) + 0.15;
-    const a = new Audio(URL.createObjectURL(wav(bird.notes, end)));
+    const song = URL.createObjectURL(wav(bird.notes, end));
+    songs.set(id, song);
+    const a = new Audio(song);
     a.preload = 'auto';
     players.set(id, a);
     return a;
   } catch { return null; }
 }
 
-/** On a touch or key press, start and stop the two picked players without a sound, so the iPad lets them play later. */
+/** On a touch or key press, play the two picked players once with silence in them, so the iPad lets them play later.
+ * The bird itself is never played here (Kyle, 2026-11-10: "Sometimes the bird sound randomly chirps 10 to 15 seconds
+ * or so after I open the app": the old unlock played the real call muted, and the iPad sometimes let it be heard). */
 function unlock(): void {
   const pick = loadPick();
   for (const id of [pick.work, pick.break]) {
@@ -117,9 +128,12 @@ function unlock(): void {
     const a = player(id);
     if (!a) continue;
     unlocked.add(id);
-    a.muted = true;
-    a.play().then(() => { if (!real.has(a)) { a.pause(); a.currentTime = 0; } a.muted = false; })
-      .catch(() => { a.muted = false; unlocked.delete(id); });
+    const song = songs.get(id) || a.src;
+    try {
+      a.src = silence();
+      a.play().catch(() => { unlocked.delete(id); })
+        .finally(() => { if (a.src !== song) { a.pause(); a.src = song; a.load(); } });
+    } catch { a.src = song; unlocked.delete(id); }
   }
 }
 
@@ -132,8 +146,9 @@ export function playBird(id: string): void {
   const a = player(id);
   if (!a) return;
   try {
-    real.add(a);
     unlocked.add(id);
+    const song = songs.get(id);
+    if (song && a.src !== song) a.src = song;
     a.muted = false;
     a.volume = 1;
     a.currentTime = 0;
