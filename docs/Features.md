@@ -192,6 +192,10 @@ add a dated line here when you add or change one.
   tsweets first, the defaults); press a name to hear it, and "End of writing" or "End of break" to pick it. The picks
   stay on the device. All twelve are made by the app for now: Kyle asked for some real recordings too, which wait on the
   cloud environment being allowed to reach a free sound library such as Wikimedia Commons.
+  No stray chirp (Kyle, 2026-11-10: "Sometimes the bird sound randomly chirps 10 to 15 seconds or so after I open the
+  app"): the first touch used to unlock the sound by playing the real bird call muted, which the iPad sometimes let through.
+  It now plays a tenth of a second of silence in the bird's player instead, then puts the bird back, so a bird is only
+  ever heard when a timer ends or Kyle presses one in Settings.
   The panel keeps only its buttons, the words so far and the "Today" line: no grey explanations and no buttons to hear the
   chirps (Kyle, 2026-10-22: "you dont need all those explanations in the grey text. or the option to hear the bird chirps").
   Words count what Kyle writes, in the page, Beats view and Focus alike: each rise in a scene's count adds, and cuts are
