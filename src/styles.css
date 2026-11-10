@@ -486,6 +486,7 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .book .bk-qt .md-b, .book .bk-qt strong { font-variant: small-caps; letter-spacing: 0.04em; }
 .md-hl { background: var(--mark, #fff1a8); border-radius: 3px; }
 .md-find { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 2px; }
+.md-find.on { background: var(--accent); color: var(--on-accent); }
 .md-ask { background: var(--accent-soft); color: var(--accent); border-radius: 4px; box-shadow: 0 0 0 1px var(--accent-soft); }
 .md-ask.asking { animation: ask-pulse 1.6s ease-in-out infinite; }
 @keyframes ask-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -501,6 +502,9 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 :root[data-mode="dark"] { --mark: #6b5a12; }
 .paper-dark { --mark: #6b5a12; }
 .find-bar { display: grid; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+/* Find stays in view while the page scrolls to each match, so the arrows can be pressed again (Kyle, 2026-11-10). */
+.writer-page > .find-bar { position: sticky; top: 0; z-index: 6; background: var(--surface); }
+.writer-page:has(> .find-bar) { scroll-padding-top: 130px; }
 .find-row { display: flex; gap: 8px; align-items: center; min-width: 0; }
 .find-row button:not(.icon-button) { flex: none; }
 .find-bar .search { flex: 1 1 auto; min-width: 0; }

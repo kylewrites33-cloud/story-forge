@@ -113,20 +113,43 @@ export function CodexCard({ schema, entry, link, onBack, now }: {
 }
 
 /** Find and replace in this scene. Matches are marked on the page; the arrows step through them. */
-export function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd, onClose }: {
+export function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd, onClose, page }: {
   text: string; query: string; setQuery: (q: string) => void; repl: string; setRepl: (r: string) => void;
   hit: number; setHit: (n: number) => void; cmd: () => EditorCommands | null; onClose: () => void;
+  /** The page when it is read only (the team's changes, a saved draft): the arrows then step through its marked matches. */
+  page?: () => HTMLElement | null;
 }) {
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (input.current) { input.current.focus(); input.current.select(); } }, []);
+  // A read-only page has no editor to select in (Kyle, 2026-11-10: "once i search and hit the down arrow, i cant go down
+  // anymore" in the Edit room). There the arrows go through the matches drawn on the page, which is also what it counts.
+  const [marks, setMarks] = useState(-1);
+  const pageMarks = (): HTMLElement[] => {
+    if (cmd()) return [];
+    const root = page ? page() : null;
+    return root ? Array.from(root.querySelectorAll<HTMLElement>('.md-find')) : [];
+  };
+  useEffect(() => {
+    const list = pageMarks();
+    const n = cmd() || !page ? -1 : list.length;
+    if (n !== marks) setMarks(n);
+    list.forEach((el, i) => el.classList.toggle('on', i === hit));
+  });
   const found = findAll(text, query);
-  const at = found.length ? Math.min(hit, found.length - 1) : -1;
+  const total = marks >= 0 ? marks : found.length;
+  const at = total ? Math.min(hit, total - 1) : -1;
   const go = (n: number) => {
-    if (!found.length) return;
-    const i = (n + found.length) % found.length;
-    setHit(i);
     const c = cmd();
+    const list = c ? [] : pageMarks();
+    const count = c || !list.length ? found.length : list.length;
+    if (!count) return;
+    const i = (n + count) % count;
+    setHit(i);
     if (c) c.select(found[i], found[i] + query.length);
+    else if (list[i]) {
+      list.forEach((el, k) => el.classList.toggle('on', k === i));
+      list[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   };
   const one = () => {
     const c = cmd();
@@ -150,9 +173,9 @@ export function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd
           onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(at + (e.shiftKey ? -1 : 1)); } if (e.key === 'Escape') onClose(); }} />
       </label>
-      <span class="meta find-count">{query ? (found.length ? (at + 1) + ' of ' + found.length : 'None') : ''}</span>
-      <button type="button" class="icon-button" aria-label="Previous" disabled={!found.length} onClick={() => go(at - 1)}><Icon name="up" /></button>
-      <button type="button" class="icon-button" aria-label="Next" disabled={!found.length} onClick={() => go(at + 1)}><Icon name="down" /></button>
+      <span class="meta find-count">{query ? (total ? (at + 1) + ' of ' + total : 'None') : ''}</span>
+      <button type="button" class="icon-button" aria-label="Previous" disabled={!total} onClick={() => go(at - 1)}><Icon name="up" /></button>
+      <button type="button" class="icon-button" aria-label="Next" disabled={!total} onClick={() => go(at + 1)}><Icon name="down" /></button>
       <button type="button" class="icon-button" aria-label="Close Find" onClick={onClose}><Icon name="close" /></button>
       </div>
       <div class="find-row">

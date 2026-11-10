@@ -138,7 +138,10 @@ add a dated line here when you add or change one.
   Everything else from the Sudowrite and Novelcrafter lists (Kyle, 2026-10-18, "set up everything app-wise"): in the
   writing screen, codex names (characters, places, items, lore, with aliases and a character's first name) underlined in
   their colour and opened as a card in the Card tab; Notes (the book's Braindump.md); Marks (`==highlight==`, with a
-  highlighter button and a list to jump through); Normal (takes bold, italic and highlight marks off); Find and replace;
+  highlighter button and a list to jump through); Normal (takes bold, italic and highlight marks off); Find and replace
+  (its bar stays at the top while the page scrolls; on a read-only page, such as the Edit room's changes or a saved draft,
+  the arrows step through the matches marked on the page, the current one filled in. Kyle, 2026-11-10: "in edit the find
+  feature doesnt work. once i search and hit the down arrow, i cant go down anymore");
   Every save (the file's commits, with Go back to this version); the book's Archive with Restore; Whole chapter (every
   scene of the chapter as one page, each saving on its own). Boards: Matrix (scenes down, codex across; point of view,
   on the card, or named), Edit Queue (editorial notes and to-dos; part of To-do since 2026-10-22), and Appears in on character, place, item and lore notes.
