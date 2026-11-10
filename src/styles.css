@@ -229,7 +229,6 @@ button:disabled { opacity: 0.5; cursor: default; }
   font-size: 0.94rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent);
   white-space: nowrap; text-transform: capitalize;
 }
-.pill-drafted, .pill-revised { background: var(--accent-soft); }
 .pill-final { background: var(--accent); color: var(--on-accent); }
 
 /* note view */
@@ -1149,7 +1148,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 /* Square corners everywhere, black outlines; dots and the round Chat button stay round. */
 :root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *, :root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *::before { border-radius: 0 !important; }
 :root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar) { border-radius: 50% !important; }
-:root[data-theme="marigold"] :is(button, select, input, textarea, .card, .book-link, .next-step, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
+:root[data-theme="marigold"] :is(button, select, input, textarea, .card, .book-link, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
 :root[data-theme="marigold"] :is(button, a.button, .bar-button) { font-family: var(--mono); letter-spacing: -0.01em; }
 :root[data-theme="marigold"] button.primary { font-weight: 700; }
 :root[data-theme="marigold"] button:not(:disabled):active { transform: translate(1px, 1px); }
@@ -1196,9 +1195,9 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   --serif: var(--pixel);
 }
 :root[data-theme="lofi"] body { font-family: var(--dot); font-size: 17px; }
-:root[data-theme="lofi"] :is(h1, h2, h3, .home-title, .card-title, .book-title, .top-title-text, .writer-title, .hero-text b, .brand, .next-kicker, .hero-text small) { font-family: var(--pixel); letter-spacing: 0.01em; }
+:root[data-theme="lofi"] :is(h1, h2, h3, .home-title, .card-title, .book-title, .top-title-text, .writer-title, .hero-text b, .brand, .hero-text small) { font-family: var(--pixel); letter-spacing: 0.01em; }
 :root[data-theme="lofi"] :is(button, a.button, .bar-button, .rail-item, .top-team, .bar-team) { font-family: var(--pixel); font-weight: 500; }
-:root[data-theme="lofi"] :is(button, select, input, textarea, .card, .book-link, .next-step, .hero-card, .bar-button, a.button) { border-width: 2px; }
+:root[data-theme="lofi"] :is(button, select, input, textarea, .card, .book-link, .hero-card, .bar-button, a.button) { border-width: 2px; }
 /* Buttons like old window buttons: white, blue outline, a small hard shadow that goes when pressed. */
 :root[data-theme="lofi"] button:not(.tool, .linklike, .star, .icon-button, .link, .chapter-name, .rail-item, .rail-sync-line, .top-title-button), :root[data-theme="lofi"] :is(a.button, .bar-button, .top-team, .bar-team) { box-shadow: 3px 3px 0 var(--ink); }
 :root[data-theme="lofi"] button:not(:disabled):active, :root[data-theme="lofi"] a.button:active { transform: translate(3px, 3px); box-shadow: none !important; }
@@ -1251,11 +1250,11 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   background-color: var(--surface); color: var(--text); border: 1px solid #34322d; box-shadow: var(--raised);
 }
 :root[data-theme="retro"] button:not(:disabled):active, :root[data-theme="retro"] a.button:active, :root[data-theme="retro"] .hero-card:active .hero-go { box-shadow: var(--sunken) !important; transform: translate(1px, 1px); }
-:root[data-theme="retro"] :is(button.primary, .hero-go, .next-step .next-button.primary) { outline: 1px solid #000; outline-offset: 0; border-color: #000; font-weight: 700; }
+:root[data-theme="retro"] :is(button.primary, .hero-go) { outline: 1px solid #000; outline-offset: 0; border-color: #000; font-weight: 700; }
 :root[data-theme="retro"] button:disabled { color: #8c8677; text-shadow: 1px 1px #fdfbf4; opacity: 1; }
 :root[data-theme="retro"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) { background-color: #fbf9f2; border: 1px solid #34322d; box-shadow: var(--sunken); }
 :root[data-theme="retro"] :is(.search input, .filter-box input, .find-row input) { box-shadow: none; border: none; background: none; }
-:root[data-theme="retro"] :is(.card, .book-link, .ov-panel, .book-path, .next-step, .hero-card) { border: 1px solid #34322d; box-shadow: var(--raised); }
+:root[data-theme="retro"] :is(.card, .book-link, .ov-panel, .book-path, .hero-card) { border: 1px solid #34322d; box-shadow: var(--raised); }
 /* Chosen tabs, switches and sidebar items in Windows blue with white words. */
 :root[data-theme="retro"] :is(.panel-tabs button[aria-selected="true"], .tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"], button.chip.on, .view-seg button[aria-pressed="true"], .top-team.on, .bar-team.on) { background: var(--sel); color: #fff; border-color: #000; box-shadow: var(--sunken); }
 :root[data-theme="retro"] :is(.view-seg) { background: none; padding: 0; gap: 4px; }
@@ -1269,8 +1268,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="retro"] .writer-bar { background: var(--rail); border-bottom: 1px solid #34322d; box-shadow: inset 0 -2px #8c8677, inset 0 1px #fdfbf4; }
 :root[data-theme="retro"] :is(.writer-right, .team-side) { border-left: 1px solid #34322d; box-shadow: inset 2px 0 #fdfbf4; }
 /* Kickers as blue title bars across the top of their window. */
-:root[data-theme="retro"] :is(.next-kicker, .hero-text small) { display: block; justify-self: stretch; align-self: stretch; margin: 0 0 6px; padding: 4px 10px; background: var(--title); color: #fff; opacity: 1; letter-spacing: 0.04em; }
-:root[data-theme="retro"] .next-step { padding-top: 12px; }
+:root[data-theme="retro"] :is(.hero-text small) { display: block; justify-self: stretch; align-self: stretch; margin: 0 0 6px; padding: 4px 10px; background: var(--title); color: #fff; opacity: 1; letter-spacing: 0.04em; }
 :root[data-theme="retro"] .hero-card:hover { filter: none; }
 :root[data-theme="retro"] ::selection { background: var(--sel); color: #fff; }
 .theme-card[data-theme="retro"] { font-family: Verdana, Tahoma, sans-serif; border-radius: 0; border-color: #34322d; box-shadow: inset -1px -1px #34322d, inset 1px 1px #fdfbf4, inset -2px -2px #8c8677; }
@@ -1329,7 +1327,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="typewriter"] :is(h1, h2, h3, .home-title, .card-title, .book-title, .top-title-text, .writer-title, .hero-text b, .brand) { font-family: var(--serif); letter-spacing: 0; }
 :root[data-theme="typewriter"] *, :root[data-theme="typewriter"] *::before { border-radius: 0 !important; }
 :root[data-theme="typewriter"] :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar) { border-radius: 50% !important; }
-:root[data-theme="typewriter"] :is(button, select, input, textarea, .card, .book-link, .next-step, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
+:root[data-theme="typewriter"] :is(button, select, input, textarea, .card, .book-link, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
 :root[data-theme="typewriter"] :is(button, a.button, .bar-button) { font-family: var(--mono); letter-spacing: -0.01em; }
 :root[data-theme="typewriter"] button.primary { font-weight: 700; }
 :root[data-theme="typewriter"] button:not(:disabled):active { transform: translate(1px, 1px); }
@@ -1404,7 +1402,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   padding-bottom: 12px; background: linear-gradient(var(--accent), var(--accent)) left bottom / 56px 1px no-repeat;
 }
 :root[data-theme="library"] :is(h2, h3, .card-title) { font-weight: 700; }
-:root[data-theme="library"] :is(.next-kicker, .hero-text small, .theme-group) { font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.1em; font-size: 0.92rem; }
+:root[data-theme="library"] :is(.hero-text small, .theme-group) { font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.1em; font-size: 0.92rem; }
 :root[data-theme="library"] button.soft, :root[data-theme="library"] :is(.top-team, .bar-team) { background: none; border: 1px solid var(--line); color: var(--accent); }
 :root[data-theme="library"] :is(.top-team.on, .bar-team.on) { border-color: var(--accent); }
 :root[data-theme="library"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: none; border-radius: 0; }
@@ -1442,11 +1440,11 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="pebble"] body { font-family: var(--serif); font-size: 17px; }
 :root[data-theme="pebble"] :is(button, select, input, a.button, .bar-button, .top-find, .rail-item) { border-radius: 22px; }
 :root[data-theme="pebble"] textarea { border-radius: 18px; }
-:root[data-theme="pebble"] :is(.card, .book-link, .next-step, .hero-card, .idea, .ov-panel, .book-path, .theme-preview) { border-radius: 22px; }
-:root[data-theme="pebble"] :is(.card, .book-link, .next-step, .hero-card, .idea) { border-color: transparent; }
+:root[data-theme="pebble"] :is(.card, .book-link, .hero-card, .idea, .ov-panel, .book-path, .theme-preview) { border-radius: 22px; }
+:root[data-theme="pebble"] :is(.card, .book-link, .hero-card, .idea) { border-color: transparent; }
 :root[data-theme="pebble"] :is(h1, .home-title) { font-family: var(--serif); font-weight: 800; font-size: 2.3rem; letter-spacing: -0.02em; }
 :root[data-theme="pebble"] :is(h2, h3, .card-title, .hero-text b) { font-weight: 800; }
-:root[data-theme="pebble"] :is(.next-kicker, .hero-text small) { letter-spacing: 0.02em; text-transform: none; font-size: 0.9rem; font-weight: 800; }
+:root[data-theme="pebble"] :is(.hero-text small) { letter-spacing: 0.02em; text-transform: none; font-size: 0.9rem; font-weight: 800; }
 :root[data-theme="pebble"] button.soft, :root[data-theme="pebble"] :is(.top-team, .bar-team) { background: var(--hover); border-color: transparent; color: var(--accent); }
 :root[data-theme="pebble"] :is(.top-team.on, .bar-team.on) { background: var(--accent-soft); }
 :root[data-theme="pebble"] :is(.tabs button, .tabs a.button) { border-color: transparent; background: var(--surface); }
@@ -1494,7 +1492,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
   -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
 :root[data-theme="prism"] :is(h2, h3, .card-title, .hero-text b, .book-title) { font-family: var(--serif); font-weight: 900; letter-spacing: -0.015em; }
-:root[data-theme="prism"] :is(.next-kicker, .hero-text small) { letter-spacing: 0.12em; }
+:root[data-theme="prism"] :is(.hero-text small) { letter-spacing: 0.12em; }
 :root[data-theme="prism"] :is(button.primary, a.button.primary) { border-color: transparent; font-weight: 700; }
 :root[data-theme="prism"] button.soft, :root[data-theme="prism"] :is(.top-team, .bar-team) { background: #1f1636; border: 1px solid #3d2c6e; color: #3de0ff; }
 :root[data-theme="prism"] :is(.top-team.on, .bar-team.on) { background: linear-gradient(135deg, #3de0ff, #a46bff); color: #0b0914; border-color: transparent; }
@@ -1509,7 +1507,7 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 :root[data-theme="prism"] .rail-item:nth-of-type(6n+5) .icon { color: #3de0ff; }
 :root[data-theme="prism"] .rail-item:nth-of-type(6n) .icon { color: #a46bff; }
 :root[data-theme="prism"] :is(.writer-progress span, .book-progress span) { background: var(--rainbow); }
-:root[data-theme="prism"] :is(.card, .idea, .next-step, .ov-panel, .book-link) { border-color: #2f2752; }
+:root[data-theme="prism"] :is(.card, .idea, .ov-panel, .book-link) { border-color: #2f2752; }
 :root[data-theme="prism"] .hero-card:hover { filter: brightness(1.12); }
 :root[data-theme="prism"] a:not(.button):not(.rail-item):not(.hero-card):not(.book-link) { color: #3de0ff; }
 :root[data-theme="prism"] input[type="checkbox"] {
@@ -1837,18 +1835,6 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .stage-confirm { margin-top: 8px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
 .stage-confirm p { margin: 0 0 10px; }
 
-.next-step {
-  margin: 8px 0 20px; padding: 18px clamp(16px, 3vw, 24px); border-radius: var(--radius); background: var(--next-bg, var(--accent-soft));
-  border: 1px solid var(--line); display: grid; gap: 8px; justify-items: start;
-}
-.next-kicker { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--kicker, var(--accent)); }
-.next-step .next-button.primary { background: var(--next-go, var(--fill, var(--accent))); border-color: var(--next-go-line, var(--fill-line, var(--accent))); color: var(--on-next-go, var(--on-fill, var(--on-accent))); }
-.next-step .next-button {
-  display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 12px 22px; font-size: 1.15rem; font-weight: 650;
-  border-radius: 14px; max-width: 100%; text-align: left; text-decoration: none; overflow-wrap: anywhere;
-}
-.next-why { margin: 0; font-size: 1rem; }
-.next-step .hint, .next-step .ok, .next-step .error { margin: 0; }
 
 .ov-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); align-items: start; }
 .ov-panel { padding: 16px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); min-width: 0; }
@@ -1862,12 +1848,6 @@ button.pg-cell:not(:disabled):hover { border: none; background: var(--hover); }
 .ov-setting button.link { min-height: 44px; padding: 0 4px; }
 .ov-setting-form { display: grid; gap: 8px; margin: 8px 0; }
 .ov-setting-form input { font: inherit; color: var(--text); min-height: 44px; padding: 8px 12px; max-width: 12rem; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
-.ov-status { list-style: none; padding: 0; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.95rem; }
-.ov-status li { display: flex; align-items: center; gap: 6px; text-transform: capitalize; }
-.ov-status li::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--st-planned); }
-.ov-status li.st-drafted::before { background: var(--st-drafted); }
-.ov-status li.st-revised::before { background: var(--st-revised); }
-.ov-status li.st-final::before { background: var(--st-final); }
 .ov-count { font-weight: 700; font-variant-numeric: tabular-nums; }
 .ov-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 .ov-list a {
@@ -2496,7 +2476,6 @@ button, .button { border-radius: 12px; }
 .side-scene.side-sub { font-size: 0.9rem; color: var(--muted); min-height: 36px; }
 .side-scene.side-sub[aria-current="page"] { background: none; color: var(--accent); font-weight: 600; }
 .main-section.has-below .writer-text { min-height: 4em; padding-bottom: 1em; }
-.ov-done-words { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Settings, Timer sound: twelve birds, each with Play and two picks. */
 .bird-list { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 8px; }
@@ -2789,12 +2768,6 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .ov-stage-pct { color: var(--accent); }
 .ov-stage-detail { margin: 0 0 8px; }
 .ov-facts { list-style: none; padding: 0; margin: 10px 0 4px; display: grid; gap: 6px; font-size: 0.97rem; }
-.ov-warn-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; border-radius: 10px; cursor: pointer; box-shadow: none; font-size: 1rem; font-weight: 400; }
-.ov-warn-row:hover { background: var(--hover); }
-.ov-warn-row > span:not(.ov-count) { flex: 1 1 auto; min-width: 0; }
-.ov-warn-row .ov-count { min-width: 2ch; text-align: right; color: var(--accent); }
-.ov-warn-row .icon { color: var(--muted); flex: none; }
-.ov-list .ov-warnings { margin: 4px 0 6px 20px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 0.95rem; }
 .six-stages li.elsewhere .book-path-bar span { opacity: 0.35; }
 .six-stages li.elsewhere .six-pct { color: var(--muted); }
 .six-status { flex: 1 1 260px; margin: 0; font-weight: 600; color: var(--text); }

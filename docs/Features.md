@@ -396,7 +396,7 @@ add a dated line here when you add or change one.
   Running the book (Kyle, 2026-10-18, from Writers Room): Overview (`#/board/overview/<book>`, the sidebar's item under
   Book details) shows the book's progress, scenes per status, what is waiting on Kyle (proposals to decide, open
   chapter to-dos, open Notes to the Team, questions in the scene notes, finished jobs not marked seen on this device), the
-  warnings of every check (`bookWarnings`), and the Release runway: chapters posted (a scene has `published`), chapters
+  warnings of every check (shown inside Waiting on you since 2026-11-06; the old `bookWarnings` list was removed 2026-11-10), and the Release runway: chapters posted (a scene has `published`), chapters
   ready (all final, none posted) and weeks of buffer at `cadence` (chapters a week; red under two). Target and pace are
   changed in place (written as numbers). A stage strip (the schema's `book_stage` list) tops the Overview and the Chapter
   Grid; pressing a stage asks first, then changes only the book's `stage`.
@@ -410,7 +410,7 @@ add a dated line here when you add or change one.
   the writing screen's chapter list ticks done chapters. Kyle marks it in the writing screen (••• menu, Mark as done,
   or the Done, split, join tab): "Mark this chapter done" sets the scene to revised ("Mark this scene done" when the
   chapter has several scenes), and "Not done yet" puts it back to drafted. The Pomodoro and Writing Log stay Kyle's own
-  typing, as below. `chaptersDone` in `src/lib/overview.ts`. The guided next step (`src/lib/nextstep.ts`) is
+  typing, as below. `chaptersDone` in `src/lib/overview.ts`. The guided next step (removed: the button left the Overview on 2026-11-06 and its code, `src/lib/nextstep.ts`, on 2026-11-10; what follows is how it worked) was
   one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
   `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
   one waits). Once every scene has a draft and the book has story calls or changes in the Edit room, the next step points there instead of moving the book to revise: Answer the story calls, then Go through the changes, else Open the Edit room (Kyle, 2026-10-28, asking what "Move the book to revise" meant on Quest Declined 1 mid proofread). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or
@@ -1054,3 +1054,15 @@ up how long it takes for me to finish these steps."
   began (`editing_pass_start`, which the app sets when a pass begins, counting that day), and the rest of editing takes
   what it took in his other books after the same draft was done (`draft2_end`, `draft3_end` to `editing_end`, less
   waiting days). With no book to go by, each pass still to come is a first guess of a week.
+
+## Tidy-up after the audit (2026-11-10)
+
+Kyle, after the audit of 2026-11-09 (vault `Docs/Sparrow/19 Audit 2026-11-09.md`): "make every one of these changes."
+
+- Words: jobs wait "for the team", not "for GitHub" (the server's runner picks them up; GitHub's own runner is the
+  fallback and is switched off). Jobs page, the Sent line and the waiting pile say so.
+- Job names added for Voice check, Compare two versions and Fill in the scene cards, so they no longer show as "Ask the team".
+- Removed, because nothing used them: the next step code and its `next-step` job kind (`src/lib/nextstep.ts`), the old
+  warnings list (`bookWarnings`), `loadMode`, `saveMode`, `BookPath`, `bookChapters`, `daysWords`, `changesPath`,
+  `PASSAGE_TOOLS`, and their styles. Nothing on any screen changed.
+- `tsconfig.json` now has `noUnusedLocals`, so the typecheck fails on an import or local nothing reads.

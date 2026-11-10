@@ -26,7 +26,7 @@ import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
 import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
-import { keepWriting, Shell } from './Shell.tsx';
+import { Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
 import { ChangesOverview } from './Changes.tsx';
@@ -35,7 +35,7 @@ import { decideQueue } from '../lib/overview.ts';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
-import { BookDetails, downloadWord, ExportWord, Home, SeriesPage } from './Home.tsx';
+import { BookDetails, downloadWord, Home, SeriesPage } from './Home.tsx';
 import { makeBackupFolder } from '../lib/docx.ts';
 import { addCover, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
@@ -301,7 +301,7 @@ export function App() {
   }, [source, runSync]);
 
   /** Ask the team for one piece of work: write a job note into the vault's Jobs folder, then sync so the Jobs screen shows it.
-   * A job of the same kind and target that GitHub has not finished yet is reported instead of made twice. */
+   * A job of the same kind and target that the team has not finished yet is reported instead of made twice. */
   const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
     const cur = snapRef.current;
@@ -309,12 +309,12 @@ export function App() {
     const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
-      return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for GitHub') + '. See Jobs.' };
+      return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for the team') + '. See Jobs.' };
     }
     try {
       await createJob(source, j, new Date());
       await runSync();
-      return { error: false, text: 'Sent to the team. GitHub runs it in a few minutes; see Jobs.' };
+      return { error: false, text: 'Sent to the team. The team picks it up within a few minutes; see Jobs.' };
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }

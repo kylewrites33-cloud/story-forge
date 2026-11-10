@@ -103,11 +103,10 @@ src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options ta
 src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
 src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
 src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
-src/lib/nextstep.ts      the guided next step from the book's stage and notes, and its next-step job
 src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, new ones
 src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
 src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, add, edit and rename
-src/ui/Overview.tsx      the Overview page, the stage strip and the next step button
+src/ui/Overview.tsx      the Overview page and the six stages
 src/ui/NotesToTeam.tsx   the Notes to the Team screen
 src/ui/Sessions.tsx      the Sessions list and one session
 src/ui/Recipes.tsx       the Recipes page and the "With a recipe" picker
@@ -129,3 +128,15 @@ src/lib/study.ts         Crow, the character and plot study app: Studies/ notes 
 src/study/               Crow's page (crow/index.html): main.tsx, StudyApp.tsx (its screens and Settings), study.css
 public/crow/             Crow's manifest and icons (its own home-screen app); public/character-study/ sends the old address to crow/
 ```
+src/lib/types.ts         shapes shared by the vault reader, the cache and the screens
+src/lib/settings.ts      connection settings, kept in this browser only
+src/lib/links.ts         wiki-link helpers, ported from the vault tool (link names, name lists, numbers)
+src/lib/format.ts        how property values read on cards and in the note view
+src/lib/warnings.ts      the shape of one warning and of a check, shared by the seeing-the-book pages
+src/ui/route.ts          the app's addresses (#/...) and the hook that reads them
+src/ui/screens.tsx       the Chapter Grid, the note view and small shared screens
+src/ui/IdeasBoard.tsx    the Ideas board: piles, cards, keep, later, drop, reasons
+src/ui/StoryBoards.tsx   the boards for every other proposal type
+src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates, sounds
+src/ui/Editor.tsx        the full-screen writing screen
+src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does

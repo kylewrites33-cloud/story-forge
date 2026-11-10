@@ -180,13 +180,6 @@ export function chatJob(thread: string, words: string, book: string, page = ''):
  * scene's conversation. The team answers there and never changes the scene; Kyle copies what he likes. */
 export type PassageTool = 'rewrite' | 'describe' | 'brainstorm' | 'write-on';
 
-export const PASSAGE_TOOLS: { key: PassageTool; label: string; hint: string }[] = [
-  { key: 'rewrite', label: 'Rewrite', hint: 'Three other ways to write the words you picked' },
-  { key: 'describe', label: 'Describe', hint: 'Sights, sounds, smells, touch and taste for the words you picked' },
-  { key: 'brainstorm', label: 'Brainstorm', hint: 'Ideas for what could happen next, from where the cursor is' },
-  { key: 'write-on', label: 'Write on', hint: 'A suggestion for the next few paragraphs, from where the cursor is' }
-];
-
 /** The words a tool works on: the selection, or else the paragraph around the cursor (Rewrite, Describe), or the
  * text up to the cursor (Brainstorm, Write on). Long text keeps its end, the part nearest the cursor. */
 export function passageFor(tool: PassageTool, text: string, sel: { start: number; end: number } | null): string {

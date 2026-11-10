@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { chapterGroups, chapterHeading, sceneLabel } from '../lib/board.ts';
 import { formatValue, isEmptyValue, label, listLines, longList, sceneHeader } from '../lib/format.ts';
-import { basename, toNumber } from '../lib/links.ts';
+import { basename } from '../lib/links.ts';
 import { searchScenes } from '../lib/search.ts';
 import { render } from '../lib/markdown.ts';
 import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';

@@ -1,11 +1,11 @@
 // A book's Overview (Writers Room's book page, Kyle 2026-10-18; made simpler 2026-11-06): the publish date, Keep writing,
 // where the book is in six stages with a percent each, Progress for the stage it is in, and Waiting on you with the story
 // checks' warnings folded in. The Release runway shows only once a chapter is posted or a posting pace is set.
-// The stage strip and the guided next step live on here for other pages; the Overview no longer shows them.
+// The stage strip lives on here for other pages; the Overview no longer shows it. The guided next step was removed
+// on 2026-11-10 (it left the Overview on 2026-11-06 and nothing else used it).
 import { useEffect, useState } from 'preact/hooks';
 import type { Decision } from '../lib/ideas.ts';
 import type { OnJob } from '../lib/jobs.ts';
-import { nextStep, nextStepJob, type NextStep } from '../lib/nextstep.ts';
 import {
   bookNote, bookNumbers, bookStage, bookStages, decideQueue, runway
 } from '../lib/overview.ts';
@@ -58,51 +58,6 @@ export function StageStrip({ schema, index, book, onDecide }: { schema: Schema; 
         </div>
       )}
     </div>
-  );
-}
-
-/** The guided next step: one big button and a sentence of why. A team step writes a next-step job; the team stops at a gate. */
-export function NextStepCard({ schema, index, book, onJob, onDecide }: { schema: Schema; index: VaultIndex; book: BookEntry; onJob?: OnJob; onDecide?: OnDecide }) {
-  const step: NextStep = nextStep(schema, index, book);
-  const [busy, setBusy] = useState(false);
-  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
-  const [confirm, setConfirm] = useState(false);
-  const note = bookNote(index, book);
-  const go = async () => {
-    if (!onJob) return;
-    setBusy(true);
-    setSaid(null);
-    const r = await onJob(nextStepJob(index, book, step));
-    setBusy(false);
-    setSaid(r.error ? r : { error: false, text: 'Sent. The team does this one step, then stops and waits for your yes. See Jobs.' });
-  };
-  let button;
-  if (step.busy) {
-    button = <a class="button primary next-button" href={href.jobs()}><span class="job-dot" aria-hidden="true" /> The team is on it: {step.label}</a>;
-  } else if (step.action === 'link') {
-    button = <a class="button primary next-button" href={step.href}>{step.label} <Icon name="right" size={20} /></a>;
-  } else if (step.action === 'stage') {
-    button = <button type="button" class="primary next-button" disabled={!onDecide || !note} onClick={() => setConfirm(true)}>{step.label} <Icon name="right" size={20} /></button>;
-  } else {
-    button = <button type="button" class="primary next-button" disabled={!onJob || busy} onClick={go}>{busy ? 'Sending…' : step.label} {!busy && <Icon name="right" size={20} />}</button>;
-  }
-  return (
-    <section class="next-step" aria-label="Next step">
-      <p class="next-kicker">Next step</p>
-      {button}
-      <p class="next-why">{step.busy ? 'Asked for already (' + String(step.busy.data.id || 'a job') + '). The team stops when it is done and waits for your yes.' : step.why}</p>
-      {step.action === 'job' && !step.busy && <p class="hint">The team does only this step, files what it makes for you to keep or drop, and stops.{onJob ? '' : ' Asking the team needs your own vault.'}</p>}
-      {confirm && note && onDecide && (
-        <div class="stage-confirm">
-          <p>Move {book.title} to <strong>{step.stage}</strong>? Only the book's stage changes.</p>
-          <div class="buttons">
-            <button type="button" class="primary" onClick={() => { onDecide(note.path, 'edit', '', { stage: step.stage }); setConfirm(false); }}>Move to {step.stage}</button>
-            <button type="button" onClick={() => setConfirm(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
-      {said && <p class={said.error ? 'error' : 'ok'} role="status">{said.text}</p>}
-    </section>
   );
 }
 
