@@ -991,15 +991,18 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     ...above.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), spot: leftOff && leftOff.path === n.path ? leftOff : null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
-      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
+      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); },
+      rectAt: (a) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.rectAt(a) : null; } })),
     { key: note.path, label: String(note.data.title || note.data.id || ''), file: myRewrite, text, read: () => { const c = readOnly.current ? null : commands.current; return c ? c.text() : pageText(); }, caret: caretFor(note.path), spot: leftOff && leftOff.path === note.path ? leftOff : null, onPut: putRewrite,
       onGo: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.select(a, b); else goWords(a, b); closeOver(); },
       onShow: (a, b) => { const c = readOnly.current ? null : commands.current; if (c) c.show(a, b); },
-      onHide: () => { const c = commands.current; if (c) c.hide(); } },
+      onHide: () => { const c = commands.current; if (c) c.hide(); },
+      rectAt: (a) => { const c = readOnly.current ? null : commands.current; return c ? c.rectAt(a) : null; } },
     ...below.map((n): RewriteSection => ({ key: n.path, label: String(n.data.title || n.data.id || ''), file: rewriteFor(copies, n), text: sibText(n), read: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.text() : sibText(n); }, caret: caretFor(n.path), spot: leftOff && leftOff.path === n.path ? leftOff : null, onPut: (p) => putRewriteSib(n, p),
       onGo: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.select(a, b); closeOver(); },
       onShow: (a, b) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.show(a, b); },
-      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); } })),
+      onHide: () => { const api = sibs.current.get(n.path); const c = api && api.commands.current; if (c) c.hide(); },
+      rectAt: (a) => { const api = sibs.current.get(n.path); const c = api && api.commands.current; return c ? c.rectAt(a) : null; } })),
   ];
   // The same button at the end of the page (Kyle, 2026-11-05: "is there an option for me to mark the draft 2 chapter as
   // done at the bottom of the page").
