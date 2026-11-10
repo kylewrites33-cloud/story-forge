@@ -12,7 +12,6 @@ import { timeAgo } from '../lib/format.ts';
 import {
   bookWords, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
-import { toNumber } from '../lib/links.ts';
 import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import { buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
 import { kindleFile, loadMatter, matterPath, saveMatterBody, splitNote, starterMatter } from '../lib/epub.ts';

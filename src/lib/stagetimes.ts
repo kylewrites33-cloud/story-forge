@@ -211,14 +211,6 @@ export function datesToRecord(six: SixStage[], dates: BookDates, published: bool
   return out;
 }
 
-/** "3 weeks", "12 days", "1 day": the short way to say a number of days. */
-export function daysWords(n: number): string {
-  if (n === 1) return '1 day';
-  if (n < 21) return n + ' days';
-  if (n < 70) return Math.round(n / 7) + ' weeks';
-  return Math.round(n / 30) + ' months';
-}
-
 /** "Nov 6" or "Nov 6, 2025" when it is not this year. */
 export function shortDay(d: string, now: Date): string {
   const date = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));

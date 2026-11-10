@@ -1,6 +1,6 @@
-// "Ask the team" jobs: Kyle presses a button, the app writes a small job note into the vault's Jobs folder, and GitHub
-// runs an agent on it (the vault's agent-jobs workflow) that fills in started, finished, cost, result and a ## Result
-// section. The app only writes job notes with status requested, cancels a requested one, and shows the rest.
+// "Ask the team" jobs: Kyle presses a button, the app writes a small job note into the vault's Jobs folder, and the
+// always-on runner (the vault's System/Tools/runner.mjs, on the server) runs an agent on it that fills in started,
+// finished, cost, result and a ## Result section. The app only writes job notes with status requested, cancels a requested one, and shows the rest.
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
@@ -8,11 +8,11 @@ import { makeNote } from './vault-index.ts';
 import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
-  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'next-step' | 'forge' | 'workflow-step' | 'revise';
+  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'forge' | 'workflow-step' | 'revise';
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
-  { key: 'requested', label: 'Waiting for GitHub' },
+  { key: 'requested', label: 'Waiting for the team' },
   { key: 'done', label: 'Done' },
   { key: 'failed', label: 'Did not finish' },
   { key: 'cancelled', label: 'Cancelled' }
@@ -39,10 +39,12 @@ export function jobLabel(kind: unknown): string {
     case 'variations': return 'Variations on this idea';
     case 'learn-taste': return 'Update my taste';
     case 'options': return 'Options for a passage';
-    case 'next-step': return 'The next step';
     case 'forge': return 'Forge a new specialist';
     case 'workflow-step': return 'A workflow step';
     case 'revise': return 'Changes for this chapter';
+    case 'voice-check': return 'Voice check';
+    case 'compare-read': return 'Compare two versions';
+    case 'fill-cards': return 'Fill in the scene cards';
     default: return 'Ask the team';
   }
 }
@@ -190,7 +192,7 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
   }
 }
 
-/** A job of the same kind and target that GitHub has not finished yet, if there is one. */
+/** A job of the same kind and target that the team has not finished yet, if there is one. */
 export function openJobFor(notes: NoteRecord[], kind: string, target: string): NoteRecord | null {
   return notes.find((n) => {
     const s = String(n.data.status || 'requested');

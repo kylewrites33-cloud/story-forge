@@ -2,7 +2,7 @@
   "name": "story-forge",
   "private": true,
   "version": "0.1.0",
-  "description": "Story Forge web app: boards over the author-business vault, read through the GitHub API.",
+  "description": "Sparrow web app: boards over the author-business vault, read through the GitHub API.",
   "type": "module",
   "engines": {
     "node": ">=22.18"

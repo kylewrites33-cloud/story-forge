@@ -211,29 +211,10 @@ export function nextTask(stages: FlowStage[], statuses: Record<string, TaskStatu
 
 // ---- Which mode, per book, on this device ----
 
-const MODE_KEY = 'story-forge.mode';
-
 /** A book with no prose yet starts in Workflow mode; one with prose in Writing mode (Kyle, 2026-10-21). */
 export function defaultMode(index: VaultIndex, book: BookEntry): Mode {
   const prose = book.scenes.some((p) => { const n = index.notes[p]; return n && n.data.kind !== 'test' && /\w/.test(n.body); });
   return prose ? 'writing' : 'workflow';
-}
-
-export function loadMode(sourceKey: string, index: VaultIndex, book: BookEntry): Mode {
-  try {
-    const all = JSON.parse(localStorage.getItem(MODE_KEY) || '{}') as Record<string, string>;
-    const m = all[sourceKey + '|' + book.folder];
-    if (m === 'workflow' || m === 'writing') return m;
-  } catch { /* no storage: the default */ }
-  return defaultMode(index, book);
-}
-
-export function saveMode(sourceKey: string, folder: string, mode: Mode): void {
-  try {
-    const all = JSON.parse(localStorage.getItem(MODE_KEY) || '{}') as Record<string, string>;
-    all[sourceKey + '|' + folder] = mode;
-    localStorage.setItem(MODE_KEY, JSON.stringify(all));
-  } catch { /* the choice lasts this visit only */ }
 }
 
 // ---- New results ----

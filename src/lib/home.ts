@@ -54,13 +54,6 @@ export function bookWords(index: VaultIndex, book: BookEntry): number {
   return book.scenes.reduce((n, p) => n + (index.notes[p] ? toNumber(index.notes[p].data.words) || 0 : 0), 0);
 }
 
-/** How many chapters a book's scenes fall in. */
-export function bookChapters(index: VaultIndex, book: BookEntry): number {
-  const seen = new Set<number>();
-  book.scenes.forEach((p) => { const c = index.notes[p] && toNumber(index.notes[p].data.chapter); if (c != null) seen.add(c); });
-  return seen.size;
-}
-
 function hash(text: string): number {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);

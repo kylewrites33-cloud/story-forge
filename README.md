@@ -2,9 +2,7 @@
 
 Sparrow is Kyle Heath's writing studio, and this is its web app. It shows the vault (the `author-business` repository) as boards, reading it through the GitHub API. It runs in the browser on the iPad, the Mac and a phone, installs to the home screen, and keeps working offline with the last copy it saved.
 
-Phase 1 has one board: the **Chapter Grid**, read only. It shows a book's scenes grouped by chapter, in order. Tap a card to see the scene's properties and text.
-
-Phase 2 adds the **Ideas** board: each book's idea notes as cards, in piles (To decide, Later, Kept, Dropped). Keep sets `status: keep`, Drop sets `status: discard`, and both record `decided` and any reason in `decision_note`; Later leaves the idea `inbox` with a `later` tag. Nothing is moved or deleted. Each choice is one commit made with Kyle's token, with no `Agent:` trailer, so the vault counts it as his. Choices made offline wait on the device and go up on the next sync.
+What it does, screen by screen and with when Kyle asked for each, is in `docs/Features.md`; every source file is in `docs/Layout.md`.
 
 ## Using it
 

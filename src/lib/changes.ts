@@ -167,8 +167,6 @@ export function countLike(notes: Record<string, NoteRecord>, bookFolder: string,
 }
 
 export const changesTitle = (chapter: number) => 'Chapter ' + chapter + ' changes';
-export const changesPath = (bookFolder: string, chapter: number) => bookFolder + '/' + CHANGES_FOLDER + '/' + changesTitle(chapter) + '.md';
-
 /** The book's changes note for a chapter, if it has one. */
 export function changesNoteFor(notes: Record<string, NoteRecord>, bookFolder: string, chapter: number | null): NoteRecord | null {
   if (chapter == null) return null;

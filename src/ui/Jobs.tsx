@@ -64,7 +64,7 @@ function JobCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: 
           {ask && <><p class="meta">What Kyle asked</p><div class="prose" dangerouslySetInnerHTML={{ __html: render(ask) }} /></>}
           {result && <><p class="meta">What the team said</p><div class="prose" dangerouslySetInnerHTML={{ __html: render(result) }} /></>}
           <p class="card-links">
-            {run && <a href={run} target="_blank" rel="noopener"><Icon name="out" size={16} /> See the run on GitHub</a>}
+            {run && <a href={run} target="_blank" rel="noopener"><Icon name="out" size={16} /> See the run's log</a>}
             <a href={href.note(note.path)}>Open the whole note</a>
           </p>
         </div>
@@ -78,7 +78,7 @@ function JobCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: 
   );
 }
 
-/** Every job Kyle asked the team for, by status. GitHub runs them and writes the results back into the notes. */
+/** Every job Kyle asked the team for, by status. The server's runner runs them and writes the results back into the notes. */
 export function JobsScreen({ index, waiting, onDecide, syncing }: { index: VaultIndex; waiting: Record<string, Choice>; onDecide?: OnDecide; syncing?: boolean }) {
   // Chat messages are jobs too, but they read as conversations on the Chat screen.
   const all = jobNotes(index).filter((n) => String(n.data.kind || '') !== 'chat');
@@ -89,7 +89,7 @@ export function JobsScreen({ index, waiting, onDecide, syncing }: { index: Vault
       <h1>Jobs</h1>
       <p class="meta">
         {busy === 0 ? 'Nothing is waiting on the team.' : busy === 1 ? '1 job is with the team.' : busy + ' jobs are with the team.'}
-        {' '}Ask for one from a scene's Team tab or a card's ••• menu. GitHub picks it up within a few minutes; this list refreshes itself every minute while it is open{syncing ? ' (refreshing now)' : ''}.
+        {' '}Ask for one from a scene's Team tab or a card's ••• menu. The team picks it up within a few minutes; this list refreshes itself every minute while it is open{syncing ? ' (refreshing now)' : ''}.
         {' '}Conversations with the team are on the <a href={href.chat()}>Chat</a> screen.
       </p>
       {!all.length && <p class="empty">No jobs yet. They live in the vault's Jobs folder.</p>}
