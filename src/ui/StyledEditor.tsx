@@ -271,9 +271,11 @@ export interface EditorCommands {
   plain: () => void;
   highlight: () => void;
   /** Select these characters and bring them into view (Find, a mark in the list). */
-  /** Put the selection here. `stay`: the page keeps its place (words brought over from the Rewrite tab), even where the
-   * iPad would scroll the cursor into sight. */
-  select: (start: number, end: number, stay?: boolean) => void;
+  select: (start: number, end: number) => void;
+  /** Words just put on the page from the side column (a Bring over): the cursor goes after them and the page keeps its
+   * place. Only when the words are out of sight does the page move, to bring their first line level with `level` on
+   * the screen (the top of the box they came from). */
+  land: (start: number, end: number, level?: number) => void;
   /** Bring these characters into view and light them, without taking the cursor or the focus (the Rewrite column,
    * while Kyle types in it). The light stays until hide or the next show. */
   /** Light these characters; with `top`, scroll the page so they sit level with that spot on the screen. */
@@ -322,6 +324,29 @@ export function showSelection() {
   box.scrollTop += r.top - b.top - b.height / 3;
 }
 
+/** Put new HTML in the page without the page losing its place. Safari (the iPad) can lay the page out again from
+ * nothing when its words are replaced, and throws the scroll back, as far as the top of the chapter (Kyle, 2026-11-10,
+ * after a Bring over: "the middle area text jumped so far down, i cant even see the new text"). Reading the place first
+ * settles the layout, which alone stops most of it; the place is put back if it moved all the same. */
+function setHtml(el: HTMLElement, h: string) {
+  const box = scroller(el), y = box.scrollTop;
+  el.innerHTML = h;
+  if (box.scrollTop !== y) box.scrollTop = y;
+}
+
+/** Keep the page at `y` for the next half second against scrolling Kyle did not do (the iPad scrolls to a cursor that
+ * was just placed, some time after it is placed). His own finger, wheel or keys end the hold at once. */
+export function holdPlace(box: HTMLElement, y: number) {
+  let on = true;
+  const stop = () => { on = false; off(); };
+  const off = () => EVENTS.forEach((e) => box.removeEventListener(e, stop));
+  const EVENTS = ['touchstart', 'wheel', 'pointerdown', 'keydown'];
+  EVENTS.forEach((e) => box.addEventListener(e, stop, { passive: true }));
+  const back = () => { if (on && box.scrollTop !== y) box.scrollTop = y; };
+  back(); requestAnimationFrame(back); setTimeout(back, 120); setTimeout(back, 300);
+  setTimeout(() => { back(); stop(); }, 500);
+}
+
 /** Run a command without the page jumping: focus, repainting the text and the iPad's own scrolling to the caret can each
  * move the page (Kyle, 2026-10-28: "right after I tap the italicize button, the word processing screen jumps away"). */
 function keepPlace(el: HTMLElement | null, fn: () => void) {
@@ -368,7 +393,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
     const el = ref.current;
     if (!el) return;
     const h = styledHtml(text, opts.current) + '<br>';
-    if (el.innerHTML !== h) el.innerHTML = h;
+    if (el.innerHTML !== h) setHtml(el, h);
     html.current = h;
     shown.current = text;
     if (caret != null) setSelection(el, caret);
@@ -552,7 +577,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
       // on the page (so the next word is italic too), while the text keeps the space outside the stars.
       const want = document.createElement('div');
       want.innerHTML = h;
-      if (lookString(el) !== lookString(want) || el.querySelector('[data-pending]')) { el.innerHTML = h; setSelection(el, caret); }
+      if (lookString(el) !== lookString(want) || el.querySelector('[data-pending]')) { setHtml(el, h); setSelection(el, caret); }
     }
     html.current = h;
     onChange(text);
@@ -636,25 +661,43 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         lastSel.current = { start: r.start, end: r.end };
       },
       selection: () => { const el = ref.current; return (el && document.activeElement === el && selectionOffsets(el)) || lastSel.current; },
-      select: (a, b, stay) => {
+      select: (a, b) => {
         const el = ref.current;
         if (!el) return;
-        const box = scroller(el), y = box.scrollTop;
         el.focus({ preventScroll: true });
         if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
         setSelection(el, a, b);
         lastSel.current = { start: a, end: b };
         onCaret(a);
-        if (stay) {
-          // Kyle, 2026-11-10, after a Bring over: "the middle section submission went straight to the bottom". The page
-          // stays where he had it; Safari's own scroll to the cursor is undone once it has happened.
-          const back = () => { if (box.scrollTop !== y) box.scrollTop = y; };
-          back(); requestAnimationFrame(back); setTimeout(back, 120); setTimeout(back, 400);
-          return;
-        }
         showSelection();
         // The iPad's keyboard slides up after the focus and can push the spot out of sight; show it again once it has.
         setTimeout(showSelection, 400);
+      },
+      land: (a, b, level) => {
+        const el = ref.current;
+        if (!el) return;
+        // Kyle, 2026-11-10: after a Bring over the page stays put, with the new paragraph in sight.
+        const box = scroller(el);
+        let y = box.scrollTop;
+        el.focus({ preventScroll: true });
+        if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
+        setSelection(el, b, b);
+        lastSel.current = { start: b, end: b };
+        onCaret(b);
+        if (box.scrollTop !== y) box.scrollTop = y;
+        const at = commands.current ? commands.current.rectAt : null;
+        const first = at ? at(Math.min(a + 1, b)) : null, last = at ? at(b) : null;
+        if (first && last) {
+          const bb = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
+          // Out of sight: every line of the words is above the bar over the top of the page, or below the keyboard's bar
+          // at its foot. With any line in sight the page does not move.
+          if (last.bottom < bb.top + 90 || first.top > bb.top + bb.height - 100) {
+            const want = level != null ? Math.min(Math.max(level, bb.top + 90), bb.top + bb.height - 220) : bb.top + bb.height / 3;
+            box.scrollTop += first.top - want;
+            y = box.scrollTop;
+          }
+        }
+        holdPlace(box, y);
       },
       show: (a, b, top) => {
         const el = ref.current;

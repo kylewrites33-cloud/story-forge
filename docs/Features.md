@@ -857,6 +857,16 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
 - **The page stays put after Bring over (2026-11-10).** Kyle: "submitted on the right and the middle section
   submission went straight to the bottom." Bring over and Put it in now leave the page where it was (the iPad's own
   scroll to the cursor is undone), and the column does not chase that.
+- **The real cause of the jump (2026-11-10, evening).** Kyle: "i submitted a paragraph on the right, and the middle area
+  text jumped so far down, i cant even see the new text ... fix it for real." The earlier fix remembered the page's
+  place after the new words went in, but Safari (every browser on the iPad) had already thrown the page back at the
+  moment its words were replaced, as far as the top of the chapter, so the fix held the page at the wrong place. Seen
+  and fixed in WebKit, not only in Chrome. Now every redraw of the page's words keeps the page's place (`setHtml` in
+  `src/ui/StyledEditor.tsx`), which also covers Bold, Italic, undo and the team's words arriving. After a Bring over
+  (`land`): the cursor goes after the new words, the page does not move, and the row comes level with the paragraph.
+  Only when no line of the new words is in sight (Kyle scrolled the column away from the page) does the page move, to
+  bring them level with the box they came from. The page is held for half a second against the iPad's own late
+  scrolling; Kyle's finger ends the hold at once. The marked-changes views keep their place too.
 - **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
   body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
   typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits

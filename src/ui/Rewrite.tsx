@@ -19,6 +19,8 @@ export interface Put {
   at: number; end: number; words: string;
   /** Where the new words sit afterwards. */
   to: number; toEnd: number;
+  /** The top of the box the words came from, on the screen: the page brings them level with it when they are out of sight. */
+  level?: number;
 }
 
 /** Where Kyle left off in draft 2 of a book, kept on this device (Kyle, 2026-11-06: "so we can sort of quickly get a
@@ -322,11 +324,13 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     if (at < 0) return;
     const row = f.rows[at];
     const r = bringOver(f.text, f.mine, f.rows, at, words);
-    if (row.mine != null) { const p = span(f.mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end }); return; }
+    const box = list.current ? list.current.querySelector<HTMLElement>('[data-row="' + index + '"]') : null;
+    const level = box ? box.getBoundingClientRect().top : undefined;
+    if (row.mine != null) { const p = span(f.mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end, level }); return; }
     // A paragraph put in: the old page's characters it replaces are none, at the spot where it now begins.
     const lead = r.at === 0 ? words + '\n\n' : '\n\n' + words;
     const from = r.at === 0 ? 0 : r.at - 2;
-    onPut({ text: r.text, at: from, end: from, words: lead, to: r.at, toEnd: r.end });
+    onPut({ text: r.text, at: from, end: from, words: lead, to: r.at, toEnd: r.end, level });
   };
   const cut = (index: number) => {
     const drawn = rows[index];
