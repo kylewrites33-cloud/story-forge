@@ -1618,7 +1618,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </div>
           ))}
           {findOpen && <FindBar text={beatsMode ? beatText.current : text} query={query} setQuery={(q) => { setQuery(q); setHit(0); }} repl={repl} setRepl={setRepl} hit={hit} setHit={setHit}
-            cmd={cmd} onClose={() => setFindOpen(false)} />}
+            cmd={cmd} page={() => mainRef.current} onClose={() => setFindOpen(false)} />}
           {beats && group && group.num != null && bookFolder ? (
             <BeatsView source={source} group={group} bookFolder={bookFolder} beatsNote={beats.note} codex={codex || []} startAt={note.path}
               onSaved={onSaved} onJob={onJob} asking={beats.asking} saver={beatsSaver}
