@@ -167,7 +167,7 @@ export function ChatScreen({ index, thread, book, onChat, onDecide, waiting, dem
 
 /** A scene's conversation in the writing screen's right-hand column: the same messages as the Chat screen, narrower,
  * with the newest at the bottom and the box to write in under them. */
-export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, intro, seed, fromTop }: {
+export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', onSent, seed, fromTop }: {
   convo: Conversation | null; thread: string; book: string; onChat?: OnChat;
   /** The Chat screen's page for this conversation, opened with the page saved first. */
   fullHref?: { href: string; onClick?: (e: MouseEvent) => void };
@@ -175,8 +175,6 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
   page?: string;
   /** Told the thread a message went into (a new conversation gets its name when the first message is sent). */
   onSent?: (thread: string) => void;
-  /** The line shown before the first message. */
-  intro?: string;
   /** Words to start the message with (Ask about this, in the writing screen). */
   seed?: string;
   /** Open at the top rather than at the last message; only new messages scroll down (the writing screen's column). */
@@ -209,7 +207,6 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
   return (
     <div class="writer-panel side-chat">
       <div class="chat-log" aria-live="polite">
-        {!messages.length && <p class="hint">{intro || 'Ask the team about this scene while you write: what she would wear, how a squash vine looks after a storm, what to cut. The answer comes here.'}</p>}
         {messages.map((m, i) => (
           <div class="chat-pair" key={m.path}>
             <div class="chat-msg kyle"><div class="prose" dangerouslySetInnerHTML={{ __html: render(m.ask) }} /></div>
@@ -235,14 +232,12 @@ export function SceneChat({ convo, thread, book, onChat, fullHref, page = '', on
 
 /** The team column beside a board or page: one conversation per book on this device, with what is on screen sent along
  * with each message so the team can guess what Kyle means. New conversation starts another; the Chat screen shows it full size. */
-export function TeamSide({ index, sourceKey, book, page, where, onChat, onClose }: {
+export function TeamSide({ index, sourceKey, book, page, onChat, onClose }: {
   index: VaultIndex; sourceKey: string;
   /** The book's folder, or '' when no book is on screen (the active book is used). */
   book: string;
   /** The ## Page text for each message. */
   page: string;
-  /** The page's name, for the line under the heading. */
-  where: string;
   onChat?: OnChat;
   onClose: () => void;
 }) {
@@ -255,7 +250,6 @@ export function TeamSide({ index, sourceKey, book, page, where, onChat, onClose 
       <div class="team-side-head">
         <div class="team-side-title">
           <h2>{c && c.messages.length ? c.title : 'Chat with the team'}</h2>
-          <p class="meta">The team sees you are on {where}.</p>
         </div>
         {thread !== 'new' && (
           <button type="button" class="icon-button" title="New conversation" aria-label="New conversation" onClick={() => pick('new')}><Icon name="plus" size={20} /></button>
@@ -264,8 +258,7 @@ export function TeamSide({ index, sourceKey, book, page, where, onChat, onClose 
       </div>
       <SceneChat key={thread} convo={c} thread={thread} book={book} onChat={onChat} page={page}
         onSent={(t) => { if (t !== thread) pick(t); }}
-        fullHref={thread !== 'new' ? { href: href.chat(thread, c ? c.book : book) } : undefined}
-        intro="Ask the team about what is on this page: which ideas to keep, what a character wants, what the next chapter needs. The answer comes here, and the conversation follows you from page to page." />
+        fullHref={thread !== 'new' ? { href: href.chat(thread, c ? c.book : book) } : undefined} />
     </aside>
   );
 }

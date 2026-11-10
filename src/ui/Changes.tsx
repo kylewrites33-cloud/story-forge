@@ -215,8 +215,8 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere }: {
-  intro: string; changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
+export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere }: {
+  changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
   /** Kyle's own version of the team's words, edited on the card, goes in as his own words (Kyle, 2026-10-28). */
@@ -309,7 +309,6 @@ export function ChangesPanel({ intro, changes, placedIds, current, onAcceptAll, 
       ) : null}
       {!changes.length ? null : (
         <>
-          {intro && <p class="chg-intro">{intro}</p>}
           <div class="chg-top">
             <p class="meta">{open.length ? open.length + ' waiting' : 'All decided'}{decided.length ? ' · ' + decided.length + ' decided' : ''}</p>
             {elsewhere > 0 && <button type="button" class="chg-all" onClick={() => onElsewhere && onElsewhere()}>{elsewhere + (elsewhere === 1 ? ' more change' : ' more changes') + ' in this chapter\'s other ' + (elsewhere === 1 ? 'scene' : 'scenes')}: show</button>}

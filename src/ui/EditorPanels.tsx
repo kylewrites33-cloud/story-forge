@@ -224,14 +224,13 @@ export function MarksPanel({ text, onGo }: { text: string; onGo: (start: number,
   const list = markList(text);
   return (
     <div class="writer-panel">
-      <p class="hint">Select words and press the highlighter in the tool row to mark them to come back to. Select marked words and press it again to take the mark off.</p>
       {list.length ? (
         <ul class="mark-list">
           {list.map((m) => (
             <li key={m.at}><button type="button" class="link" onClick={() => onGo(m.at, m.at + m.text.length + 4)}><mark>{m.text.length > 80 ? m.text.slice(0, 77) + '…' : m.text}</mark></button></li>
           ))}
         </ul>
-      ) : <p class="hint">No marks in this scene.</p>}
+      ) : <p class="hint">No marks in this scene. Pick words and press the highlighter to mark them.</p>}
     </div>
   );
 }
@@ -776,7 +775,7 @@ export function TodosPanel({ todos, chapter, sceneId, onTodo, onAdd, onJob, book
   };
   return (
     <div class="writer-panel todos-panel">
-      <p class="hint">{where ? where + ': ' : ''}{open.length === 1 ? '1 to-do open' : open.length + ' to-dos open'}. Tick one off when it is fixed.</p>
+      <p class="hint">{where ? where + ': ' : ''}{open.length === 1 ? '1 to-do open' : open.length + ' to-dos open'}</p>
       {open.length > 0 ? <ul class="todo-list">{open.map(row)}</ul> : <p class="hint">Nothing to fix in this chapter yet.</p>}
       {onAdd && (
         <div class="todo-add">
@@ -885,9 +884,6 @@ export function PlanPanel({ source, bookFolder, chapter, plan, canSave, kind = '
   };
   return (
     <div class="writer-panel plan-panel">
-      {scrap
-        ? <p class="hint">Words you cut from chapter {chapter} and notes you want to keep, as long as you like. It stays out of the story, and the team leaves it alone unless you ask.</p>
-        : <p class="hint">Your plan for chapter {chapter}, as long as you like. It stays out of the story; the team reads it whenever they work on this chapter.</p>}
       {scrap && take && (
         <div class="scrap-move">
           <button type="button" {...(keepFocus || {})} onClick={moveIn}>Move picked words here</button>
