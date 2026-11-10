@@ -854,6 +854,9 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
 - **Level after Bring over (2026-11-10).** Kyle, with a picture of a box far below its paragraph: "Note how low the
   right side line is after submission." When Kyle's cursor moves on the page (a click, a Bring over), its row in the
   column now comes level with his paragraph, not only when the row was out of sight.
+- **The page stays put after Bring over (2026-11-10).** Kyle: "submitted on the right and the middle section
+  submission went straight to the bottom." Bring over and Put it in now leave the page where it was (the iPad's own
+  scroll to the cursor is undone), and the column does not chase that.
 - **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
   body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
   typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits

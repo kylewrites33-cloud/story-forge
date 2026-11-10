@@ -957,7 +957,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     closeUnder(chPlace.placed, p.at, p.end);
     wordsNotTyped(bodyWords(p.text) - bodyWords(pageText()));
     const c = readOnly.current ? null : commands.current;
-    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd, true); }
     else { changed(p.text); reload(); }
     setCaretAt(p.toEnd);
     keepSpot(spotOf(note.path, p.text, p.to));
@@ -969,7 +969,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!api) return;
     wordsNotTyped(bodyWords(p.text) - bodyWords(api.text()));
     const c = api.commands.current;
-    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd); }
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd, true); }
     else api.put(p.text);
     setSibTick((k) => k + 1);
     setCaretAt(p.toEnd, n.path);
