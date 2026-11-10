@@ -851,6 +851,9 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   the middle of the page comes level with that paragraph (not the top of the column), even when his cursor is in a box.
   Scrolling the column never moves the page. Tapping a box still brings his paragraph level with it, and that move of
   the page does not move the column, so the column stays where he left it until he scrolls the page himself.
+- **Where Kyle reads (2026-11-10, evening).** Kyle: "my true reading and working zone is not the halfway mark of the
+  document, but two-thirds of the way up the document." The column now follows the paragraph a third of the way down
+  the page, not the one in the middle.
 - **Level after Bring over (2026-11-10).** Kyle, with a picture of a box far below its paragraph: "Note how low the
   right side line is after submission." When Kyle's cursor moves on the page (a click, a Bring over), its row in the
   column now comes level with his paragraph, not only when the row was out of sight.

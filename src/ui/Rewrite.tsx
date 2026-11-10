@@ -99,8 +99,9 @@ export interface RewriteSection {
 // paragraph is in the middle of the screen, we want the right-side paragraphs to track with it (probably as soon as the
 // scroll stops). then, if i happen to scroll the right side paragraphs, the left side stays put unless i tap a right side
 // paragraph. and then the right will stay put until i move the left again"). A moment after Kyle's own scrolling of the
-// page stops, the row of the paragraph in the middle of the page comes level with that paragraph. Each scene of the
-// chapter offers its paragraph and the one nearest the middle wins. Scrolling the column never moves the page. Tapping a
+// page stops, the row of the paragraph where he reads comes level with that paragraph: a third of the way down the
+// page since later that day, when he said that is where he reads, not the middle. Each scene of the chapter offers its
+// paragraph and the one nearest that line wins. Scrolling the column never moves the page. Tapping a
 // box moves the page to it, and that move is hushed so the column stays where Kyle left it.
 type Follower = () => { off: number; go: () => void } | null;
 const followers = new Set<Follower>();
@@ -251,7 +252,9 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     });
     return () => cancelAnimationFrame(frame);
   }, [cur, caret]);
-  // As Kyle scrolls the page: his paragraph nearest the middle of the page, and how to bring its row level with it.
+  // As Kyle scrolls the page: his paragraph nearest where he reads, and how to bring its row level with it. He reads
+  // and works a third of the way down the page, not in its middle (Kyle, 2026-11-10: "my true reading and working zone
+  // is not the halfway mark of the document, but two-thirds of the way up").
   const latest = useRef({ rows, mine, rectAt: section.rectAt });
   latest.current = { rows, mine, rectAt: section.rectAt };
   useEffect(() => follow(() => {
@@ -259,7 +262,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     const page = document.querySelector('.writer-page');
     if (!rectAt || !list.current || !page) return null;
     const pb = page.getBoundingClientRect();
-    const mid = pb.top + pb.height / 2;
+    const mid = pb.top + pb.height / 3;
     let best: { off: number; k: number; top: number } | null = null;
     for (let k = 0; k < rows.length; k++) {
       const row = rows[k];
