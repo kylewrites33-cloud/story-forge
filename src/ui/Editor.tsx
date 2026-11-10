@@ -16,7 +16,7 @@ import { Icon } from './Icon.tsx';
 import { DONE_STATUSES } from '../lib/overview.ts';
 import { boardLinks } from './StoryBoards.tsx';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
-import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { StyledEditor, holdPlace, type EditorCommands } from './StyledEditor.tsx';
 import { loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 import { askBody, defaultJobTitle, jobAsk, resultBody, type OnJob } from '../lib/jobs.ts';
 import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
@@ -957,8 +957,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     closeUnder(chPlace.placed, p.at, p.end);
     wordsNotTyped(bodyWords(p.text) - bodyWords(pageText()));
     const c = readOnly.current ? null : commands.current;
-    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd, true); }
-    else { changed(p.text); reload(); }
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.land(p.to, p.toEnd, p.level); }
+    else {
+      // The page with the team's changes marked is drawn again from the new words; it keeps its place too.
+      const pg = mainRef.current ? mainRef.current.closest('.writer-page') as HTMLElement | null : null;
+      const y = pg ? pg.scrollTop : 0;
+      changed(p.text); reload();
+      if (pg) holdPlace(pg, y);
+    }
     setCaretAt(p.toEnd);
     keepSpot(spotOf(note.path, p.text, p.to));
   };
@@ -969,7 +975,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!api) return;
     wordsNotTyped(bodyWords(p.text) - bodyWords(api.text()));
     const c = api.commands.current;
-    if (c) { c.replaceRange(p.at, p.end, p.words); c.select(p.toEnd, p.toEnd, true); }
+    if (c) { c.replaceRange(p.at, p.end, p.words); c.land(p.to, p.toEnd, p.level); }
     else api.put(p.text);
     setSibTick((k) => k + 1);
     setCaretAt(p.toEnd, n.path);
