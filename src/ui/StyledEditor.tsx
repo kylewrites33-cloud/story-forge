@@ -274,7 +274,8 @@ export interface EditorCommands {
   select: (start: number, end: number) => void;
   /** Bring these characters into view and light them, without taking the cursor or the focus (the Rewrite column,
    * while Kyle types in it). The light stays until hide or the next show. */
-  show: (start: number, end: number) => void;
+  /** Light these characters; with `top`, scroll the page so they sit level with that spot on the screen. */
+  show: (start: number, end: number, top?: number) => void;
   hide: () => void;
   /** The page's words as the editor holds them this moment. */
   text: () => string;
@@ -645,7 +646,7 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         // The iPad's keyboard slides up after the focus and can push the spot out of sight; show it again once it has.
         setTimeout(showSelection, 400);
       },
-      show: (a, b) => {
+      show: (a, b, top) => {
         const el = ref.current;
         if (!el) return;
         if (shown.current != null && el.innerHTML !== html.current) paint(shown.current, null);
@@ -658,7 +659,12 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         if (!rect.height && !rect.width) { const n = (sn.nodeType === 3 ? sn.parentElement : sn) as HTMLElement | null; if (n) rect = n.getBoundingClientRect(); }
         const box = scroller(el);
         const bb = box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect();
-        if (rect.top < bb.top + 40 || rect.bottom > bb.top + bb.height - 40) box.scrollTop += rect.top - bb.top - bb.height / 3;
+        // Level with the box Kyle tapped in the side column (Kyle, 2026-11-10: "the paragraph on the left has not come
+        // up"), kept clear of the page's top and bottom edges; else, only when out of sight, a third of the way down.
+        if (top != null) {
+          const want = Math.min(Math.max(top, bb.top + 40), bb.top + bb.height - Math.min(rect.height, bb.height / 2) - 40);
+          box.scrollTop += rect.top - want;
+        } else if (rect.top < bb.top + 40 || rect.bottom > bb.top + bb.height - 40) box.scrollTop += rect.top - bb.top - bb.height / 3;
         // A soft light on the words, drawn as boxes over the page from the range's own rectangles. The CSS Highlight API
         // painted it a few words off on the iPad (Kyle, 2026-11-05), so it is not used. It stays while Kyle works in the
         // column's box ("once i select in the right side box to edit, the highlight on the left disappears ... difficult

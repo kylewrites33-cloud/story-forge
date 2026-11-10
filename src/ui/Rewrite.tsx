@@ -44,7 +44,7 @@ function saveEdits(key: string, edits: Record<number, string>) {
 
 /** One of the Writer's paragraphs as a box Kyle can type in straight away (no button): the words he can already see on
  * his page stay greyer behind the text, the Writer's new words and his own typing darker. */
-function RewriteBox({ was, words, onInput, onFocus, onBlur }: { was?: string; words: string; onInput: (w: string) => void; onFocus: () => void; onBlur: () => void }) {
+function RewriteBox({ was, words, onInput, onFocus, onBlur }: { was?: string; words: string; onInput: (w: string) => void; onFocus: (top: number) => void; onBlur: () => void }) {
   const back = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const parts = was == null ? [{ kind: 'ins', text: words }] : wordDiff(was, words).filter((d) => d.kind !== 'del');
@@ -56,7 +56,7 @@ function RewriteBox({ was, words, onInput, onFocus, onBlur }: { was?: string; wo
         {parts.map((d) => d.kind === 'ins' ? <span class="chg-new">{d.text}</span> : d.text)}{'\n'}
       </div>
       <textarea ref={box} class="chg-tweak" rows={2} value={words} aria-label="The Writer's paragraph; change it here before you bring it over"
-        onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)} onFocus={onFocus} onBlur={onBlur}
+        onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)} onFocus={(e) => onFocus((e.currentTarget as HTMLElement).getBoundingClientRect().top)} onBlur={onBlur}
         onScroll={(e) => { if (back.current) back.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }} />
     </div>
   );
@@ -84,8 +84,9 @@ export interface RewriteSection {
   onPut: (p: Put) => void;
   /** Show these characters of the page (a tap on a paragraph in the column). */
   onGo: (at: number, end: number) => void;
-  /** Bring these characters of the page into view and light them without taking the cursor (Kyle's cursor is in the column). */
-  onShow: (at: number, end: number) => void;
+  /** Light these characters of the page without taking the cursor (Kyle's cursor is in the column), and line them up
+   * with the box he tapped, whose top is at `top` on the screen. */
+  onShow: (at: number, end: number, top?: number) => void;
   /** Take the light off the page (the cursor left the column's box). */
   onHide: () => void;
   /** Where a spot of this scene's page sits on the screen, so the column can follow the page as Kyle scrolls it. */
@@ -334,7 +335,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
           const words = row.theirs != null ? wordsOf(row) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
           const go = () => { const p = where(row); if (p) onGo(p.at, p.end); };
-          const show = () => { const p = where(row); if (p) onShow(p.at, p.end); };
+          const show = (top: number) => { const p = where(row); if (p) onShow(p.at, p.end, top); };
           return (
             <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
               {row.theirs == null ? (
