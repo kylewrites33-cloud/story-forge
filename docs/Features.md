@@ -851,6 +851,9 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   the middle of the page comes level with that paragraph (not the top of the column), even when his cursor is in a box.
   Scrolling the column never moves the page. Tapping a box still brings his paragraph level with it, and that move of
   the page does not move the column, so the column stays where he left it until he scrolls the page himself.
+- **Level after Bring over (2026-11-10).** Kyle, with a picture of a box far below its paragraph: "Note how low the
+  right side line is after submission." When Kyle's cursor moves on the page (a click, a Bring over), its row in the
+  column now comes level with his paragraph, not only when the row was out of sight.
 - **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
   body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
   typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits

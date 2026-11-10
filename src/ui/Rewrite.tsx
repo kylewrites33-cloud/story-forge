@@ -220,17 +220,34 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     return rows.findIndex((r) => r.mine != null && r.mine <= i && i <= (r.mineEnd ?? r.mine));
   }, [spot, text, rows]);
   const list = useRef<HTMLDivElement>(null);
+  // Kyle's cursor moved (a click, a Bring over): its row comes level with his paragraph on the page (Kyle, 2026-11-10,
+  // a picture of a box far below its paragraph after a Bring over: "Note how low the right side line is after
+  // submission"). Measured a frame later, once the page has settled. When the page cannot say where the paragraph is,
+  // a row out of sight comes to the middle of the column as before.
   useEffect(() => {
     if (cur < 0 || !list.current) return;
-    const el = list.current.querySelector<HTMLElement>('[data-row="' + cur + '"]');
-    if (!el) return;
-    const box = list.current.closest('.writer-right') || list.current;
-    const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
-    // Out of sight: bring it to the middle of the column, so the rows around it show too.
-    if (r.top >= b.top && r.bottom <= b.bottom) return;
-    // Scroll the column only, never the page around it.
-    if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
-    else el.scrollIntoView({ block: 'center' });
+    const frame = requestAnimationFrame(() => {
+      if (!list.current) return;
+      const el = list.current.querySelector<HTMLElement>('[data-row="' + cur + '"]');
+      if (!el) return;
+      const box = list.current.closest('.writer-right') || list.current;
+      const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+      const row = rows[cur];
+      const p0 = row && row.mine != null ? mine[row.mine] : null;
+      const q = p0 && section.rectAt ? section.rectAt(Math.min(p0.at + 1, p0.end)) : null;
+      const page = document.querySelector('.writer-page');
+      const pb = page ? page.getBoundingClientRect() : null;
+      if (q && pb && q.bottom > pb.top && q.top < pb.bottom && box.scrollHeight > box.clientHeight) {
+        const want = Math.min(Math.max(q.top, b.top + 12), b.top + b.height - Math.min(r.height, b.height / 2) - 12);
+        box.scrollTop += r.top - want;
+        return;
+      }
+      if (r.top >= b.top && r.bottom <= b.bottom) return;
+      // Scroll the column only, never the page around it.
+      if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
+      else el.scrollIntoView({ block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [cur, caret]);
   // As Kyle scrolls the page: his paragraph nearest the middle of the page, and how to bring its row level with it.
   const latest = useRef({ rows, mine, rectAt: section.rectAt });
