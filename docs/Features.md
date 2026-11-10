@@ -843,6 +843,14 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
 - **Level with the box (2026-11-10).** Kyle, with a picture of a lit paragraph near the bottom of the page: "the
   paragraph on the left has not come up". Putting the cursor in a box now moves the page so his paragraph sits level
   with the box, kept clear of the page's top and bottom edges. With the column following the page, that is a short move.
+- **The page is the boss (2026-11-10, later the same day).** Kyle: "i think we want the center text screen to be the
+  boss. so whatever paragraph is in the middle of the screen, we want the right-side paragraphs to track with it
+  (probably as soon as the scroll stops). then, if i happen to scroll the right side paragraphs, the left side stays put
+  unless i tap a right side paragraph. and then the right will stay put until i move the left again." This replaces the
+  two entries above where they differ. A moment after Kyle stops scrolling the page, the row of the paragraph nearest
+  the middle of the page comes level with that paragraph (not the top of the column), even when his cursor is in a box.
+  Scrolling the column never moves the page. Tapping a box still brings his paragraph level with it, and that move of
+  the page does not move the column, so the column stays where he left it until he scrolls the page himself.
 - **Where you left off (2026-11-06).** Kyle: "a subtle little arrow to track underneath the last paragraph in the main
   body that we changed ... and maybe even on the right-hand side too". The last paragraph Kyle brought over, put in or
   typed in while the chapter has a rewrite is kept on the device, per book. A small arrow in the accent colour sits

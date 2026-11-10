@@ -93,25 +93,27 @@ export interface RewriteSection {
   rectAt?: (at: number) => DOMRect | null;
 }
 
-// ---- The column follows the page as Kyle scrolls it (Kyle, 2026-11-10: "At the beginning of a chapter, when I tap a
-// line on the right, even if I've already scrolled down on the left side, a lot of times it bumps the left side back a
-// lot so that I lose my place"). The column only followed his cursor, so after scrolling the page it still showed the
-// chapter's first paragraphs, and tapping one of those brought the page back up to them. Now, a moment after the page
-// stops scrolling, the row of the first paragraph in sight comes to the top of the column. Each scene of the chapter
-// offers its first paragraph in sight and the highest one wins. Only the page's own scrolling counts, and never while
-// Kyle's cursor is in a box of the column.
-type Follower = () => { top: number; go: () => void } | null;
+// ---- The page is the boss (Kyle, 2026-11-10: "i think we want the center text screen to be the boss. so whatever
+// paragraph is in the middle of the screen, we want the right-side paragraphs to track with it (probably as soon as the
+// scroll stops). then, if i happen to scroll the right side paragraphs, the left side stays put unless i tap a right side
+// paragraph. and then the right will stay put until i move the left again"). A moment after Kyle's own scrolling of the
+// page stops, the row of the paragraph in the middle of the page comes level with that paragraph. Each scene of the
+// chapter offers its paragraph and the one nearest the middle wins. Scrolling the column never moves the page. Tapping a
+// box moves the page to it, and that move is hushed so the column stays where Kyle left it.
+type Follower = () => { off: number; go: () => void } | null;
 const followers = new Set<Follower>();
 let followTimer = 0;
+let quietUntil = 0;
+/** The page is about to move because Kyle tapped a box: the column does not follow that move. */
+function hush() { quietUntil = Date.now() + 600; clearTimeout(followTimer); }
 function pageScrolled(e: Event) {
   const from = e.target;
   if (!(from instanceof Element) || !from.classList.contains('writer-page')) return;
   clearTimeout(followTimer);
+  if (Date.now() < quietUntil) return;
   followTimer = window.setTimeout(() => {
-    const a = document.activeElement;
-    if (a && a.closest('.writer-right') && /^(TEXTAREA|INPUT)$/.test(a.tagName)) return;
-    let best: { top: number; go: () => void } | null = null;
-    for (const f of followers) { const c = f(); if (c && (!best || c.top < best.top)) best = c; }
+    let best: { off: number; go: () => void } | null = null;
+    for (const f of followers) { const c = f(); if (c && (!best || c.off < best.off)) best = c; }
     if (best) best.go();
   }, 200);
 }
@@ -230,7 +232,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     if (box.scrollHeight > box.clientHeight) box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
     else el.scrollIntoView({ block: 'center' });
   }, [cur, caret]);
-  // As Kyle scrolls the page: his first paragraph in sight, and how to bring its row to the top of the column.
+  // As Kyle scrolls the page: his paragraph nearest the middle of the page, and how to bring its row level with it.
   const latest = useRef({ rows, mine, rectAt: section.rectAt });
   latest.current = { rows, mine, rectAt: section.rectAt };
   useEffect(() => follow(() => {
@@ -238,26 +240,33 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     const page = document.querySelector('.writer-page');
     if (!rectAt || !list.current || !page) return null;
     const pb = page.getBoundingClientRect();
+    const mid = pb.top + pb.height / 2;
+    let best: { off: number; k: number; top: number } | null = null;
     for (let k = 0; k < rows.length; k++) {
       const row = rows[k];
       if (row.mine == null) continue;
-      const q = rectAt(mine[row.mineEnd ?? row.mine].end);
-      if (!q || q.bottom <= pb.top + 8) continue;
-      if (q.top >= pb.bottom) return null;
-      return {
-        top: q.top,
-        go: () => {
-          const el = list.current && list.current.querySelector<HTMLElement>('[data-row="' + k + '"]');
-          const box = list.current && list.current.closest('.writer-right');
-          if (!el || !box || box.scrollHeight <= box.clientHeight) return;
-          const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
-          // Already near the top of the column: leave it.
-          if (r.top >= b.top && r.top <= b.top + b.height / 3) return;
-          box.scrollTop += r.top - b.top - 12;
-        }
-      };
+      const p0 = mine[row.mine];
+      // One character in, so the top is on the paragraph's first line and not the blank line before it.
+      const a = rectAt(Math.min(p0.at + 1, p0.end)), z = rectAt(mine[row.mineEnd ?? row.mine].end);
+      if (!a || !z) continue;
+      const off = mid < a.top ? a.top - mid : mid > z.bottom ? mid - z.bottom : 0;
+      if (!best || off < best.off) best = { off, k, top: a.top };
+      if (a.top > mid) break;
     }
-    return null;
+    if (!best) return null;
+    const { off, k, top } = best;
+    return {
+      off,
+      go: () => {
+        const el = list.current && list.current.querySelector<HTMLElement>('[data-row="' + k + '"]');
+        const box = list.current && list.current.closest('.writer-right');
+        if (!el || !box || box.scrollHeight <= box.clientHeight) return;
+        const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+        // Level with the paragraph, kept inside the column.
+        const want = Math.min(Math.max(top, b.top + 12), b.top + b.height - Math.min(r.height, b.height / 2) - 12);
+        box.scrollTop += r.top - want;
+      }
+    };
   }), []);
   // Opening the column: bring the row where Kyle left off into the middle, once, unless his cursor is already here.
   const placed = useRef(false);
@@ -335,7 +344,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
           const words = row.theirs != null ? wordsOf(row) : '';
           const edited = row.theirs != null && edits[row.theirs] != null;
           const go = () => { const p = where(row); if (p) onGo(p.at, p.end); };
-          const show = (top: number) => { const p = where(row); if (p) onShow(p.at, p.end, top); };
+          const show = (top: number) => { const p = where(row); if (p) { hush(); onShow(p.at, p.end, top); } };
           return (
             <div key={k} data-row={k} class={'rewrite-row' + (same ? ' same' : '') + (k === cur ? ' on' : '') + (k === leftAt ? ' left-off' : '') + (row.mine == null ? ' added' : '') + (row.theirs == null ? ' cut' : '')}>
               {row.theirs == null ? (
