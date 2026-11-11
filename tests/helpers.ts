@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { FileEntry, VaultSource } from '../src/lib/types.ts';
+import type { CommitPlan, CommitResult, FileEntry, ReadAtHead, VaultSource } from '../src/lib/types.ts';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DEMO = path.join(ROOT, 'demo-vault');
@@ -51,6 +51,12 @@ export class MemSource implements VaultSource {
   files = new Map<string, string>();
   writes: { path: string; message: string }[] = [];
   offline = false;
+  /** Goes up with every save, as a branch moves. */
+  head = 0;
+  /** Set by a test to change the vault between a save's read and its landing, once: the save must start again. */
+  race: (() => void) | null = null;
+  /** How many times commit asked for a plan. */
+  builds = 0;
   sha(text: string) { let h = 7; for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0; return h.toString(16); }
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
     return { files: [...this.files].map(([p, t]) => ({ path: p, sha: this.sha(t) })), truncated: false };
@@ -67,6 +73,7 @@ export class MemSource implements VaultSource {
     if ((cur === undefined ? '' : this.sha(cur)) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
     this.files.set(p, text);
     this.writes.push({ path: p, message });
+    this.head++;
     return this.sha(text);
   }
   async remove(p: string, sha: string, message: string) {
@@ -74,6 +81,35 @@ export class MemSource implements VaultSource {
     if (cur === undefined || this.sha(cur) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
     this.files.delete(p);
     this.writes.push({ path: p, message: 'REMOVE ' + message });
+    this.head++;
+  }
+  /** Every save as one step, the way GitHubSource.commit does it: if the vault moved since the read, plan again. */
+  commits: { message: string; paths: string[] }[] = [];
+  async commit(build: (read: ReadAtHead) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
+    for (let attempt = 0; ; attempt++) {
+      if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
+      const at = this.head;
+      const seen = new Map(this.files);
+      this.builds++;
+      const plan = await build(async (p) => {
+        if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
+        const t = seen.get(p);
+        return t === undefined ? null : { text: t, sha: this.sha(t) };
+      });
+      const removes = (plan && plan.removes) || [];
+      if (!plan || (!plan.writes.length && !removes.length)) return null;
+      if (this.race) { const r = this.race; this.race = null; r(); this.head++; }
+      if (this.head !== at) {
+        if (attempt < 4) continue;
+        throw Object.assign(new Error('The vault kept changing.'), { status: 422 });
+      }
+      const shas: Record<string, string> = {};
+      plan.writes.forEach((f) => { this.files.set(f.path, f.text); shas[f.path] = this.sha(f.text); this.writes.push({ path: f.path, message: plan.message }); });
+      removes.forEach((p) => { this.files.delete(p); this.writes.push({ path: p, message: 'REMOVE ' + plan.message }); });
+      this.head++;
+      this.commits.push({ message: plan.message, paths: plan.writes.map((f) => f.path).concat(removes) });
+      return { commit: 'c' + this.head, shas };
+    }
   }
 }
 

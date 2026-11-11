@@ -1,0 +1,383 @@
+// The one saving system (src/vault): actions wait in the outbox, show at once, and go up as one save each.
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { test } from 'node:test';
+import { blobSha, fromBase64, GitHubSource, toBase64 } from '../src/lib/github.ts';
+import { parseSchema } from '../src/lib/schema.ts';
+import { DEFAULTS } from '../src/lib/settings.ts';
+import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
+import { enqueue, overlay, saveQueue, loadQueue, type Choice } from '../src/lib/write-queue.ts';
+import { editRecord, editText, overlayActions } from '../src/vault/apply.ts';
+import { choiceAction, type Edit } from '../src/vault/ops.ts';
+import { add, choicesOf, loadOutbox, saveOutbox, settle } from '../src/vault/outbox.ts';
+import { pushAction, pushAll } from '../src/vault/push.ts';
+import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
+
+const AT = '2026-11-11T15:00:00.000Z';
+const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
+const S6 = BOOK + '/Scenes/S-006 Thaw Market.md';
+const S7 = BOOK + '/Scenes/S-007 Ledger.md';
+const scene = (id: string, title: string, ch: number, chTitle: string, order: number) =>
+  '---\ntype: scene\nid: ' + id + '\ntitle: ' + title + '\nstatus: drafted\nchapter: ' + ch + (chTitle ? '\nchapter_title: ' + chTitle : '') + '\norder: ' + order + '\nwords: 5\n---\n\nThe market smelled of wet rope.\n';
+const IDEA = '---\ntype: idea\nid: I-008\ntitle: Chapter groupings\nkind: structure\nstatus: inbox\ncreated: 2026-10-17\n---\n\nBody.\n';
+const move = (path: string, order: number, chapter: number, chapterTitle = ''): Choice => ({ path, decision: 'move', reason: '', at: AT, move: { order, chapter, chapterTitle } });
+const edit = (path: string, fields: Record<string, string>): Choice => ({ path, decision: 'edit', reason: '', at: AT, fields });
+const decide = (path: string, decision: Choice['decision'], reason = ''): Choice => ({ path, decision, reason, at: AT });
+
+class MemStorage {
+  m = new Map<string, string>();
+  getItem(k: string) { return this.m.has(k) ? this.m.get(k)! : null; }
+  setItem(k: string, v: string) { this.m.set(k, v); }
+  removeItem(k: string) { this.m.delete(k); }
+}
+const store = () => new MemStorage() as unknown as Storage;
+
+// ---- what an edit does: the screen's form and the saved form agree ----
+
+test('an edit does the same to a note on screen as it does to the note\'s saved text, for every demo note', async () => {
+  const src = new FsSource(DEMO);
+  const { files } = await src.tree();
+  const notes = files.filter((f) => f.path.endsWith('.md') && !f.path.startsWith('.'));
+  const edits = (path: string): Edit[] => [
+    decide(path, 'keep', 'Fits the book.'), decide(path, 'later'), decide(path, 'drop', 'Too mean: he is "kind".'), decide(path, 'inbox'),
+    move(path, 2.5, 4, 'A new name'), move(path, 9, 2), edit(path, { headline: 'She counts the nets: two short.', title: 'Nets' }), edit(path, { status: 'done' })
+  ].map((choice) => ({ type: 'choice' as const, choice }));
+  let checked = 0;
+  for (const f of notes) {
+    const text = await src.read(f.path);
+    const note = makeNote(f.path, f.sha, text);
+    if (note.error || !note.type) continue;
+    for (const e of edits(f.path)) {
+      const onScreen = editRecord(note, e).data;
+      const saved = makeNote(f.path, 'x', editText(text, e)).data;
+      Object.keys({ ...onScreen, ...saved }).forEach((k) => {
+        const a = onScreen[k], b = saved[k];
+        if (a == null || a === '') { assert.ok(b == null || b === '', f.path + ' ' + e.choice.decision + ': ' + k + ' should be empty, saved as ' + JSON.stringify(b)); return; }
+        assert.equal(String(b), String(a), f.path + ' ' + e.choice.decision + ': ' + k);
+      });
+      checked++;
+    }
+    // The body is never touched by a choice.
+    assert.equal(makeNote(f.path, 'x', editText(text, edits(f.path)[0])).body, note.body);
+  }
+  assert.ok(checked > 100, 'checked ' + checked);
+});
+
+test('waiting actions show on every screen at once, the same as the old queue showed them', async () => {
+  const src = new FsSource(DEMO);
+  const { files } = await src.tree();
+  const index = await buildIndex({ schema: parseSchema(demoSchemaText()), files, read: (p, sha) => src.read(p, sha) });
+  const book = index.books.find((b) => b.folder === BOOK)!;
+  const s6 = book.scenes.find((p) => p.includes('S-006'))!;
+  const idea = book.ideas![0];
+  const choices = [move(s6, 1.5, 1, 'Frost'), decide(idea, 'keep', 'Yes.'), edit(s6, { headline: 'Rope and thaw.' })];
+  const shown = overlayActions(index, [choiceAction([choices[0]]), choiceAction([choices[1], choices[2]])]);
+  assert.deepEqual(shown, overlay(index, choices));
+  assert.deepEqual(shown.books.find((b) => b.folder === BOOK)!.scenes.slice(0, 3).map((p) => shown.notes[p].data.id), ['S-001', 'S-006', 'S-002']);
+  assert.equal(index.notes[s6].data.chapter, 3, 'the saved copy itself is untouched');
+  assert.equal(overlayActions(index, []), index);
+});
+
+// ---- the outbox ----
+
+test('a newer choice replaces a waiting one in its place; edits join; an action left empty goes', () => {
+  let box = add([], choiceAction([decide('a.md', 'later')]));
+  box = add(box, choiceAction([decide('a.md', 'keep')]));
+  assert.deepEqual(choicesOf(box).map((c) => c.decision), ['keep']);
+  box = add(box, choiceAction([edit('a.md', { turn: 'T' })]));
+  box = add(box, choiceAction([move('a.md', 2, 1)]));
+  box = add(box, choiceAction([edit('a.md', { hook: 'H' })]));
+  assert.deepEqual(choicesOf(box).map((c) => c.decision), ['keep', 'move', 'edit']);
+  assert.deepEqual(choicesOf(box)[2].fields, { turn: 'T', hook: 'H' });
+  // The same as the old queue did.
+  const old = [decide('a.md', 'later'), decide('a.md', 'keep'), edit('a.md', { turn: 'T' }), move('a.md', 2, 1), edit('a.md', { hook: 'H' })].reduce(enqueue, [] as Choice[]);
+  assert.deepEqual(choicesOf(box), old);
+});
+
+test('an action of several notes loses only the part a newer action replaces', () => {
+  const rename = choiceAction([edit('s1.md', { chapter_title: 'Frost' }), edit('s2.md', { chapter_title: 'Frost' })]);
+  let box = add([], rename);
+  box = add(box, choiceAction([edit('s2.md', { chapter_title: 'Thaw' })]));
+  assert.equal(box.length, 2);
+  assert.equal(box[0].id, rename.id);
+  assert.deepEqual(box[0].ops.map((o) => o.path), ['s1.md']);
+  assert.deepEqual(choicesOf(box).map((c) => [c.path, c.fields!.chapter_title]), [['s1.md', 'Frost'], ['s2.md', 'Thaw']]);
+});
+
+test('the outbox is kept on the device, and choices from the old queue move into it once', () => {
+  const s = store();
+  saveQueue('k', [decide('a.md', 'keep', 'Mine.'), move('b.md', 3, 2)], s);
+  const first = loadOutbox('k', s);
+  assert.deepEqual(choicesOf(first), [decide('a.md', 'keep', 'Mine.'), move('b.md', 3, 2)]);
+  assert.deepEqual(loadQueue('k', s), [], 'the old queue is emptied');
+  const again = loadOutbox('k', s);
+  assert.deepEqual(again, first, 'and nothing is added twice');
+  saveOutbox('k', [], s);
+  assert.deepEqual(loadOutbox('k', s), []);
+  assert.deepEqual(loadOutbox('other', s), []);
+  s.setItem('story-forge.outbox.k', '{not json');
+  assert.deepEqual(loadOutbox('k', s), []);
+});
+
+test('after a push, saved actions leave, failed ones keep their sentence, and ones added meanwhile stay', () => {
+  const a = choiceAction([decide('a.md', 'keep')]), b = choiceAction([decide('b.md', 'keep')]), c = choiceAction([decide('c.md', 'keep')]);
+  const left = settle([a, b, c], [a.id], { [b.id]: 'GitHub answered 500.' });
+  assert.deepEqual(left.map((x) => x.id), [b.id, c.id]);
+  assert.equal(left[0].error, 'GitHub answered 500.');
+  assert.equal(choicesOf(left)[0].error, 'GitHub answered 500.');
+  assert.equal(left[1].error, undefined);
+});
+
+// ---- sending it up ----
+
+test('one action is one save, however many notes it touches', async () => {
+  const src = new MemSource();
+  src.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
+  src.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
+  // The card that named chapter 3 moves to chapter 1; the next card in chapter 3 takes the name on.
+  const saved = await pushAction(src, choiceAction([move(S6, 1.5, 1, 'Frost'), move(S7, 7, 3, 'Ledger')]));
+  assert.equal(src.commits.length, 1);
+  assert.deepEqual(src.commits[0].paths, [S6, S7]);
+  assert.match(src.commits[0].message, /^scenes: move S-006 Thaw Market\n\nSaved together with:\n- scenes: move S-007 Ledger\n/);
+  assert.ok(!/Agent:/.test(src.commits[0].message), 'the save is Kyle\'s');
+  assert.match(src.files.get(S6)!, /^chapter: 1$/m);
+  assert.match(src.files.get(S7)!, /^chapter_title: Ledger$/m);
+  assert.deepEqual(saved.map((n) => [n.path, n.sha]), [[S6, src.sha(src.files.get(S6)!)], [S7, src.sha(src.files.get(S7)!)]]);
+  assert.equal(saved[0].data.chapter_title, 'Frost');
+});
+
+test('if the vault changed while the save was being made, the change is made again on the newer note', async () => {
+  const src = new MemSource();
+  src.files.set('Ideas/I-008.md', IDEA);
+  src.race = () => src.files.set('Ideas/I-008.md', IDEA.replace('Body.', 'Body.\n\nThe team added a line.'));
+  const [note] = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
+  assert.equal(src.builds, 2, 'planned twice');
+  assert.equal(src.commits.length, 1);
+  assert.match(src.files.get('Ideas/I-008.md')!, /^status: keep$/m);
+  assert.ok(src.files.get('Ideas/I-008.md')!.endsWith('The team added a line.\n'), 'the team\'s line is kept');
+  assert.equal(note.data.status, 'keep');
+  assert.ok(note.body.includes('The team added a line.'));
+});
+
+test('two changes to one note in one action build on each other; a change that changes nothing saves nothing', async () => {
+  const src = new MemSource();
+  src.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
+  await pushAction(src, choiceAction([move(S6, 2, 2), edit(S6, { headline: 'Rope.' })]));
+  assert.equal(src.commits.length, 1);
+  assert.match(src.files.get(S6)!, /^chapter: 2$/m);
+  assert.match(src.files.get(S6)!, /^headline: Rope\.$/m);
+  const [same] = await pushAction(src, choiceAction([edit(S6, { headline: 'Rope.' })]));
+  assert.equal(src.commits.length, 1, 'nothing new to save');
+  assert.equal(same.sha, src.sha(src.files.get(S6)!));
+  assert.equal(same.data.headline, 'Rope.');
+});
+
+test('offline stops the outbox and keeps everything; a missing note lets its change go; other failures keep theirs', async () => {
+  const src = new MemSource();
+  src.files.set('a.md', IDEA);
+  src.files.set('c.md', IDEA);
+  const a = choiceAction([decide('a.md', 'keep')]), gone = choiceAction([decide('gone.md', 'keep')]), c = choiceAction([decide('c.md', 'drop')]);
+  src.offline = true;
+  const off = await pushAll(src, [a, gone, c]);
+  assert.deepEqual([off.done, off.failed, off.saved.length], [[], {}, 0]);
+  assert.match(off.error!, /Cannot reach GitHub/);
+  assert.equal(settle([a, gone, c], off.done, off.failed).length, 3);
+  src.offline = false;
+  const on = await pushAll(src, [a, gone, c]);
+  assert.deepEqual(on.done, [a.id, gone.id, c.id]);
+  assert.equal(on.error, null);
+  assert.deepEqual(on.saved.map((n) => [n.path, n.data.status]), [['a.md', 'keep'], ['c.md', 'discard']]);
+  // A failure that is not the connection: that action waits with its sentence, the others still go.
+  const broken = new MemSource();
+  broken.files.set('a.md', IDEA);
+  broken.files.set('c.md', IDEA);
+  const real = broken.commit.bind(broken);
+  broken.commit = (build) => real((read) => build(async (p) => {
+    if (p === 'a.md') throw Object.assign(new Error('GitHub answered 500 while saving a.md. Try again in a minute.'), { status: 500 });
+    return read(p);
+  }));
+  const res = await pushAll(broken, [a, c]);
+  assert.deepEqual(res.done, [c.id]);
+  assert.match(res.failed[a.id], /500/);
+  assert.match(broken.files.get('c.md')!, /^status: discard$/m);
+  assert.match(broken.files.get('a.md')!, /^status: inbox$/m);
+});
+
+test('actions that waited together go up as one save, forty at most; one alone is its own save', async () => {
+  const src = new MemSource();
+  const acts = Array.from({ length: 45 }, (_, i) => {
+    src.files.set('Ideas/I-' + i + '.md', IDEA.replace('I-008', 'I-' + String(i).padStart(3, '0')));
+    return choiceAction([decide('Ideas/I-' + i + '.md', i % 2 ? 'keep' : 'drop')]);
+  });
+  // The same idea twice in the backlog: the later action builds on the earlier one inside the one save.
+  acts.push(choiceAction([edit('Ideas/I-0.md', { title: 'A better name' })]));
+  const res = await pushAll(src, acts);
+  assert.equal(res.error, null);
+  assert.deepEqual(res.done, acts.map((a) => a.id));
+  assert.deepEqual(src.commits.map((c) => c.paths.length), [40, 6]);
+  assert.match(src.commits[0].message, /^ideas: drop I-000 Chapter groupings\n\nSaved together with:\n- ideas: keep I-001 Chapter groupings\n/);
+  assert.match(src.files.get('Ideas/I-0.md')!, /^status: discard$/m);
+  assert.match(src.files.get('Ideas/I-0.md')!, /^title: A better name$/m);
+  assert.equal(res.saved.filter((n) => n.path === 'Ideas/I-0.md').pop()!.data.title, 'A better name');
+  await pushAll(src, [choiceAction([decide('Ideas/I-7.md', 'later')])]);
+  assert.deepEqual(src.commits[2].paths, ['Ideas/I-7.md']);
+});
+
+test('when GitHub says slow down, everything waits and nothing is marked as failed', async () => {
+  const gh = fakeGitHub({ 'vault/a.md': IDEA, 'vault/b.md': IDEA });
+  let slow = true;
+  const src = new GitHubSource(settings, async (url, init) => (slow && init && init.method === 'POST'
+    ? new Response('{"message":"You have exceeded a secondary rate limit."}', { status: 403, headers: { 'retry-after': '60' } }) : gh.fetch(url, init)));
+  const acts = [choiceAction([decide('a.md', 'keep')]), choiceAction([decide('b.md', 'drop')])];
+  const res = await pushAll(src, acts);
+  assert.match(res.error!, /asked the app to slow down/);
+  assert.deepEqual([res.done, res.failed], [[], {}]);
+  assert.equal(gh.state.head, 'c0');
+  slow = false;
+  const ok = await pushAll(src, acts);
+  assert.deepEqual(ok.done, acts.map((a) => a.id));
+  assert.equal(gh.commits.get(gh.state.head)!.parent, 'c0', 'one save for both');
+  // A token that may not write is a real failure, said plainly, and each action keeps it.
+  const denied = new GitHubSource(settings, async (url, init) => (init && init.method === 'POST' ? new Response('{}', { status: 403 }) : gh.fetch(url, init)));
+  const no = await pushAll(denied, [choiceAction([decide('a.md', 'later')])]);
+  assert.match(Object.values(no.failed)[0], /not allowed to change/);
+});
+
+test('the old way (the switch in Settings) saves the same actions one note at a time', async () => {
+  const src = new MemSource();
+  src.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
+  src.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
+  const act = choiceAction([move(S6, 1.5, 1, 'Frost'), move(S7, 7, 3, 'Ledger'), decide('gone.md', 'keep')]);
+  const res = await pushAll(src, [act], { legacy: true });
+  assert.deepEqual(res.done, [act.id]);
+  assert.equal(src.commits.length, 0);
+  assert.deepEqual(src.writes.map((w) => w.path), [S6, S7]);
+  const fresh = new MemSource();
+  fresh.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
+  fresh.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
+  await pushAll(fresh, [act]);
+  assert.deepEqual([...fresh.files], [...src.files], 'both ways leave the same notes');
+});
+
+// ---- GitHub: one commit through git's own objects ----
+
+test('a blob sha worked out in the app is the one git gives', async () => {
+  assert.equal(await blobSha(''), 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391');
+  assert.equal(await blobSha('hello\n'), 'ce013625030ba8dba906f756967f9e9ca394464a');
+  const text = '---\ntitle: Café “Ash Bell”\n---\n\nThe bell rang twice — then nothing.\r\n';
+  const bytes = Buffer.from(text, 'utf8');
+  assert.equal(await blobSha(text), crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob ' + bytes.length + '\0'), bytes])).digest('hex'));
+});
+
+/** A pretend GitHub with a branch, commits and trees, enough for the git data calls the app makes. */
+function fakeGitHub(start: Record<string, string>) {
+  const trees = new Map<string, Map<string, string>>([['t0', new Map(Object.entries(start))]]);
+  const commits = new Map<string, { tree: string; parent: string | null; message: string }>([['c0', { tree: 't0', parent: null, message: 'start' }]]);
+  const state = { head: 'c0', calls: [] as string[], beforePatch: null as (() => void) | null };
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  const sha1 = (t: string) => { const b = Buffer.from(t, 'utf8'); return crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob ' + b.length + '\0'), b])).digest('hex'); };
+  const commitTo = (files: Record<string, string | null>, message: string) => {
+    const tree = new Map(trees.get(commits.get(state.head)!.tree)!);
+    Object.entries(files).forEach(([p, t]) => (t == null ? tree.delete(p) : tree.set(p, t)));
+    const id = String(commits.size);
+    trees.set('t' + id, tree);
+    commits.set('c' + id, { tree: 't' + id, parent: state.head, message });
+    state.head = 'c' + id;
+  };
+  const fetch = async (url: string, init?: RequestInit): Promise<Response> => {
+    const u = new URL(url);
+    const path = decodeURIComponent(u.pathname.replace('/repos/kylewrites33-cloud/author-business', ''));
+    const method = (init && init.method) || 'GET';
+    const body = init && init.body ? JSON.parse(String(init.body)) : null;
+    state.calls.push(method + ' ' + path);
+    assert.equal((init!.headers as Record<string, string>).Authorization, 'Bearer test-token');
+    if (method === 'GET' && path === '/git/ref/heads/main') return json({ object: { sha: state.head } });
+    if (method === 'GET' && path.startsWith('/git/commits/')) return json({ tree: { sha: commits.get(path.slice(13))!.tree } });
+    if (method === 'GET' && path.startsWith('/contents/')) {
+      const c = commits.get(u.searchParams.get('ref')!);
+      const text = c && trees.get(c.tree)!.get(path.slice(10));
+      return text == null ? json({}, 404) : json({ sha: sha1(text), encoding: 'base64', content: toBase64(text) });
+    }
+    if (method === 'POST' && path === '/git/trees') {
+      const tree = new Map(trees.get(body.base_tree)!);
+      for (const e of body.tree) {
+        if (e.sha === null) { if (!tree.has(e.path)) return json({}, 422); tree.delete(e.path); } else tree.set(e.path, e.content);
+      }
+      const id = 't' + (trees.size + 100);
+      trees.set(id, tree);
+      return json({ sha: id }, 201);
+    }
+    if (method === 'POST' && path === '/git/commits') {
+      const id = 'c' + (commits.size + 100);
+      commits.set(id, { tree: body.tree, parent: body.parents[0], message: body.message });
+      return json({ sha: id }, 201);
+    }
+    if (method === 'PATCH' && path === '/git/refs/heads/main') {
+      assert.equal(body.force, false, 'the branch is never forced');
+      if (state.beforePatch) { const f = state.beforePatch; state.beforePatch = null; f(); }
+      if (commits.get(body.sha)!.parent !== state.head) return json({ message: 'Update is not a fast forward' }, 422);
+      state.head = body.sha;
+      return json({ object: { sha: body.sha } });
+    }
+    return json({}, 404);
+  };
+  const files = () => Object.fromEntries(trees.get(commits.get(state.head)!.tree)!);
+  return { fetch, state, commits, files, commitTo };
+}
+
+const settings = { ...DEFAULTS, token: 'test-token', root: 'vault' };
+
+test('GitHub: several files written and removed as one commit, read first at the branch\'s own commit', async () => {
+  const gh = fakeGitHub({ 'vault/a.md': 'A\n', 'vault/b.md': 'B\n', 'vault/old.md': 'old\n', 'README.md': 'outside the vault\n' });
+  const src = new GitHubSource(settings, gh.fetch);
+  const res = await src.commit(async (read) => {
+    const a = await read('a.md');
+    assert.deepEqual(a, { text: 'A\n', sha: await blobSha('A\n') });
+    assert.equal(await read('nothing.md'), null);
+    return { message: 'app: one save', writes: [{ path: 'a.md', text: a!.text + 'more\n' }, { path: 'new/c.md', text: 'C é\n' }], removes: ['old.md'] };
+  });
+  assert.deepEqual(gh.files(), { 'vault/a.md': 'A\nmore\n', 'vault/b.md': 'B\n', 'vault/new/c.md': 'C é\n', 'README.md': 'outside the vault\n' });
+  assert.equal(gh.commits.get(gh.state.head)!.message, 'app: one save');
+  assert.equal(gh.commits.get(gh.state.head)!.parent, 'c0');
+  assert.deepEqual(res, { commit: gh.state.head, shas: { 'a.md': await blobSha('A\nmore\n'), 'new/c.md': await blobSha('C é\n') } });
+  assert.deepEqual(gh.state.calls.map((c) => c.split(' ')[0] + ' ' + c.split(' ')[1].split('/').slice(0, 3).join('/')),
+    ['GET /git/ref', 'GET /contents/vault', 'GET /contents/vault', 'GET /git/commits', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs']);
+  // Nothing to change: nothing is sent.
+  const before = gh.state.calls.length;
+  assert.equal(await src.commit(async () => null), null);
+  assert.equal(await src.commit(async () => ({ message: 'x', writes: [] })), null);
+  assert.equal(gh.state.calls.length, before, 'the app remembers where its own save left the branch');
+});
+
+test('GitHub: the next save starts from the app\'s own last save without asking where the branch is', async () => {
+  const gh = fakeGitHub({ 'vault/a.md': 'A\n' });
+  const src = new GitHubSource(settings, gh.fetch);
+  await src.commit(async () => ({ message: 'one', writes: [{ path: 'a.md', text: 'A1\n' }] }));
+  gh.state.calls.length = 0;
+  await src.commit(async (read) => ({ message: 'two', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A2\n' }] }));
+  assert.deepEqual(gh.state.calls, ['GET /contents/vault/a.md', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs/heads/main']);
+  assert.equal(gh.files()['vault/a.md'], 'A1\nA2\n');
+  // The team saves in between: the remembered place is stale, GitHub refuses, and the save is made again on their version.
+  gh.commitTo({ 'vault/a.md': 'TEAM\n', 'vault/t.md': 'theirs\n' }, 'agents: a change');
+  let builds = 0;
+  await src.commit(async (read) => { builds++; return { message: 'three', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A3\n' }] }; });
+  assert.equal(builds, 2);
+  assert.deepEqual(gh.files(), { 'vault/a.md': 'TEAM\nA3\n', 'vault/t.md': 'theirs\n' });
+});
+
+test('GitHub: a save that loses the race is made again on the newer branch, and a real failure is a plain sentence', async () => {
+  const gh = fakeGitHub({ 'vault/Ideas/I-008.md': IDEA });
+  const src = new GitHubSource(settings, gh.fetch);
+  gh.state.beforePatch = () => gh.commitTo({ 'vault/Ideas/I-008.md': IDEA.replace('Body.', 'Body.\n\nThe team added a line.') }, 'agents: a line');
+  const [note] = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
+  const text = gh.files()['vault/Ideas/I-008.md'];
+  assert.match(text, /^status: keep$/m);
+  assert.ok(text.endsWith('The team added a line.\n'));
+  assert.equal(note.sha, await blobSha(text));
+  assert.equal(fromBase64(toBase64(text)), text);
+  const down = new GitHubSource(settings, async () => { throw new TypeError('Failed to fetch'); });
+  const res = await pushAll(down, [choiceAction([decide('Ideas/I-008.md', 'drop')])]);
+  assert.match(res.error!, /Cannot reach GitHub/);
+  assert.deepEqual(res.done, []);
+  assert.deepEqual(res.failed, {}, 'offline is not a failure of the action');
+});
