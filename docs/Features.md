@@ -338,6 +338,22 @@ add a dated line here when you add or change one.
   chapter list is closed. While a scene is open the app reads the vault every 30 seconds (15 while the team is answering)
   and merges a newer version line by line into the page (`src/lib/live.ts`): Kyle's lines win a clash, the other version is
   saved as a copy. The vault's `put-in-page` skill tells any Claude session how to push words there.
+  **Fixed 2026-11-11: this had never worked when the app's copy of the vault was up to date, which is nearly always.**
+  The page marked the version it was told about as seen, then asked whether the version it had just read was seen;
+  the two are the same version, so every line from elsewhere was dropped and showed only when the scene was opened
+  again (the saves themselves always merged, so nothing was lost). The question is now asked first (`takeFresh` in
+  `src/lib/live.ts`, with a test), and a read that comes back while a save is on its way is tried again when the
+  save lands. Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes
+  against a pretend GitHub: a line added to an untouched open page shows, and the app saves nothing because of it; a
+  line that arrives while Kyle is typing shows, every key he typed is there in order and the cursor keeps its place;
+  nothing goes in twice over repeated reads; the same line changed in both places keeps his on the page and saves
+  theirs as one copy; words that waited offline and met a line from elsewhere are saved with it and the line comes
+  into the page, as the message under the heading says.
+  **Also 2026-11-11: words that waited with no connection go up the moment it is back, with the scene still open.**
+  Before, nothing sent an open scene's waiting words until the next key press, the next pause in typing or leaving
+  the page, though the page said "It goes to the vault when you are back online". The page now listens for the
+  connection coming back, with one listener that stays for as long as the page is open (in WebKit a listener that is
+  taken off and put back at each redraw missed the event: the redraw the event causes took it off first).
   Offline sync made safe (Kyle, 2026-10-20: the iPad is the main device; words written offline must reach the vault the
   way Scrivener's do). Every save, including a scene that waited on the device with no connection, merges line by line
   with what changed elsewhere (`saveDraft` uses `merge3`): only lines both sides changed make a "changed elsewhere" copy,
