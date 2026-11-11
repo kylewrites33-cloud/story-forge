@@ -4,8 +4,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { basename, linkName } from './links.ts';
 import { safeTitle } from './scenes.ts';
-import { makeNote } from './vault-index.ts';
-import type { BookEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { BookEntry, FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export const NOTES_FOLDER = 'Notes to the Team';
 /** Who a note goes to when it is for everyone. */
@@ -76,23 +75,14 @@ export function freePath(folder: string, title: string, taken: string[]): string
   }
 }
 
-/** Write a new Note to the Team into the book's folder as Kyle's commit (no Agent trailer). */
-export async function createNote(source: VaultSource, bookFolder: string, n: NewNote, now: Date): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
+/** A new Note to the Team for the book's folder, worked out from the files the vault has. It keeps the file name it was
+ * first shown with (`keep`, a path) unless another note took that name meanwhile. Kyle's commit (no Agent trailer). */
+export function planNote(files: FileEntry[], bookFolder: string, n: NewNote, now: Date, keep = ''): Made {
   const body = n.body.trim();
   if (!body) throw new Error('Write the instruction first.');
   const title = noteTitle(n.title, body);
   if (!title) throw new Error('Give the note a few words of title.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const path = freePath(bookFolder + '/' + NOTES_FOLDER, title, files.map((f) => f.path));
-    const text = noteText({ title, to: n.to, body }, now);
-    try {
-      const sha = await source.write(path, text, '', 'notes: add ' + title + '\n\nA Note to the Team, written in the Sparrow app.');
-      return makeNote(path, sha, text);
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-      throw e;
-    }
-  }
+  const taken = files.map((f) => f.path);
+  const path = keep && !taken.some((p) => p.toLowerCase() === keep.toLowerCase()) ? keep : freePath(bookFolder + '/' + NOTES_FOLDER, title, taken);
+  return { id: path, path, text: noteText({ title, to: n.to, body }, now), message: 'notes: add ' + title + '\n\nA Note to the Team, written in the Sparrow app.' };
 }

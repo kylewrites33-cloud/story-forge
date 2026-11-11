@@ -21,7 +21,7 @@ src/lib/market.ts        Publisher Rocket files: the ones a series has, safe nam
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a new to-do is (planTask: next free ID, path, text)
 src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, what a new one is (planTodo, in the book's Tasks folder)
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes
-src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
+src/lib/jobs.ts          Ask the team: job notes by status, a new job with the next free ID (planJob, for the `job` maker), Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
@@ -73,7 +73,7 @@ src/lib/team.ts          the AI team: agents, skills and who loads them, lessons
 src/ui/Team.tsx          the Team page, an agent's page, Skills and Session history
 src/lib/workflow.ts      the workflow from System/Workflow.md: stages, steps, who does each, Kyle's dated notes
 src/ui/Workflow.tsx      the Workflow page: each stage's table, filters, notes
-src/lib/flow.ts          Workflow mode: steps paired into tasks, where each stands (Check too), the mode per book, results as idea notes, the step job's ask
+src/lib/flow.ts          Workflow mode: steps paired into tasks, where each stands (Check too), the mode per book, results as idea notes (planResult, for the `result` maker), the step job's ask
 src/ui/Flow.tsx          Workflow mode's screens (home, stage, step), the Workflow | Writing switch, the writing screen's Workflow tab, From the workflow on character pages
 src/lib/rooms.ts         the book's six rooms and which pages each holds (Plan's Steps, the Codex's four kinds); the Team room's places
 src/lib/find.ts          Find in the top bar: chapters, scenes, codex names and ideas matching what Kyle types
@@ -103,9 +103,9 @@ src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options ta
 src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
 src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
 src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
-src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, new ones
+src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, a new one (planNote, for the `note` maker)
 src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
-src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, add, edit and rename
+src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, a new one (planRecipe, for the `recipe` maker), edit and rename
 src/ui/Overview.tsx      the Overview page and the six stages
 src/ui/NotesToTeam.tsx   the Notes to the Team screen
 src/ui/Sessions.tsx      the Sessions list and one session
@@ -142,9 +142,9 @@ src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
 src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, or a new note by its maker), Edit (a change kept as what he meant: a board choice, or answers on a chapter's changes)
-src/vault/makers.ts      the makers of new notes, by name (task, todo): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
+src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
 src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied
-src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push
+src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push; what went up but is not in the saved copy on the device yet
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; the old way behind the switch
 src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
 

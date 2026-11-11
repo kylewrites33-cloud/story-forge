@@ -1,3 +1,5 @@
+import { createAction } from '../src/vault/ops.ts';
+import { pushAll } from '../src/vault/push.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -5,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  bookSigns, createResults, currentStage, defaultMode, flowJobAsk, flowResults, flowStages, keptFor, kindForStep, nextIdeaNumber, ownResults, resultText, resultTitle,
+  bookSigns, currentStage, defaultMode, flowJobAsk, flowResults, flowStages, keptFor, kindForStep, nextIdeaNumber, ownResults, resultText, resultTitle,
   splitResults, stageProgress, taskByKey, taskStatuses, targetValue
 } from '../src/lib/flow.ts';
 import { parseSchema } from '../src/lib/schema.ts';
@@ -90,11 +92,16 @@ test('results are saved as idea notes with the next free ID, as Kyle', async () 
   src.files.set(BOOK + '/Ideas/I-004 A.md', 'x');
   src.files.set(BOOK + '/Archive/I-009 B.md', 'x');
   assert.equal(nextIdeaNumber((await src.tree()).files, BOOK), 10);
-  const made = await createResults(src, BOOK, [
-    { step: '18', origin: 'brought-in', text: 'Stubborn mender', target: '[[Mara Quill]]', status: 'inbox' },
-    { step: 'Voice', origin: 'kyle', text: 'Hums hymns when he lies', target: '', status: 'keep' }
-  ], new Date('2026-10-21T12:00:00'));
+  const at = new Date('2026-10-21T12:00:00');
+  const act = createAction('result', [
+    { book: BOOK, r: { step: '18', origin: 'brought-in' as const, text: 'Stubborn mender', target: '[[Mara Quill]]', status: 'inbox' as const }, at: at.toISOString() },
+    { book: BOOK, r: { step: 'Voice', origin: 'kyle' as const, text: 'Hums hymns when he lies', target: '', status: 'keep' as const }, at: at.toISOString() }
+  ], (await src.tree()).files, at);
+  const res = await pushAll(src, [act]);
+  assert.equal(res.error, null);
+  const made = res.saved;
   assert.deepEqual(made.map((n) => n.data.id), ['I-010', 'I-011']);
+  assert.equal(src.commits.length, 1, 'results added together are one save');
   assert.equal(made[0].data.step, '18');
   assert.equal(made[0].data.origin, 'brought-in');
   assert.equal(made[0].data.status, 'inbox');

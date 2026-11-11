@@ -21,8 +21,10 @@ function messageFor(lines: string[]): string {
 /** Is the note found at a new note's own path that same note? Then an earlier try saved it and the answer never
  * reached the device (the connection dropped at the last moment), and adding it again would make it twice. */
 function sameNote(found: string, shown: string): boolean {
-  const a = Frontmatter.parse(found).data || {}, b = Frontmatter.parse(shown).data || {};
-  return ['type', 'id', 'title', 'created'].every((k) => String(a[k]) === String(b[k]));
+  const a = Frontmatter.parse(found), b = Frontmatter.parse(shown);
+  const x = a.data || {}, y = b.data || {};
+  // The same kind, ID, title and day, and the words Kyle wrote still open it (the team may have written under them since).
+  return ['type', 'id', 'title', 'created'].every((k) => String(x[k]) === String(y[k])) && String(a.body || '').trim().startsWith(String(b.body || '').trim());
 }
 
 /** How many notes are read at once before a save. */

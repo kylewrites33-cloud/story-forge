@@ -9,7 +9,7 @@ import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
 import { enqueue, overlay, saveQueue, loadQueue, type Choice } from '../src/lib/write-queue.ts';
 import { editRecord, editText, foldSaved, overlayActions } from '../src/vault/apply.ts';
 import { choiceAction, createAction, marksAction, type Edit } from '../src/vault/ops.ts';
-import { add, choicesOf, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../src/vault/outbox.ts';
+import { add, choicesOf, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
 import { parseChanges } from '../src/lib/changes.ts';
 import { taskNotes } from '../src/lib/tasks.ts';
@@ -403,6 +403,37 @@ test('the outbox keeps a new note across closing the app, and drops one it canno
   assert.deepEqual(loadOutbox('k', s), [a]);
   s.setItem('story-forge.outbox.k', JSON.stringify([a, { id: 'x', at: 'y', ops: [{ kind: 'create', make: 'no-such-maker', payload: {}, id: 'Z-1', path: 'z.md', text: '' }] }]));
   assert.deepEqual(loadOutbox('k', s), [a]);
+});
+
+test('what went up stays on the device until the saved copy holds it, and shows again on an older copy', async () => {
+  const fs2 = new FsSource(DEMO);
+  const schema = parseSchema(demoSchemaText());
+  const snap = await sync(fs2, null);
+  const idea = Object.keys(snap.index.notes).find((p) => snap.index.notes[p].type === 'idea' && snap.index.notes[p].data.status === 'inbox')!;
+  const src = new MemSource();
+  for (const f of (await fs2.tree()).files) if (f.path.startsWith('Tasks/') || f.path === idea) src.files.set(f.path, await fs2.read(f.path));
+  const keep = choiceAction([decide(idea, 'keep')]);
+  const todo = createAction('task', newTask('Order proof copies'), Object.keys(snap.index.notes).map((path) => ({ path, sha: '' })), NOW);
+  const failed = choiceAction([decide('gone.md', 'keep')]);
+  const res = await pushAll(src, [keep, todo]);
+  const s = store();
+  saveLanded('k', landedOf([keep, todo, failed], res.done, res.renames), s);
+  assert.deepEqual(loadLanded('k', s).map((a) => a.id), [keep.id, todo.id]);
+  assert.deepEqual(loadOutbox('k', s), [], 'it is not waiting to go up again');
+  // The app closed before the saved copy was written: the older copy with the list over it shows what the newer one would.
+  const older = overlayActions(snap.index, loadLanded('k', s), schema);
+  const newer = foldSaved(snap.index, res.saved, schema);
+  assert.equal(older.notes[idea].data.status, 'keep');
+  assert.deepEqual(older.notes[idea].data, newer.notes[idea].data);
+  assert.deepEqual(taskNotes(older).map((n) => n.data.title), taskNotes(newer).map((n) => n.data.title));
+  // Over a copy that already holds it, it changes nothing Kyle can see.
+  const twice = overlayActions(newer, loadLanded('k', s), schema);
+  assert.deepEqual(twice.notes[idea].data, newer.notes[idea].data);
+  assert.equal(taskNotes(twice).length, taskNotes(newer).length);
+  // A new note saved under another ID than it was shown with is left to the next sync.
+  assert.deepEqual(landedOf([todo], [todo.id], { [todo.ops[0].path]: 'Tasks/T-999 Other.md' }), []);
+  saveLanded('k', [], s);
+  assert.deepEqual(loadLanded('k', s), []);
 });
 
 // ---- GitHub: one commit through git's own objects ----

@@ -6,7 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { chatJob, conversation, conversations, firstWords, isSceneThread, isThread, nextChatThread } from '../src/lib/chat.ts';
-import { createJob, jobText } from '../src/lib/jobs.ts';
+import { jobText } from '../src/lib/jobs.ts';
+import { createAction } from '../src/vault/ops.ts';
+import { pushAll } from '../src/vault/push.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
@@ -106,8 +108,10 @@ test('a message becomes a chat job with its thread, and goes in as Kyle\'s commi
   assert.deepEqual(p.data, { type: 'job', id: 'J-009', title: 'Is the ferryman too nice?', kind: 'chat', book: BOOK, thread: 'chat-003', status: 'requested', requested_by: 'Kyle', created: '2026-10-18' });
   assert.equal(p.body, '## Ask\nIs the ferryman too nice?\n');
   const src = new MemSource();
-  const made = await createJob(src, chatJob('chat-001', 'Is the ferryman too nice?', BOOK), new Date('2026-10-18T10:00:00'));
-  // createJob makes the title safe for a file name.
+  const at = new Date('2026-10-18T10:00:00');
+  const res = await pushAll(src, [createAction('job', { j: chatJob('chat-001', 'Is the ferryman too nice?', BOOK), at: at.toISOString() }, [], at)]);
+  const made = res.saved[0];
+  // The title is made safe for a file name.
   assert.equal(made.path, 'Jobs/J-001 Is the ferryman too nice.md');
   assert.equal(made.data.thread, 'chat-001');
   assert.doesNotMatch(src.writes[0].message, /Agent:/);

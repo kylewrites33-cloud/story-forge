@@ -60,9 +60,15 @@ export function marksAction(path: string, marks: Record<string, ChangeStatus>, a
   };
 }
 
-/** A new note as one action. Throws a plain sentence when what Kyle typed cannot make a note. */
-export function createAction<K extends MakerName>(name: K, payload: Payloads[K], files: FileEntry[], now: Date = new Date()): Action {
-  const made = make(name, files, payload);
-  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'create', make: name, payload, id: made.id, path: made.path, text: made.text }] };
+/** A new note as one action, or several of one kind added together (workflow results) as one action: one save. Each
+ * takes its ID after the ones before it. Throws a plain sentence when what Kyle typed cannot make a note. */
+export function createAction<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][], files: FileEntry[], now: Date = new Date()): Action {
+  const known = files.slice();
+  const ops = (Array.isArray(payload) ? payload : [payload]).map((p): Op => {
+    const made = make(name, known, p);
+    known.push({ path: made.path, sha: '' });
+    return { kind: 'create', make: name, payload: p, id: made.id, path: made.path, text: made.text };
+  });
+  return { id: newId(now), at: now.toISOString(), ops };
 }
 

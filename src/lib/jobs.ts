@@ -4,8 +4,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
-import { makeNote } from './vault-index.ts';
-import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
   | 'combine' | 'variations' | 'learn-taste' | 'options' | 'forge' | 'workflow-step' | 'revise';
@@ -200,24 +199,17 @@ export function openJobFor(notes: NoteRecord[], kind: string, target: string): N
   }) || null;
 }
 
-/** Write a job note into the vault's Jobs folder as Kyle's commit (no Agent trailer: the request is his). */
-export async function createJob(source: VaultSource, j: NewJob, now: Date): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
+/** A new job note for the vault's Jobs folder, worked out from the files the vault has. It keeps the ID it was first
+ * shown with (`keep`) unless another job took that ID meanwhile. It is Kyle's commit (no Agent trailer: the request is his). */
+export function planJob(files: FileEntry[], j: NewJob, now: Date, keep = ''): Made {
   const title = safeTitle(j.title);
   if (!title) throw new Error('Give the job a title first.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const id = nextJobId(files);
-    const path = 'Jobs/' + id + ' ' + title + '.md';
-    const text = jobText(id, { ...j, title }, now);
-    try {
-      const sha = await source.write(path, text, '', 'jobs: add ' + id + ' ' + title + '\n\nAsked for in the Sparrow app.');
-      return makeNote(path, sha, text);
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-      throw e;
-    }
-  }
+  const taken = keep && files.some((f) => {
+    const m = f.path.startsWith('Jobs/') ? /^J-(\d+)/.exec(f.path.slice(f.path.lastIndexOf('/') + 1)) : null;
+    return Boolean(m) && parseInt(m![1], 10) === idNumber(keep);
+  });
+  const id = keep && !taken ? keep : nextJobId(files);
+  return { id, path: 'Jobs/' + id + ' ' + title + '.md', text: jobText(id, { ...j, title }, now), message: 'jobs: add ' + id + ' ' + title + '\n\nAsked for in the Sparrow app.' };
 }
 
 /** "about $0.42", or '' when the runner has not said. */
