@@ -8,8 +8,8 @@ import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/s
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
-import { createTask, type NewTask } from '../lib/tasks.ts';
-import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
+import type { NewTask } from '../lib/tasks.ts';
+import { bookTodos, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
 import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
@@ -17,14 +17,15 @@ import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts, putDraft, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
-import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
+import { activeBook, makeNote } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { ChapterTitlesPage } from './ChapterTitles.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import type { Choice } from '../lib/write-queue.ts';
-import { overlayActions } from '../vault/apply.ts';
-import { choiceAction, type Action } from '../vault/ops.ts';
-import { add, choicesOf, loadOutbox, saveOutbox, settle } from '../vault/outbox.ts';
+import { foldSaved, overlayActions } from '../vault/apply.ts';
+import type { MakerName, Payloads } from '../vault/makers.ts';
+import { choiceAction, createAction, type Action } from '../vault/ops.ts';
+import { add, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAll } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
@@ -104,12 +105,12 @@ export function App() {
   const [, tick] = useState(0);
   const snapRef = useRef<Snapshot | null>(null);
   snapRef.current = snap;
-  // The outbox: what Kyle has done that the vault does not have yet (src/vault). `queue` is the same as plain choices, for the screens.
+  // The outbox: what Kyle has done that the vault does not have yet (src/vault).
   const [outbox, setOutboxState] = useState<Action[]>(() => loadOutbox(source.key));
   const outboxRef = useRef<Action[]>(outbox);
   const sourceRef = useRef(source);
   sourceRef.current = source;
-  const queue = useMemo<Choice[]>(() => choicesOf(outbox), [outbox]);
+  const schemaRef = useRef<Schema | null>(null);
   const lastOpened = useRef('');
 
   const setOutbox = useCallback((list: Action[]) => {
@@ -124,13 +125,22 @@ export function App() {
 
   useEffect(() => { setOutbox(loadOutbox(source.key)); }, [source, setOutbox]);
 
+  /** Put a new note in the outbox: it shows at once with the ID it will most likely get, and is saved when the
+   * connection allows. Throws a plain sentence when what Kyle typed cannot make a note. */
+  const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K]) => {
+    const cur = snapRef.current;
+    if (!cur) throw new Error('Press Sync first.');
+    // The files the app knows of: the saved copy's notes and the new notes still waiting.
+    const paths = Object.keys(cur.index.notes);
+    outboxRef.current.forEach((a) => a.ops.forEach((op) => { if (op.kind === 'create') paths.push(op.path); }));
+    setOutbox(add(outboxRef.current, createAction(name, payload, paths.map((path) => ({ path, sha: '' })))));
+  }, [setOutbox]);
+
   /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. */
   const foldNotes = useCallback(async (saved: NoteRecord[]) => {
     const cur = snapRef.current;
     if (!saved.length || !cur || cur.key !== source.key) return;
-    const notes = { ...cur.index.notes };
-    saved.forEach((n) => { notes[n.path] = n; });
-    const next = { ...cur, index: resortScenes({ ...cur.index, notes }) };
+    const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current) };
     snapRef.current = next;
     setSnap(next);
     await writeSnapshot(next);
@@ -160,11 +170,11 @@ export function App() {
     const res = await pushAll(source, sent, { legacy: oldSaving() });
     if (sourceRef.current !== source) {
       // Kyle pointed the app at another vault while this was saving: settle this vault's own list where it is kept.
-      saveOutbox(source.key, settle(loadOutbox(source.key), res.done, res.failed));
+      saveOutbox(source.key, settle(loadOutbox(source.key), res.done, res.failed, res.renames));
       return res.error;
     }
     // Only the actions this push handled leave or take a failure; ones Kyle added while it ran wait for the next push.
-    const left = settle(outboxRef.current, res.done, res.failed);
+    const left = settle(outboxRef.current, res.done, res.failed, res.renames);
     setOutbox(left);
     if (res.error) setError(res.error);
     await foldNotes(res.saved);
@@ -303,37 +313,27 @@ export function App() {
     }
   }, [source, runSync]);
 
-  /** Add a to-do to the vault's Tasks folder, then sync so the list shows it. */
+  /** Add a to-do to the vault's Tasks folder. It shows at once and is saved when the connection allows (2026-11-11). */
   const onAddTask = useCallback(async (t: NewTask): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a to-do.';
     try {
-      await createTask(source, t, new Date());
-      await runSync();
+      create('task', { t, at: new Date().toISOString() });
+      runFlush();
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [create, runFlush]);
 
-  /** Add a to-do beside the page: a task note in the book's own Tasks folder, then sync so the panel shows it. */
+  /** Add a to-do beside the page: a task note in the book's own Tasks folder. It shows at once, offline too. */
   const onAddTodo = useCallback(async (bookFolder: string, t: NewTodo): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a to-do.';
     try {
-      const made = await createTodo(source, bookFolder, t, new Date());
-      const now = snapRef.current;
-      if (now && now.key === source.key) {
-        const tasks = (now.index.tasks || []).filter((p) => p !== made.path).concat(made.path).sort();
-        const next = { ...now, index: { ...now.index, notes: { ...now.index.notes, [made.path]: made }, tasks } };
-        snapRef.current = next;
-        setSnap(next);
-        await writeSnapshot(next);
-      }
-      runSync();
+      create('todo', { book: bookFolder, t, at: new Date().toISOString() });
+      runFlush();
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [create, runFlush]);
 
   /** Ask the team for one piece of work: write a job note into the vault's Jobs folder, then sync so the Jobs screen shows it.
    * A job of the same kind and target that the team has not finished yet is reported instead of made twice. */
@@ -677,12 +677,10 @@ export function App() {
     try { return parseSchema(snap.schemaText); } catch { return null; }
   }, [snap]);
 
-  const view = useMemo<VaultIndex | null>(() => (snap ? overlayActions(snap.index, outbox) : null), [snap, outbox]);
-  const waiting = useMemo(() => {
-    const out: Record<string, Choice> = {};
-    queue.forEach((c) => { out[c.path] = c; });
-    return out;
-  }, [queue]);
+  schemaRef.current = schema;
+  const view = useMemo<VaultIndex | null>(() => (snap ? overlayActions(snap.index, outbox, schema) : null), [snap, outbox, schema]);
+  const waiting = useMemo(() => waitingOf(outbox), [outbox]);
+  const waitingN = useMemo(() => waitingCount(outbox), [outbox]);
 
   const onSave = (s: Settings) => setSettings(saveSettings(s));
   const onForget = async () => {
@@ -893,11 +891,11 @@ export function App() {
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
-    queue.length ? (online ? 'Saving ' + (queue.length === 1 ? '1 choice' : queue.length + ' choices') + '.' : (queue.length === 1 ? '1 choice is' : queue.length + ' choices are') + ' saved on this device and go up when you are back online.') : '',
+    waitingN ? (online ? 'Saving ' + (waitingN === 1 ? '1 change' : waitingN + ' changes') + '.' : (waitingN === 1 ? '1 change is saved on this device and goes' : waitingN + ' changes are saved on this device and go') + ' up when you are back online.') : '',
     drafts ? (drafts === 1 ? 'Writing in 1 scene is' : 'Writing in ' + drafts + ' scenes is') + ' saved on this device' + (online ? '. Press to send it to the vault.' : ' and goes up when you are back online.') : ''
   ].filter(Boolean).join(' ');
   const syncLine = syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '. Press to sync again.' : 'Not synced yet.';
-  const chip = syncing ? 'Syncing…' : !online ? 'Offline' : queue.length ? 'Saving ' + queue.length + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
+  const chip = syncing ? 'Syncing…' : !online ? 'Offline' : waitingN ? 'Saving ' + waitingN + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
   const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
     : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
@@ -906,7 +904,7 @@ export function App() {
     team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
   const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
   const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : route.name === 'flow' ? ' · Workflow' : '') : 'Sparrow');
-  const syncGood = Boolean(snap && !syncing && online && !queue.length && !drafts);
+  const syncGood = Boolean(snap && !syncing && online && !waitingN && !drafts);
 
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
   const sideBook = view ? navBook || activeBook(view) : null;
@@ -948,7 +946,7 @@ export function App() {
     <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
       timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLogged={foldNotes} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
-      {(error || notice || (!online && (queue.length > 0 || drafts > 0))) && (
+      {(error || notice || (!online && (waitingN > 0 || drafts > 0))) && (
         <div class="banner" role="status">
           {notice && <p class="notice"><span>{notice}</span> <button type="button" onClick={() => setNotice(null)}>OK</button></p>}
           {!online && waitingText && <p class="waiting">{waitingText}</p>}

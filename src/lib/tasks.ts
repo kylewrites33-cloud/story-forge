@@ -1,11 +1,10 @@
 // The to-do list: task notes from the vault's Tasks folder and each book's Tasks folder, by status, and new to-dos Kyle
-// adds from the app. A status change is an ordinary card edit (the write queue's "edit" choice).
+// adds from the app. A status change is an ordinary card edit; a new to-do is a "task" create in the outbox (src/vault).
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
 import { fullTitle } from './todos.ts';
-import { makeNote } from './vault-index.ts';
-import type { FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export const TASK_GROUPS: { key: string; label: string }[] = [
   { key: 'doing', label: 'Doing' },
@@ -80,24 +79,23 @@ export function taskText(id: string, t: NewTask, now: Date): string {
   return Frontmatter.join(data, '\n' + body + '\n');
 }
 
-/** Add a to-do to the vault's Tasks folder as Kyle's commit. */
-export async function createTask(source: VaultSource, t: NewTask, now: Date): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
+/** Is this task ID already on a file in the vault's Tasks folder? */
+function taskIdTaken(files: FileEntry[], id: string): boolean {
+  const n = idNumber(id);
+  return files.some((f) => {
+    if (!f.path.startsWith('Tasks/')) return false;
+    const m = /^T-(\d+)/.exec(f.path.slice(f.path.lastIndexOf('/') + 1));
+    return Boolean(m) && parseInt(m![1], 10) === n;
+  });
+}
+
+/** A new to-do for the vault's Tasks folder, worked out from the files the vault has. It keeps the ID it was first
+ * shown with (`keep`) unless another note took that ID meanwhile; then it takes the next free one. */
+export function planTask(files: FileEntry[], t: NewTask, now: Date, keep = ''): Made {
   // The note keeps every word Kyle wrote; only the file name is shortened.
   const title = fullTitle(t.title);
   const name = safeTitle(title);
   if (!name) throw new Error('Give the to-do a title first.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const id = nextTaskId(files);
-    const path = 'Tasks/' + id + ' ' + name + '.md';
-    const text = taskText(id, { ...t, title }, now);
-    try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded on the To-do list in the Sparrow app.');
-      return makeNote(path, sha, text);
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-      throw e;
-    }
-  }
+  const id = keep && !taskIdTaken(files, keep) ? keep : nextTaskId(files);
+  return { id, path: 'Tasks/' + id + ' ' + name + '.md', text: taskText(id, { ...t, title }, now), message: 'tasks: add ' + id + ' ' + name + '\n\nAdded on the To-do list in the Sparrow app.' };
 }

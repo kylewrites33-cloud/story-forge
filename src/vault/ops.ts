@@ -3,6 +3,8 @@
 // or not at all. Actions wait in the outbox (outbox.ts), show on every screen at once (apply.ts) and go up when the
 // connection allows (push.ts).
 import type { Choice } from '../lib/write-queue.ts';
+import type { FileEntry } from '../lib/types.ts';
+import { make, type MakerName, type Payloads } from './makers.ts';
 
 /** A change to a note that is already in the vault, kept as what Kyle meant and not as new text, so it can be made
  * again on a newer version of the note if the team or another device changed it meanwhile. */
@@ -12,7 +14,11 @@ export type Edit =
 
 /** One change to one file. */
 export type Op =
-  | { kind: 'edit'; path: string; edit: Edit };
+  | { kind: 'edit'; path: string; edit: Edit }
+  /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
+   * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
+   * if another note took it meanwhile. */
+  | { kind: 'create'; make: MakerName; payload: Payloads[MakerName]; id: string; path: string; text: string };
 
 export interface Action {
   /** Unique on this device. */
@@ -39,3 +45,10 @@ export function choiceAction(choices: Choice[], now: Date = new Date()): Action 
     ops: choices.map((choice) => ({ kind: 'edit' as const, path: choice.path, edit: { type: 'choice' as const, choice } }))
   };
 }
+
+/** A new note as one action. Throws a plain sentence when what Kyle typed cannot make a note. */
+export function createAction<K extends MakerName>(name: K, payload: Payloads[K], files: FileEntry[], now: Date = new Date()): Action {
+  const made = make(name, files, payload);
+  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'create', make: name, payload, id: made.id, path: made.path, text: made.text }] };
+}
+

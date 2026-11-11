@@ -7,10 +7,13 @@ import { parseSchema } from '../src/lib/schema.ts';
 import { DEFAULTS } from '../src/lib/settings.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
 import { enqueue, overlay, saveQueue, loadQueue, type Choice } from '../src/lib/write-queue.ts';
-import { editRecord, editText, overlayActions } from '../src/vault/apply.ts';
-import { choiceAction, type Edit } from '../src/vault/ops.ts';
-import { add, choicesOf, loadOutbox, saveOutbox, settle } from '../src/vault/outbox.ts';
+import { editRecord, editText, foldSaved, overlayActions } from '../src/vault/apply.ts';
+import { choiceAction, createAction, type Edit } from '../src/vault/ops.ts';
+import { add, choicesOf, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
+import { taskNotes } from '../src/lib/tasks.ts';
+import { bookTodos } from '../src/lib/todos.ts';
+import { sync } from '../src/lib/sync.ts';
 import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
 
 const AT = '2026-11-11T15:00:00.000Z';
@@ -135,7 +138,7 @@ test('one action is one save, however many notes it touches', async () => {
   src.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
   src.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
   // The card that named chapter 3 moves to chapter 1; the next card in chapter 3 takes the name on.
-  const saved = await pushAction(src, choiceAction([move(S6, 1.5, 1, 'Frost'), move(S7, 7, 3, 'Ledger')]));
+  const { saved } = await pushAction(src, choiceAction([move(S6, 1.5, 1, 'Frost'), move(S7, 7, 3, 'Ledger')]));
   assert.equal(src.commits.length, 1);
   assert.deepEqual(src.commits[0].paths, [S6, S7]);
   assert.match(src.commits[0].message, /^scenes: move S-006 Thaw Market\n\nSaved together with:\n- scenes: move S-007 Ledger\n/);
@@ -150,7 +153,7 @@ test('if the vault changed while the save was being made, the change is made aga
   const src = new MemSource();
   src.files.set('Ideas/I-008.md', IDEA);
   src.race = () => src.files.set('Ideas/I-008.md', IDEA.replace('Body.', 'Body.\n\nThe team added a line.'));
-  const [note] = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
+  const { saved: [note] } = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
   assert.equal(src.builds, 2, 'planned twice');
   assert.equal(src.commits.length, 1);
   assert.match(src.files.get('Ideas/I-008.md')!, /^status: keep$/m);
@@ -166,7 +169,7 @@ test('two changes to one note in one action build on each other; a change that c
   assert.equal(src.commits.length, 1);
   assert.match(src.files.get(S6)!, /^chapter: 2$/m);
   assert.match(src.files.get(S6)!, /^headline: Rope\.$/m);
-  const [same] = await pushAction(src, choiceAction([edit(S6, { headline: 'Rope.' })]));
+  const { saved: [same] } = await pushAction(src, choiceAction([edit(S6, { headline: 'Rope.' })]));
   assert.equal(src.commits.length, 1, 'nothing new to save');
   assert.equal(same.sha, src.sha(src.files.get(S6)!));
   assert.equal(same.data.headline, 'Rope.');
@@ -192,10 +195,10 @@ test('offline stops the outbox and keeps everything; a missing note lets its cha
   broken.files.set('a.md', IDEA);
   broken.files.set('c.md', IDEA);
   const real = broken.commit.bind(broken);
-  broken.commit = (build) => real((read) => build(async (p) => {
+  broken.commit = (build) => real((head) => build({ ...head, read: async (p) => {
     if (p === 'a.md') throw Object.assign(new Error('GitHub answered 500 while saving a.md. Try again in a minute.'), { status: 500 });
-    return read(p);
-  }));
+    return head.read(p);
+  } }));
   const res = await pushAll(broken, [a, c]);
   assert.deepEqual(res.done, [c.id]);
   assert.match(res.failed[a.id], /500/);
@@ -259,6 +262,147 @@ test('the old way (the switch in Settings) saves the same actions one note at a 
   assert.deepEqual([...fresh.files], [...src.files], 'both ways leave the same notes');
 });
 
+// ---- new notes ----
+
+const TASK = (id: string, title: string) => '---\ntype: task\nid: ' + id + '\ntitle: ' + title + '\nowner: Kyle\nstatus: open\ncreated: 2026-11-01\n---\n\nBody.\n';
+const NOW = new Date('2026-11-11T15:00:00');
+const newTask = (title: string) => ({ t: { title, owner: 'Kyle', due: '', body: '' }, at: NOW.toISOString() });
+
+test('a new to-do shows at once, in the list where its kind goes, before it is saved', async () => {
+  const src = new FsSource(DEMO);
+  const schema = parseSchema(demoSchemaText());
+  const snap = await sync(src, null);
+  const files = Object.keys(snap.index.notes).map((path) => ({ path, sha: '' }));
+  const a = createAction('task', newTask('Email the cover artist: brief'), files, NOW);
+  const b = createAction('todo', { book: BOOK, t: { title: 'Check the lantern', chapter: 2, scene: '' }, at: NOW.toISOString() }, files, NOW);
+  assert.equal(a.ops[0].path, 'Tasks/T-003 Email the cover artist brief.md');
+  assert.equal(b.ops[0].path, BOOK + '/Tasks/T-004 Check the lantern.md');
+  let box = add(add([], a), b);
+  // Ticked done before it has gone up: an ordinary edit, on the note as shown.
+  box = add(box, choiceAction([edit(a.ops[0].path, { status: 'done' })]));
+  const shown = overlayActions(snap.index, box, schema);
+  assert.deepEqual(taskNotes(shown).filter((n) => !n.path.startsWith('Series/')).map((n) => [n.data.id, n.data.status]).slice(-1), [['T-003', 'done']]);
+  assert.equal(shown.notes[a.ops[0].path].data.title, 'Email the cover artist: brief', 'the note keeps every word');
+  const book = shown.books.find((x) => x.folder === BOOK)!;
+  assert.deepEqual(bookTodos(shown, book).map((n) => n.data.id).sort(), ['T-001', 'T-002', 'T-003', 'T-004']);
+  // What a sync learned from the vault's other files is still there, and the saved copy is untouched.
+  const was = snap.index.books.find((x) => x.folder === BOOK)!;
+  assert.deepEqual([book.cover, book.archive, book.drafts, book.rewrite, book.scenes], [was.cover, was.archive, was.drafts, was.rewrite, was.scenes]);
+  assert.equal(shown.team, snap.index.team);
+  assert.equal(snap.index.notes[a.ops[0].path], undefined);
+  assert.equal(waitingCount(box), 3);
+  assert.deepEqual(Object.keys(waitingOf(box)).sort(), [a.ops[0].path, b.ops[0].path].sort());
+  // A second new to-do made while the first still waits takes the next number, not the same one.
+  const more = createAction('task', newTask('Another'), files.concat(box.flatMap((x) => x.ops.filter((o) => o.kind === 'create').map((o) => ({ path: o.path, sha: '' })))), NOW);
+  assert.equal(more.ops[0].path, 'Tasks/T-004 Another.md');
+  assert.throws(() => createAction('task', newTask('  '), files, NOW), /Give the to-do a title first/);
+});
+
+test('a new to-do is saved with the ID it was shown with, and what waited for it goes up in the same save', async () => {
+  const src = new MemSource();
+  src.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+  const a = createAction('task', newTask('Second: with a colon'), (await src.tree()).files, NOW);
+  const res = await pushAll(src, [a, choiceAction([edit(a.ops[0].path, { status: 'doing' })])]);
+  assert.equal(res.error, null);
+  assert.deepEqual(res.renames, {});
+  assert.equal(src.commits.length, 1);
+  assert.deepEqual(src.commits[0].paths, ['Tasks/T-002 Second with a colon.md']);
+  assert.match(src.commits[0].message, /^tasks: add T-002 Second with a colon\n\nSaved together with:\n- tasks: doing T-002 Second: with a colon\n\nAdded on the To-do list in the Sparrow app\.$/);
+  const text = src.files.get('Tasks/T-002 Second with a colon.md')!;
+  assert.match(text, /^id: T-002$/m);
+  assert.match(text, /^status: doing$/m);
+  assert.match(text, /^created: 2026-11-11$/m);
+  assert.deepEqual(res.saved.map((n) => [n.path, n.sha, n.data.status]), [['Tasks/T-002 Second with a colon.md', src.sha(text), 'doing']]);
+});
+
+test('a new to-do whose save landed but whose answer was lost is not added twice', async () => {
+  for (const legacy of [false, true]) {
+    const src = new MemSource();
+    src.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+    const a = createAction('task', newTask('Only once'), (await src.tree()).files, NOW);
+    const tick = choiceAction([edit(a.ops[0].path, { status: 'doing' })]);
+    // The first try lands in the vault; the device never hears, so both actions still wait and go up again.
+    assert.equal((await pushAll(src, [a, tick], { legacy })).error, null);
+    const after = new Map(src.files);
+    const again = await pushAll(src, [a, tick], { legacy });
+    assert.equal(again.error, null);
+    assert.deepEqual(again.done, [a.id, tick.id]);
+    assert.deepEqual(again.renames, {});
+    assert.deepEqual([...src.files], [...after], 'nothing new in the vault' + (legacy ? ' (the old way)' : ''));
+    assert.deepEqual(again.saved.map((n) => [n.path, n.data.status]).slice(-1), [['Tasks/T-002 Only once.md', 'doing']]);
+    // Alone too, and a different to-do with the same number is still a different note.
+    assert.deepEqual((await pushAll(src, [a], { legacy })).renames, {});
+    assert.equal(src.files.size, 2);
+    const other = createAction('task', newTask('Another one'), [{ path: 'Tasks/T-001 First.md', sha: '' }], NOW);
+    assert.equal(other.ops[0].path, 'Tasks/T-002 Another one.md');
+    assert.deepEqual((await pushAll(src, [other], { legacy })).renames, { 'Tasks/T-002 Another one.md': 'Tasks/T-003 Another one.md' });
+    assert.equal(src.files.size, 3);
+  }
+});
+
+test('if another note took the ID while the to-do waited, it takes the next one and what waits for it follows', async () => {
+  const src = new MemSource();
+  src.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+  const a = createAction('task', newTask('Mine'), (await src.tree()).files, NOW);
+  const b = createAction('task', newTask('Mine too'), (await src.tree()).files.concat({ path: a.ops[0].path, sha: '' }), NOW);
+  assert.deepEqual([a.ops[0].path, b.ops[0].path], ['Tasks/T-002 Mine.md', 'Tasks/T-003 Mine too.md']);
+  const tick = choiceAction([edit(a.ops[0].path, { status: 'done' })]);
+  // While Kyle was offline the team filed its own T-002, in a folder under Tasks.
+  src.files.set('Tasks/Team/T-002 Theirs.md', TASK('T-002', 'Theirs'));
+  // Each on its own, as when they are added one after the other online.
+  const first = await pushAll(src, [a]);
+  assert.deepEqual(first.renames, { 'Tasks/T-002 Mine.md': 'Tasks/T-003 Mine.md' });
+  assert.match(src.files.get('Tasks/T-003 Mine.md')!, /^id: T-003$/m);
+  const left = settle([a, b, tick], first.done, first.failed, first.renames);
+  assert.deepEqual(left.map((x) => x.ops[0].path), ['Tasks/T-003 Mine too.md', 'Tasks/T-003 Mine.md']);
+  assert.equal((left[1].ops[0] as { edit: { choice: Choice } }).edit.choice.path, 'Tasks/T-003 Mine.md');
+  const second = await pushAll(src, left);
+  assert.deepEqual(second.renames, { 'Tasks/T-003 Mine too.md': 'Tasks/T-004 Mine too.md' });
+  assert.deepEqual([...src.files.keys()].sort(), ['Tasks/T-001 First.md', 'Tasks/T-003 Mine.md', 'Tasks/T-004 Mine too.md', 'Tasks/Team/T-002 Theirs.md']);
+  assert.match(src.files.get('Tasks/T-003 Mine.md')!, /^status: done$/m);
+  // All three together, as after time offline: the same notes come out of one save.
+  const again = new MemSource();
+  again.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+  again.files.set('Tasks/Team/T-002 Theirs.md', TASK('T-002', 'Theirs'));
+  const all = await pushAll(again, [a, b, tick]);
+  assert.equal(again.commits.length, 1);
+  assert.deepEqual([...again.files], [...src.files].sort((x, y) => [...again.files.keys()].indexOf(x[0]) - [...again.files.keys()].indexOf(y[0])));
+  assert.deepEqual(all.renames, { 'Tasks/T-002 Mine.md': 'Tasks/T-003 Mine.md', 'Tasks/T-003 Mine too.md': 'Tasks/T-004 Mine too.md' });
+  // And the old way gives the same notes.
+  const old = new MemSource();
+  old.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+  old.files.set('Tasks/Team/T-002 Theirs.md', TASK('T-002', 'Theirs'));
+  const legacy = await pushAll(old, [a, b, tick], { legacy: true });
+  assert.deepEqual(legacy.done.length, 3);
+  assert.deepEqual(new Map([...old.files].sort()), new Map([...src.files].sort()));
+});
+
+test('a saved new note is put into the saved copy where its kind goes, so it does not blink away before the next sync', async () => {
+  const fs2 = new FsSource(DEMO);
+  const schema = parseSchema(demoSchemaText());
+  const snap = await sync(fs2, null);
+  const src = new MemSource();
+  for (const f of (await fs2.tree()).files) if (f.path.startsWith('Tasks/')) src.files.set(f.path, await fs2.read(f.path));
+  const a = createAction('task', newTask('Order proof copies'), Object.keys(snap.index.notes).map((path) => ({ path, sha: '' })), NOW);
+  const res = await pushAll(src, [a]);
+  const folded = foldSaved(snap.index, res.saved, schema);
+  assert.ok(taskNotes(folded).some((n) => n.data.title === 'Order proof copies' && n.sha === src.sha(src.files.get(n.path)!)));
+  assert.equal(taskNotes(folded).length, taskNotes(snap.index).length + 1);
+  // A note that was already there is only replaced.
+  const again = foldSaved(folded, res.saved, schema);
+  assert.equal(taskNotes(again).length, taskNotes(folded).length);
+  assert.equal(foldSaved(folded, [], schema), folded);
+});
+
+test('the outbox keeps a new note across closing the app, and drops one it cannot read', () => {
+  const s = store();
+  const a = createAction('task', newTask('Kept'), [], NOW);
+  saveOutbox('k', [a], s);
+  assert.deepEqual(loadOutbox('k', s), [a]);
+  s.setItem('story-forge.outbox.k', JSON.stringify([a, { id: 'x', at: 'y', ops: [{ kind: 'create', make: 'no-such-maker', payload: {}, id: 'Z-1', path: 'z.md', text: '' }] }]));
+  assert.deepEqual(loadOutbox('k', s), [a]);
+});
+
 // ---- GitHub: one commit through git's own objects ----
 
 test('a blob sha worked out in the app is the one git gives', async () => {
@@ -293,6 +437,10 @@ function fakeGitHub(start: Record<string, string>) {
     assert.equal((init!.headers as Record<string, string>).Authorization, 'Bearer test-token');
     if (method === 'GET' && path === '/git/ref/heads/main') return json({ object: { sha: state.head } });
     if (method === 'GET' && path.startsWith('/git/commits/')) return json({ tree: { sha: commits.get(path.slice(13))!.tree } });
+    if (method === 'GET' && path.startsWith('/git/trees/')) {
+      assert.equal(u.searchParams.get('recursive'), '1');
+      return json({ truncated: false, tree: [...trees.get(path.slice(11))!].map(([p, t]) => ({ path: p, type: 'blob', sha: sha1(t) })) });
+    }
     if (method === 'GET' && path.startsWith('/contents/')) {
       const c = commits.get(u.searchParams.get('ref')!);
       const text = c && trees.get(c.tree)!.get(path.slice(10));
@@ -330,7 +478,8 @@ const settings = { ...DEFAULTS, token: 'test-token', root: 'vault' };
 test('GitHub: several files written and removed as one commit, read first at the branch\'s own commit', async () => {
   const gh = fakeGitHub({ 'vault/a.md': 'A\n', 'vault/b.md': 'B\n', 'vault/old.md': 'old\n', 'README.md': 'outside the vault\n' });
   const src = new GitHubSource(settings, gh.fetch);
-  const res = await src.commit(async (read) => {
+  const res = await src.commit(async ({ read, files }) => {
+    assert.deepEqual((await files()).map((f) => f.path).sort(), ['a.md', 'b.md', 'old.md'], 'the vault\'s files, without what sits outside its folder');
     const a = await read('a.md');
     assert.deepEqual(a, { text: 'A\n', sha: await blobSha('A\n') });
     assert.equal(await read('nothing.md'), null);
@@ -341,7 +490,7 @@ test('GitHub: several files written and removed as one commit, read first at the
   assert.equal(gh.commits.get(gh.state.head)!.parent, 'c0');
   assert.deepEqual(res, { commit: gh.state.head, shas: { 'a.md': await blobSha('A\nmore\n'), 'new/c.md': await blobSha('C é\n') } });
   assert.deepEqual(gh.state.calls.map((c) => c.split(' ')[0] + ' ' + c.split(' ')[1].split('/').slice(0, 3).join('/')),
-    ['GET /git/ref', 'GET /contents/vault', 'GET /contents/vault', 'GET /git/commits', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs']);
+    ['GET /git/ref', 'GET /git/commits', 'GET /git/trees', 'GET /contents/vault', 'GET /contents/vault', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs']);
   // Nothing to change: nothing is sent.
   const before = gh.state.calls.length;
   assert.equal(await src.commit(async () => null), null);
@@ -354,13 +503,13 @@ test('GitHub: the next save starts from the app\'s own last save without asking 
   const src = new GitHubSource(settings, gh.fetch);
   await src.commit(async () => ({ message: 'one', writes: [{ path: 'a.md', text: 'A1\n' }] }));
   gh.state.calls.length = 0;
-  await src.commit(async (read) => ({ message: 'two', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A2\n' }] }));
+  await src.commit(async ({ read }) => ({ message: 'two', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A2\n' }] }));
   assert.deepEqual(gh.state.calls, ['GET /contents/vault/a.md', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs/heads/main']);
   assert.equal(gh.files()['vault/a.md'], 'A1\nA2\n');
   // The team saves in between: the remembered place is stale, GitHub refuses, and the save is made again on their version.
   gh.commitTo({ 'vault/a.md': 'TEAM\n', 'vault/t.md': 'theirs\n' }, 'agents: a change');
   let builds = 0;
-  await src.commit(async (read) => { builds++; return { message: 'three', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A3\n' }] }; });
+  await src.commit(async ({ read }) => { builds++; return { message: 'three', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'A3\n' }] }; });
   assert.equal(builds, 2);
   assert.deepEqual(gh.files(), { 'vault/a.md': 'TEAM\nA3\n', 'vault/t.md': 'theirs\n' });
 });
@@ -369,7 +518,7 @@ test('GitHub: a save that loses the race is made again on the newer branch, and 
   const gh = fakeGitHub({ 'vault/Ideas/I-008.md': IDEA });
   const src = new GitHubSource(settings, gh.fetch);
   gh.state.beforePatch = () => gh.commitTo({ 'vault/Ideas/I-008.md': IDEA.replace('Body.', 'Body.\n\nThe team added a line.') }, 'agents: a line');
-  const [note] = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
+  const { saved: [note] } = await pushAction(src, choiceAction([decide('Ideas/I-008.md', 'keep', 'Matches my breaks.')]));
   const text = gh.files()['vault/Ideas/I-008.md'];
   assert.match(text, /^status: keep$/m);
   assert.ok(text.endsWith('The team added a line.\n'));

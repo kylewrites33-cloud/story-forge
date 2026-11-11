@@ -1170,3 +1170,30 @@ first piece. The code is `src/vault/`.
   demo vault and a pretend GitHub: keep, three quick choices, a save the team beat to the branch, GitHub out of reach
   with the app closed and opened, the old queue moving over, and the switch.
 
+## The one saving system, step 1: new to-dos (2026-11-11)
+
+The second piece. A new to-do, from Add a to-do on the To-do page or from the box beside the writing page, now goes
+through the outbox like a board choice. Nothing on either screen changed but this:
+
+- **It works offline.** Before, adding a to-do needed the connection ("Connect to the internet to add a to-do.") and
+  waited for GitHub before it showed. Now it shows at once, with "Saving" on its card, waits on the device with
+  everything else, and goes up when the connection allows. It can be started or ticked off while it waits; the tick
+  goes up in the same save as the to-do.
+- **Its number.** The to-do shows with the next free number (T-NNN) the device knows of. At the save the number is
+  checked against the vault as it is at that moment; if the team or another device took it meanwhile, the to-do takes
+  the next one, and anything still waiting for it follows. The note is the same one the old code wrote, in the same
+  folder (`Tasks/`, or the book's own `Tasks/` with `chapter` and `scene`), with the same line in the vault's history
+  and no Agent trailer.
+- **Never twice.** If a save lands in the vault but its answer never reaches the device (the connection drops at the
+  last moment), the next try finds the note already there, by its path, ID, title and date, and adds nothing.
+- **How it is built.** A new note is an op that names its maker (`src/vault/makers.ts`: `task` and `todo` so far) and
+  carries what Kyle typed. The maker runs when he adds it, for the note on screen, and again at the save on the vault's
+  own file list. Other things the app adds (asks to the team, chat, chapters, recipes, notes) move onto makers in later
+  pieces and still need the connection until then.
+- The line under the Sync button now counts changes, not choices ("2 changes are saved on this device and go up when
+  you are back online.").
+- The old way (Settings, Saving) adds the note with the old single-file call, after reading the vault's file list.
+- Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
+  demo vault and a pretend GitHub: add online, add with GitHub out of reach and the app closed and opened, start or
+  tick while it waits, the team taking the number meanwhile, the Map and the List, the box beside the page, the old way.
+

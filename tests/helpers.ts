@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CommitPlan, CommitResult, FileEntry, ReadAtHead, VaultSource } from '../src/lib/types.ts';
+import type { CommitPlan, CommitResult, FileEntry, Head, VaultSource } from '../src/lib/types.ts';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DEMO = path.join(ROOT, 'demo-vault');
@@ -85,16 +85,19 @@ export class MemSource implements VaultSource {
   }
   /** Every save as one step, the way GitHubSource.commit does it: if the vault moved since the read, plan again. */
   commits: { message: string; paths: string[] }[] = [];
-  async commit(build: (read: ReadAtHead) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
+  async commit(build: (head: Head) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
     for (let attempt = 0; ; attempt++) {
       if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
       const at = this.head;
       const seen = new Map(this.files);
       this.builds++;
-      const plan = await build(async (p) => {
-        if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
-        const t = seen.get(p);
-        return t === undefined ? null : { text: t, sha: this.sha(t) };
+      const plan = await build({
+        read: async (p) => {
+          if (this.offline) throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 });
+          const t = seen.get(p);
+          return t === undefined ? null : { text: t, sha: this.sha(t) };
+        },
+        files: async () => [...seen].map(([p, t]) => ({ path: p, sha: this.sha(t) }))
       });
       const removes = (plan && plan.removes) || [];
       if (!plan || (!plan.writes.length && !removes.length)) return null;

@@ -1,5 +1,5 @@
 // Reads the vault through the GitHub REST API: one call for the whole file tree, then one call per changed file.
-import type { CommitPlan, CommitResult, FileEntry, ReadAtHead, SaveEntry, VaultSource } from './types.ts';
+import type { CommitPlan, CommitResult, FileEntry, Head, SaveEntry, VaultSource } from './types.ts';
 import type { Settings } from './settings.ts';
 
 const API = 'https://api.github.com';
@@ -109,7 +109,12 @@ export class GitHubSource implements VaultSource {
 
   /** Every file under the vault root on the branch, with its blob sha. */
   async tree(): Promise<{ files: FileEntry[]; truncated: boolean }> {
-    const res = await this.get(this.repoUrl('/git/trees/' + encodeURIComponent(this.s.branch) + '?recursive=1'), 'the branch "' + this.s.branch + '"', undefined, true);
+    return this.treeAt(encodeURIComponent(this.s.branch), true);
+  }
+
+  /** Every file under the vault root in one tree (a branch name, or a tree's sha, which never changes). */
+  private async treeAt(tree: string, fresh: boolean): Promise<{ files: FileEntry[]; truncated: boolean }> {
+    const res = await this.get(this.repoUrl('/git/trees/' + tree + '?recursive=1'), 'the branch "' + this.s.branch + '"', undefined, fresh);
     const body = (await res.json()) as { tree?: { path: string; type: string; sha: string }[]; truncated?: boolean };
     const prefix = this.s.root ? this.s.root + '/' : '';
     const files: FileEntry[] = [];
@@ -171,7 +176,7 @@ export class GitHubSource implements VaultSource {
 
   /** One save of any number of files as one commit, all or nothing: read at the branch's commit, build a tree on it, commit,
    * and move the branch (never forced). If the branch moved meanwhile, read and build again on the newer commit. */
-  async commit(build: (read: ReadAtHead) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
+  async commit(build: (head: Head) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
     const prefix = this.s.root ? this.s.root + '/' : '';
     const branch = this.s.branch.split('/').map(encodeURIComponent).join('/');
     const what = 'the branch "' + this.s.branch + '"';
@@ -185,7 +190,11 @@ export class GitHubSource implements VaultSource {
         parent = head.object.sha;
         base = '';
       }
-      const read: ReadAtHead = async (path) => {
+      const baseTree = async (): Promise<string> => {
+        if (!base) base = ((await (await this.get(this.repoUrl('/git/commits/' + parent), what)).json()) as { tree: { sha: string } }).tree.sha;
+        return base;
+      };
+      const read: Head['read'] = async (path) => {
         try {
           const res = await this.get(this.contentsUrl(path) + '?ref=' + parent, path);
           const body = (await res.json()) as { sha?: string; content?: string; encoding?: string };
@@ -198,13 +207,13 @@ export class GitHubSource implements VaultSource {
           throw e;
         }
       };
-      const plan = await build(read);
+      const plan = await build({ read, files: async () => (await this.treeAt(await baseTree(), false)).files });
       const removes = (plan && plan.removes) || [];
       if (!plan || (!plan.writes.length && !removes.length)) {
         if (hint) this.last = hint;
         return null;
       }
-      if (!base) base = ((await (await this.get(this.repoUrl('/git/commits/' + parent), what)).json()) as { tree: { sha: string } }).tree.sha;
+      await baseTree();
       const entries = plan.writes.map((f) => ({ path: prefix + f.path, mode: '100644', type: 'blob', content: f.text } as Record<string, unknown>))
         .concat(removes.map((p) => ({ path: prefix + p, mode: '100644', type: 'blob', sha: null })));
       const tree = (await this.send('POST', this.repoUrl('/git/trees'), { base_tree: base, tree: entries }, 'the save')) as { sha: string };

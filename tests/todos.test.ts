@@ -7,7 +7,9 @@ import path from 'node:path';
 import { jobAsk, defaultJobTitle, jobLabel } from '../src/lib/jobs.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
-import { bookTodos, chapterTodos, createTodo, isBookTodo, isOpen, nextBookTaskId, todoPlace, todoText } from '../src/lib/todos.ts';
+import { bookTodos, chapterTodos, isBookTodo, isOpen, nextBookTaskId, todoPlace, todoText } from '../src/lib/todos.ts';
+import { createAction } from '../src/vault/ops.ts';
+import { pushAction } from '../src/vault/push.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
 
@@ -33,7 +35,9 @@ test('the demo book has to-dos, apart from the studio ones', async () => {
 test('a to-do added beside the page goes into the book\'s Tasks folder', async () => {
   const src = new MemSource();
   src.files.set(BOOK + '/Tasks/T-004 Old.md', '---\ntype: task\nid: T-004\ntitle: Old\nstatus: open\n---\n');
-  const n = await createTodo(src, BOOK, { title: 'Mara: tin or brass lantern?', chapter: 1, scene: 'S-001' }, new Date('2026-10-18T09:00:00'));
+  const files = (await src.tree()).files;
+  const act = createAction('todo', { book: BOOK, t: { title: 'Mara: tin or brass lantern?', chapter: 1, scene: 'S-001' }, at: new Date('2026-10-18T09:00:00').toISOString() }, files);
+  const n = (await pushAction(src, act)).saved[0];
   assert.equal(n.path, BOOK + '/Tasks/T-005 Mara tin or brass lantern.md');
   assert.equal(n.data.id, 'T-005');
   assert.equal(n.data.chapter, 1);
@@ -48,7 +52,7 @@ test('a to-do added beside the page goes into the book\'s Tasks folder', async (
 test('a long to-do keeps every word; only its file name is shortened', async () => {
   const src = new MemSource();
   const long = 'find a way to communicate one more tension point of reed and poppys relationship here. make it a time for reed\nto clarify hes not intersted in poppy. first signal that grey may have feelings for her?';
-  const n = await createTodo(src, BOOK, { title: long, chapter: 1, scene: '' }, new Date('2026-10-20T09:00:00'));
+  const n = (await pushAction(src, createAction('todo', { book: BOOK, t: { title: long, chapter: 1, scene: '' }, at: new Date('2026-10-20T09:00:00').toISOString() }, []))).saved[0];
   assert.equal(n.data.title, long.replace('\n', ' '));
   const name = n.path.slice(n.path.lastIndexOf('/') + 1);
   assert.ok(name.length <= 'T-001 '.length + 90 + '.md'.length);
