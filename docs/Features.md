@@ -1120,3 +1120,14 @@ team"), "The team sees you are on …" under the team column's heading on other 
 short line now sits in the empty list instead), "Tick one off when it is fixed" after the to-do count, and the score key
 under the Check score. Options with nothing waiting says one short line, "No options yet. Pick some words and press
 Options in the tool row." The changes note's summary is still in the note itself (Open the changes note).
+
+## Typing stays quick with the Rewrite tab open (2026-11-11)
+
+Kyle, 2026-11-11: "Typing in Sparrow is suddenly real slow." With the Rewrite tab open, every key on the page lined the
+whole chapter up with the Writer's again (every paragraph of his against every one of the Writer's) and worked out the
+grey and dark words of every box in the column. In a long chapter that was about a third of a second a key on WebKit,
+the iPad's engine. Now each paragraph's comparison is kept, so a key compares only the paragraph being typed in; each
+box works out its words only when its own paragraph changes; and the column no longer measures the page at every key
+(it still follows a tap, a Bring over and a move to another paragraph). Measured in WebKitGTK on a 6,300-word chapter:
+354 ms a key before, 48 ms after (29 ms with the Rewrite tab closed).
+

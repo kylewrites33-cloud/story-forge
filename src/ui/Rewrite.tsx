@@ -49,7 +49,9 @@ function saveEdits(key: string, edits: Record<number, string>) {
 function RewriteBox({ was, words, onInput, onFocus, onBlur }: { was?: string; words: string; onInput: (w: string) => void; onFocus: (top: number) => void; onBlur: () => void }) {
   const back = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
-  const parts = was == null ? [{ kind: 'ins', text: words }] : wordDiff(was, words).filter((d) => d.kind !== 'del');
+  // Worked out again only when this paragraph changes: every box doing it at every key Kyle typed on the page made
+  // typing slow in a long chapter (Kyle, 2026-11-11).
+  const parts = useMemo(() => (was == null ? [{ kind: 'ins', text: words }] : wordDiff(was, words).filter((d) => d.kind !== 'del')), [was, words]);
   // The box grows with its words, so the whole paragraph shows and the column scrolls, never the box.
   useEffect(() => { const el = box.current; if (!el) return; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }, [words]);
   return (
@@ -223,11 +225,23 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     return rows.findIndex((r) => r.mine != null && r.mine <= i && i <= (r.mineEnd ?? r.mine));
   }, [spot, text, rows]);
   const list = useRef<HTMLDivElement>(null);
+  /** Set when this column has just put words on the page (a Bring over, a paragraph taken out). */
+  const putAt = useRef(false);
   // Kyle's cursor moved (a click, a Bring over): its row comes level with his paragraph on the page (Kyle, 2026-11-10,
   // a picture of a box far below its paragraph after a Bring over: "Note how low the right side line is after
   // submission"). Measured a frame later, once the page has settled. When the page cannot say where the paragraph is,
   // a row out of sight comes to the middle of the column as before.
+  // While Kyle types, the cursor moves at every key but his paragraph stays where it is, so the column is left alone:
+  // measuring the page at every key made typing slow on the iPad (Kyle, 2026-11-11: "Typing in Sparrow is suddenly real
+  // slow"). It still follows a Bring over, a tap and a move to another paragraph.
+  const typedAt = useRef(0), lastCur = useRef(-1);
+  useEffect(() => { typedAt.current = Date.now(); }, [text]);
   useEffect(() => {
+    const moved = cur !== lastCur.current;
+    lastCur.current = cur;
+    const jumped = putAt.current;
+    putAt.current = false;
+    if (!moved && !jumped && Date.now() - typedAt.current < 600) return;
     if (cur < 0 || !list.current) return;
     const frame = requestAnimationFrame(() => {
       if (!list.current) return;
@@ -329,10 +343,11 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     const r = bringOver(f.text, f.mine, f.rows, at, words);
     const box = list.current ? list.current.querySelector<HTMLElement>('[data-row="' + index + '"]') : null;
     const level = box ? box.getBoundingClientRect().top : undefined;
-    if (row.mine != null) { const p = span(f.mine, row)!; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end, level }); return; }
+    if (row.mine != null) { const p = span(f.mine, row)!; putAt.current = true; onPut({ text: r.text, at: p.at, end: p.end, words, to: r.at, toEnd: r.end, level }); return; }
     // A paragraph put in: the old page's characters it replaces are none, at the spot where it now begins.
     const lead = r.at === 0 ? words + '\n\n' : '\n\n' + words;
     const from = r.at === 0 ? 0 : r.at - 2;
+    putAt.current = true;
     onPut({ text: r.text, at: from, end: from, words: lead, to: r.at, toEnd: r.end, level });
   };
   const cut = (index: number) => {
@@ -347,6 +362,7 @@ function RewriteScene({ source, section, hideSame, named }: { source: VaultSourc
     // Take the paragraph and the blank line before it (or after it, at the start).
     const at = p.at > 0 ? f.text.slice(0, p.at).replace(/\s+$/, '').length : 0;
     const end = p.at > 0 ? p.end : Math.min(f.text.length, p.end + (f.text.slice(p.end).match(/^\s*/) || [''])[0].length);
+    putAt.current = true;
     onPut({ text: next, at, end, words: '', to: at, toEnd: at });
   };
   /** Where a row's words of Kyle's sit on the page this moment. */
