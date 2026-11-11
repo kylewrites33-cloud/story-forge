@@ -41,7 +41,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
   register: (path: string, api: SectionApi | null) => void;
   marks?: SectionMarks | null;
 }) {
-  const canSave = Boolean(source.readFresh && source.write);
+  const canSave = Boolean(source.readFresh && source.commit);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
   const ref = useRef(draft);
   const [error, setError] = useState<string | null>(null);

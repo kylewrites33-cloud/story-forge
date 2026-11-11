@@ -4,7 +4,6 @@
 // again makes Draft 2's copies and starts Draft 3. The vault tool and the index skip the Drafts folder, so the copies'
 // scene IDs never clash with the real scenes; the app reads them only to show a saved draft or export it.
 import { Frontmatter } from './frontmatter.js';
-import { bodyWords } from './drafts.ts';
 import type { FileEntry, NoteRecord, VaultSource } from './types.ts';
 
 export const DRAFTS_FOLDER = 'Drafts';
@@ -54,30 +53,6 @@ export function draftNoteText(number: number, scenes: number, words: number, now
   if (note.trim()) data.note = note.trim();
   const day = now.toISOString().slice(0, 10);
   return Frontmatter.join(data, 'Draft ' + number + ' of the book as it stood on ' + day + ': ' + scenes + ' scenes, ' + words.toLocaleString('en-US') + ' words. The copies are in the folder `Draft ' + number + '/` beside this note and are never changed.\n');
-}
-
-/** Copy every scene of the book into `Drafts/Draft N/` and write the Draft N note, as one save where the vault allows it.
- * `scenes` are the book's scene notes as last saved. Returns the new draft's number. */
-export async function saveBookDraft(source: VaultSource, bookFolder: string, scenes: NoteRecord[], now: Date, note = ''): Promise<{ number: number; scenes: number; words: number }> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  if (!scenes.length) throw new Error('This book has no scenes yet, so there is no draft to save.');
-  const { files } = await source.tree();
-  const number = workingNumber(savedDrafts(files, bookFolder));
-  const dir = bookFolder + '/' + DRAFTS_FOLDER + '/Draft ' + number;
-  const shas = new Map(files.map((f) => [f.path, f.sha]));
-  const out: { path: string; text: string }[] = [];
-  let words = 0;
-  for (const s of scenes) {
-    const sha = shas.get(s.path) || s.sha;
-    const text = await source.read(s.path, sha);
-    out.push({ path: dir + '/' + fileName(s.path), text });
-    words += bodyWords(s.body);
-  }
-  out.push({ path: bookFolder + '/' + DRAFTS_FOLDER + '/Draft ' + number + '.md', text: draftNoteText(number, scenes.length, words, now, note) });
-  const message = 'drafts: save Draft ' + number + ' of ' + fileName(bookFolder) + ' (' + scenes.length + ' scenes)\n\nSaved in the Sparrow app; the scene files are now Draft ' + (number + 1) + '.';
-  if (source.writeMany) await source.writeMany(out, message);
-  else for (const f of out) await source.write(f.path, f.text, '', message);
-  return { number, scenes: scenes.length, words };
 }
 
 /** A saved draft's scene copies as notes, for export, in the order of `scenes` (the book now) with copies of scenes

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { beatStart, parseBeats } from '../lib/beats.ts';
 import {
-  bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, splitLead, withBody, type Draft,
+  bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, splitLead, type Draft,
   type SnapshotEntry
 } from '../lib/drafts.ts';
 import { saveDraft, saveSnapshot } from '../vault/words.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
-import { archivedWhy, restoreArchived } from '../lib/scenes.ts';
+import { archivedWhy } from '../lib/scenes.ts';
 import { formatValue, isEmptyValue, label as fieldLabel, sceneHeader } from '../lib/format.ts';
 import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
 import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
@@ -22,7 +22,7 @@ import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.t
 import { addToScrap, planHead, planPath, scrapHead, scrapPath } from '../lib/plans.ts';
 import { isOpen, type NewTodo } from '../lib/todos.ts';
 import type { Decision } from '../lib/ideas.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 
 type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -237,43 +237,22 @@ export function MarksPanel({ text, onGo }: { text: string; onGo: (start: number,
 }
 
 /** The book's Braindump beside the page: loose notes, research and reminders, saved to Braindump.md in the book's folder. */
-export function NotesPanel({ source, bookFolder, note, canSave, onChanged, onWords }: {
-  source: VaultSource; bookFolder: string | null; note: NoteRecord | null; canSave: boolean; onChanged: () => Promise<void>;
+export function NotesPanel({ bookFolder, note, canSave, onWords }: {
+  bookFolder: string | null; note: NoteRecord | null; canSave: boolean;
   /** The one saving system: the words as Kyle opened them and as they are now. They show at once and wait with
-   * everything else, so saving needs no connection. Without it, the old way: straight to the vault. */
+   * everything else, so saving needs no connection. A scene outside a book has none. */
   onWords?: (was: string, body: string) => void;
 }) {
   const [text, setText] = useState(note ? note.body.replace(/^\n/, '') : '');
   // The words as Kyle opened them (or last saved them here): what changed elsewhere since is merged in when they save.
   const opened = useRef(note ? note.body : '');
-  const [busy, setBusy] = useState(false);
-  const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
   const changedText = text.trim() !== (note ? note.body.trim() : '');
-  if (!bookFolder) return <div class="writer-panel"><p class="hint">Notes belong to a book; this scene is not in one.</p></div>;
-  const save = async () => {
-    if (onWords) {
-      onWords(opened.current, text);
-      opened.current = text;
-      setSaid({ error: false, text: navigator.onLine ? 'Saved in the book\'s Braindump note.' : 'Kept on this device. It goes to the book\'s Braindump note when you are connected.' });
-      return;
-    }
-    if (!source.write || !source.readFresh) return;
-    if (!navigator.onLine) { setSaid({ error: true, text: 'Connect to the internet to save your notes.' }); return; }
-    setBusy(true);
-    setSaid(null);
-    try {
-      const path = note ? note.path : bookFolder + '/Braindump.md';
-      let sha = '', base = Frontmatter.join({ type: 'braindump' }, '\n');
-      try { const f = await source.readFresh(path); sha = f.sha; base = f.text; } catch (e) { if ((e as { status?: number }).status !== 404 && !/has no/.test((e as Error).message)) throw e; }
-      const next = withBody(base, '\n' + text.replace(/^\n+/, '').replace(/\s*$/, '\n'));
-      await source.write(path, next, sha, 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.');
-      await onChanged();
-      setSaid({ error: false, text: 'Saved in the book\'s Braindump note.' });
-    } catch (e) {
-      setSaid({ error: true, text: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
+  if (!bookFolder || !onWords) return <div class="writer-panel"><p class="hint">Notes belong to a book; this scene is not in one.</p></div>;
+  const save = () => {
+    onWords(opened.current, text);
+    opened.current = text;
+    setSaid(navigator.onLine ? 'Saved in the book\'s Braindump note.' : 'Kept on this device. It goes to the book\'s Braindump note when you are connected.');
   };
   return (
     <div class="writer-panel">
@@ -281,8 +260,8 @@ export function NotesPanel({ source, bookFolder, note, canSave, onChanged, onWor
         Notes for this book: research, reminders, loose ideas. They stay beside the page while you write.
         <textarea class="notes-box" rows={14} value={text} onInput={(e) => setText((e.currentTarget as HTMLTextAreaElement).value)} placeholder="Anything you want to keep in view" />
       </label>
-      {canSave && <div class="buttons"><button type="button" class="primary" disabled={busy || !changedText} onClick={save}>{busy ? 'Saving…' : 'Save notes'}</button></div>}
-      {said && <p class={said.error ? 'error' : 'ok'}>{said.text}</p>}
+      {canSave && <div class="buttons"><button type="button" class="primary" disabled={!changedText} onClick={save}>Save notes</button></div>}
+      {said && <p class="ok">{said}</p>}
       <p class="hint">Saved in the book's Braindump note, which the team reads too.</p>
     </div>
   );
@@ -341,10 +320,10 @@ function HistoryList({ source, note, body, canSave, keep, onUse }: {
 }
 
 /** Joined or removed scenes in the book's Archive folder, with Restore. */
-export function ArchiveList({ source, files, bookFolder, canSave, onChanged, onRestore }: {
-  source: VaultSource; files: FileEntry[]; bookFolder: string; canSave: boolean; onChanged: () => Promise<void>;
-  /** The one saving system: the scene is in Scenes again and out of the Archive in one save. Without it, the old way. */
-  onRestore?: (path: string) => Promise<void>;
+export function ArchiveList({ source, files, canSave, onChanged, onRestore }: {
+  source: VaultSource; files: FileEntry[]; canSave: boolean; onChanged: () => Promise<void>;
+  /** The one saving system: the scene is in Scenes again and out of the Archive in one save. */
+  onRestore: (path: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [sure, setSure] = useState<{ file: FileEntry; why: string } | null>(null);
@@ -359,7 +338,7 @@ export function ArchiveList({ source, files, bookFolder, canSave, onChanged, onR
     if (!sure) return;
     if (!navigator.onLine) { setError('Connect to the internet to restore a scene.'); return; }
     setBusy(true);
-    try { if (onRestore) await onRestore(sure.file.path); else await restoreArchived(source, sure.file, bookFolder); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { await onRestore(sure.file.path); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   return (
     <div class="side-archive">

@@ -9,21 +9,20 @@ src/lib/vault-index.ts   which files to read, parse them, build series/books/sce
 src/lib/board.ts         Chapter Grid grouping
 src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make; reasons, stars, idea filters
 src/lib/boards.ts        Story Juice and Market boards: which notes, grouped and ordered by the schema; the cast with book deltas
-src/lib/write-queue.ts   a board choice (Choice) and what it changes; the old queue and the old one-note-at-a-time save, kept until Settings' The old way goes
-src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors; commit (one save of many files through git's own objects), blob shas
-src/lib/demo-source.ts   the bundled demo vault as a source
+src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors; commit, the one way the app changes the vault (one save of any number of files through git's own objects); blob shas
+src/lib/demo-source.ts   the bundled demo vault as a source; its saves (commit) live in memory until the page reloads
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
 src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see CLAUDE.md)
 src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML that keeps every character
-src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes; how a draft lands on the note the vault has (draftOnto) and a copy's name and text (planSnapshot), for the saving system; words that follow a new note saved under another name (moveDrafts)
-src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
+src/lib/drafts.ts        the writing screen's drafts: kept on the device as Kyle types, word counts, the copies a note has; how a draft lands on the note the vault has (draftOnto) and a copy's name and text (planSnapshot), for the saving system; drafts finished offline handed to it when the connection is back (flushDrafts); words that follow a new note saved under another name (moveDrafts)
+src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, a file from the device ready to save (rocketFile)
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a new to-do is (planTask: next free ID, path, text)
 src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, what a new one is (planTodo, in the book's Tasks folder)
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes, and what is due from the two meters for the saving system to carry (takeTypingCounts)
 src/lib/jobs.ts          Ask the team: job notes by status, a new job with the next free ID (planJob, for the `job` maker), Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
-src/lib/scenes.ts        new scenes (planScene, for the `scene` maker), split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
+src/lib/scenes.ts        new scenes (planScene, for the `scene` maker), split and join: next free ID, order between neighbours, the text and place of an archived scene, the note to the team after a join; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
 src/lib/books.ts         new series and books (planSeries and planBook are their makers' plans), manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
@@ -32,9 +31,9 @@ src/lib/bookstages.ts    the Overview's six stages (market research to publishin
 src/lib/stagetimes.ts    each stage's start and end days on the book note, how long each took, and the estimated publish date
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/search.ts        the Chapter Grid search: chapter and scene numbers, chapter titles, codex names, near misses, best first
-src/lib/covers.ts        book covers: keep the full-size picture in Cover/, shrink on the device, save as Cover.jpg, keep on the device by blob sha
+src/lib/covers.ts        book covers: shrink on the device, the two files to save (coverFiles: the full-size picture in Cover/ and Cover.jpg), keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
-src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name
+src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name, its backup copy ready to save (backupFile)
 src/lib/epub.ts          the Kindle file: the book as an EPUB 3 for KDP (screens boxed, Book Matter pages, cover), the matter page's editing
 src/lib/theme.ts         colour themes per device: Match this device, eight light, six dark (colours in styles.css)
 src/fonts/               Space Mono and Space Grotesk (Marigold theme, Typewriter page font), Pixelify Sans and DotGothic16 (Lo-Fi theme), VT323 (Retro OS theme), Literata (Library), Nunito (Pebble), Archivo (Prism); woff2, SIL OFL licences beside them
@@ -52,11 +51,11 @@ src/ui/ChapterPage.tsx   the whole chapter as one page
 src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
 src/lib/brackets.ts      {braces} (asks for the team): finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
-src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps, change lists renamed; rewrite ticks and Chapter Titles follow)
+src/lib/chapters.ts      a chapter's number and name: which notes follow when a chapter is added, moved or deleted and their new text (beats, plans, scraps, change lists renamed); renaming. The save itself is src/vault/chapters.ts
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, what Kyle's answer does to the note, story calls
-src/lib/bookdrafts.ts    a book's saved drafts (Drafts/Draft N/): finding them, saving the next as one commit, a scene's copy
+src/lib/bookdrafts.ts    a book's saved drafts (Drafts/Draft N/): finding them, the draft note's text, a scene's copy
 src/lib/rewrite.ts       the Writer's rewrite (Drafts/Rewrite/): a scene's copy, paragraphs lined up with Kyle's, bringing one over
 src/lib/titles.ts        Chapter Titles.md: the title options per chapter, Kyle's tick, his own title
 src/ui/ChapterTitles.tsx Edit > Chapter titles: tick a title, write your own, or None of these for more
@@ -105,7 +104,7 @@ src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words witho
 src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
 src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, a new one (planNote, for the `note` maker)
 src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
-src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, a new one (planRecipe, for the `recipe` maker), edit and rename
+src/lib/recipes.ts       Kyle's recipes: the list, a job's ask with a recipe, a new one (planRecipe, for the `recipe` maker), an edited one's text
 src/ui/Overview.tsx      the Overview page and the six stages
 src/ui/NotesToTeam.tsx   the Notes to the Team screen
 src/ui/Sessions.tsx      the Sessions list and one session
@@ -124,6 +123,7 @@ src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
 tests/                   Node test runner tests
+tests/golden/            what a save must leave in the vault, file for file, one .json a case (`leaves` in tests/helpers.ts); first written from the older note-by-note saving code just before it was removed (2026-11-11). `GOLDEN=write npm test` writes them again for a change that is meant
 src/lib/study.ts         Crow, the character and plot study app: Studies/ notes (studies, character cards, scenes read for character and plot, lenses), tallies of the best lens
 src/study/               Crow's page (crow/index.html): main.tsx, StudyApp.tsx (its screens and Settings), study.css
 public/crow/             Crow's manifest and icons (its own home-screen app); public/character-study/ sends the old address to crow/
@@ -149,7 +149,7 @@ src/vault/outbox.ts      actions waiting on the device (localStorage), newer rep
 src/vault/tree.ts        the vault as one save sees it: the files at the start with the save's own changes on top, so each op meets what the one before it did; files that are not text (pictures, Word files) ride in the same save
 src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following; the delete op: scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up, as one save
 src/vault/book.ts        the draft op (every scene copied to Drafts/Draft N/ with its note, on the vault as it is then), the restore op (a scene back in Scenes and out of the Archive) and the join op (the next scene's note to the Archive, out of Scenes, and the team told), each one save
-src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each; the old functions when the device is on the old way
-src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it; the old way behind the switch
-src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
+src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each
+src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it
+src/vault/choice.ts      a choice on a board (Choice: keep, later, drop, Rewrite, an edit to a card, a card dragged) and what it changes on a note
 

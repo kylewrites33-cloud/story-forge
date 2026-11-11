@@ -3,7 +3,7 @@
 // or not at all. Actions wait in the outbox (outbox.ts), show on every screen at once (apply.ts) and go up when the
 // connection allows (push.ts).
 import type { ChangeStatus } from '../lib/changes.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from './choice.ts';
 import type { DraftWords } from '../lib/drafts.ts';
 import type { DeviceFile, FileEntry } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';

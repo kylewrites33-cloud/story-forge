@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { backupFolder, buildDocx, exportName, makeBackupFolder, manuscript, pieces, saveBackup, screen, isScreen } from '../src/lib/docx.ts';
+import { backupFile, backupFolder, buildDocx, exportName, manuscript, pieces, screen, isScreen } from '../src/lib/docx.ts';
+import { filesAction } from '../src/vault/ops.ts';
+import { pushAction } from '../src/vault/push.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { DEMO, FsSource, MemSource } from './helpers.ts';
@@ -57,22 +59,14 @@ test('each export is backed up in Book Backups/series/book; the same day replace
   const { index } = await demo();
   const book = index.books[0];
   const src = new MemSource();
-  (src as unknown as { writeBytes: typeof src.write }).writeBytes = (p, b64, sha, msg) => src.write(p, b64, sha, msg);
   const name = exportName(book, new Date(2026, 9, 18));
-  const where = await saveBackup(src, book, new Uint8Array([1, 2, 3]), name);
-  assert.equal(where, 'Book Backups/' + book.seriesName + '/' + book.title + '/' + name);
-  await saveBackup(src, book, new Uint8Array([4, 5]), name);
-  assert.equal(src.writes.filter((w) => w.path === where).length, 2);
-  assert.equal(src.files.get(where), Buffer.from([4, 5]).toString('base64'));
+  const first = backupFile(book, new Uint8Array([1, 2, 3]), name);
+  assert.equal(first.path, 'Book Backups/' + book.seriesName + '/' + book.title + '/' + name);
+  await pushAction(src, filesAction([first]));
+  await pushAction(src, filesAction([backupFile(book, new Uint8Array([4, 5]), name)]));
+  assert.equal(src.commits.length, 2);
+  assert.equal(src.files.get(first.path), Buffer.from([4, 5]).toString('base64'));
   assert.equal(backupFolder('A/B: C', 'Book?'), 'Book Backups/AB C/Book');
-});
-
-test('a new series and a new book get their backup folders', async () => {
-  const src = new MemSource();
-  await makeBackupFolder(src, 'Ember Road');
-  await makeBackupFolder(src, 'Ember Road', 'Ash Bell');
-  await makeBackupFolder(src, 'Ember Road', 'Ash Bell');
-  assert.deepEqual([...src.files.keys()], ['Book Backups/Ember Road/.gitkeep', 'Book Backups/Ember Road/Ash Bell/.gitkeep']);
 });
 
 test('a System screen (lines starting "> ") is one block paragraph with line breaks, its bold title in small caps', () => {

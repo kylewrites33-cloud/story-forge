@@ -1,19 +1,18 @@
 // The one saving system, chapters: a new scene by its maker, and a book's chapters renumbered as one save.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../src/lib/chapters.ts';
+import { moveMap, roomMap } from '../src/lib/chapters.ts';
 import { loadDrafts, moveDrafts, putDraft, type Draft } from '../src/lib/drafts.ts';
 import { parseSchema } from '../src/lib/schema.ts';
-import { archiveNote, archiveScene, restoreArchived } from '../src/lib/scenes.ts';
 import { sync } from '../src/lib/sync.ts';
 import { compareScenes } from '../src/lib/vault-index.ts';
-import type { NoteRecord, VaultIndex, VaultSource } from '../src/lib/types.ts';
+import type { NoteRecord, VaultIndex } from '../src/lib/types.ts';
 import { toNumber } from '../src/lib/links.ts';
 import { foldSaved, overlayActions } from '../src/vault/apply.ts';
-import { chaptersAction, createAction, deleteAction, type Action } from '../src/vault/ops.ts';
+import { chaptersAction, createAction, deleteAction, restoreAction, type Action } from '../src/vault/ops.ts';
 import { add, loadOutbox, saveOutbox } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
-import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, hasVault, leaves, MemSource, VAULT } from './helpers.ts';
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
 const AT = '2026-11-11T16:00:00.000Z';
@@ -118,30 +117,16 @@ test('scenes from an outline are one save, each with the number after the one be
 
 // ---- chapters renumbered ----
 
-/** The old way: one save a note, then the two lists. */
-async function oldWay(src: MemSource, change: { type: 'room'; after: number } | { type: 'move'; from: number; to: number }): Promise<void> {
-  const index = await indexOf(src);
-  if (change.type === 'room') {
-    await makeRoom(src, chapterShifts(index.notes, BOOK, change.after), change.after + 1);
-    await renumberLists(src, index.notes, BOOK, roomMap(change.after), 'Why.');
-  } else {
-    await applyShifts(src, chapterMove(index.notes, BOOK, scenesOf(index), change.from, change.to), 'Why.');
-    await renumberLists(src, index.notes, BOOK, moveMap(change.from, change.to), 'Why.');
-  }
-}
-
 for (const change of [
   { type: 'room' as const, after: 1 }, { type: 'room' as const, after: 0 }, { type: 'room' as const, after: 3 },
   { type: 'move' as const, from: 3, to: 1 }, { type: 'move' as const, from: 1, to: 3 }, { type: 'move' as const, from: 2, to: 4 },
   { type: 'move' as const, from: 4, to: 2 }, { type: 'move' as const, from: 1, to: 2 }
 ]) {
-  test('one save leaves the vault exactly as the old note-by-note way did: ' + JSON.stringify(change), async () => {
-    const a = await vault(), b = await vault();
-    await oldWay(a, change);
+  test('one save leaves the vault exactly as the note-by-note way did: ' + JSON.stringify(change), async () => {
+    const b = await vault();
     const res = await pushAction(b, chaptersAction(BOOK, change, 'Why.'));
-    assert.deepEqual([...b.files].sort(), [...a.files].sort());
+    leaves('chapters-' + (change.type === 'room' ? 'room-after-' + change.after : 'move-' + change.from + '-to-' + change.to), (await vault()).files, b.files);
     assert.equal(b.commits.length, 1, 'one save');
-    assert.ok(a.writes.length > b.commits.length);
     assert.ok(!/Agent:/.test(b.commits[0].message));
     // The saved copy on the device, with what the save answered put in, is what a fresh read of the vault gives.
     const before = await indexOf(await vault());
@@ -262,38 +247,17 @@ test('scenes stay in reading order by their numbers after every move', async () 
 
 // ---- scenes deleted ----
 
-/** The old way of deleting scenes, as the page did it: two saves a note, then one for every note that follows. */
-async function oldDelete(src: VaultSource, book: string, index: VaultIndex, paths: string[], now: Date): Promise<void> {
-  const scenes = index.books.find((b) => b.folder === book)!.scenes.map((p) => index.notes[p]);
-  const going = scenes.filter((n) => paths.indexOf(n.path) >= 0);
-  for (const n of going) await archiveScene(src, n, now);
-  const emptied = Array.from(new Set(going.map((n) => toNumber(n.data.chapter)).filter((c): c is number => c != null)))
-    .filter((c) => !scenes.some((n) => paths.indexOf(n.path) < 0 && toNumber(n.data.chapter) === c))
-    .sort((a, b) => b - a);
-  let fresh = index.notes;
-  for (const ch of emptied) {
-    const extra = chapterNotes(fresh, book, ch);
-    const dir = book + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
-    for (const n of extra) await archiveNote(src, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
-    await applyShifts(src, chapterCloseUp(fresh, book, ch, going.map((n) => n.path).concat(extra.map((n) => n.path))), 'Why.');
-    const titles = await renumberLists(src, fresh, book, closeMap(ch), 'Why.');
-    if (titles) await src.write!(dir + 'Chapter ' + ch + ' title options.md', '> [!note] Archived\n> The title options of chapter ' + ch + ', deleted in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.\n\n' + titles + '\n', '', 'archive');
-    fresh = (await sync(src, null)).index.notes;
-  }
-}
 const scenePath = (index: VaultIndex, id: string) => scenesOf(index).find((n) => n.data.id === id)!.path;
 const NOW = new Date(2026, 10, 11, 12, 0, 0);
 
 for (const ids of [['S-002'], ['S-007'], ['S-008'], ['S-003', 'S-004'], ['S-001', 'S-002'], ['S-005', 'S-006', 'S-008'], ['S-003', 'S-004', 'S-006']]) {
-  test('scenes deleted in one save leave the vault exactly as the old note-by-note way did: ' + ids.join(', '), async () => {
-    const a = await vault(), b = await vault();
+  test('scenes deleted in one save leave the vault exactly as the note-by-note way did: ' + ids.join(', '), async () => {
+    const b = await vault();
     const before = await indexOf(b);
     const paths = ids.map((id) => scenePath(before, id));
-    await oldDelete(a, BOOK, await indexOf(a), paths, NOW);
     const res = await pushAction(b, deleteAction(BOOK, paths, NOW), { known: before.notes });
-    assert.deepEqual([...b.files].sort(), [...a.files].sort());
+    leaves('delete-' + ids.join('-'), (await vault()).files, b.files);
     assert.equal(b.commits.length, 1, 'one save');
-    assert.ok(a.writes.length > 1);
     assert.ok(!/Agent:/.test(b.commits[0].message));
     paths.forEach((p) => assert.ok(!b.files.has(p) && res.removed.indexOf(p) >= 0));
     // The saved copy on the device, with what the save answered put in, is what a fresh read of the vault gives:
@@ -323,8 +287,8 @@ test('deleting a scene: it goes to the Archive as it was, with the day and why, 
   // Its chapter still has a scene, so no chapter number changes.
   assert.equal(src.commits[0].paths.length, 2);
   const folded = foldSaved(index, res.saved, schema, res.removed);
-  const entry = folded.books.find((b) => b.folder === BOOK)!.archive!.find((f) => f.path === kept)!;
-  await restoreArchived(src, entry, BOOK);
+  assert.ok(folded.books.find((b) => b.folder === BOOK)!.archive!.some((f) => f.path === kept), 'Restore finds it in the Archive list');
+  await pushAction(src, restoreAction(BOOK, kept));
   assert.equal(src.files.get(path), was);
   assert.ok(!src.files.has(kept));
 });
@@ -381,7 +345,7 @@ test('if the vault moved while the delete was being made, it is worked out again
 
 // ---- on a copy of the real book, when the vault is checked out beside this repository ----
 
-test('Quest Declined 2: a chapter moved, one added in the middle and one deleted, as one save each, leave the book as the old way did', { skip: !hasVault }, async () => {
+test('Quest Declined 2: a chapter moved, one added in the middle and one deleted are one save each, and the book stays in order', { skip: !hasVault }, async () => {
   const QD2 = 'Series/Quest Declined/Books/2 Quest Declined 2';
   const disk = new FsSource(VAULT);
   const all = (await disk.tree()).files.filter((f) => !f.path.startsWith('.git/') && (f.path.startsWith(QD2 + '/') || f.path.startsWith('System/')) && /\.(md|json)$/.test(f.path));
@@ -389,51 +353,59 @@ test('Quest Declined 2: a chapter moved, one added in the middle and one deleted
   for (const f of all) texts.set(f.path, await disk.read(f.path));
   const copy = () => { const m = new MemSource(); texts.forEach((t, p) => m.files.set(p, t)); return m; };
   const realSchema = parseSchema(texts.get('System/schema.json')!);
-  for (const change of [{ type: 'move' as const, from: 30, to: 12 }, { type: 'move' as const, from: 3, to: 4 }, { type: 'room' as const, after: 10 }]) {
-    const a = copy(), b = copy();
-    const index = (await sync(a, null)).index;
-    const scenes = index.books.find((x) => x.folder === QD2)!.scenes.map((p) => index.notes[p]);
-    if (change.type === 'room') {
-      await makeRoom(a, chapterShifts(index.notes, QD2, change.after), change.after + 1);
-      await renumberLists(a, index.notes, QD2, roomMap(change.after), 'Why.');
-    } else {
-      await applyShifts(a, chapterMove(index.notes, QD2, scenes, change.from, change.to), 'Why.');
-      await renumberLists(a, index.notes, QD2, moveMap(change.from, change.to), 'Why.');
-    }
+  const bookOf = (i: VaultIndex) => i.books.find((x) => x.folder === QD2)!;
+  /** Each scene's chapter, in reading order. */
+  const chapters = (i: VaultIndex) => bookOf(i).scenes.map((p) => toNumber(i.notes[p].data.chapter)).filter((c): c is number => c != null);
+  const words = (i: VaultIndex) => bookOf(i).scenes.map((p) => i.notes[p].body);
+  const watch = (b: MemSource) => {
     const reads: string[] = [];
     const commit = b.commit.bind(b);
     b.commit = (build) => commit((head) => build({ read: (p) => { reads.push(p); return head.read(p); }, files: head.files }));
-    const res = await pushAction(b, chaptersAction(QD2, change, 'Why.'), { known: index.notes });
-    assert.deepEqual([...b.files].sort(), [...a.files].sort(), JSON.stringify(change));
-    assert.equal(b.commits.length, 1);
-    // The saved copy with the answer folded in is what a fresh read gives.
+    return reads;
+  };
+  /** The saved copy with the save's answer folded in is what a fresh read gives. */
+  const sameAsFresh = async (b: MemSource, index: VaultIndex, res: Awaited<ReturnType<typeof pushAction>>) => {
     const folded = foldSaved(index, res.saved, realSchema, res.removed);
     const fresh = (await sync(b, null)).index;
     assert.deepEqual(Object.keys(folded.notes).sort(), Object.keys(fresh.notes).sort());
     Object.keys(fresh.notes).forEach((p) => assert.deepEqual(folded.notes[p], fresh.notes[p], p));
-    assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.scenes, fresh.books.find((x) => x.folder === QD2)!.scenes);
-    console.log('  ' + JSON.stringify(change) + ': old way ' + a.writes.length + ' saves, new way 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
+    assert.deepEqual(bookOf(folded).scenes, bookOf(fresh).scenes);
+    return { folded, fresh };
+  };
+  for (const change of [{ type: 'move' as const, from: 30, to: 12 }, { type: 'move' as const, from: 3, to: 4 }, { type: 'room' as const, after: 10 }]) {
+    const b = copy();
+    const index = (await sync(b, null)).index;
+    const reads = watch(b);
+    const res = await pushAction(b, chaptersAction(QD2, change, 'Why.'), { known: index.notes });
+    assert.equal(b.commits.length, 1, JSON.stringify(change));
+    const { fresh } = await sameAsFresh(b, index, res);
+    const now = chapters(fresh);
+    assert.deepEqual(now, now.slice().sort((x, y) => x - y), 'reading order follows the numbers');
+    // Every scene is at the number the change gives its chapter, with its words as they were.
+    const map = change.type === 'room' ? roomMap(change.after) : moveMap(change.from, change.to);
+    for (const p of bookOf(index).scenes) {
+      const c = toNumber(index.notes[p].data.chapter);
+      assert.equal(toNumber(fresh.notes[p].data.chapter), c == null ? null : map(c), p);
+      assert.equal(fresh.notes[p].body, index.notes[p].body, p);
+    }
+    assert.equal(bookOf(fresh).scenes.length, bookOf(index).scenes.length);
+    console.log('  ' + JSON.stringify(change) + ': 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
   }
   // A chapter deleted (one scene a chapter in this book): its notes to the Archive and the chapters after it closed up.
   for (const ch of [12, 37]) {
-    const a = copy(), b = copy();
-    const index = (await sync(a, null)).index;
-    const scenes = index.books.find((x) => x.folder === QD2)!.scenes.map((p) => index.notes[p]);
-    const paths = scenes.filter((n) => toNumber(n.data.chapter) === ch).map((n) => n.path);
+    const b = copy();
+    const index = (await sync(b, null)).index;
+    const paths = bookOf(index).scenes.filter((p) => toNumber(index.notes[p].data.chapter) === ch);
     if (!paths.length) continue;
-    await oldDelete(a, QD2, index, paths, NOW);
-    const reads: string[] = [];
-    const commit = b.commit.bind(b);
-    b.commit = (build) => commit((head) => build({ read: (p) => { reads.push(p); return head.read(p); }, files: head.files }));
+    const reads = watch(b);
     const res = await pushAction(b, deleteAction(QD2, paths, NOW), { known: index.notes });
-    assert.deepEqual([...b.files].sort(), [...a.files].sort(), 'delete chapter ' + ch);
-    assert.equal(b.commits.length, 1);
-    const folded = foldSaved(index, res.saved, realSchema, res.removed);
-    const fresh = (await sync(b, null)).index;
-    assert.deepEqual(Object.keys(folded.notes).sort(), Object.keys(fresh.notes).sort());
-    Object.keys(fresh.notes).forEach((p) => assert.deepEqual(folded.notes[p], fresh.notes[p], p));
-    assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.scenes, fresh.books.find((x) => x.folder === QD2)!.scenes);
-    assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.archive, (fresh.books.find((x) => x.folder === QD2)!.archive || []).slice().sort((x, y) => (x.path < y.path ? -1 : 1)));
-    console.log('  delete chapter ' + ch + ': old way ' + a.writes.length + ' saves, new way 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
+    assert.equal(b.commits.length, 1, 'delete chapter ' + ch);
+    const { folded, fresh } = await sameAsFresh(b, index, res);
+    assert.deepEqual(bookOf(folded).archive, (bookOf(fresh).archive || []).slice().sort((x, y) => (x.path < y.path ? -1 : 1)));
+    const left = bookOf(index).scenes.filter((p) => paths.indexOf(p) < 0);
+    assert.deepEqual(chapters(fresh), left.map((p) => toNumber(index.notes[p].data.chapter)!).map((c) => (c > ch ? c - 1 : c)), 'the chapters after it closed up by one');
+    assert.deepEqual(words(fresh), left.map((p) => index.notes[p].body), 'no other word changed');
+    paths.forEach((p) => assert.ok(b.files.has(QD2 + '/Archive/' + p.slice(p.lastIndexOf('/') + 1)), 'the deleted scene is in the Archive'));
+    console.log('  delete chapter ' + ch + ': 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
   }
 });

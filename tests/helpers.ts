@@ -1,4 +1,5 @@
 // A vault source that reads a folder on disk, so the tests run the same code the app runs against GitHub.
+import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -44,7 +45,7 @@ export class FsSource implements VaultSource {
 
 export const demoSchemaText = () => fs.readFileSync(path.join(DEMO, 'System', 'schema.json'), 'utf8');
 
-/** A vault in memory that writes the way GitHub does: a stale sha is a conflict, and an empty sha adds a file. */
+/** A vault in memory that saves the way GitHub does: every save is one step, planned again if the vault moved meanwhile. */
 export class MemSource implements VaultSource {
   readonly key = 'mem';
   readonly label = 'memory';
@@ -67,21 +68,6 @@ export class MemSource implements VaultSource {
     const t = this.files.get(p);
     if (t === undefined) throw Object.assign(new Error('gone'), { status: 404 });
     return { text: t, sha: this.sha(t) };
-  }
-  async write(p: string, text: string, sha: string, message: string) {
-    const cur = this.files.get(p);
-    if ((cur === undefined ? '' : this.sha(cur)) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
-    this.files.set(p, text);
-    this.writes.push({ path: p, message });
-    this.head++;
-    return this.sha(text);
-  }
-  async remove(p: string, sha: string, message: string) {
-    const cur = this.files.get(p);
-    if (cur === undefined || this.sha(cur) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
-    this.files.delete(p);
-    this.writes.push({ path: p, message: 'REMOVE ' + message });
-    this.head++;
   }
   /** Every save as one step, the way GitHubSource.commit does it: if the vault moved since the read, plan again. */
   commits: { message: string; paths: string[] }[] = [];
@@ -119,3 +105,30 @@ export class MemSource implements VaultSource {
   }
 }
 
+
+/** What a save did to a vault: the files it added or rewrote, and the ones it took away. */
+export function changeOf(before: Map<string, string>, after: Map<string, string>): { set: Record<string, string>; gone: string[] } {
+  const set: Record<string, string> = {};
+  [...after.keys()].sort().forEach((p) => { if (before.get(p) !== after.get(p)) set[p] = after.get(p)!; });
+  return { set, gone: [...before.keys()].filter((p) => !after.has(p)).sort() };
+}
+
+const GOLDEN = path.join(ROOT, 'tests', 'golden');
+
+/** Holds a save to exactly what it must leave in the vault, file for file. What is expected is written down in
+ * tests/golden/<name>.json: the files added or rewritten (`set`), the files gone (`gone`), and anything else the test
+ * hands over (`also`). These were first written from the older note-by-note saving code, just before it was taken out
+ * (2026-11-11), so the one saving system is still held to what that code did. For a change that is meant,
+ * `GOLDEN=write npm test` writes them again; read the diff before committing it. */
+export function leaves(name: string, before: Map<string, string>, after: Map<string, string>, also?: unknown): void {
+  const got = JSON.parse(JSON.stringify({ ...changeOf(before, after), ...(also === undefined ? {} : { also }) }));
+  const file = path.join(GOLDEN, name + '.json');
+  if (process.env.GOLDEN === 'write') {
+    fs.mkdirSync(GOLDEN, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(got, null, 1) + '\n');
+    return;
+  }
+  if (!fs.existsSync(file)) throw new Error('No expected result is written down for "' + name + '" (tests/golden). Run GOLDEN=write npm test once and read what it wrote.');
+  const want = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(got, want, name);
+}

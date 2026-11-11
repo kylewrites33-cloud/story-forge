@@ -42,7 +42,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   checkOpts?: CheckOptions;
 }) {
   useLockedPage();
-  const canSave = Boolean(source.readFresh && source.write);
+  const canSave = Boolean(source.readFresh && source.commit);
   const [sections, setSections] = useState<Section[]>(() => {
     const drafts = loadDrafts(source.key);
     return group.scenes.map((n) => ({ note: n, draft: openDraft(n, drafts[n.path], new Date()) }));

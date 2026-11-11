@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  addToDay, addTypedToDay, addTypingToDay, flushLog, flushTyped, flushTyping, loadTyped, loadTyping, logPath, markTyping, saveLog, takeTypingCounts, today,
+  addToDay, addTypedToDay, addTypingToDay, loadTyped, loadTyping, logPath, markTyping, takeTypingCounts, today,
   trackWords, type LogItem, type PomodoroRecord
 } from '../src/lib/pomodoro.ts';
 import { parseSchema } from '../src/lib/schema.ts';
@@ -15,7 +15,7 @@ import { textAction, type Action } from '../src/vault/ops.ts';
 import { add, loadOutbox, saveOutbox } from '../src/vault/outbox.ts';
 import { pushAll } from '../src/vault/push.ts';
 import type { TextChange } from '../src/vault/text.ts';
-import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, leaves, MemSource } from './helpers.ts';
 
 // The timer keeps its meters in localStorage; Node has none, so a small stand-in.
 const device = new Map<string, string>();
@@ -92,22 +92,8 @@ test('the first Pomodoro of a day starts the day\'s note: it shows at once, wait
 });
 
 test('Pomodoros and typing counts land as the timer\'s own sending left them', async () => {
-  // The old way: the timer sends each itself.
-  device.clear();
-  const old = await vault();
-  saveLog(old.key, [R1, R2]);
-  await flushLog(old, new Date(AT));
   const t = new Date(DAY + 'T10:10:00').getTime();
-  trackWords('a.md', 'S-013', 1000, 1060, t);
-  trackWords('a.md', 'S-013', 1060, 1120, t + 210000);
-  markTyping(t);
-  markTyping(t + 90000);
-  markTyping(t + 210000);
-  await flushTyped(old, new Date(AT));
-  await flushTyping(old, new Date(AT));
-  assert.equal(old.writes.length, 4, 'four saves the old way');
-
-  // The new way: the timer hands them over, and the saving system carries them.
+  // The timer hands them over, and the saving system carries them.
   device.clear();
   const src = await vault();
   let list = add([], logAction([{ kind: 'pomodoro', record: R1 }, { kind: 'pomodoro', record: R2 }], 'p'));
@@ -129,7 +115,7 @@ test('Pomodoros and typing counts land as the timer\'s own sending left them', a
   const res = await pushAll(src, list);
   assert.deepEqual(res.done, ['p', 'c']);
   assert.equal(src.commits.length, 1, 'what waited together is one save');
-  assert.equal(src.files.get(PATH), old.files.get(PATH), 'the day\'s note is the same');
+  leaves('writing-log-day', (await vault()).files, src.files);
   assert.match(src.files.get(PATH)!, /^typed: 622$/m);
   assert.match(src.files.get(PATH)!, /^typing_minutes: 3.5$/m);
 });

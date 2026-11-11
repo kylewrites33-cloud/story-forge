@@ -8,7 +8,10 @@ import { Frontmatter } from '../src/lib/frontmatter.js';
 import { applyToText, moveChange } from '../src/lib/ideas.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
-import { enqueue, overlay, saveChoice, type Choice } from '../src/lib/write-queue.ts';
+import { overlayActions } from '../src/vault/apply.ts';
+import { choiceAction } from '../src/vault/ops.ts';
+import { add, choicesOf } from '../src/vault/outbox.ts';
+import { pushAction } from '../src/vault/push.ts';
 import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
@@ -30,10 +33,10 @@ test('a move changes only order, chapter and chapter_title', () => {
 
 test('a move and an accept on the same card both wait; a newer move replaces the older one', () => {
   const p = BOOK + '/Scenes/S-006 Thaw Market.md';
-  let q: Choice[] = [];
-  q = enqueue(q, { path: p, decision: 'move', reason: '', at: AT, move: { order: 2, chapter: 1, chapterTitle: '' } });
-  q = enqueue(q, { path: p, decision: 'accept', reason: '', at: AT });
-  q = enqueue(q, { path: p, decision: 'move', reason: '', at: AT, move: { order: 3.5, chapter: 2, chapterTitle: '' } });
+  let box = add([], choiceAction([{ path: p, decision: 'move', reason: '', at: AT, move: { order: 2, chapter: 1, chapterTitle: '' } }]));
+  box = add(box, choiceAction([{ path: p, decision: 'accept', reason: '', at: AT }]));
+  box = add(box, choiceAction([{ path: p, decision: 'move', reason: '', at: AT, move: { order: 3.5, chapter: 2, chapterTitle: '' } }]));
+  const q = choicesOf(box);
   assert.deepEqual(q.map((c) => c.decision), ['accept', 'move']);
   assert.equal(q[1].move!.order, 3.5);
 });
@@ -44,7 +47,7 @@ test('a waiting move shows the card in its new place at once', async () => {
   const index = await buildIndex({ schema, files, read: (p, sha) => src.read(p, sha) });
   const book = index.books.find((b) => b.folder === BOOK)!;
   const s6 = book.scenes.find((p) => p.includes('S-006'))!;
-  const shown = overlay(index, [{ path: s6, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } }]);
+  const shown = overlayActions(index, [choiceAction([{ path: s6, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } }])]);
   const ids = shown.books.find((b) => b.folder === BOOK)!.scenes.map((p) => shown.notes[p].data.id);
   assert.deepEqual(ids.slice(0, 3), ['S-001', 'S-006', 'S-002']);
   assert.equal(shown.notes[s6].data.chapter, 1);
@@ -56,10 +59,11 @@ test('saving a move writes Kyle\'s commit with no Agent line', async () => {
   const src = new MemSource();
   const p = BOOK + '/Scenes/S-006 Thaw Market.md';
   src.files.set(p, NOTE);
-  await saveChoice(src, { path: p, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } });
+  await pushAction(src, choiceAction([{ path: p, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } }]));
   assert.match(src.files.get(p)!, /^order: 1\.5$/m);
-  assert.equal(src.writes[0].message, 'scenes: move S-006 Thaw Market\n\nChosen on the Chapter Grid in the Sparrow app.');
-  assert.ok(!/Agent:/.test(src.writes[0].message));
+  assert.equal(src.commits.length, 1);
+  assert.equal(src.commits[0].message, 'scenes: move S-006 Thaw Market\n\nChosen on the Chapter Grid in the Sparrow app.');
+  assert.ok(!/Agent:/.test(src.commits[0].message));
 });
 
 test('the demo vault still passes sf validate after a move', { skip: !hasVault && 'the vault is not beside this repository' }, async () => {
@@ -69,7 +73,7 @@ test('the demo vault still passes sf validate after a move', { skip: !hasVault &
   const file = path.join(dir, rel);
   const src = new MemSource();
   src.files.set(rel, fs.readFileSync(file, 'utf8'));
-  await saveChoice(src, { path: rel, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } });
+  await pushAction(src, choiceAction([{ path: rel, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } }]));
   fs.writeFileSync(file, src.files.get(rel)!);
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], {
     cwd: dir, env: { ...process.env, SF_VAULT: dir }, encoding: 'utf8'

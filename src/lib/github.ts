@@ -146,34 +146,6 @@ export class GitHubSource implements VaultSource {
     return { text: fromBase64(body.content), sha: body.sha };
   }
 
-  /** Replace one file as one commit on the branch, or add a new one when `sha` is empty.
-   * The commit is made with Kyle's token, so it counts as his. */
-  async write(path: string, text: string, sha: string, message: string): Promise<string> {
-    return this.put(path, toBase64(text), sha, message);
-  }
-
-  /** Several new files as one commit, through git's own objects: the branch's commit, a tree with the files added, a
-   * commit on it, and the branch moved to it (never forced: if the branch moved meanwhile, it starts again). */
-  async writeMany(files: { path: string; text: string }[], message: string): Promise<void> {
-    this.last = null;
-    const prefix = this.s.root ? this.s.root + '/' : '';
-    const ref = this.repoUrl('/git/refs/heads/' + this.s.branch.split('/').map(encodeURIComponent).join('/'));
-    for (let attempt = 0; ; attempt++) {
-      const head = (await (await this.get(this.repoUrl('/git/ref/heads/' + this.s.branch.split('/').map(encodeURIComponent).join('/')), 'the branch "' + this.s.branch + '"', undefined, true)).json()) as { object: { sha: string } };
-      const parent = head.object.sha;
-      const commit = (await (await this.get(this.repoUrl('/git/commits/' + parent), 'the branch "' + this.s.branch + '"')).json()) as { tree: { sha: string } };
-      const tree = (await this.send('POST', this.repoUrl('/git/trees'), { base_tree: commit.tree.sha, tree: files.map((f) => ({ path: prefix + f.path, mode: '100644', type: 'blob', content: f.text })) }, 'the new files')) as { sha: string };
-      const made = (await this.send('POST', this.repoUrl('/git/commits'), { message, tree: tree.sha, parents: [parent] }, 'the save')) as { sha: string };
-      try {
-        await this.send('PATCH', ref, { sha: made.sha, force: false }, 'the branch "' + this.s.branch + '"');
-        return;
-      } catch (e) {
-        if (e instanceof GitHubError && e.status === 422 && attempt < 3) continue;
-        throw e;
-      }
-    }
-  }
-
   /** One save of any number of files as one commit, all or nothing: read at the branch's commit, build a tree on it, commit,
    * and move the branch (never forced). If the branch moved meanwhile, read and build again on the newer commit. */
   async commit(build: (head: Head) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
@@ -262,57 +234,10 @@ export class GitHubSource implements VaultSource {
     return res.json();
   }
 
-  /** A picture (a book cover) as base64, saved the same way as a note. */
-  async writeBytes(path: string, base64: string, sha: string, message: string): Promise<string> {
-    return this.put(path, base64, sha, message);
-  }
-
   /** A picture's bytes, by its blob sha. */
   async readBytes(path: string, sha: string): Promise<Blob> {
     const res = await this.get(this.repoUrl('/git/blobs/' + sha), path, 'application/vnd.github.raw+json');
     return res.blob();
-  }
-
-  /** Save one file. GitHub also answers 409 when another save lands on the branch at the same moment, even for a
-   * different file (2026-11-05: Done with this chapter failed on Book.md while the chapter's cards, a snapshot and the
-   * writing log were saving). So on a 409 the app looks at the file: if it is still the version we started from, it
-   * saves again; only a file that really changed is a conflict. */
-  private async put(path: string, content: string, sha: string, message: string): Promise<string> {
-    this.last = null;
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await this.putOnce(path, content, sha, message);
-      } catch (e) {
-        if (!(e instanceof GitHubError && e.status === 409 && sha && attempt < 3)) throw e;
-        let now: string | null = null;
-        try { now = (await this.readFresh(path)).sha; } catch { throw e; }
-        if (now !== sha) throw e;
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-      }
-    }
-  }
-
-  private async putOnce(path: string, content: string, sha: string, message: string): Promise<string> {
-    let res: Response;
-    try {
-      res = await this.fetch(this.contentsUrl(path), {
-        method: 'PUT',
-        headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(sha ? { message, content, sha, branch: this.s.branch } : { message, content, branch: this.s.branch })
-      });
-    } catch {
-      throw new GitHubError('Cannot reach GitHub. Your choice is saved on this device and goes up when the connection is back.', 0);
-    }
-    // 409: the file changed since `sha`. 422 without a sha: a file of that name is already there.
-    if (res.status === 409 || (res.status === 422 && !sha)) {
-      const err = new GitHubError(path + ' changed on GitHub while the app was saving it. Sync and try again.', res.status) as GitHubError & { conflict: boolean };
-      err.conflict = true;
-      throw err;
-    }
-    if (!res.ok) throw new GitHubError(explain(res, this.s, path, 'change'), res.status);
-    const body = (await res.json()) as { content?: { sha?: string } };
-    if (!body.content || !body.content.sha) throw new GitHubError('GitHub saved ' + path + ' but did not say how. Press Sync to check.', 500);
-    return body.content.sha;
   }
 
   /** Every commit on the branch that changed this file, newest first (up to 100). */
@@ -339,28 +264,6 @@ export class GitHubSource implements VaultSource {
     return fromBase64(body.content);
   }
 
-  /** Remove one file as one commit on the branch. A stale sha is a conflict, as for write. */
-  async remove(path: string, sha: string, message: string): Promise<void> {
-    this.last = null;
-    let res: Response;
-    try {
-      res = await this.fetch(this.contentsUrl(path), {
-        method: 'DELETE',
-        headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + this.s.token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, sha, branch: this.s.branch })
-      });
-    } catch {
-      throw new GitHubError('Cannot reach GitHub. Check the connection and try again.', 0);
-    }
-    if (res.status === 409) {
-      const err = new GitHubError(path + ' changed on GitHub while the app was working on it. Sync and try again.', res.status) as GitHubError & { conflict: boolean };
-      err.conflict = true;
-      throw err;
-    }
-    if (!res.ok) throw new GitHubError(explain(res, this.s, path, 'change'), res.status);
-  }
-
-  /** Checks the token, the repository and the branch, and says what it found in a plain sentence. */
   async test(): Promise<string> {
     await this.get(this.repoUrl(''), 'the repository', undefined, true);
     const { files } = await this.tree();

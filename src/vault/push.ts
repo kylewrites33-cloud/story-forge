@@ -9,7 +9,6 @@ import { recipeName, RECIPES_FOLDER } from '../lib/recipes.ts';
 import { safeTitle } from '../lib/scenes.ts';
 import { teamFiles } from '../lib/team.ts';
 import { makeNote } from '../lib/vault-index.ts';
-import { saveChoice } from '../lib/write-queue.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { editMessage, editText } from './apply.ts';
 import { make } from './makers.ts';
@@ -213,67 +212,6 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
 /** Save one action as one step. */
 export const pushAction = (source: VaultSource, action: Action, opts: PushOptions = {}): Promise<Pushed> => pushActions(source, [action], opts);
 
-/** One edit to one note the old way: read it, change it, write it, and again if it changed in between. */
-async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<NoteRecord> {
-  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
-  for (let attempt = 0; ; attempt++) {
-    let cur = { text: '', sha: '' };
-    try { cur = await source.readFresh(path); } catch (e) { if (!((e as { status?: number }).status === 404 && starts(edit))) throw e; }
-    const { text, sha } = cur;
-    const next = editText(text, edit);
-    if (next === text) return makeNote(path, sha, text);
-    try {
-      return makeNote(path, await source.write(path, next, sha, editMessage(text, edit, path)), next);
-    } catch (e) {
-      if (!((e as { conflict?: boolean }).conflict && attempt < 3)) throw e;
-    }
-  }
-}
-
-/** The old way, one note at a time through the calls the app made before. Kept behind a switch in Settings until the
- * new way has run on the real book (2026-11-11); a failure part-way can leave an action half saved, as it always could. */
-async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
-  const out: Pushed = { saved: [], renames: {}, removed: [] };
-  for (const op of action.ops) {
-    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file' || op.kind === 'draft' || op.kind === 'restore' || op.kind === 'join' || (op.kind === 'edit' && op.edit.type === 'body')) {
-      // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
-      const p = await pushActions(source, [{ ...action, ops: [op] }]);
-      out.saved.push(...p.saved);
-      out.removed.push(...p.removed);
-      Object.assign(out.renames, p.renames);
-      continue;
-    }
-    if (op.kind === 'create') {
-      if (!source.write) throw new Error('This vault cannot be changed from the app.');
-      for (let attempt = 0; ; attempt++) {
-        const files = (await source.tree()).files;
-        if (source.readFresh && files.some((f) => f.path === op.path)) {
-          const there = await source.readFresh(op.path);
-          if (sameNote(there.text, op.text)) { out.saved.push(makeNote(op.path, there.sha, there.text)); break; }
-        }
-        const made = make(op.make, files, op.payload, op.id);
-        try {
-          out.saved.push(makeNote(made.path, await source.write(made.path, made.text, '', made.message), made.text));
-          if (made.path !== op.path) out.renames[op.path] = made.path;
-          break;
-        } catch (e) {
-          // Another note took that name a moment ago: count again.
-          if (!((e as { conflict?: boolean }).conflict && attempt < 3)) throw e;
-        }
-      }
-      continue;
-    }
-    const path = out.renames[op.path] || op.path;
-    try {
-      if (op.edit.type === 'choice') out.saved.push(await saveChoice(source, path === op.path ? op.edit.choice : { ...op.edit.choice, path }));
-      else out.saved.push(await saveEdit(source, path, op.edit));
-    } catch (e) {
-      if ((e as { status?: number }).status !== 404) throw e;
-    }
-  }
-  return out;
-}
-
 export interface PushResult {
   /** Notes as the vault now has them. */
   saved: NoteRecord[];
@@ -299,14 +237,14 @@ const wait = (e: unknown): boolean => { const st = (e as { status?: number }).st
 /** Save every waiting action in order. One action is one save. When several wait (Kyle was offline), they go up
  * together, up to forty a save; if a group will not save, its actions go one at a time so only the one at fault waits.
  * Stops at the first connection failure and keeps the rest for next time. */
-export async function pushAll(source: VaultSource, list: Action[], opts: PushOptions & { legacy?: boolean } = {}): Promise<PushResult> {
+export async function pushAll(source: VaultSource, list: Action[], opts: PushOptions = {}): Promise<PushResult> {
   const out: PushResult = { saved: [], renames: {}, removed: [], texts: {}, done: [], failed: {}, error: null };
   // An action later in the list may be about a note an earlier save in this same push gave another path.
   const follow = (a: Action): Action => (a.ops.some((op) => out.renames[op.path]) ? settle([a], [], {}, out.renames)[0] : a);
   const take = (p: Pushed, ids: string[]) => { out.saved.push(...p.saved); Object.assign(out.renames, p.renames); out.removed.push(...p.removed); Object.assign(out.texts, p.texts || {}); out.done.push(...ids); };
   const one = async (a: Action): Promise<boolean> => {
     try {
-      take(await (opts.legacy ? pushLegacy(source, follow(a)) : pushAction(source, follow(a), opts)), [a.id]);
+      take(await pushAction(source, follow(a), opts), [a.id]);
     } catch (e) {
       out.error = (e as Error).message;
       if (wait(e)) return false;
@@ -316,7 +254,7 @@ export async function pushAll(source: VaultSource, list: Action[], opts: PushOpt
   };
   for (let i = 0; i < list.length; i += TOGETHER) {
     const group = list.slice(i, i + TOGETHER);
-    if (group.length > 1 && !opts.legacy) {
+    if (group.length > 1) {
       try {
         take(await pushActions(source, group.map(follow), opts), group.map((a) => a.id));
         continue;

@@ -2,12 +2,8 @@
 // tab, a recipe changed, a note's new title with its file renamed, a new series and a new book.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createBook, createSeries } from '../src/lib/books.ts';
-import { makeBackupFolder } from '../src/lib/docx.ts';
 import { loadDrafts, moveDrafts, putDraft, type Draft } from '../src/lib/drafts.ts';
-import { saveRecipe } from '../src/lib/recipes.ts';
 import { parseSchema } from '../src/lib/schema.ts';
-import { renameScene } from '../src/lib/scenes.ts';
 import { sync } from '../src/lib/sync.ts';
 import { NONE, parseTitles, pickedTitle } from '../src/lib/titles.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
@@ -17,7 +13,7 @@ import { createAction, textAction, type Action } from '../src/vault/ops.ts';
 import { add, loadOutbox, saveOutbox, settle } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
 import type { TextChange } from '../src/vault/text.ts';
-import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, leaves, MemSource } from './helpers.ts';
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
 const TITLES = BOOK + '/Chapter Titles.md';
@@ -126,44 +122,39 @@ test('a chapter marked through in the Rewrite tab works with no connection and l
   assert.match(src.commits[0].message, /^rewrite: chapter 3 through in the Rewrite tab$/);
 });
 
-test('a recipe changed and renamed is one save, and leaves the vault as the old two-step way did', async () => {
-  const a = await vault(), b = await vault();
+test('a recipe changed and renamed is one save, and leaves the vault as the two-step way did', async () => {
+  const b = await vault();
   const index = await indexOf(b);
   const r = { title: 'Ferry Ledger', use_for: 'a ledger page', body: 'Three lines at most.' };
-  await saveRecipe(a, index.notes[RECIPE], r);
   const action = textAction([{ path: RECIPE, change: { what: 'recipe', use_for: r.use_for, body: r.body } }], [{ kind: 'retitle', path: RECIPE, title: r.title, what: 'recipe' }], new Date(AT));
   // On screen at once: the new name and words, under the old file name until the save.
   const shown = overlayActions(index, [action], schema).notes[RECIPE];
   assert.equal(shown.data.title, 'Ferry Ledger');
   assert.equal(shown.body.trim(), 'Three lines at most.');
   const res = await pushAction(b, action);
-  assert.deepEqual([...b.files].sort(), [...a.files].sort());
+  leaves('recipe-renamed', (await vault()).files, b.files);
   assert.equal(b.commits.length, 1);
-  assert.ok(a.writes.length > 1);
   assert.deepEqual(res.renames, { [RECIPE]: 'Recipes/Ferry Ledger.md' });
   assert.deepEqual(res.removed, [RECIPE]);
   await sameAsFresh(b, index, res);
-  // Words only: one file, the old way's text.
-  const c = await vault(), d = await vault();
-  await saveRecipe(c, index.notes[RECIPE], { ...r, title: 'Ledger Entry' });
+  // Words only: one file.
+  const d = await vault();
   await pushAction(d, textAction([{ path: RECIPE, change: { what: 'recipe', use_for: r.use_for, body: r.body } }]));
-  assert.deepEqual([...d.files].sort(), [...c.files].sort());
+  leaves('recipe-words', (await vault()).files, d.files);
   assert.match(d.commits[0].message, /^recipes: edit Ledger Entry\n\nEdited in the Sparrow app\.$/);
 });
 
 // ---- a scene's new title ----
 
-test('a scene\'s new title: one save renames the file, only the title line changes, and the vault is as the old way left it', async () => {
-  const a = await vault(), b = await vault();
+test('a scene\'s new title: one save renames the file, and only the title line changes', async () => {
+  const b = await vault();
   const index = await indexOf(b);
-  await renameScene(a, index.notes[SCENE], 'The Night Ferry');
   const action = retitle(SCENE, 'The Night Ferry');
   assert.equal(overlayActions(index, [action], schema).notes[SCENE].data.title, 'The Night Ferry');
   const res = await pushAction(b, action);
   const dest = BOOK + '/Scenes/S-002 The Night Ferry.md';
-  assert.deepEqual([...b.files].sort(), [...a.files].sort());
+  leaves('scene-renamed', (await vault()).files, b.files);
   assert.equal(b.commits.length, 1);
-  assert.equal(a.writes.length, 2);
   assert.match(b.commits[0].message, /^scenes: rename S-002 to The Night Ferry\n\nRenamed in the Sparrow app: The Ferry -> The Night Ferry\.$/);
   assert.deepEqual(res.renames, { [SCENE]: dest });
   await sameAsFresh(b, index, res);
@@ -210,13 +201,9 @@ test('a title another scene file already has is refused with a plain sentence an
 // ---- a new series, a new book ----
 
 test('a new series and a new book show at once, work with no connection, and are one save each with their backup folder', async () => {
-  const a = await vault(), b = await vault();
+  const b = await vault();
   const index = await indexOf(b);
   const now = new Date(AT);
-  await createSeries(a, 'Salt Road', 'cozy fantasy', now);
-  await makeBackupFolder(a, 'Salt Road');
-  await createBook(a, 'Series/Salt Road', 'Salt Road', 'The Tide Clerk', 1, now);
-  await makeBackupFolder(a, 'Salt Road', 'The Tide Clerk');
   const series = createAction('series', { name: 'Salt Road', genre: 'cozy fantasy', at: AT }, known(index), now);
   assert.equal(series.ops[0].path, 'Series/Salt Road/Series.md');
   const withSeries = overlayActions(index, [series], schema);
@@ -229,9 +216,8 @@ test('a new series and a new book show at once, work with no connection, and are
   b.offline = false;
   const res = await pushAll(b, [series, book]);
   assert.equal(res.error, null);
-  assert.deepEqual([...b.files].sort(), [...a.files].sort());
+  leaves('new-series-and-book', (await vault()).files, b.files);
   assert.equal(b.commits.length, 1);
-  assert.equal(a.writes.length, 4);
   await sameAsFresh(b, index, res);
   // A name the vault already has is refused when Kyle types it.
   assert.throws(() => createAction('series', { name: 'Ember Road', genre: '', at: AT }, known(index), now), /A series called Ember Road is already in the vault\. Choose another name\./);

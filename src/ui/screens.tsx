@@ -12,7 +12,7 @@ import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../
 import { chaptersDone } from '../lib/overview.ts';
 import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, type OutlineScene, type ReadRates } from '../lib/home.ts';
 import { Cover } from './Home.tsx';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { defaultJobTitle, type JobKind, type OnJob } from '../lib/jobs.ts';

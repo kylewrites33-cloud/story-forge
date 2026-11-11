@@ -1,0 +1,8 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Archive/S-007 Test Drive, Bell Voice.md": "---\ntype: scene\nid: S-007\ntitle: Test Drive, Bell Voice\norder: 7\nkind: test\npov: \"[[Mara Quill]]\"\nstatus: planned\ngoal: Try the bell's first ring in Mara's voice before Chapter 4 is outlined.\n---\n\n> [!note] Archived\n> Deleted in the Sparrow app on 2026-11-11.\n\nCard notes: a test drive with no chapter yet. It shows how the grid lists scenes that have no chapter.\n"
+ },
+ "gone": [
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-007 Test Drive, Bell Voice.md"
+ ]
+}

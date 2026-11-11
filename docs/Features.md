@@ -1187,8 +1187,8 @@ first piece. The code is `src/vault/`.
   marked as failed.
 - **Saving and syncing take turns** (one lane in `App.tsx`). Before, a sync that began just before a save landed could
   finish after it and put the older note back on the screen until the next sync.
-- **The way back.** Settings, Saving: The new way or The old way, per device. The old way sends the outbox one note at
-  a time as before. It goes when the old saving code goes, once the new way has run on the real book.
+- **The way back** (gone 2026-11-11, see "the old way is out" below). Settings, Saving had The new way or The old way,
+  per device, while features moved over; the old way sent the outbox one note at a time as before.
 - Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
   demo vault and a pretend GitHub: keep, three quick choices, a save the team beat to the branch, GitHub out of reach
   with the app closed and opened, the old queue moving over, and the switch.
@@ -1566,3 +1566,57 @@ words are kept on the device as Kyle types (`src/lib/drafts.ts`, unchanged), and
   1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: a save; a save that waited
   with GitHub out of reach and met another device's line; a clash kept as a copy in the same save; a copy; split;
   join; the old way.
+
+### The one saving system, step 1: the old way is out (2026-11-11)
+
+Kyle wrote and finished chapter 34 of Quest Declined 2 on the new way (five saves of the scene between 2:39 and 3:01pm
+Eastern, each changing only his words, with his Rewrite-tab choices and the Writing Log beside them), which was the
+sign waited for. So:
+
+- **Settings has no Saving section.** There is one way to save. A device that still carries the switch's mark
+  (`sparrow.old-saving` in its storage) is not asked about it.
+- **Out of the app:** the old sender (`pushLegacy` and the `legacy` option in `src/vault/push.ts`), the old queue
+  module (`src/lib/write-queue.ts`: `enqueue`, `overlay`, `saveChoice`, `flush`), the switch (`src/vault/switch.ts`),
+  and every "if the old way" branch in `App.tsx`, `Editor.tsx` and `src/vault/words.ts`. `App.tsx` no longer hands a
+  page a save that may be missing: the notes box, Front and back matter, Chapter titles, the timer's log, Restore and
+  files from the device always go through the saving system.
+- **Kept:** a board choice's shape and what it changes moved to `src/vault/choice.ts`; choices and Edit room answers
+  left waiting in the two older lists on a device that has not opened the app since 2026-11-11 still move into the
+  outbox once (`loadOutbox`).
+- **Gone with it, the same day:** the older one-note-at-a-time code nothing called any more. See the next section.
+- Checked with the unit tests (the tests that compared the old way with the new now state what the new way must
+  leave), and every browser check again in Chromium at the three sizes and WebKitGTK at the two iPad sizes; the first
+  check now also holds that Settings shows no switch and that a device carrying the old mark saves the one way.
+
+### The one saving system, step 1: one way to change the vault (2026-11-11)
+
+Nothing Kyle sees changes. What changed is underneath: the app now has exactly one way to change the vault, so a new
+feature cannot save around the saving system by accident.
+
+- **A vault source has one write: `commit`** (`VaultSource` in `src/lib/types.ts`). `write`, `writeMany`, `writeBytes`
+  and `remove` are gone from the source, from `GitHubSource` and from the demo vault, with GitHub's one-file-at-a-time
+  calls and their "saved again after a 409" patch (2026-11-05), which one save for many files never needed. Whether a
+  vault can be changed is asked one way everywhere: `source.commit`.
+- **The older saving functions are deleted** (about 600 lines): in `scenes.ts` (`createScene`, `splitOff`,
+  `archiveForJoin`, `removeJoined`, `archiveNote`, `archiveScene`, `noteJoinForTeam`, `restoreArchived`,
+  `renameScene`), `chapters.ts` (`applyShifts`, `makeRoom`, `renumberLists`), `books.ts` (`createSeries`,
+  `createBook`), `bookdrafts.ts` (`saveBookDraft`), `covers.ts` (`addCover`, `saveCover`), `docx.ts` (`saveBackup`,
+  `makeBackupFolder`), `epub.ts` (`saveMatterBody`), `market.ts` (`addRocketFile`), `recipes.ts` (`saveRecipe`),
+  `drafts.ts` (the old `saveDraft` and `saveSnapshot`) and the timer's own sending (`flushLog`, `flushTyped`,
+  `flushTyping`). What is left in those modules works out text, names and places; `src/vault/` does the saving.
+- **Screens no longer carry a second way to save.** The Word backup and Front and back matter (`Home.tsx`), Chapter
+  titles, the notes box and Restore (`EditorPanels.tsx`), a deleted beat's words (`BeatsPage.tsx`) and the timer's log
+  (`Pomodoro.tsx`) only hand their change to the saving system; the fallbacks that wrote to GitHub themselves are out.
+- **Crow's picture for a character** (`src/study/StudyApp.tsx`) is saved through the saving system too (a file from
+  the device, replacing the one there). It was the last direct write in the code.
+- **What the old code did is written down, not lost.** Before it was removed, each test that compared "the old way"
+  with the new one wrote what the old way left in the vault to `tests/golden/<case>.json` (32 cases: every chapter
+  added or moved, scenes deleted, a split, a join, copies, a clash, a renamed scene and recipe, a new series and book,
+  a draft of the book, a restored scene, Rocket files, a day of the Writing Log). The tests now hold the saving system
+  to those files, byte for byte (`leaves` in `tests/helpers.ts`). The older functions' own tests were moved onto the
+  saving system rather than dropped, among them the one that adds, splits and joins scenes in a copy of the demo vault
+  and runs the vault's own validator over the result. The check on the real Quest Declined 2 (when the vault is beside
+  this repository) no longer compares with the old code; it holds that every scene lands at the chapter number the
+  change gives it, with no word changed.
+- Checked with the unit tests and every browser check in Chromium at the three sizes and WebKitGTK at the two iPad
+  sizes, plus a new check that a picture added in Crow is one save.

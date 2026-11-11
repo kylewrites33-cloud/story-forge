@@ -7,7 +7,7 @@ import { applyToData, applyToText, commitMessage } from '../lib/ideas.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { PHASE } from '../lib/sync.ts';
 import { archiveFiles, assemble, makeNote, resortScenes, selectFiles } from '../lib/vault-index.ts';
-import { changeOf } from '../lib/write-queue.ts';
+import { changeOf } from './choice.ts';
 import type { NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Action, Edit } from './ops.ts';
 import { changeMessage, changeRecord, changeText, startsNote } from './text.ts';

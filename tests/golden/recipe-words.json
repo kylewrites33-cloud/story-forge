@@ -1,0 +1,6 @@
+{
+ "set": {
+  "Recipes/Ledger Entry.md": "---\ntype: recipe\ntitle: Ledger Entry\nuse_for: a ledger page\ncreated: 2026-10-18\n---\n\nThree lines at most.\n"
+ },
+ "gone": []
+}

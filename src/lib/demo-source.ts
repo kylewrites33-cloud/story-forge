@@ -48,9 +48,9 @@ export class DemoSource implements VaultSource {
     return { text, sha: hash(text) };
   }
 
-  async write(path: string, text: string, sha: string, message = ''): Promise<string> {
+  /** One file of a save, kept in memory with a line for History. */
+  private set(path: string, text: string, message: string): string {
     const now = !this.removed.has(path) && (this.changed.has(path) || files['/demo-vault/' + path] !== undefined) ? hash(this.text(path)) : '';
-    if (now !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
     const list = this.log.get(path) || [];
     if (!list.length && now) list.push({ entry: { commit: 'demo-0', date: '2026-10-01T09:00:00Z', message: 'demo: the demo vault as it came', agent: '' }, text: this.text(path) });
     list.push({ entry: { commit: 'demo-' + list.length, date: new Date().toISOString(), message: message.split('\n')[0], agent: '' }, text });
@@ -58,10 +58,6 @@ export class DemoSource implements VaultSource {
     this.changed.set(path, text);
     this.removed.delete(path);
     return hash(text);
-  }
-
-  async writeMany(list: { path: string; text: string }[], message = ''): Promise<void> {
-    for (const f of list) await this.write(f.path, f.text, '', message);
   }
 
   /** One save of several files. Nothing else changes the demo vault, so it never has to start again. */
@@ -75,20 +71,13 @@ export class DemoSource implements VaultSource {
     const blobs = (plan && plan.blobs) || [];
     if (!plan || (!plan.writes.length && !removes.length && !blobs.length)) return null;
     const shas: Record<string, string> = {};
-    for (const f of plan.writes) shas[f.path] = await this.write(f.path, f.text, has(f.path) ? hash(this.text(f.path)) : '', plan.message);
+    for (const f of plan.writes) shas[f.path] = this.set(f.path, f.text, plan.message);
     blobs.forEach((b) => { this.pictures.set(b.path, b.base64); shas[b.path] = hash(b.base64); });
     removes.forEach((path) => { this.removed.add(path); this.changed.delete(path); });
     this.saves++;
     return { commit: 'demo-save-' + this.saves, shas };
   }
   private saves = 0;
-
-  async writeBytes(path: string, base64: string, sha: string): Promise<string> {
-    const had = this.pictures.get(path);
-    if ((had ? hash(had) : '') !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
-    this.pictures.set(path, base64);
-    return hash(base64);
-  }
 
   async readBytes(path: string): Promise<Blob> {
     const b64 = this.pictures.get(path);
@@ -121,11 +110,5 @@ export class DemoSource implements VaultSource {
     if (hit) return hit.text;
     if (commit === 'demo-0' && files['/demo-vault/' + path] !== undefined) return files['/demo-vault/' + path];
     throw new Error('The demo vault has no such save.');
-  }
-
-  async remove(path: string, sha: string): Promise<void> {
-    if (hash(this.text(path)) !== sha) throw Object.assign(new Error(path + ' changed while saving.'), { conflict: true });
-    this.removed.add(path);
-    this.changed.delete(path);
   }
 }

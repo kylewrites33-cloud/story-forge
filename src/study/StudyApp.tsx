@@ -10,6 +10,8 @@ import { readPicture, writePicture } from '../lib/cache.ts';
 import { coverProblem, shrinkToJpeg } from '../lib/covers.ts';
 import { inline } from '../lib/markdown.ts';
 import type { FileEntry, VaultSource } from '../lib/types.ts';
+import { filesAction } from '../vault/ops.ts';
+import { pushAction } from '../vault/push.ts';
 import {
   ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
   type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
@@ -765,7 +767,7 @@ function CharacterPage({ lib, study, name, lens, setLens, source, afterSave }: {
   const lenses = lensesFor(lib, 'character');
   const shown = lens || c.bestLens;
   const l = lib.lenses.find((x) => x.name === shown);
-  const canSave = !!source.writeBytes && source.key !== 'demo';
+  const canSave = !!source.commit && source.key !== 'demo';
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
@@ -774,8 +776,7 @@ function CharacterPage({ lib, study, name, lens, setLens, source, afterSave }: {
     setSaving('Saving the picture…');
     try {
       const b64 = await shrinkToJpeg(file);
-      const path = facePath(study.folder, c.name);
-      await source.writeBytes!(path, b64, c.face && c.face.path === path ? c.face.sha : '', 'study: picture for ' + c.name);
+      await pushAction(source, filesAction([{ path: facePath(study.folder, c.name), taken: 'replace', base64: b64, message: 'study: picture for ' + c.name }]));
       await afterSave();
       setSaving('');
     } catch (e) {

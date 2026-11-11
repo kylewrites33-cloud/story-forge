@@ -4,14 +4,12 @@
 // so on, so those files get the new number in their name as well. Reading order is each scene's `order`, so a chapter
 // that moves takes new orders between its new neighbours.
 // The Edit room's change lists ("Chapter N changes.md") are chapter notes too and follow the same way. Two lists are
-// kept by chapter number outside any chapter note, and `renumberLists` moves them along: the chapters Kyle is through
+// kept by chapter number outside any chapter note, and the same save moves them along (src/vault/chapters.ts): the chapters Kyle is through
 // in the Rewrite tab (`rewrite_done` on the book note) and the sections of Chapter Titles.md (2026-11-11: before this
 // a chapter added, moved or deleted during an edit left all three pointing at the wrong chapter).
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
-import { rewriteDone, withRewriteList } from './rewrite.ts';
-import { renumberTitles, TITLES_FILE } from './titles.ts';
-import type { NoteRecord, VaultSource } from './types.ts';
+import type { NoteRecord } from './types.ts';
 
 /** Note types that carry a `chapter` number. The ones in NAMED are also named after their chapter. */
 const CHAPTER_TYPES = ['scene', 'task', 'scene-notes', 'chapter-beats', 'chapter-plan', 'chapter-scrap', 'chapter-changes'];
@@ -100,50 +98,6 @@ export function shiftedText(text: string, s: Shift): string {
   return out;
 }
 
-/** Save every shift, one save per note (two for a note that passes through another name). Throws a plain sentence if
- * one cannot be saved. */
-export async function applyShifts(source: VaultSource, shifts: Shift[], why: string): Promise<void> {
-  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
-  const write = source.write.bind(source);
-  const rename = async (from: string, to: string, text: string, sha: string, msg: string) => {
-    if (!source.remove) throw new Error('This vault cannot rename notes from the app.');
-    const made = await write(to, text, '', msg);
-    await source.remove(from, sha, msg);
-    return made;
-  };
-  const later: { from: string; to: string; text: string; sha: string; msg: string }[] = [];
-  for (const s of shifts) {
-    const msg = 'chapters: chapter ' + s.from + ' is now ' + s.to + ' (' + s.path.slice(s.path.lastIndexOf('/') + 1).replace(/\.md$/, '') + ')\n\n' + why;
-    try {
-      for (let attempt = 0; ; attempt++) {
-        const { text, sha } = await source.readFresh(s.path);
-        const next = shiftedText(text, s);
-        try {
-          if (s.newPath === s.path) {
-            if (next !== text) await write(s.path, next, sha, msg);
-          } else if (s.via) {
-            const viaSha = await rename(s.path, s.via, next, sha, msg);
-            later.push({ from: s.via, to: s.newPath, text: next, sha: viaSha, msg });
-          } else await rename(s.path, s.newPath, next, sha, msg);
-          break;
-        } catch (e) {
-          if ((e as { conflict?: boolean }).conflict && attempt === 0 && s.newPath === s.path) continue;
-          throw e;
-        }
-      }
-    } catch (e) {
-      throw new Error('Chapter ' + s.from + ' could not become chapter ' + s.to + ' (' + (e as Error).message + '). Press Sync and look at the chapter list before trying again.');
-    }
-  }
-  for (const l of later) {
-    try {
-      await rename(l.from, l.to, l.text, l.sha, l.msg);
-    } catch (e) {
-      throw new Error('A note could not get its new name (' + (e as Error).message + '). It is saved as ' + l.from.slice(l.from.lastIndexOf('/') + 1) + '.');
-    }
-  }
-}
-
 /** After chapter `gone` is deleted, every later chapter closes up by one, lowest first, so each note moves into a number
  * (and a file name) the one before it has just left. `left` are notes already taken away (they are not shifted). */
 export function chapterCloseUp(notes: Record<string, NoteRecord>, bookFolder: string, gone: number, left: string[] = []): Shift[] {
@@ -157,11 +111,6 @@ export function chapterCloseUp(notes: Record<string, NoteRecord>, bookFolder: st
 export function chapterNotes(notes: Record<string, NoteRecord>, bookFolder: string, ch: number): NoteRecord[] {
   return Object.values(notes).filter((n) => n.path.startsWith(bookFolder + '/') && n.type !== 'scene' && CHAPTER_TYPES.indexOf(n.type) >= 0 &&
     toNumber(n.data.chapter) === ch && !/\/(Archive|Snapshots|Exports)\//.test(n.path.slice(bookFolder.length)));
-}
-
-/** Move every note in `shifts` up one chapter to make room for a new chapter. */
-export async function makeRoom(source: VaultSource, shifts: Shift[], newChapter: number): Promise<void> {
-  await applyShifts(source, shifts, 'Chapters after ' + (newChapter - 1) + ' move up one to make room for a new chapter ' + newChapter + '. Added in the Sparrow app.');
 }
 
 /** Renaming a chapter (Kyle, 2026-10-22: tap the chapter's name on the page, or hold it in the list). A chapter's name is
@@ -184,47 +133,3 @@ export const moveMap = (from: number, to: number): ChapterMap => (ch) =>
   ch === from ? to : to < from ? (ch >= to && ch < from ? ch + 1 : ch) : (ch > from && ch <= to ? ch - 1 : ch);
 /** Chapter `gone` is deleted; the chapters after it close up by one. */
 export const closeMap = (gone: number): ChapterMap => (ch) => (ch === gone ? null : ch > gone ? ch - 1 : ch);
-
-/** The book's two lists kept by chapter number follow a renumbering: `rewrite_done` on the book note and the
- * `## Chapter N` sections of Chapter Titles.md. Each is one save and only when it changes. Returns the title options of
- * a deleted chapter (or ''), so the caller can put them in the Archive. Throws a plain sentence. */
-export async function renumberLists(source: VaultSource, notes: Record<string, NoteRecord>, bookFolder: string, map: ChapterMap, why: string): Promise<string> {
-  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
-  const readFresh = source.readFresh.bind(source), write = source.write.bind(source);
-  const save = async (path: string, what: string, change: (text: string) => string) => {
-    try {
-      for (let attempt = 0; ; attempt++) {
-        const { text, sha } = await readFresh(path);
-        const next = change(text);
-        if (next === text) return;
-        try {
-          await write(path, next, sha, 'chapters: ' + what + ' follows the new chapter numbers\n\n' + why);
-          return;
-        } catch (e) {
-          if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
-          throw e;
-        }
-      }
-    } catch (e) {
-      throw new Error('The chapters have their new numbers, but ' + what + ' could not follow (' + (e as Error).message + '). Tell the team so they can set it right.');
-    }
-  };
-  const bookPath = bookFolder + '/Book.md';
-  if (notes[bookPath] && rewriteDone(notes[bookPath]).length) {
-    await save(bookPath, 'the list of chapters you are through in the Rewrite tab', (text) => {
-      const now = rewriteDone({ data: (Frontmatter.parse(text).data || {}) as Record<string, unknown> });
-      const next = now.map(map).filter((n): n is number => n != null);
-      return next.join() === now.join() ? text : withRewriteList(text, next);
-    });
-  }
-  let gone = '';
-  const titlesPath = bookFolder + '/' + TITLES_FILE;
-  if (notes[titlesPath]) {
-    await save(titlesPath, 'the chapter titles list', (text) => {
-      const r = renumberTitles(text, map);
-      gone = r.gone;
-      return r.text;
-    });
-  }
-  return gone;
-}

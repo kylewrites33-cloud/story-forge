@@ -5,7 +5,6 @@ import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts
 import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
 import { loadTopRoom, saveTopRoom, type TopRoom } from '../lib/topbar.ts';
-import { oldSaving, setOldSaving } from '../vault/switch.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
 
@@ -78,29 +77,12 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
         {result && <p class={result.ok ? 'ok' : 'error'} role="status">{result.text}</p>}
       </form>
       <ReadingRates />
-      <SavingWay />
       <h2>Forget</h2>
       <p>Removes the token and the saved copy of the vault from this browser.</p>
       <p class="buttons">
         <button type="button" onClick={() => { setForm({ ...form, token: '' }); props.onForget(); setResult({ ok: true, text: 'Forgotten.' }); }}>Forget token</button>
       </p>
     </section>
-  );
-}
-
-/** The way back while features move onto the one saving system (2026-11-11). It goes when the old saving code goes. */
-function SavingWay() {
-  const [old, setOld] = useState(() => oldSaving());
-  const pick = (on: boolean) => { setOldSaving(on); setOld(on); };
-  return (
-    <>
-      <h2>Saving</h2>
-      <p class="hint">A choice on a board (keep, later, drop, a card moved, a chapter renamed) now goes up in one step, so a save cannot stop half-way. If choices stop saving on this device, pick The old way here and tell Claude. Each device keeps its own choice.</p>
-      <p class="buttons">
-        <button type="button" class={!old ? 'primary' : ''} aria-pressed={!old} onClick={() => pick(false)}>{!old ? '✓ ' : ''}The new way</button>
-        <button type="button" class={old ? 'primary' : ''} aria-pressed={old} onClick={() => pick(true)}>{old ? '✓ ' : ''}The old way</button>
-      </p>
-    </>
   );
 }
 

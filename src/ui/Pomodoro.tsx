@@ -5,15 +5,12 @@
 // counted with or without a Pomodoro, to the day's Writing Log note.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  advance, clock, flushLog, flushTyped, flushTyping, loadLog, loadTimer, loadTyped, loadTyping, msLeft, pause, resume, saveLog, saveTimer, typedDue,
-  pomodoroCount, startWork, stop, stoppedRecord, takeTypingCounts, today, typingDue, wordsAnHour, wordsSoFar, type LogItem, type TimerState
+  advance, clock, loadLog, loadTimer, loadTyped, loadTyping, msLeft, pause, resume, saveLog, saveTimer,
+  pomodoroCount, startWork, stop, stoppedRecord, takeTypingCounts, today, wordsAnHour, wordsSoFar, type LogItem, type TimerState
 } from '../lib/pomodoro.ts';
-import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { VaultIndex, VaultSource } from '../lib/types.ts';
 import { chirp, keepAwake } from './chirp.ts';
 import { Icon } from './Icon.tsx';
-
-let flushing = false;
-let sendingTyped = false;
 
 const num = (n: number) => n.toLocaleString('en-US');
 /** "52 minutes", "1 hour 5 minutes": minutes typing, rounded to the minute. */
@@ -25,76 +22,39 @@ const typingTime = (minutes: number) => {
   return h ? h + (h === 1 ? ' hour' : ' hours') + (rest ? ' ' + mins : '') : mins;
 };
 
-export function PomodoroTimer({ source, index, variant, onLogged, onLog }: {
+export function PomodoroTimer({ source, index, variant, onLog }: {
   source: VaultSource;
   index: VaultIndex | null;
   /** float: bottom right of the page; bar: in the writing screen's top bar; focus: beside Leave focus. */
   variant: 'float' | 'bar' | 'focus' | 'rail';
-  onLogged?: (notes: NoteRecord[]) => void;
-  /** The one saving system: Pomodoros and typing counts are handed over and it carries them to the vault. Without it
-   * the timer sends them itself (the old way). */
-  onLog?: (items: LogItem[]) => void;
+  /** Finished Pomodoros and typing counts are handed to the saving system, which carries them to the vault. */
+  onLog: (items: LogItem[]) => void;
 }) {
   const [s, setS] = useState<TimerState>(loadTimer);
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState('');
   const [waiting, setWaiting] = useState(() => loadLog(source.key));
   const box = useRef<HTMLDivElement>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const held = useRef(false);
-  const onLoggedRef = useRef(onLogged);
-  onLoggedRef.current = onLogged;
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;
 
-  const flush = async () => {
-    if (onLogRef.current) {
-      // Finished Pomodoros go to the saving system, which keeps them on the device until they are in the vault.
-      const list = loadLog(source.key);
-      if (!list.length) return;
-      onLogRef.current(list.map((record): LogItem => ({ kind: 'pomodoro', record })));
-      saveLog(source.key, []);
-      setWaiting([]);
-      return;
-    }
-    if (flushing || !source.write || !navigator.onLine || !loadLog(source.key).length) return;
-    flushing = true;
-    try {
-      const saved = await flushLog(source, new Date());
-      setError('');
-      if (saved.length && onLoggedRef.current) onLoggedRef.current(saved);
-    } catch (e) {
-      setError('A finished Pomodoro is saved on this device and goes to the vault later. ' + (e as Error).message);
-    } finally {
-      flushing = false;
-      setWaiting(loadLog(source.key));
-    }
+  /** Finished Pomodoros go to the saving system, which keeps them on the device until they are in the vault. */
+  const flush = () => {
+    const list = loadLog(source.key);
+    if (!list.length) return;
+    onLogRef.current(list.map((record): LogItem => ({ kind: 'pomodoro', record })));
+    saveLog(source.key, []);
+    setWaiting([]);
   };
 
   /** Send the words typed to the day's note when they are due (or now, when the page is put away). */
-  const sendTyped = async (force = false) => {
-    if (onLogRef.current) {
-      // With no connection the counts stay in their meters, which add up; they are handed over when it is back.
-      if (!navigator.onLine) return;
-      const items = takeTypingCounts(force);
-      if (items.length) onLogRef.current(items);
-      return;
-    }
-    if (sendingTyped || !source.write || !navigator.onLine) return;
-    const t = loadTyped();
-    const a = loadTyping();
-    const words = Object.keys(t.days).length > 0 && (force || typedDue(t, Date.now()));
-    const time = force ? Object.keys(a.days).length > 0 : typingDue(a, Date.now());
-    if (!words && !time) return;
-    sendingTyped = true;
-    try {
-      // One after the other: both go to the same day note.
-      const saved = words ? await flushTyped(source, new Date()) : [];
-      if (time) saved.push(...await flushTyping(source, new Date()));
-      if (saved.length && onLoggedRef.current) onLoggedRef.current(saved);
-    } catch { /* they stay on this device and go next time */ }
-    finally { sendingTyped = false; }
+  const sendTyped = (force = false) => {
+    // With no connection the counts stay in their meters, which add up; they are handed over when it is back.
+    if (!navigator.onLine) return;
+    const items = takeTypingCounts(force);
+    if (items.length) onLogRef.current(items);
   };
 
   /** Read the stored timer, move it on if its time is up, and show it. */
@@ -229,7 +189,6 @@ export function PomodoroTimer({ source, index, variant, onLogged, onLog }: {
           <p class="pomodoro-today"><strong>Today:</strong> {num(day.typed)} {day.typed === 1 ? 'word' : 'words'} typed in {typingTime(day.typing)} of typing{speed != null ? ', ' + num(speed) + ' words an hour' : ''}.</p>
           <p class="hint">Pomodoros: {done} ({num(day.minutes)} {day.minutes === 1 ? 'minute' : 'minutes'}).</p>
           {waiting.length > 0 && <p class="hint">{waiting.length === 1 ? '1 Pomodoro is' : waiting.length + ' Pomodoros are'} saved on this device and go to the vault's Writing Log when you are online.</p>}
-          {error && <p class="error">{error}</p>}
         </div>
       )}
     </div>

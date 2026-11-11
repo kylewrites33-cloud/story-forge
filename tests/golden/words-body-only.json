@@ -1,0 +1,46 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-005 The Ledger.md": "---\ntype: scene\nid: S-005\ntitle: The Ledger\nchapter: 3\nchapter_title: Ledger\norder: 5\nday: 5\nthreads:\n  - \"[[Who Cracked the Bell]]\"\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\nplace: \"[[Cinder Ford]]\"\ntension: 6\noutcome: yes\nmood: 0\ncard_draft:\n  - tension\n  - outcome\n  - mood\nstatus: planned\ngoal: Find the year the bell was last recast.\nturn: The page for that year has been cut out with a razor.\nwords: 0\n---\n\nCard notes: the ferry tolls are in the same ledger, in Tobin's hand.\n\nThe ferry did not come back.\n"
+ },
+ "gone": [],
+ "also": {
+  "merged": false,
+  "clash": null,
+  "note": {
+   "path": "Series/Ember Road/Books/1 Ash Bell/Scenes/S-005 The Ledger.md",
+   "sha": "",
+   "type": "scene",
+   "data": {
+    "type": "scene",
+    "id": "S-005",
+    "title": "The Ledger",
+    "chapter": 3,
+    "chapter_title": "Ledger",
+    "order": 5,
+    "day": 5,
+    "threads": [
+     "[[Who Cracked the Bell]]"
+    ],
+    "pov": "[[Mara Quill]]",
+    "cast": [
+     "[[Mara Quill]]"
+    ],
+    "place": "[[Cinder Ford]]",
+    "tension": 6,
+    "outcome": "yes",
+    "mood": 0,
+    "card_draft": [
+     "tension",
+     "outcome",
+     "mood"
+    ],
+    "status": "planned",
+    "goal": "Find the year the bell was last recast.",
+    "turn": "The page for that year has been cut out with a razor.",
+    "words": 0
+   },
+   "body": "\nCard notes: the ferry tolls are in the same ledger, in Tobin's hand.\n\nThe ferry did not come back.\n",
+   "error": null
+  }
+ }
+}

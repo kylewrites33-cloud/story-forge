@@ -57,13 +57,6 @@ export interface VaultSource {
   read(path: string, sha: string): Promise<string>;
   /** A note's text and blob sha as the source has them right now, bypassing every cache. Sources Kyle can change have it. */
   readFresh?(path: string): Promise<{ text: string; sha: string }>;
-  /** Replace a file whose current blob sha is `sha`, or add a new file when `sha` is '', as one commit. Returns the new blob sha.
-   * Throws an error with `conflict: true` when the file changed since `sha`. */
-  write?(path: string, text: string, sha: string, message: string): Promise<string>;
-  /** Add several new files as one commit (a saved draft's copies). Every path must be new. */
-  writeMany?(files: { path: string; text: string }[], message: string): Promise<void>;
-  /** Save a picture given as base64, as write does for text. Returns the new blob sha. */
-  writeBytes?(path: string, base64: string, sha: string, message: string): Promise<string>;
   /** A picture's bytes by blob sha. */
   readBytes?(path: string, sha: string): Promise<Blob>;
   /** Every commit that changed a file, newest first (GitHub keeps every save). */
@@ -72,9 +65,8 @@ export interface VaultSource {
   recent?(): Promise<SaveEntry[]>;
   /** A file's text as it was at one commit. */
   readAt?(path: string, commit: string): Promise<string>;
-  /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
-  remove?(path: string, sha: string, message: string): Promise<void>;
-  /** One save of any number of files, all or nothing (the one saving system, 2026-11-11). `build` is given the vault
+  /** The one way the app changes the vault (the one saving system, 2026-11-11; sources Kyle can change have it):
+   * one save of any number of files, all or nothing. `build` is given the vault
    * as it is at this moment and answers with what to change, or null for nothing. If the vault moved
    * on while the save was being made, `build` runs again on the newer files, so a save never lands on a stale copy.
    * Answers null when there was nothing to change, else the commit and each written file's new blob sha. */

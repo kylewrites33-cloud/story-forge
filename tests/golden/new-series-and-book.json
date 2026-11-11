@@ -1,0 +1,9 @@
+{
+ "set": {
+  "Book Backups/Salt Road/.gitkeep": "Word backups from Export to Word on Book details.\n",
+  "Book Backups/Salt Road/The Tide Clerk/.gitkeep": "Word backups from Export to Word on Book details.\n",
+  "Series/Salt Road/Books/1 The Tide Clerk/Book.md": "---\ntype: book\ntitle: The Tide Clerk\nseries: \"[[Salt Road]]\"\nnumber: 1\nstage: spark\ntarget_words: 60000\ncreated: 2026-11-11\n---\n\nThe Tide Clerk was started in the Sparrow app.\n",
+  "Series/Salt Road/Series.md": "---\ntype: series\nname: Salt Road\ngenre: cozy fantasy\nstatus: active\ncreated: 2026-11-11\n---\n\nSalt Road was started in the Sparrow app.\n"
+ },
+ "gone": []
+}

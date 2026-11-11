@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildEpub, coverFile, headingHtml, inlineHtml, kindleFile, matterPages, matterPath, saveMatterBody, screenHtml, splitNote, starterMatter } from '../src/lib/epub.ts';
+import { buildEpub, coverFile, headingHtml, inlineHtml, kindleFile, matterPages, screenHtml, splitNote, starterMatter } from '../src/lib/epub.ts';
 import { manuscript } from '../src/lib/docx.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
 import { parseSchema } from '../src/lib/schema.ts';
-import { DEMO, FsSource, MemSource } from './helpers.ts';
+import { DEMO, FsSource } from './helpers.ts';
 
 async function demo() {
   const src = new FsSource(DEMO);
@@ -90,18 +90,4 @@ test('the demo book makes a Kindle file with its matter, and says the cover is m
   assert.match(k.name, /\.epub$/);
   assert.deepEqual(k.missing, ['the cover']);
   assert.match(text(unzip(k.bytes), 'OEBPS/front1.xhtml'), /Copyright © 2026 Test Author/);
-});
-
-test('saving the matter keeps its properties and refuses a version changed elsewhere', async () => {
-  const src = new MemSource();
-  const { index } = await demo();
-  const book = index.books[0];
-  const p = matterPath(book);
-  const sha = await src.write!(p, starterMatter('A'), '', 'start');
-  const sha2 = await saveMatterBody(src, book, '## Front: Copyright\nNew words.', sha);
-  const now = await src.readFresh!(p);
-  assert.match(now.text, /^---\ntype: book-matter\n/);
-  assert.match(now.text, /\n---\n## Front: Copyright\nNew words\.\n$/);
-  await assert.rejects(saveMatterBody(src, book, 'x', sha), /changed somewhere else/);
-  assert.notEqual(sha2, sha);
 });

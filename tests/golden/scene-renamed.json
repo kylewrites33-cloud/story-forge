@@ -1,0 +1,8 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-002 The Night Ferry.md": "---\ntype: scene\nid: S-002\ntitle: The Night Ferry\nheadline: Mara tries to get Tobin across the ferry before the guards come and finds the rope cut.\nact: Act One\nchapter: 1\norder: 2\nday: 3\nthreads:\n  - \"[[Mara and Tobin]]\"\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\n  - \"[[Tobin Quill]]\"\nplace: \"[[Cinder Ford]]\"\nlore:\n  - \"[[Bell Law]]\"\nreveal:\n  - \"[[Bell Law]]\"\ntension: 5\noutcome: no-and\nmood: -2\ncard_draft:\n  - tension\n  - outcome\n  - mood\nstatus: planned\ngoal: Get Tobin across before the guards arrive.\nturn: The ferry rope has been cut.\nhook: The knife marks are fresh.\n---\n\nCard notes: Tobin mentions the Warden.\n"
+ },
+ "gone": [
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-002 The Ferry.md"
+ ]
+}

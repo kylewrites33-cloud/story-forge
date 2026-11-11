@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { answeredIn, bookNotesToTeam, freePath, noteTitle, noteTo } from '../src/lib/notes.ts';
-import { createAction } from '../src/vault/ops.ts';
-import { pushAll } from '../src/vault/push.ts';
+import { createAction, textAction } from '../src/vault/ops.ts';
+import { pushAction, pushAll } from '../src/vault/push.ts';
 import { bookSessions, parseSession, sessionIdeas, sessionWhen, speakers, voiceColour } from '../src/lib/sessions.ts';
-import { editRecipeText, recipeName, recipeNotes, saveRecipe, withRecipe } from '../src/lib/recipes.ts';
-import { makeNote } from '../src/lib/vault-index.ts';
+import { editRecipeText, recipeName, recipeNotes, withRecipe } from '../src/lib/recipes.ts';
 import { MemSource } from './helpers.ts';
 import { BOOK, demoIndex } from './wr-helpers.ts';
 
@@ -106,13 +105,14 @@ test('recipes: listed A to Z, named in a job\'s ask once, added and edited as Ky
   assert.equal(Frontmatter.parse(edited).body.trim(), 'Five lines at most.');
   assert.equal(Frontmatter.parse(editRecipeText(text, '', 'x')).data.use_for, undefined);
 
-  const saved = await saveRecipe(src, makeNote(made.path, src.sha(text), text), { title: 'Stat Block', use_for: 'a status screen', body: 'Five lines.' });
-  assert.equal(saved.path, 'Recipes/Stat Block.md');
-  assert.match(src.writes[1].message, /^recipes: edit Stat Block/);
-  const cur = src.files.get('Recipes/Stat Block.md')!;
-  const renamed = await saveRecipe(src, makeNote(saved.path, src.sha(cur), cur), { title: 'Status Screen', use_for: 'a status screen', body: 'Five lines.' });
-  assert.equal(renamed.path, 'Recipes/Status Screen.md');
-  assert.equal(renamed.data.title, 'Status Screen');
+  // Changed, then changed and renamed: each is one save.
+  const change = { what: 'recipe' as const, use_for: 'a status screen', body: 'Five lines.' };
+  await pushAction(src, textAction([{ path: made.path, change }]));
+  assert.match(src.commits[1].message, /^recipes: edit Stat Block/);
+  assert.equal(Frontmatter.parse(src.files.get('Recipes/Stat Block.md')!).body.trim(), 'Five lines.');
+  const renamed = await pushAction(src, textAction([{ path: made.path, change }], [{ kind: 'retitle', path: made.path, title: 'Status Screen', what: 'recipe' }]));
+  assert.deepEqual(renamed.renames, { 'Recipes/Stat Block.md': 'Recipes/Status Screen.md' });
+  assert.equal(Frontmatter.parse(src.files.get('Recipes/Status Screen.md')!).data.title, 'Status Screen');
   assert.ok(!src.files.has('Recipes/Stat Block.md'));
   await assert.rejects(addRecipe({ title: '', use_for: '', body: 'x' }), /name/);
 });

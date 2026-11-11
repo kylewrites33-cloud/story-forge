@@ -5,8 +5,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  addToDay, addTypedToDay, addTyping, addTypingToDay, flushTyping, loadTyping, markTyping, toMinutes, typingDue, wordsAnHour, TYPING_GAP_MS, advance, flushTyped, loadTyped, trackWords, wordsNotTyped, typedDue, saveTimer, loadTimer, clock, flushLog, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
+  addToDay, addTypedToDay, addTyping, addTypingToDay, loadTyping, markTyping, toMinutes, typingDue, wordsAnHour, TYPING_GAP_MS, advance, loadTyped, trackWords, wordsNotTyped, typedDue, saveTimer, loadTimer, clock, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
 } from '../src/lib/pomodoro.ts';
+import { logPath, takeTypingCounts, type LogItem } from '../src/lib/pomodoro.ts';
+import { pushAction } from '../src/vault/push.ts';
+import { textAction } from '../src/vault/ops.ts';
+import type { TextChange } from '../src/vault/text.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { VaultIndex } from '../src/lib/types.ts';
 import { DEMO, hasVault, MemSource, VAULT } from './helpers.ts';
@@ -20,6 +24,15 @@ const store = new Map<string, string>();
 };
 
 const T0 = new Date('2026-10-18T09:30:00').getTime();
+
+/** The timer's log handed to the one saving system, as the app hands it over: each piece a change to its day's note. */
+async function send(src: MemSource, items: LogItem[], now: Date): Promise<void> {
+  const at = now.toISOString();
+  const changes = items.map((i): { path: string; change: TextChange } => i.kind === 'pomodoro' ? { path: logPath(i.record.date), change: { what: 'log-pomodoro', record: i.record, at } }
+    : i.kind === 'typed' ? { path: logPath(i.date), change: { what: 'log-typed', date: i.date, words: i.words, at } }
+      : { path: logPath(i.date), change: { what: 'log-typing', date: i.date, minutes: i.minutes, at } });
+  await pushAction(src, textAction(changes, [], now));
+}
 
 test('a work Pomodoro counts only the words written in it', () => {
   let s = startWork(idleState(), T0);
@@ -92,9 +105,8 @@ test('finished Pomodoros wait on the device, then go to the Writing Log as Kyle\
   ]);
   const index = { notes: {} } as unknown as VaultIndex;
   assert.deepEqual(today(index, loadLog(src.key), new Date('2026-10-18T12:00:00')), { pomodoros: 2, minutes: 50, words: 500, typed: 0, typing: 0 });
-  const saved = await flushLog(src, new Date('2026-10-18T10:30:00Z'));
-  assert.equal(saved.length, 2);
-  assert.deepEqual(loadLog(src.key), []);
+  await send(src, loadLog(src.key).map((record) => ({ kind: 'pomodoro' as const, record })), new Date('2026-10-18T10:30:00Z'));
+  assert.equal(src.commits.length, 1, 'both in one save');
   const n = makeNote('Writing Log/2026-10-18.md', 'x', src.files.get('Writing Log/2026-10-18.md') as string);
   assert.equal(n.data.pomodoros, 2);
   assert.equal(n.data.words, 500);
@@ -136,9 +148,10 @@ test('words typed count with no Pomodoro running, and the team\'s words never co
   // It goes to the day's note as `typed`; a day logged before then starts from its Pomodoro words.
   const src = new MemSource();
   src.files.set('Writing Log/2026-10-21.md', addToDay('', { date: '2026-10-21', time: '08:00', minutes: 25, words: 516, scenes: ['S-051'] }, new Date(t)));
-  const saved = await flushTyped(src, new Date(t + 20 * 60000));
-  assert.equal(saved.length, 1);
-  assert.deepEqual(loadTyped().days, {});
+  const typed = takeTypingCounts(true, t + 20 * 60000).filter((i) => i.kind === 'typed');
+  assert.deepEqual(typed, [{ kind: 'typed', date: '2026-10-21', words: 75 }]);
+  await send(src, typed, new Date(t + 20 * 60000));
+  assert.deepEqual(loadTyped().days, {}, 'what was handed over has left the meter');
   const n = makeNote('Writing Log/2026-10-21.md', 'x', src.files.get('Writing Log/2026-10-21.md') as string);
   assert.equal(n.data.typed, 516 + 75);
   assert.equal(n.data.words, 516, 'the Pomodoro words stay as they were');
@@ -174,9 +187,10 @@ test('minutes typing count only the time between changes two minutes or less apa
   // It goes to the day's note as typing_minutes, beside the words typed, and adds up.
   const src = new MemSource();
   src.files.set('Writing Log/2026-10-29.md', addTypedToDay('', '2026-10-29', 300, new Date(t)));
-  const saved = await flushTyping(src, new Date(t + 5 * 60000));
-  assert.equal(saved.length, 1);
-  assert.deepEqual(loadTyping().days, {});
+  const minutes = takeTypingCounts(true, t + 5 * 60000);
+  assert.deepEqual(minutes, [{ kind: 'typing', date: '2026-10-29', minutes: 1 }]);
+  await send(src, minutes, new Date(t + 5 * 60000));
+  assert.deepEqual(loadTyping().days, {}, 'what was handed over has left the meter');
   src.files.set('Writing Log/2026-10-29.md', addTypingToDay(src.files.get('Writing Log/2026-10-29.md') as string, '2026-10-29', 0.5, new Date(t)));
   const n = makeNote('Writing Log/2026-10-29.md', 'x', src.files.get('Writing Log/2026-10-29.md') as string);
   assert.equal(n.data.typing_minutes, 1.5);

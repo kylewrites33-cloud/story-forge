@@ -10,7 +10,7 @@ import {
   tensionIssues, type Outcome, type ScenePoint
 } from '../lib/tension.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { href } from './route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';
