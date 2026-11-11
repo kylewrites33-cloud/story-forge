@@ -1224,3 +1224,42 @@ changes as done and Back to Draft 1 on the team's changes now go through the out
   demo vault and a pretend GitHub: Accept with a to-do ticked in the same save, Reject, Undo opening the to-do again,
   answers made with GitHub out of reach and the app closed and opened, the old list moving over, and the old way.
 
+
+## The one saving system, step 1: asks, chat, notes, recipes and workflow results (2026-11-11)
+
+The fourth piece. Five more things the app adds now go through the outbox: an ask to the team (Ask the team, the
+writing page's Fill braces, Options, Check, beats and the rest, which are all job notes), a Chat message, a Note to the
+Team, a new recipe, and results written or pasted into a workflow step. Nothing on the screens changed but this:
+
+- **They work offline.** Each needed the connection before ("Connect to the internet to ask the team.", "... to send
+  a message.", "... to add a note.", "... to add a recipe.", "... to save results.") and waited for GitHub before it
+  showed. Now each shows at once, waits on the device with everything else and goes up when the connection allows.
+  The team still only starts on an ask once it is in the vault, so the line after asking says which it is: "Sent to
+  the team. The team picks it up within a few minutes; see Jobs." or "Saved on this device. It goes to the team when
+  you are back online; see Jobs."
+- **Not asked twice.** The same ask for the same target is still refused while one is open, and an ask that waits on
+  the device counts as open.
+- **Chat.** A message shows in its conversation at once. A new conversation takes the next conversation number the
+  device knows of, counting messages that still wait.
+- **Several results, one save.** Results brought into a workflow step together are one action: all of them are in
+  the vault, or none.
+- **Numbers and names.** A job takes the next free J-number and a result the next free I-number, checked again at the
+  save as for to-dos. A Note to the Team or a recipe whose file name was taken meanwhile gets the next free name
+  ("Ferry times 2"). The notes, their folders and the lines in the vault's history are the ones the old code wrote.
+- **How it is built.** Four more makers in `src/vault/makers.ts` (`job`, `note`, `recipe`, `result`); `createAction`
+  takes one thing or a list. The old functions that wrote these notes straight to GitHub are gone (`createJob`,
+  `createNote`, `createRecipe`, `createResults`).
+- **Closing the app right after a save.** The saved copy of the vault on the device is written a moment after the
+  outbox goes up (the Edit room piece, above). If the app was closed in that moment and opened again with no
+  connection, a choice that had already gone up showed as not made until the next sync. Now what went up stays on the
+  device in a small list of its own (`story-forge.landed.<vault>`) until the saved copy with it in has been written,
+  and is shown over an older copy when the app opens. Saves from the writing page write the saved copy at once again,
+  as they did before the Edit room piece.
+- **Still need the connection** until their own pieces: adding a scene or a chapter, moving or deleting a chapter,
+  chapter titles, starting a series or a book, covers, Rocket files, bringing in a manuscript, changing a recipe, a
+  note on the workflow, marking a chapter in the rewrite, split and join, copies and saved drafts.
+- Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
+  demo vault and a pretend GitHub: a new conversation, a message sent with GitHub out of reach and the app closed and
+  opened (the team taking its number meanwhile), Ask the team asked twice while the first waits, a Note to the Team,
+  a recipe, the old way, and every earlier piece's check again (boards, to-dos, the Edit room), with the app closed
+  right after a save and GitHub out of reach.

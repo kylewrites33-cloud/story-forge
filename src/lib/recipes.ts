@@ -6,7 +6,7 @@ import { basename } from './links.ts';
 import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
 import { freePath } from './notes.ts';
-import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultIndex, VaultSource } from './types.ts';
 
 export const RECIPES_FOLDER = 'Recipes';
 
@@ -51,24 +51,15 @@ export function recipeText(r: RecipeFields, now: Date): string {
   return Frontmatter.join(data, '\n' + r.body.trim() + '\n');
 }
 
-/** Write a new recipe as Kyle's commit. */
-export async function createRecipe(source: VaultSource, r: RecipeFields, now: Date): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
+/** A new recipe, worked out from the files the vault has. It keeps the file name it was first shown with (`keep`, a
+ * path) unless another recipe took that name meanwhile. Kyle's commit. */
+export function planRecipe(files: FileEntry[], r: RecipeFields, now: Date, keep = ''): Made {
   const title = safeTitle(r.title);
   if (!title) throw new Error('Give the recipe a name first.');
   if (!r.body.trim()) throw new Error('Write what the recipe tells the team to do.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const path = freePath(RECIPES_FOLDER, title, files.map((f) => f.path));
-    const text = recipeText({ ...r, title }, now);
-    try {
-      const sha = await source.write(path, text, '', 'recipes: add ' + title + '\n\nWritten in the Sparrow app.');
-      return makeNote(path, sha, text);
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-      throw e;
-    }
-  }
+  const taken = files.map((f) => f.path);
+  const path = keep && !taken.some((p) => p.toLowerCase() === keep.toLowerCase()) ? keep : freePath(RECIPES_FOLDER, title, taken);
+  return { id: path, path, text: recipeText({ ...r, title }, now), message: 'recipes: add ' + title + '\n\nWritten in the Sparrow app.' };
 }
 
 /** The recipe's text with a new use_for and instruction. Only those change: every other line Kyle wrote stays. */

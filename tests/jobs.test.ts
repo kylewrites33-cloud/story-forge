@@ -6,7 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { applyToText, commitMessage, editChange } from '../src/lib/ideas.ts';
-import { askBody, costLabel, createJob, defaultJobTitle, jobGroups, jobLabel, jobNotes, jobText, nextJobId, openJobFor, resultBody } from '../src/lib/jobs.ts';
+import { createAction } from '../src/vault/ops.ts';
+import { pushAll } from '../src/vault/push.ts';
+import { askBody, costLabel, defaultJobTitle, jobGroups, jobLabel, jobNotes, jobText, nextJobId, openJobFor, resultBody } from '../src/lib/jobs.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
@@ -87,15 +89,31 @@ test("Kyle's words for kinds, statuses, titles and cost", () => {
   assert.equal(costLabel(undefined), '');
 });
 
-test('createJob writes Jobs/J-NNN as a commit without an Agent trailer, and retries on a clash', async () => {
+test('an ask to the team is a job note Jobs/J-NNN, saved as Kyle\'s without an Agent trailer, with the next ID if its own was taken', async () => {
   const src = new MemSource();
   src.files.set('Jobs/J-004 Older.md', '---\ntype: job\nid: J-004\ntitle: Older\nkind: learn\nstatus: done\n---\n## Ask\nx\n');
-  const made = await createJob(src, { title: 'Check S-002 for AI-sounding phrases', kind: 'check', target: 'S-002', book: 'Series/Ember Road/Books/1 Ash Bell', ask: '' }, new Date('2026-10-18T10:00:00'));
-  assert.equal(made.path, 'Jobs/J-005 Check S-002 for AI-sounding phrases.md');
+  const at = new Date('2026-10-18T10:00:00');
+  const j = { title: 'Check S-002 for AI-sounding phrases', kind: 'check' as const, target: 'S-002', book: 'Series/Ember Road/Books/1 Ash Bell', ask: '' };
+  const act = createAction('job', { j, at: at.toISOString() }, (await src.tree()).files, at);
+  assert.equal(act.ops[0].path, 'Jobs/J-005 Check S-002 for AI-sounding phrases.md');
+  // The team's runner added a job of its own before this one went up.
+  src.files.set('Jobs/J-005 Nightly.md', '---\ntype: job\nid: J-005\ntitle: Nightly\nkind: learn\nstatus: requested\n---\n## Ask\nx\n');
+  const res = await pushAll(src, [act]);
+  assert.equal(res.error, null);
+  const made = res.saved[0];
+  assert.equal(made.path, 'Jobs/J-006 Check S-002 for AI-sounding phrases.md');
+  assert.equal(made.data.id, 'J-006');
   assert.equal(made.data.status, 'requested');
-  assert.equal(src.writes[0].message, 'jobs: add J-005 Check S-002 for AI-sounding phrases\n\nAsked for in the Sparrow app.');
+  assert.deepEqual(res.renames, { 'Jobs/J-005 Check S-002 for AI-sounding phrases.md': made.path });
+  assert.equal(src.writes[0].message, 'jobs: add J-006 Check S-002 for AI-sounding phrases\n\nAsked for in the Sparrow app.');
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
-  await assert.rejects(createJob(src, { title: '   ', kind: 'custom', target: '', book: '', ask: '' }, new Date()), /Give the job a title first\./);
+  // The team has answered it since; sent again (the first answer was lost on the way back), it is not asked twice.
+  src.files.set(made.path, src.files.get(made.path)!.replace('status: requested', 'status: done') + '\n## Result\nDone.\n');
+  const again = createAction('job', { j, at: at.toISOString() }, [{ path: 'Jobs/J-005 Nightly.md', sha: '' }], at);
+  assert.equal(again.ops[0].path, made.path);
+  assert.equal((await pushAll(src, [again])).error, null);
+  assert.equal(src.files.size, 3);
+  assert.throws(() => createAction('job', { j: { title: '   ', kind: 'custom', target: '', book: '', ask: '' }, at: at.toISOString() }, [], at), /Give the job a title first\./);
 });
 
 test('Cancel changes one status line and says so in the commit', () => {

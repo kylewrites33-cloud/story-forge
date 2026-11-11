@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Frontmatter } from '../src/lib/frontmatter.js';
-import { answeredIn, bookNotesToTeam, createNote, freePath, noteTitle, noteTo } from '../src/lib/notes.ts';
+import { answeredIn, bookNotesToTeam, freePath, noteTitle, noteTo } from '../src/lib/notes.ts';
+import { createAction } from '../src/vault/ops.ts';
+import { pushAll } from '../src/vault/push.ts';
 import { bookSessions, parseSession, sessionIdeas, sessionWhen, speakers, voiceColour } from '../src/lib/sessions.ts';
-import { createRecipe, editRecipeText, recipeName, recipeNotes, saveRecipe, withRecipe } from '../src/lib/recipes.ts';
+import { editRecipeText, recipeName, recipeNotes, saveRecipe, withRecipe } from '../src/lib/recipes.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { MemSource } from './helpers.ts';
 import { BOOK, demoIndex } from './wr-helpers.ts';
@@ -24,16 +26,25 @@ test('Notes to the Team: open first, who each is for, and the session that answe
 test('a new Note to the Team is Kyle\'s commit in the book\'s folder, never over another note', async () => {
   const src = new MemSource();
   src.files.set(BOOK + '/Notes to the Team/Keep Tobin young.md', '---\ntype: note\ntitle: Keep Tobin young\nstatus: open\n---\nx\n');
-  const n = await createNote(src, BOOK, { title: 'Keep Tobin young', to: 'Writer', body: 'Tobin talks like a seventeen-year-old.' }, NOW);
+  const addNote = async (n: { title: string; to: string; body: string }) => (await pushAll(src, [createAction('note', { book: BOOK, n, at: NOW.toISOString() }, (await src.tree()).files, NOW)])).saved[0];
+  const n = await addNote({ title: 'Keep Tobin young', to: 'Writer', body: 'Tobin talks like a seventeen-year-old.' });
   assert.equal(n.path, BOOK + '/Notes to the Team/Keep Tobin young 2.md');
   assert.deepEqual(n.data, { type: 'note', title: 'Keep Tobin young', to: 'Writer', status: 'open', created: '2026-10-18' });
   assert.equal(n.body.trim(), 'Tobin talks like a seventeen-year-old.');
   assert.match(src.writes[0].message, /^notes: add Keep Tobin young/);
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
-  const auto = await createNote(src, BOOK, { title: '', to: '', body: 'Never let Mara cry on the page. She works instead, and the work goes wrong.' }, NOW);
+  const auto = await addNote({ title: '', to: '', body: 'Never let Mara cry on the page. She works instead, and the work goes wrong.' });
   assert.equal(auto.data.title, 'Never let Mara cry on the page. She works instead, and the');
   assert.equal(auto.data.to, 'Team');
-  await assert.rejects(createNote(src, BOOK, { title: 'x', to: 'Team', body: '  ' }, NOW), /Write the instruction first/);
+  await assert.rejects(addNote({ title: 'x', to: 'Team', body: '  ' }), /Write the instruction first/);
+  // Shown as one name while it waited; another device took that name meanwhile, with other words: it takes the next.
+  const waits = createAction('note', { book: BOOK, n: { title: 'Ferry times', to: 'Team', body: 'Dawn, not noon.' }, at: NOW.toISOString() }, (await src.tree()).files, NOW);
+  assert.equal(waits.ops[0].path, BOOK + '/Notes to the Team/Ferry times.md');
+  src.files.set(BOOK + '/Notes to the Team/Ferry times.md', '---\ntype: note\ntitle: Ferry times\nto: Team\nstatus: open\ncreated: 2026-10-18\n---\n\nSomething else.\n');
+  const went = await pushAll(src, [waits]);
+  assert.deepEqual(went.renames, { [BOOK + '/Notes to the Team/Ferry times.md']: BOOK + '/Notes to the Team/Ferry times 2.md' });
+  assert.match(src.files.get(BOOK + '/Notes to the Team/Ferry times 2.md')!, /Dawn, not noon\./);
+  assert.match(src.files.get(BOOK + '/Notes to the Team/Ferry times.md')!, /Something else\./);
   assert.equal(noteTitle('', 'Short one.'), 'Short one');
   assert.equal(freePath('F', 'A', ['F/a.md', 'F/A 2.md']), 'F/A 3.md');
 });
@@ -82,7 +93,8 @@ test('recipes: listed A to Z, named in a job\'s ask once, added and edited as Ky
   assert.equal(withRecipe('Draft it.', ''), 'Draft it.');
 
   const src = new MemSource();
-  const made = await createRecipe(src, { title: 'Stat Block', use_for: 'a LitRPG status screen', body: 'Four lines at most.' }, NOW);
+  const addRecipe = async (r: { title: string; use_for: string; body: string }) => (await pushAll(src, [createAction('recipe', { r, at: NOW.toISOString() }, (await src.tree()).files, NOW)])).saved[0];
+  const made = await addRecipe({ title: 'Stat Block', use_for: 'a LitRPG status screen', body: 'Four lines at most.' });
   assert.equal(made.path, 'Recipes/Stat Block.md');
   assert.deepEqual(made.data, { type: 'recipe', title: 'Stat Block', use_for: 'a LitRPG status screen', created: '2026-10-18' });
   assert.doesNotMatch(src.writes[0].message, /Agent:/);
@@ -102,5 +114,5 @@ test('recipes: listed A to Z, named in a job\'s ask once, added and edited as Ky
   assert.equal(renamed.path, 'Recipes/Status Screen.md');
   assert.equal(renamed.data.title, 'Status Screen');
   assert.ok(!src.files.has('Recipes/Stat Block.md'));
-  await assert.rejects(createRecipe(src, { title: '', use_for: '', body: 'x' }, NOW), /name/);
+  await assert.rejects(addRecipe({ title: '', use_for: '', body: 'x' }), /name/);
 });

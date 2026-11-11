@@ -10,7 +10,7 @@ import type { Decision } from '../lib/ideas.ts';
 import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { bookTodos, type NewTodo } from '../lib/todos.ts';
-import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
+import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
 import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
@@ -25,7 +25,7 @@ import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
 import { choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
-import { add, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
+import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAll } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
@@ -72,8 +72,8 @@ import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from
 import { pageContext, type PageView } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
 import { PILES, piles } from '../lib/ideas.ts';
-import { createNote, type NewNote } from '../lib/notes.ts';
-import { createRecipe, recipeName, recipeNotes, saveRecipe, type RecipeFields } from '../lib/recipes.ts';
+import type { NewNote } from '../lib/notes.ts';
+import { recipeName, recipeNotes, saveRecipe, type RecipeFields } from '../lib/recipes.ts';
 import { OverviewPage } from './Overview.tsx';
 import { NotesScreen } from './NotesToTeam.tsx';
 import { SessionsScreen, SessionView } from './Sessions.tsx';
@@ -82,7 +82,7 @@ import { WorkflowScreen } from './Workflow.tsx';
 import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
 import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
-import { createResults, flowResults, type NewResult } from '../lib/flow.ts';
+import { flowResults, type NewResult } from '../lib/flow.ts';
 import { nameList, toNumber } from '../lib/links.ts';
 
 function makeSource(s: Settings): VaultSource {
@@ -127,24 +127,33 @@ export function App() {
 
   /** Put a new note in the outbox: it shows at once with the ID it will most likely get, and is saved when the
    * connection allows. Throws a plain sentence when what Kyle typed cannot make a note. */
-  const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K]) => {
+  const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
     const cur = snapRef.current;
     if (!cur) throw new Error('Press Sync first.');
     // The files the app knows of: the saved copy's notes and the new notes still waiting.
     const paths = Object.keys(cur.index.notes);
     outboxRef.current.forEach((a) => a.ops.forEach((op) => { if (op.kind === 'create') paths.push(op.path); }));
-    setOutbox(add(outboxRef.current, createAction(name, payload, paths.map((path) => ({ path, sha: '' })))));
+    const action = createAction(name, payload, paths.map((path) => ({ path, sha: '' })));
+    setOutbox(add(outboxRef.current, action));
+    return action;
   }, [setOutbox]);
 
-  // Writing the saved copy to the device copies the whole vault, so after a save it is written once things go quiet,
-  // not once for each save (Keep after Keep in the Edit room), and at once when the app is put away.
+  /** Write the saved copy to the device. What went up before this is in it now, so it leaves the list kept for the
+   * moment between a save and this write (outbox.ts, loadLanded). */
+  const persist = useCallback(async (s: Snapshot) => {
+    const ids = loadLanded(s.key).map((a) => a.id);
+    await writeSnapshot(s);
+    if (ids.length) saveLanded(s.key, loadLanded(s.key).filter((a) => ids.indexOf(a.id) < 0));
+  }, []);
+  // Writing the saved copy copies the whole vault, so after the outbox goes up it is written once things go quiet, not
+  // once for each save (Keep after Keep in the Edit room), and at once when the app is put away.
   const snapTimer = useRef(0);
   const writeSnapNow = useCallback(() => {
     if (!snapTimer.current) return;
     clearTimeout(snapTimer.current);
     snapTimer.current = 0;
-    if (snapRef.current) void writeSnapshot(snapRef.current);
-  }, []);
+    if (snapRef.current) void persist(snapRef.current);
+  }, [persist]);
   useEffect(() => {
     const onHide = () => { if (document.visibilityState === 'hidden') writeSnapNow(); };
     document.addEventListener('visibilitychange', onHide);
@@ -152,16 +161,19 @@ export function App() {
     return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', writeSnapNow); writeSnapNow(); };
   }, [writeSnapNow]);
 
-  /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. */
-  const foldNotes = useCallback(async (saved: NoteRecord[]) => {
+  /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. `soon` is for
+   * the outbox: the copy on the device is written once things go quiet. Anything else (writing) is written at once. */
+  const foldNotes = useCallback(async (saved: NoteRecord[], soon = false) => {
     const cur = snapRef.current;
     if (!saved.length || !cur || cur.key !== source.key) return;
     const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current) };
     snapRef.current = next;
     setSnap(next);
     clearTimeout(snapTimer.current);
-    snapTimer.current = window.setTimeout(writeSnapNow, 1500);
-  }, [source, writeSnapNow]);
+    snapTimer.current = 0;
+    if (soon) snapTimer.current = window.setTimeout(writeSnapNow, 1500);
+    else await persist(next);
+  }, [source, writeSnapNow, persist]);
 
   // One lane for sending the outbox up and for reading the vault down, so the two never cross: a sync that started
   // before a save landed could otherwise finish after it and put the older note back on the screen until the next sync.
@@ -192,9 +204,12 @@ export function App() {
     }
     // Only the actions this push handled leave or take a failure; ones Kyle added while it ran wait for the next push.
     const left = settle(outboxRef.current, res.done, res.failed, res.renames);
+    // What went up stays on the device, in its own list, until the saved copy with it in has been written.
+    const landed = landedOf(sent, res.done, res.renames);
+    if (landed.length) saveLanded(source.key, loadLanded(source.key).concat(landed));
     setOutbox(left);
     if (res.error) setError(res.error);
-    await foldNotes(res.saved);
+    await foldNotes(res.saved, true);
     if (left.some((a) => !sent.some((x) => x.id === a.id))) setTimeout(() => runFlushRef.current(), 0);
     return res.error;
   }, [source, setOutbox, foldNotes]);
@@ -222,7 +237,9 @@ export function App() {
       snapRef.current = next;
       setSnap(next);
       setError(saveError);
-      await writeSnapshot(next);
+      clearTimeout(snapTimer.current);
+      snapTimer.current = 0;
+      await persist(next);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -361,49 +378,41 @@ export function App() {
   /** Ask the team for one piece of work: write a job note into the vault's Jobs folder, then sync so the Jobs screen shows it.
    * A job of the same kind and target that the team has not finished yet is reported instead of made twice. */
   const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
-    if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
     const cur = snapRef.current;
     // Fill braces may run again while one is waiting: the page only sends asks the team does not have yet.
-    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlayActions(cur.index, outboxRef.current)), j.kind, j.target) : null;
+    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlayActions(cur.index, outboxRef.current, schemaRef.current)), j.kind, j.target) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
       return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for the team') + '. See Jobs.' };
     }
     try {
-      await createJob(source, j, new Date());
-      await runSync();
-      return { error: false, text: 'Sent to the team. The team picks it up within a few minutes; see Jobs.' };
+      // The ask is a job note in the outbox (2026-11-11): it shows in Jobs at once and goes up when the connection allows.
+      create('job', { j, at: new Date().toISOString() });
+      runFlush();
+      return { error: false, text: navigator.onLine ? 'Sent to the team. The team picks it up within a few minutes; see Jobs.' : 'Saved on this device. It goes to the team when you are back online; see Jobs.' };
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }
-  }, [source, runSync]);
+  }, [create, runFlush]);
 
   /** Send a message in a conversation with the team: one chat job note, shown at once, then a sync in the background.
    * A conversation not started yet ('new') gets the next free chat-NNN. A message may follow one still waiting for a reply. */
   const onChat = useCallback(async (thread: string, words: string, book: string, page = ''): Promise<{ thread: string; book: string } | { error: string }> => {
-    if (!navigator.onLine) return { error: 'Connect to the internet to send a message.' };
     const cur = snapRef.current;
     if (!cur) return { error: 'Press Sync first.' };
-    const shown = overlayActions(cur.index, outboxRef.current);
+    // Messages still waiting on the device count, so two new conversations started offline get two names.
+    const shown = overlayActions(cur.index, outboxRef.current, schemaRef.current);
     const t = thread === 'new' ? nextChatThread(shown) : thread;
     if (!isThread(t)) return { error: 'That conversation has no name the team knows. Start a new conversation instead.' };
     const folder = book || (activeBook(shown) || shown.books[0] || { folder: '' }).folder;
     try {
-      const made = await createJob(source, chatJob(t, words, folder, page), new Date());
-      const now = snapRef.current;
-      if (now && now.key === source.key) {
-        const jobs = (now.index.jobs || []).filter((p) => p !== made.path).concat(made.path).sort();
-        const next = { ...now, index: { ...now.index, notes: { ...now.index.notes, [made.path]: made }, jobs } };
-        snapRef.current = next;
-        setSnap(next);
-        await writeSnapshot(next);
-      }
-      runSync();
+      create('job', { j: chatJob(t, words, folder, page), at: new Date().toISOString() });
+      runFlush();
       return { thread: t, book: folder };
     } catch (e) {
       return { error: (e as Error).message };
     }
-  }, [source, runSync]);
+  }, [create, runFlush]);
 
   /** A picture from the device becomes the book's cover: kept full size in the book's Cover/ folder, and a small copy
    * made here is saved as Cover.jpg in the book's folder. */
@@ -502,13 +511,11 @@ export function App() {
 
   /** Writers Room pages: a new Note to the Team, a new or changed recipe; each saves at once, then syncs. */
   const onAddNote = useCallback(async (book: BookEntry, n: NewNote): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a note.';
-    try { await createNote(source, book.folder, n, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+    try { create('note', { book: book.folder, n, at: new Date().toISOString() }); runFlush(); return null; } catch (e) { return (e as Error).message; }
+  }, [create, runFlush]);
   const onAddRecipe = useCallback(async (r: RecipeFields): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a recipe.';
-    try { await createRecipe(source, r, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+    try { create('recipe', { r, at: new Date().toISOString() }); runFlush(); return null; } catch (e) { return (e as Error).message; }
+  }, [create, runFlush]);
   const onSaveRecipe = useCallback(async (note: NoteRecord, r: RecipeFields): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to change a recipe.';
     try { await saveRecipe(source, note, r); await runSync(); return null; } catch (e) { return (e as Error).message; }
@@ -553,10 +560,11 @@ export function App() {
 
   /** Workflow mode: results Kyle brought in or wrote, saved as idea notes in the book's Ideas folder, then a sync so every screen has them. */
   const onResults = useCallback(async (book: BookEntry, list: NewResult[]): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to save results.';
     if (!list.length) return 'Write or paste a result first.';
-    try { await createResults(source, book.folder, list, new Date()); await runSync(); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+    // Results added together are one action: they go up as one save, each with the next ID.
+    const at = new Date().toISOString();
+    try { create('result', list.map((r) => ({ book: book.folder, r, at }))); runFlush(); return null; } catch (e) { return (e as Error).message; }
+  }, [create, runFlush]);
 
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
     act([{ path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }]);
@@ -647,8 +655,13 @@ export function App() {
     let live = true;
     setLoaded(false);
     setError(null);
-    readSnapshot(source.key).then((saved) => {
+    readSnapshot(source.key).then((read) => {
       if (!live) return;
+      // The app was closed between a save and the write of the saved copy: show what went up on the older copy.
+      const landed = read ? loadLanded(source.key) : [];
+      let schema: Schema | null = null;
+      try { if (read && landed.length) schema = parseSchema(read.schemaText); } catch { schema = null; }
+      const saved = read && landed.length ? { ...read, index: overlayActions(read.index, landed, schema) } : read;
       setSnap(saved);
       snapRef.current = saved;
       setLoaded(true);

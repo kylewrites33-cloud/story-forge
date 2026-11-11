@@ -6,6 +6,7 @@ import { isMaker } from './makers.ts';
 import { choiceAction, marksAction, type Action, type Op } from './ops.ts';
 
 const KEY = 'story-forge.outbox.';
+const LANDED = 'story-forge.landed.';
 
 type Store = Storage | null;
 const store = (): Store => globalThis.localStorage ?? null;
@@ -57,6 +58,41 @@ export function saveOutbox(sourceKey: string, list: Action[], s: Store = store()
   } catch {
     /* storage full or turned off: the action still saves now if the connection holds */
   }
+}
+
+/** Actions that have gone up but may not be in the saved copy on this device yet. The saved copy is written a moment
+ * after a save (it copies the whole vault), and the app can be closed in that moment. Until the copy is written, the
+ * action stays here, so the app can show it again when it opens with the older copy and no connection. */
+export function loadLanded(sourceKey: string, s: Store = store()): Action[] {
+  try {
+    const raw = s && s.getItem(LANDED + sourceKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(valid) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLanded(sourceKey: string, list: Action[], s: Store = store()): void {
+  try {
+    if (!s) return;
+    if (list.length) s.setItem(LANDED + sourceKey, JSON.stringify(list));
+    else s.removeItem(LANDED + sourceKey);
+  } catch {
+    /* storage full or turned off: the next sync puts the saved copy right */
+  }
+}
+
+/** The actions a push sent up, as they should be shown on an older saved copy. A new note that was saved under another
+ * ID than it was shown with is left out: the next sync brings it. */
+export function landedOf(sent: Action[], done: string[], renames: Record<string, string> = {}): Action[] {
+  const out: Action[] = [];
+  sent.forEach((a) => {
+    if (done.indexOf(a.id) < 0) return;
+    const ops = a.ops.filter((op) => !renames[op.path]);
+    if (ops.length) out.push({ id: a.id, at: a.at, ops });
+  });
+  return out;
 }
 
 /** The choice an op carries, if it is one. */

@@ -7,9 +7,8 @@ import { Frontmatter } from './frontmatter.js';
 import { idNumber, linkName } from './links.ts';
 import { pileOf, stamp } from './ideas.ts';
 import { safeTitle } from './scenes.ts';
-import { makeNote } from './vault-index.ts';
 import type { Workflow, WorkflowStep } from './workflow.ts';
-import type { BookEntry, FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { BookEntry, FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export type Mode = 'workflow' | 'writing';
 
@@ -307,31 +306,19 @@ export function resultText(id: string, r: NewResult, now: Date): string {
   return Frontmatter.join(data, '\n## The idea\n\n' + words + '\n');
 }
 
-/** Write results as idea notes in the book's Ideas folder, one commit each, as Kyle's (no Agent trailer). */
-export async function createResults(source: VaultSource, bookFolder: string, list: NewResult[], now: Date): Promise<NoteRecord[]> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const made: NoteRecord[] = [];
-  let next = 0;
-  for (const r of list) {
-    for (let attempt = 0; ; attempt++) {
-      if (!next || attempt) next = nextIdeaNumber((await source.tree()).files, bookFolder);
-      const id = 'I-' + String(next).padStart(3, '0');
-      const text = resultText(id, r, now);
-      const title = safeTitle(String(Frontmatter.parse(text).data.title || 'Result'));
-      const path = bookFolder + '/Ideas/' + id + ' ' + title + '.md';
-      try {
-        const how = r.origin === 'kyle' ? 'written in' : 'brought into';
-        const sha = await source.write(path, text, '', 'ideas: add ' + id + ' ' + title + '\n\nA result for workflow step ' + r.step + ', ' + how + ' the Sparrow app.');
-        made.push(makeNote(path, sha, text));
-        next++;
-        break;
-      } catch (e) {
-        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-        throw e;
-      }
-    }
-  }
-  return made;
+/** A result as an idea note in the book's Ideas folder, worked out from the files the vault has. It keeps the ID it was
+ * first shown with (`keep`) unless another idea in the book took that ID meanwhile. Kyle's commit (no Agent trailer). */
+export function planResult(files: FileEntry[], bookFolder: string, r: NewResult, now: Date, keep = ''): Made {
+  if (!r.text.trim()) throw new Error('Write or paste a result first.');
+  const taken = keep && files.some((f) => {
+    const m = f.path.startsWith(bookFolder + '/') ? /^I-(\d+)\b/.exec(f.path.slice(f.path.lastIndexOf('/') + 1)) : null;
+    return Boolean(m) && parseInt(m![1], 10) === idNumber(keep);
+  });
+  const id = keep && !taken ? keep : 'I-' + String(nextIdeaNumber(files, bookFolder)).padStart(3, '0');
+  const text = resultText(id, r, now);
+  const title = safeTitle(String(Frontmatter.parse(text).data.title || 'Result'));
+  const how = r.origin === 'kyle' ? 'written in' : 'brought into';
+  return { id, path: bookFolder + '/Ideas/' + id + ' ' + title + '.md', text, message: 'ideas: add ' + id + ' ' + title + '\n\nA result for workflow step ' + r.step + ', ' + how + ' the Sparrow app.' };
 }
 
 // ---- Asking the team ----
