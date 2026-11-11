@@ -4,8 +4,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { idNumber, toNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
-import { makeNote } from './vault-index.ts';
-import type { BookEntry, FileEntry, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { BookEntry, FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export const OPEN_STATUSES = ['open', 'doing'];
 
@@ -68,26 +67,21 @@ export function fullTitle(s: string): string {
   return String(s || '').replace(/\s+/g, ' ').trim();
 }
 
-/** Add a to-do to a book's Tasks folder as Kyle's commit. */
-export async function createTodo(source: VaultSource, bookFolder: string, t: NewTodo, now: Date): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
+/** A new to-do for a book's Tasks folder, worked out from the files the vault has. It keeps the ID it was first shown
+ * with (`keep`) unless another note took that ID meanwhile; then it takes the next free one. */
+export function planTodo(files: FileEntry[], bookFolder: string, t: NewTodo, now: Date, keep = ''): Made {
   // The note keeps every word Kyle wrote; only the file name is shortened.
   const title = fullTitle(t.title);
   const name = safeTitle(title);
   if (!name) throw new Error('Write the to-do first.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const id = nextBookTaskId(files, bookFolder);
-    const path = bookFolder + '/Tasks/' + id + ' ' + name + '.md';
-    const text = todoText(id, { ...t, title }, now);
-    try {
-      const sha = await source.write(path, text, '', 'tasks: add ' + id + ' ' + name + '\n\nAdded beside the page in the Sparrow app.');
-      return makeNote(path, sha, text);
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-      throw e;
-    }
-  }
+  const pre = bookFolder + '/Tasks/';
+  const taken = keep && files.some((f) => {
+    if (!f.path.startsWith(pre)) return false;
+    const m = /^T-(\d+)/.exec(f.path.slice(pre.length));
+    return Boolean(m) && parseInt(m![1], 10) === idNumber(keep);
+  });
+  const id = keep && !taken ? keep : nextBookTaskId(files, bookFolder);
+  return { id, path: pre + id + ' ' + name + '.md', text: todoText(id, { ...t, title }, now), message: 'tasks: add ' + id + ' ' + name + '\n\nAdded beside the page in the Sparrow app.' };
 }
 
 /** Where a to-do is, in Kyle's words: "Chapter 3 · S-012". */

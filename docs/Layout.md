@@ -18,8 +18,8 @@ src/lib/prose.js         the vault tool's prose helpers and word count, copied a
 src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML that keeps every character
 src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
-src/lib/tasks.ts         the to-do list: task notes by status, due dates, new to-dos with the next free ID
-src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, new ones in the book's Tasks folder
+src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a new to-do is (planTask: next free ID, path, text)
+src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, what a new one is (planTodo, in the book's Tasks folder)
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes
 src/lib/jobs.ts          Ask the team: job notes by status, new jobs with the next free ID, Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
@@ -141,7 +141,8 @@ src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
-src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (one change to one file), Edit (a change kept as what he meant)
+src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, or a new note by its maker), Edit (a change kept as what he meant)
+src/vault/makers.ts      the makers of new notes, by name (task, todo): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
 src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied
 src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; the old way behind the switch
