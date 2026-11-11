@@ -831,7 +831,10 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   on the iPad ("something's a little funny about how the text in the middle gets selected"). The light stays while the cursor
   is in the box and follows the page as it scrolls, and goes when the cursor leaves the box (Kyle: "once i select in
   the right side box to edit, the highlight on the left disappears ... difficult for me to track which location im
-  working in"). A chapter of several scenes keeps one left edge when a scene has a { } note in the margin ("the next
+  working in"). The boxes are cut to the part of the page in sight (2026-11-11, Kyle: "the highlights run past the word
+  processor section when you scroll"): scrolled above the page they were drawn over the top bar and the changes bar,
+  because they sit over the whole screen; `inSight` in `src/ui/StyledEditor.tsx` gives the page's box less the bars that
+  stay at its top or foot, and a line half under an edge is drawn half. A chapter of several scenes keeps one left edge when a scene has a { } note in the margin ("the next
   scene on the screen seems staggered differently when i close the left side chapters pane"). Done with this chapter is
   also at the end of the page, under the last scene, with the same "You are through chapter N" and Open it again
   (Kyle: "is there an option for me to mark the draft 2 chapter as done at the bottom of the page").
