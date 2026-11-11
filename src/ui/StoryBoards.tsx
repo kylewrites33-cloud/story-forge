@@ -6,36 +6,8 @@ import { pileOf } from '../lib/ideas.ts';
 import { propDef } from '../lib/schema.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
-import { seeingLinks } from './Seeing.tsx';
-
-export interface BoardLink { key: string; title: string; to: string; icon: string }
-
-/** Pages of a book the app draws without a board in the schema: Overview, Notes to the Team, Sessions. */
-export const APP_BOARDS = ['overview', 'notes', 'sessions'];
-
-/** The book's boards, in the order the Story Juice chain uses them; boards the schema lacks are left out. */
-export function boardLinks(schema: Schema, folder: string): BoardLink[] {
-  return [
-    { key: 'chapter-grid', title: 'Chapter Grid', to: href.book(folder), icon: 'grid' },
-    { key: 'ideas', title: 'Ideas', to: href.ideas(folder), icon: 'idea' },
-    { key: 'story-juice', title: 'Story Juice', to: href.board('story-juice', folder), icon: 'juice' },
-    { key: 'characters', title: 'Characters', to: href.board('characters', folder), icon: 'people' },
-    { key: 'conflict-matrix', title: 'Conflict Matrix', to: href.board('conflict-matrix', folder), icon: 'conflict' },
-    { key: 'beat-sheet', title: 'Beat Sheet', to: href.board('beat-sheet', folder), icon: 'beats' },
-    { key: 'market', title: 'Market', to: href.board('market', folder), icon: 'market' },
-    { key: 'matrix', title: 'Matrix', to: href.board('matrix', folder), icon: 'matrix' },
-    { key: 'taste', title: 'Taste', to: href.board('taste', folder), icon: 'taste' },
-    { key: 'overview', title: 'Home', to: href.board('overview', folder), icon: 'home' },
-    { key: 'notes', title: 'Notes to the Team', to: href.board('notes', folder), icon: 'note' },
-    { key: 'sessions', title: 'Sessions', to: href.board('sessions', folder), icon: 'sessions' },
-    { key: 'tension', title: 'Tension and Pacing', to: href.board('tension', folder), icon: 'tension' },
-    { key: 'arcs', title: 'Character Arcs', to: href.board('arcs', folder), icon: 'arc' }
-  ].filter((l) => l.key === 'chapter-grid' || l.key === 'ideas' || l.key === 'matrix' || l.key === 'taste' || l.key === 'tension' || l.key === 'arcs' || APP_BOARDS.indexOf(l.key) >= 0 || schema.boards[l.key])
-    .map((l) => ({ ...l, title: (schema.boards[l.key] && schema.boards[l.key].title) || l.title }))
-    .concat(seeingLinks(folder));
-}
 
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
   'story-juice': {

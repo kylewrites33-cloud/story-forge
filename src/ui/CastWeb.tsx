@@ -7,7 +7,7 @@ import { useState } from 'preact/hooks';
 import { castWeb, defaultFocus, hubFor, lineWidth } from '../lib/castweb.ts';
 import type { CastWeb, WebEdge } from '../lib/castweb.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
 

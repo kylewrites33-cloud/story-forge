@@ -32,16 +32,16 @@ import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, 
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
-import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
-import { boardLinks, StoryBoardScreen } from './StoryBoards.tsx';
+import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
+import { StoryBoardScreen } from './StoryBoards.tsx';
 import { Shell } from './Shell.tsx';
-import { CodexBoard } from './Codex.tsx';
+import { CODEX_PAGES, CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
 import { ChangesOverview } from './Changes.tsx';
 import { rewriteDone, rewriteProgress } from '../lib/rewrite.ts';
 import { decideQueue } from '../lib/overview.ts';
-import { CODEX_PAGES } from '../lib/rooms.ts';
-import { href, parseHash, useRoute } from './route.ts';
+import { barTitle, folderOf, pageOf, tellingOf } from '../app/pages.ts';
+import { href, parseHash, useRoute } from '../app/route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, downloadWord, Home, SeriesPage } from './Home.tsx';
 import { coverFiles, coverProblem } from '../lib/covers.ts';
@@ -57,7 +57,7 @@ import { beatsNoteFor } from '../lib/beats.ts';
 import { changesNoteFor, chapterChanges, countLike, isStoryCall, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor } from '../lib/bookdrafts.ts';
 import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
-import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
+import { fillJobsFor } from '../lib/brackets.ts';
 import { optionJobsFor } from '../lib/options.ts';
 import { checkOptions } from '../lib/lintcheck.ts';
 import { planFor, scrapFor } from '../lib/plans.ts';
@@ -69,9 +69,8 @@ import { SEEING_BOARDS, SeeingBoard } from './Seeing.tsx';
 import { ChatScreen } from './Chat.tsx';
 import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
 import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from '../lib/chat.ts';
-import { pageContext, type PageView } from '../lib/context.ts';
+import { pageContext } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
-import { PILES, piles } from '../lib/ideas.ts';
 import type { NewNote } from '../lib/notes.ts';
 import { recipeName, recipeNotes, type RecipeFields } from '../lib/recipes.ts';
 import { OverviewPage } from './Overview.tsx';
@@ -91,6 +90,8 @@ function makeSource(s: Settings): VaultSource {
 
 export function App() {
   const route = useRoute();
+  const routeRef = useRef(route);
+  routeRef.current = route;
   const [settings, setSettings] = useState(loadSettings);
   const source = useMemo(() => makeSource(settings), [settings]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -764,35 +765,26 @@ export function App() {
     window.addEventListener('online', up);
     window.addEventListener('offline', down);
     document.addEventListener('visibilitychange', visible);
-    // The clock on the screen ticks every minute; on the Jobs screen the vault is read again too, so a finished job shows up.
-    const timer = setInterval(() => {
-      tick((n) => n + 1);
-      const name = parseHash(location.hash).name;
-      if ((name === 'jobs' || name === 'chat') && document.visibilityState === 'visible') runSync();
-    }, 60000);
-    // An open conversation waiting on a reply is read again every 15 seconds, about as often as the runner looks for work.
-    // So is an open scene while the team is answering its chat or its braces; any open scene is read every 30 seconds,
-    // so words pushed from elsewhere come into the page without reloading.
+    // The clock on the screen ticks every minute.
+    const timer = setInterval(() => tick((n) => n + 1), 60000);
+    // Every 15 seconds the page on screen says, through the list of pages, whether the vault should be read again:
+    // at once while the team is answering something it shows (an open conversation, a scene's chat or braces), and
+    // otherwise as often as the page asks (Jobs and Chat each minute, so a finished job shows up; an open scene every
+    // 30 seconds, so words pushed from elsewhere come into the page without reloading).
     let beat = 0;
     const quick = setInterval(() => {
       beat++;
-      const r = parseHash(location.hash);
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      const r = routeRef.current;
+      const pg = pageOf(r);
       const cur = snapRef.current;
-      if (!cur || document.visibilityState !== 'visible' || !navigator.onLine) return;
-      if (r.name === 'chat' && r.thread && r.thread !== 'new') { if (conversation(cur.index, r.thread, r.book).pending) runSync(); return; }
-      if (r.name !== 'write') {
-        // The team column beside a board or page, open and waiting on a reply.
-        if (document.querySelector('.team-side')) {
-          const sides = loadSideThreads(source.key);
-          if (Object.keys(sides).some((b) => conversation(cur.index, sides[b], b).pending)) runSync();
-        }
-        return;
+      if (cur && pg && pg.waiting && pg.waiting(cur.index, r)) { runSync(); return; }
+      if (pg && pg.reread && beat % (pg.reread / 15) === 0) { runSync(); return; }
+      // The team column beside a board or page, open and waiting on a reply.
+      if (cur && !(pg && (pg.of === 'write' || pg.noSide)) && document.querySelector('.team-side')) {
+        const sides = loadSideThreads(source.key);
+        if (Object.keys(sides).some((b) => conversation(cur.index, sides[b], b).pending)) runSync();
       }
-      const note = cur.index.notes[r.path];
-      const book = note ? cur.index.books.find((b) => r.path.startsWith(b.folder + '/')) : null;
-      const id = note ? String(note.data.id || '') : '';
-      const busy = book && id ? fillJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || optionJobsFor(jobNotes(cur.index), id, book.folder).some(isOpenJob) || conversation(cur.index, id, book.folder).pending : false;
-      if (busy || beat % 2 === 0) runSync();
     }, 15000);
     return () => {
       window.removeEventListener('online', up);
@@ -1015,13 +1007,11 @@ export function App() {
 
   // The top bar shows the boards of the book on screen, or else of the active book.
   const navBook = view
-    ? (route.name === 'book' || route.name === 'ideas' || route.name === 'board' || route.name === 'flow' ? view.books.find((b) => b.folder === route.folder) : null) ||
+    ? (folderOf(route) ? view.books.find((b) => b.folder === folderOf(route)) : null) ||
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) ||
       (route.name === 'home' || route.name === 'books' || route.name === 'series' ? null : activeBook(view))
     : null;
-  const at = route.name === 'team' ? href.team(route.slug) : route.name === 'skills' ? href.skills(route.skill) : route.name === 'history' ? href.history(route.who) : '';
-  const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas'
-    : route.name === 'book' ? 'chapter-grid' : '';
+  const pg = pageOf(route);
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
@@ -1031,53 +1021,19 @@ export function App() {
   const syncLine = syncing ? 'Syncing…' : !online ? 'Offline. Showing the copy saved ' + (snap ? timeAgo(snap.lastSync) : 'never') + '.' : snap ? 'Synced ' + timeAgo(snap.lastSync) + '. Press to sync again.' : 'Not synced yet.';
   const chip = syncing ? 'Syncing…' : !online ? 'Offline' : waitingN ? 'Saving ' + waitingN + '…' : drafts ? drafts + ' waiting' : snap ? 'Synced' : 'Sync';
 
-  const place = route.name === 'home' || route.name === 'books' ? 'home' : route.name === 'series' ? 'series'
-    : route.name === 'chat' || route.name === 'jobs' || route.name === 'todo' || route.name === 'settings'
-      || route.name === 'team' || route.name === 'skills' || route.name === 'history' || route.name === 'recipes' || route.name === 'workflow' ? route.name : '';
-  const PLACE_TITLE: Record<string, string> = { home: 'Books', series: 'Series', chat: 'Chat with the team', jobs: 'Jobs', todo: 'To-do', settings: 'Settings',
-    team: 'The team', skills: 'Skills', history: 'Session history', recipes: 'Recipes', workflow: 'Workflow' };
-  const navLink = navBook && schema && boardKey ? boardLinks(schema, navBook.folder).find((l) => l.key === boardKey) : null;
-  const pageTitle = PLACE_TITLE[place] || (navBook ? navBook.title + (navLink ? ' · ' + navLink.title : route.name === 'flow' ? ' · Workflow' : '') : 'Sparrow');
+  const pageTitle = barTitle(pg, route, schema, navBook);
   const syncGood = Boolean(snap && !syncing && online && !waitingN && !drafts);
 
   // The team column: on every page but Settings and the Chat screen, with what is on screen sent along with each message.
   const sideBook = view ? navBook || activeBook(view) : null;
-  const WHERE: Record<string, string> = { home: 'the Books page', series: 'the Series page', jobs: 'the Jobs page', todo: 'the To-do list',
-    team: 'the Team page', skills: 'the Skills page', history: 'Session history', recipes: 'the Recipes page', workflow: 'the Workflow page' };
-  const where = navLink ? 'the ' + navLink.title + ' board' : WHERE[place] || (route.name === 'note' ? 'a note' : route.name === 'flow' ? 'Workflow mode' : 'this page');
-  const pageView = (): PageView => {
-    const v: PageView = { name: where, book: sideBook };
-    if (!view) return v;
-    const notesOf = (paths?: string[]) => (paths || []).map((p) => view.notes[p]).filter(Boolean);
-    if (navBook && boardKey) {
-      if (boardKey === 'ideas') { const pl = piles(notesOf(navBook.ideas)); v.notes = PILES.flatMap((x) => pl[x.key] || []); }
-      else if (boardKey === 'chapter-grid') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
-      else if (boardKey === 'matrix') v.notes = castFor(view, navBook).map((c) => c.note);
-      else if (boardKey === 'tension') v.notes = notesOf(navBook.scenes).filter((n) => n.data.kind !== 'test');
-      else if (boardKey === 'arcs') v.notes = castFor(view, navBook).map((c) => c.note);
-      else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) v.notes = boardNotes(view, navBook, boardKey as StoryBoard);
-    } else if (route.name === 'note') {
-      const n = view.notes[route.path];
-      if (n) {
-        v.notes = [n];
-        const body = n.body.replace(/\s+/g, ' ').trim();
-        if (body) v.lines = ['The note begins: ' + (body.length > 500 ? body.slice(0, 500) + '…' : body)];
-      }
-    } else if (route.name === 'team' && route.slug) v.lines = ['Looking at the team member: ' + route.slug];
-    else if (route.name === 'skills' && route.skill) v.lines = ['Looking at the skill: ' + route.skill];
-    else if (route.name === 'flow') v.lines = ['In Workflow mode' + (route.step ? ', on step ' + route.step : route.stage ? ', on stage ' + route.stage : ', on its home') + ' of the workflow (System/Workflow.md). Results are idea notes with `step`; Kyle keeps, puts off or drops them.'];
-    else if (route.name === 'workflow') v.lines = ['Looking at the workflow (System/Workflow.md)' + (route.step ? ', step ' + route.step : '') + '. Kyle may want to judge or change a step: answer about the workflow, and propose changes as a note, never by editing it.'];
-    else if (route.name === 'series' && route.folder) v.lines = ['Looking at the series: `' + route.folder + '`'];
-    return v;
-  };
-  const showSide = Boolean(view) && place !== 'chat' && place !== 'settings';
+  const showSide = Boolean(view) && !(pg && pg.noSide);
   const side = showSide && view ? (close: () => void) => {
-    return <TeamSide index={view} sourceKey={source.key} book={sideBook ? sideBook.folder : ''} page={pageContext(pageView())}
+    return <TeamSide index={view} sourceKey={source.key} book={sideBook ? sideBook.folder : ''} page={pageContext(tellingOf(pg, route, schema, view, navBook, sideBook))}
       onChat={source.commit ? onChat : undefined} onClose={close} />;
   } : null;
 
   return (
-    <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
+    <Shell source={source} schema={schema} index={view} book={navBook} page={pg} route={route} demo={source instanceof DemoSource} title={pageTitle} side={side}
       timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLog={onLog} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || notice || (!online && (waitingN > 0 || drafts > 0))) && (

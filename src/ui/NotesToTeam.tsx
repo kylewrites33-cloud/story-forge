@@ -7,7 +7,7 @@ import { answeredIn, bookNotesToTeam, isOpenNote, noteTo, WHOLE_TEAM, type NewNo
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { useTeam } from './Team.tsx';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;

@@ -8,7 +8,7 @@ import { KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/chan
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 export type ChangesView = 'all' | 'simple' | 'final' | 'original';
 export const VIEWS: [ChangesView, string][] = [['all', 'All changes'], ['simple', 'Simple'], ['final', 'Final'], ['original', 'Self-Edit']];

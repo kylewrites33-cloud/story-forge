@@ -6,7 +6,7 @@ import { dueLabel, taskBook, taskGroups, taskNotes, type NewTask } from '../lib/
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { isBookTodo, todoPlace } from '../lib/todos.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { ProposalCard } from './IdeasBoard.tsx';
 import { TodoMap } from './TodoMap.tsx';
 import { CONTEXTS } from '../lib/todomap.ts';

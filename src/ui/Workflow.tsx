@@ -10,7 +10,7 @@ import { allSteps, parseWorkflow, type WorkflowStep } from '../lib/workflow.ts';
 import type { VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { Avatar, useTeam } from './Team.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 const html = (md: string) => ({ __html: inline(md) });
 

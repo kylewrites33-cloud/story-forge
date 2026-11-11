@@ -8,7 +8,7 @@ import { codexFor, longestGap, matcher, presence, present, type CodexEntry, type
 import { toNumber } from '../lib/links.ts';
 import { plannedNotNamed } from '../lib/codexnow.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 
 type Show = 'character' | 'place' | 'other';

@@ -17,7 +17,7 @@ import type { TextChange } from '../vault/text.ts';
 import { backupFile, buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { kindleFile, matterPath, splitNote, starterMatter } from '../lib/epub.ts';
 import { activeBook } from '../lib/vault-index.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { IdeasLink, Warnings } from './screens.tsx';
 import { StageStrip } from './Overview.tsx';

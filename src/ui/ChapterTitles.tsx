@@ -7,7 +7,7 @@ import { NONE, parseTitles, pickedTitle, TITLES_FILE } from '../lib/titles.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { TextChange } from '../vault/text.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 export function ChapterTitlesPage({ index, book, groups, onRename, onChange }: {
   index: VaultIndex; book: BookEntry;

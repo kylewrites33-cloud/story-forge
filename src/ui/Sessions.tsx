@@ -6,7 +6,7 @@ import { render } from '../lib/markdown.ts';
 import { bookSessions, parseSession, sessionIdeas, sessionWhen, speakers, voiceColour, type SessionPart } from '../lib/sessions.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 /** A session's name without the date and time its file name starts with. */
 function sessionName(n: NoteRecord): string {

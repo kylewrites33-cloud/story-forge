@@ -11,7 +11,7 @@ import {
 } from '../lib/tension.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';
 

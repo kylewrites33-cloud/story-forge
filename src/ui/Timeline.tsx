@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { sceneHeader } from '../lib/format.ts';
 import { timeline } from '../lib/timeline.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
 

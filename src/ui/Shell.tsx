@@ -12,13 +12,12 @@ import { loadRecent } from '../lib/home.ts';
 import { loadSideOpen, saveSideOpen } from '../lib/chat.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
 import { Cover } from './Home.tsx';
-import { href } from './route.ts';
+import { href, type Route } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { sixOf } from '../lib/bookstages.ts';
-import { LOWER_ROOMS, ROOMS, roomOf, isTeamPlace, TEAM_PLACES, type Room } from '../lib/rooms.ts';
+import { pagesIn, placeOf, roomLinks, roomOf, ROOMS, TEAM, type Page, type Room } from '../app/pages.ts';
 import { jobNotes } from '../lib/jobs.ts';
 import { taskNotes } from '../lib/tasks.ts';
-import { roomLinks } from './Rooms.tsx';
 import { useFlow } from './Flow.tsx';
 import { FindButton } from './Find.tsx';
 
@@ -37,12 +36,10 @@ export interface ShellProps {
   schema: Schema | null;
   index: VaultIndex | null;
   book: BookEntry | null;
-  /** The board on screen, or '' when none. */
-  board: string;
-  /** Which of the app's own places is on screen: home, series, chat, jobs, todo, settings, team, skills, history, or ''. */
-  place: string;
-  /** The page's address (its hash), so a team member or skill on screen shows as current. */
-  at?: string;
+  /** The page on screen, from the app's list of pages (`src/app/pages.ts`), or null for an address the list lacks. */
+  page: Page | null;
+  /** The address on screen. */
+  route: Route;
   demo: boolean;
   sync: { label: string; title: string; good: boolean; warn: boolean; busy: boolean; onSync: () => void };
   /** The page's name for the slim top bar. */
@@ -72,7 +69,7 @@ function SparrowMark() {
   );
 }
 
-export function Shell({ source, schema, index, book, board, place, at = '', demo, sync, title, side, timer, children }: ShellProps) {
+export function Shell({ source, schema, index, book, page, route, demo, sync, title, side, timer, children }: ShellProps) {
   const [slim, setSlim] = useState(() => typeof matchMedia === 'function' && matchMedia(SLIM).matches);
   useEffect(() => {
     if (typeof matchMedia !== 'function') return;
@@ -96,7 +93,6 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   }, []);
   const showSide = Boolean(side) && sideOpen;
   const flow = useFlow(index, book);
-  const hash = typeof location === 'undefined' ? '' : location.hash;
   const [pagesOpen, setPagesOpen] = useState(false);
   useEffect(() => {
     const close = () => { setOpen(false); setPagesOpen(false); if (!matchMedia(WIDE_SIDE).matches) setSideOpenState(false); };
@@ -111,19 +107,20 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
     return () => { window.removeEventListener('hashchange', close); window.removeEventListener('keydown', key); };
   }, []);
 
-  const links = book && schema ? roomLinks(schema, book.folder, false) : {};
+  const links = book && schema ? roomLinks(schema, book.folder) : {};
+  const place = placeOf(page);
   const running = index ? jobNotes(index).some((n) => n.data.status === 'running') : false;
   const openTodos = index ? taskNotes(index).filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length : 0;
   // The workflow's market research stage belongs to the Market room; the rest of the steps to Plan.
   const marketAt = flow.stages.findIndex((st) => sixOf(st.title) === 'market');
   if (book && marketAt >= 0 && links['market-steps']) links['market-steps'] = { ...links['market-steps'], to: href.flowStage(book.folder, marketAt + 1) };
-  const onMarketSteps = Boolean(book) && marketAt >= 0 && hash === href.flowStage(book ? book.folder : '', marketAt + 1);
-  const onSteps = !onMarketSteps && Boolean(book) && hash.indexOf(href.flow(book ? book.folder : '')) === 0;
-  const inRoom = onMarketSteps ? roomOf('market-steps') : onSteps ? roomOf('steps') : roomOf(board);
-  const pageKey = onMarketSteps ? 'market-steps' : onSteps ? 'steps' : board;
-  const teamTo: Record<string, string> = { chat: href.chat(), jobs: href.jobs(), team: href.team(), skills: href.skills(), recipes: href.recipes(), workflow: href.workflow() };
-  const teamOn = place === 'history' ? 'team' : place;
-  const inTeam = isTeamPlace(place);
+  // Workflow mode is two pages of the list: the market research stage is Market's Research steps, the rest Plan's Steps.
+  const onFlow = route.name === 'flow' && Boolean(book) && route.folder === (book ? book.folder : '');
+  const onMarketSteps = onFlow && route.name === 'flow' && marketAt >= 0 && route.stage === marketAt + 1 && !route.step;
+  const pageKey = route.name === 'flow' ? (onMarketSteps ? 'market-steps' : onFlow ? 'steps' : '') : route.name === 'board' ? route.board : page && page.of === 'book' ? page.id : '';
+  const inRoom = roomOf(pageKey);
+  const inTeam = Boolean(page && page.room === TEAM.key);
+  const teamOn = page ? page.under || page.id : '';
   const item = (to: string, icon: string, label: string, current: boolean, extra?: string, count?: number) => (
     <a key={to + label} class={'rail-item' + (extra ? ' ' + extra : '')} href={to} aria-current={current ? 'page' : undefined} title={count == null ? label : label + ' (' + count + ')'}>
       <Icon name={icon} size={20} /><span class="rail-label">{label}</span>{extra && extra.indexOf('rail-busy') >= 0 && <span class="job-dot" aria-hidden="true" />}{count != null && <span class="rail-count rail-label">{count}</span>}
@@ -136,8 +133,8 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
   );
   // The pages of the room (or Team) on screen, for the sidebar and the top bar's menu.
   const pages: { to: string; title: string; current: boolean; count?: number }[] = inTeam
-    ? TEAM_PLACES.map((p) => ({ to: teamTo[p.key], title: p.title, current: p.key === teamOn }))
-    : inRoom ? inRoom.boards.map((k) => links[k]).filter(Boolean).map((l) => ({ to: l.to, title: l.title, current: l.key === pageKey, count: l.key === 'steps' ? flow.waiting : undefined })) : [];
+    ? pagesIn(TEAM.key).filter((p) => !p.under).map((p) => ({ to: p.to(''), title: p.title, current: p.id === teamOn }))
+    : inRoom ? pagesIn(inRoom.key).map((p) => links[p.id]).filter(Boolean).map((l) => ({ to: l.to, title: l.title, current: l.key === pageKey, count: l.key === 'steps' ? flow.waiting : undefined })) : [];
   // A room in the sidebar, with its pages beneath it when it is on screen. Write has no pages: it opens the writing
   // screen at the scene to keep writing, or the Chapter Grid when the book has no scenes yet.
   const roomItem = (r: Room) => {
@@ -147,7 +144,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
       const to = scene ? href.write(scene) : links['chapter-grid'] ? links['chapter-grid'].to : '';
       return to ? <div key={r.key} class="rail-room-group">{item(to, r.icon, r.title, false, 'rail-room')}</div> : null;
     }
-    const first = r.boards.map((k) => links[k]).find(Boolean);
+    const first = pagesIn(r.key).map((p) => links[p.id]).find(Boolean);
     if (!first) return null;
     const here = Boolean(inRoom && inRoom.key === r.key);
     const to = r.key === 'plan' ? links.ideas ? links.ideas.to : first.to : first.to;
@@ -158,7 +155,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
       </div>
     );
   };
-  const roomTitle = inTeam ? 'Team' : inRoom ? inRoom.title : '';
+  const roomTitle = inTeam ? TEAM.title : inRoom ? inRoom.title : '';
   const pageTitle = (pages.find((p) => p.current) || { title: '' }).title;
   const barTitle = roomTitle ? (pageTitle && pageTitle !== roomTitle && pages.length > 1 ? roomTitle + ' · ' + pageTitle : roomTitle) : title;
   const teamButton = side
@@ -177,7 +174,7 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
         <nav class="rail-scroll" aria-label="Places">
           {!(book && index) && (
             <>
-              {item(href.home(), 'books', 'Books', place === 'home')}
+              {item(href.home(), 'books', 'Books', place === 'books')}
               {item(href.allSeries(), 'shelf', 'Series', place === 'series')}
             </>
           )}
@@ -193,12 +190,12 @@ export function Shell({ source, schema, index, book, board, place, at = '', demo
                 </a>
                 <a class="rail-book-switch rail-label" href={href.home()} title="All books and series" aria-label="All books and series"><Icon name="books" size={18} /></a>
               </div>
-              {ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) < 0).map(roomItem)}
+              {ROOMS.filter((r) => !r.lower).map(roomItem)}
             </>
           )}
           <div class="rail-foot">
-            {book && index && ROOMS.filter((r) => LOWER_ROOMS.indexOf(r.key) >= 0).map(roomItem)}
-            {item(href.chat(), 'spark', 'Team', false, (running ? 'rail-busy' : '') + (inTeam ? ' rail-room-here' : '') || undefined)}
+            {book && index && ROOMS.filter((r) => r.lower).map(roomItem)}
+            {item(href.chat(), TEAM.icon, TEAM.title, false, (running ? 'rail-busy' : '') + (inTeam ? ' rail-room-here' : '') || undefined)}
             {inTeam && <div class="rail-subs">{pages.map((p) => sub(p.to, p.title, p.current))}</div>}
             {item(href.todo(), 'todo', 'To-do', place === 'todo', undefined, openTodos || undefined)}
             {timer && !slim && timer('rail')}

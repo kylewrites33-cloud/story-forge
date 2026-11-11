@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import { beatRuler, placeLabel, RULER_SOURCE, SAVE_THE_CAT, VERDICT_LABEL } from '../lib/beatruler.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 const KEY = 'story-forge.beat-ruler';
 

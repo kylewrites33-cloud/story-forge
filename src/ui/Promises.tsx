@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import { lastFifthStart, laneWarnings, promiseLanes, type PromiseLane, type PromiseMark } from '../lib/promises.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneHeads, SeeingHead, WarningList } from './SeeingParts.tsx';
 

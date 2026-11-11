@@ -1,0 +1,1146 @@
+{
+ "full": {
+  "rooms": {
+   "chapter-grid": {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   "ideas": {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   "story-juice": {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   "characters": {
+    "key": "characters",
+    "title": "Characters",
+    "to": "#/board/characters/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "people"
+   },
+   "conflict-matrix": {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   "beat-sheet": {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   "market": {
+    "key": "market",
+    "title": "Market board",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   "matrix": {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   "taste": {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   "overview": {
+    "key": "overview",
+    "title": "Overview",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   "notes": {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   "sessions": {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   "tension": {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   "arcs": {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   "promises": {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   "plot-grid": {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   "timeline": {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   "themes": {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   "cast-web": {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   },
+   "details": {
+    "key": "details",
+    "title": "Book details",
+    "to": "#/board/details/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "image"
+   },
+   "decide": {
+    "key": "decide",
+    "title": "Decide one at a time",
+    "to": "#/board/decide/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "changes": {
+    "key": "changes",
+    "title": "Changes",
+    "to": "#/board/changes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "swap"
+   },
+   "story-calls": {
+    "key": "story-calls",
+    "title": "Story calls",
+    "to": "#/board/story-calls/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "chapter-titles": {
+    "key": "chapter-titles",
+    "title": "Chapter titles",
+    "to": "#/board/chapter-titles/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "pen"
+   },
+   "steps": {
+    "key": "steps",
+    "title": "Steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "outline"
+   },
+   "market-steps": {
+    "key": "market-steps",
+    "title": "Research steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y/stage/1",
+    "icon": "outline"
+   },
+   "places": {
+    "key": "places",
+    "title": "Places",
+    "to": "#/board/places/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "map"
+   },
+   "items": {
+    "key": "items",
+    "title": "Items",
+    "to": "#/board/items/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "item"
+   },
+   "lore": {
+    "key": "lore",
+    "title": "Lore",
+    "to": "#/board/lore/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "lore"
+   }
+  },
+  "tools": [
+   {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   {
+    "key": "characters",
+    "title": "Characters",
+    "to": "#/board/characters/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "people"
+   },
+   {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   {
+    "key": "market",
+    "title": "Market",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   {
+    "key": "overview",
+    "title": "Home",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   }
+  ]
+ },
+ "bare": {
+  "rooms": {
+   "chapter-grid": {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   "ideas": {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   "matrix": {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   "taste": {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   "overview": {
+    "key": "overview",
+    "title": "Overview",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   "notes": {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   "sessions": {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   "tension": {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   "arcs": {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   "promises": {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   "plot-grid": {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   "timeline": {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   "themes": {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   "cast-web": {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   },
+   "details": {
+    "key": "details",
+    "title": "Book details",
+    "to": "#/board/details/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "image"
+   },
+   "decide": {
+    "key": "decide",
+    "title": "Decide one at a time",
+    "to": "#/board/decide/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "changes": {
+    "key": "changes",
+    "title": "Changes",
+    "to": "#/board/changes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "swap"
+   },
+   "story-calls": {
+    "key": "story-calls",
+    "title": "Story calls",
+    "to": "#/board/story-calls/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "chapter-titles": {
+    "key": "chapter-titles",
+    "title": "Chapter titles",
+    "to": "#/board/chapter-titles/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "pen"
+   },
+   "steps": {
+    "key": "steps",
+    "title": "Steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "outline"
+   },
+   "market-steps": {
+    "key": "market-steps",
+    "title": "Research steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y/stage/1",
+    "icon": "outline"
+   }
+  },
+  "tools": [
+   {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   {
+    "key": "overview",
+    "title": "Home",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   }
+  ]
+ },
+ "nochars": {
+  "rooms": {
+   "chapter-grid": {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   "ideas": {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   "story-juice": {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   "conflict-matrix": {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   "beat-sheet": {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   "market": {
+    "key": "market",
+    "title": "Market board",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   "matrix": {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   "taste": {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   "overview": {
+    "key": "overview",
+    "title": "Overview",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   "notes": {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   "sessions": {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   "tension": {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   "arcs": {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   "promises": {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   "plot-grid": {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   "timeline": {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   "themes": {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   "cast-web": {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   },
+   "details": {
+    "key": "details",
+    "title": "Book details",
+    "to": "#/board/details/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "image"
+   },
+   "decide": {
+    "key": "decide",
+    "title": "Decide one at a time",
+    "to": "#/board/decide/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "changes": {
+    "key": "changes",
+    "title": "Changes",
+    "to": "#/board/changes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "swap"
+   },
+   "story-calls": {
+    "key": "story-calls",
+    "title": "Story calls",
+    "to": "#/board/story-calls/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "chapter-titles": {
+    "key": "chapter-titles",
+    "title": "Chapter titles",
+    "to": "#/board/chapter-titles/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "pen"
+   },
+   "steps": {
+    "key": "steps",
+    "title": "Steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "outline"
+   },
+   "market-steps": {
+    "key": "market-steps",
+    "title": "Research steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y/stage/1",
+    "icon": "outline"
+   }
+  },
+  "tools": [
+   {
+    "key": "chapter-grid",
+    "title": "Chapter Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   {
+    "key": "ideas",
+    "title": "Ideas",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   {
+    "key": "market",
+    "title": "Market",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   {
+    "key": "overview",
+    "title": "Home",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   }
+  ]
+ },
+ "renamed": {
+  "rooms": {
+   "chapter-grid": {
+    "key": "chapter-grid",
+    "title": "Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   "ideas": {
+    "key": "ideas",
+    "title": "Sparks",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   "story-juice": {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   "characters": {
+    "key": "characters",
+    "title": "Characters",
+    "to": "#/board/characters/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "people"
+   },
+   "conflict-matrix": {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   "beat-sheet": {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   "market": {
+    "key": "market",
+    "title": "Market board",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   "matrix": {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   "taste": {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   "overview": {
+    "key": "overview",
+    "title": "Overview",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   "notes": {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   "sessions": {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   "tension": {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   "arcs": {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   "promises": {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   "plot-grid": {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   "timeline": {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   "themes": {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   "cast-web": {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   },
+   "details": {
+    "key": "details",
+    "title": "Book details",
+    "to": "#/board/details/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "image"
+   },
+   "decide": {
+    "key": "decide",
+    "title": "Decide one at a time",
+    "to": "#/board/decide/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "changes": {
+    "key": "changes",
+    "title": "Changes",
+    "to": "#/board/changes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "swap"
+   },
+   "story-calls": {
+    "key": "story-calls",
+    "title": "Story calls",
+    "to": "#/board/story-calls/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "cards"
+   },
+   "chapter-titles": {
+    "key": "chapter-titles",
+    "title": "Chapter titles",
+    "to": "#/board/chapter-titles/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "pen"
+   },
+   "steps": {
+    "key": "steps",
+    "title": "Steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "outline"
+   },
+   "market-steps": {
+    "key": "market-steps",
+    "title": "Research steps",
+    "to": "#/flow/Series%2FX%2FBooks%2F1%20Y/stage/1",
+    "icon": "outline"
+   },
+   "places": {
+    "key": "places",
+    "title": "Places",
+    "to": "#/board/places/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "map"
+   },
+   "items": {
+    "key": "items",
+    "title": "Items",
+    "to": "#/board/items/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "item"
+   },
+   "lore": {
+    "key": "lore",
+    "title": "Lore",
+    "to": "#/board/lore/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "lore"
+   }
+  },
+  "tools": [
+   {
+    "key": "chapter-grid",
+    "title": "Grid",
+    "to": "#/book/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "grid"
+   },
+   {
+    "key": "ideas",
+    "title": "Sparks",
+    "to": "#/ideas/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "idea"
+   },
+   {
+    "key": "story-juice",
+    "title": "Story Juice",
+    "to": "#/board/story-juice/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "juice"
+   },
+   {
+    "key": "characters",
+    "title": "Characters",
+    "to": "#/board/characters/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "people"
+   },
+   {
+    "key": "conflict-matrix",
+    "title": "Conflict Matrix",
+    "to": "#/board/conflict-matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "conflict"
+   },
+   {
+    "key": "beat-sheet",
+    "title": "Beat Sheet",
+    "to": "#/board/beat-sheet/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "beats"
+   },
+   {
+    "key": "market",
+    "title": "The Shelf",
+    "to": "#/board/market/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "market"
+   },
+   {
+    "key": "matrix",
+    "title": "Matrix",
+    "to": "#/board/matrix/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "matrix"
+   },
+   {
+    "key": "taste",
+    "title": "Taste",
+    "to": "#/board/taste/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "taste"
+   },
+   {
+    "key": "overview",
+    "title": "Home",
+    "to": "#/board/overview/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "home"
+   },
+   {
+    "key": "notes",
+    "title": "Notes to the Team",
+    "to": "#/board/notes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "note"
+   },
+   {
+    "key": "sessions",
+    "title": "Sessions",
+    "to": "#/board/sessions/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "sessions"
+   },
+   {
+    "key": "tension",
+    "title": "Tension and Pacing",
+    "to": "#/board/tension/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "tension"
+   },
+   {
+    "key": "arcs",
+    "title": "Character Arcs",
+    "to": "#/board/arcs/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "arc"
+   },
+   {
+    "key": "promises",
+    "title": "Promises",
+    "to": "#/board/promises/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "promise"
+   },
+   {
+    "key": "plot-grid",
+    "title": "Plot Grid",
+    "to": "#/board/plot-grid/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "threads"
+   },
+   {
+    "key": "timeline",
+    "title": "Timeline",
+    "to": "#/board/timeline/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "timeline"
+   },
+   {
+    "key": "themes",
+    "title": "Themes",
+    "to": "#/board/themes/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "heat"
+   },
+   {
+    "key": "cast-web",
+    "title": "Cast web",
+    "to": "#/board/cast-web/Series%2FX%2FBooks%2F1%20Y",
+    "icon": "web"
+   }
+  ]
+ },
+ "rooms": {
+  "home": [
+   "overview",
+   "decide"
+  ],
+  "market": [
+   "market",
+   "market-steps"
+  ],
+  "plan": [
+   "steps",
+   "chapter-grid",
+   "ideas",
+   "story-juice",
+   "beat-sheet",
+   "conflict-matrix",
+   "promises",
+   "plot-grid",
+   "timeline",
+   "arcs",
+   "notes"
+  ],
+  "write": [],
+  "review": [
+   "changes",
+   "story-calls",
+   "chapter-titles",
+   "tension",
+   "themes",
+   "sessions",
+   "taste"
+  ],
+  "publish": [
+   "details"
+  ],
+  "codex": [
+   "characters",
+   "places",
+   "items",
+   "lore",
+   "matrix",
+   "cast-web"
+  ]
+ },
+ "team": [
+  {
+   "key": "chat",
+   "title": "Chat",
+   "icon": "chat"
+  },
+  {
+   "key": "jobs",
+   "title": "Jobs",
+   "icon": "team"
+  },
+  {
+   "key": "team",
+   "title": "Agents",
+   "icon": "people"
+  },
+  {
+   "key": "skills",
+   "title": "Skills",
+   "icon": "idea"
+  },
+  {
+   "key": "recipes",
+   "title": "Recipes",
+   "icon": "recipe"
+  },
+  {
+   "key": "workflow",
+   "title": "Workflow table",
+   "icon": "list"
+  }
+ ]
+}
