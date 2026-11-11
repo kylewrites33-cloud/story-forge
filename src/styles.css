@@ -2789,3 +2789,20 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .rewrite-row.left-off { position: relative; margin-bottom: 14px; }
 .rewrite-row .left-off-mark { position: absolute; left: 10px; bottom: -22px; }
 .rewrite-row.folded.left-off { min-height: 10px; }
+
+/* The trial of the new writing box (code structure redesign, step 3; src/write/). Goes when the trial does. */
+.trial-door { display: grid; gap: 8px; max-width: 36rem; padding: 14px 16px; margin-bottom: 16px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-soft); }
+.trial-door h2, .trial-door p { margin: 0; }
+.trial-door .meta { color: var(--text); }
+.writer.trial .writer-bar .tool { flex: none; min-width: 44px; min-height: 44px; border-radius: 10px; }
+.writer.trial .writer-bar .tool:disabled { opacity: 0.35; }
+.trial-head { display: grid; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-family: var(--ui-font, inherit); }
+.trial-note, .trial-meter { margin: 0; font-size: 0.94rem; }
+.trial-meter { color: var(--muted); }
+.trial-row { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.trial-row .bar-button { min-height: 44px; }
+.trial-pick { display: grid; gap: 4px; flex: 1 1 14rem; min-width: 0; font-size: 0.94rem; font-weight: 600; }
+.trial-pick select { font: inherit; font-weight: 400; min-height: 44px; width: 100%; min-width: 0; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+.trial-text.writer-text.styled { white-space: normal; }
+.trial-text .cm-quote.md-qt .md-b { font-variant: small-caps; letter-spacing: 0.04em; }
+.writer.paper-cream .trial-head, .writer.paper-dark .trial-head { border-bottom-color: currentColor; }

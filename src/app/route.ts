@@ -12,6 +12,8 @@ export type Route =
   | { name: 'chapter'; path: string }
   /** The chapter of this scene, by its beats. */
   | { name: 'beats'; path: string }
+  /** The trial of the new writing box, with this scene's chapter in it; path '' is the scene Kyle was last in. */
+  | { name: 'trial'; path: string }
   | { name: 'todo' }
   | { name: 'jobs' }
   /** thread '' is the list of conversations, 'new' a conversation not started yet; book is the book it is for. */
@@ -43,6 +45,7 @@ export function parseHash(hash: string): Route {
   if (head === 'write' && tail) return { name: 'write', path: tail };
   if (head === 'chapter' && tail) return { name: 'chapter', path: tail };
   if (head === 'beats' && tail) return { name: 'beats', path: tail };
+  if (head === 'trial') return { name: 'trial', path: tail };
   if (head === 'settings') return { name: 'settings' };
   if (head === 'team') return { name: 'team', slug: tail };
   if (head === 'skills') return { name: 'skills', skill: tail };
@@ -73,6 +76,7 @@ export const href = {
   write: (path: string) => '#/write/' + encodeURIComponent(path),
   chapter: (path: string) => '#/chapter/' + encodeURIComponent(path),
   beats: (path: string) => '#/beats/' + encodeURIComponent(path),
+  trial: (path = '') => '#/trial' + (path ? '/' + encodeURIComponent(path) : ''),
   todo: () => '#/todo',
   jobs: () => '#/jobs',
   chat: (thread = '', book = '') => '#/chat' + (thread ? '/' + encodeURIComponent(thread) + (book ? '/' + encodeURIComponent(book) : '') : ''),

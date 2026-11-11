@@ -61,6 +61,8 @@ import { TodoList } from '../ui/TodoList.tsx';
 import { WorkflowScreen } from '../ui/Workflow.tsx';
 import type { Choice } from '../vault/choice.ts';
 import { BRAINDUMP_START, type TextChange } from '../vault/text.ts';
+import { keepWriting } from '../ui/Shell.tsx';
+import { TrialPage } from '../write/Trial.tsx';
 import type { PAGES } from './pages.ts';
 import { href, type Route } from './route.ts';
 
@@ -357,5 +359,12 @@ export const WRITE_SCREENS: Record<IdOf<'write'>, (app: AppCtx, route: Route) =>
     return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(index, book)} startAt={path}
       checkOpts={checkOptionsFor(index, book.folder)}
       backTo={href.book(book.folder)} onSaved={(n) => { act.foldNotes([n]); }} timer={<PomodoroTimer source={source} index={index} variant="bar" onLog={act.onLog} />} />;
+  },
+  // The trial of the new writing box: the chapter of the scene named, or of the scene Kyle was last in. It is handed no action, so it cannot save.
+  trial: ({ source, schema, index }, route) => {
+    const named = at(route, 'trial').path;
+    const book = (named && index.books.find((b) => named.startsWith(b.folder + '/'))) || activeBook(index) || index.books[0] || null;
+    const path = named || (book ? keepWriting(index, book, source.key) : null) || '';
+    return <TrialPage key={book ? book.folder : ''} schema={schema} index={index} book={book} path={path} />;
   }
 };
