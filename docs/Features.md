@@ -99,6 +99,7 @@ add a dated line here when you add or change one.
   older copy there is never overwritten (`archiveNote` in `src/lib/scenes.ts`). A chapter left with no scenes takes its
   beats, plan, scrap, to-dos and scene notes to `Archive/Deleted chapter N <date>/`, and the chapters after it move down
   one (`chapterCloseUp`). If the open scene goes, the page moves to the next scene left. Needs the internet.
+  Since 2026-11-11 a delete is one save (see "The one saving system, step 1: chapters, second half").
   A short press still opens the scene. Renaming a chapter (Kyle, 2026-10-22: "i should be able to change the chapter name
   by tapping in the field in the word processor, or long pressing on the chapter in the left pane"): tap the chapter's
   name at the top of the page and type (Enter or tapping away saves, Esc cancels), or choose Rename the chapter in the
@@ -1307,3 +1308,41 @@ The fifth piece: adding a scene, adding a chapter and moving a chapter. Deleting
   1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: a new last chapter online and with no
   connection, typing in it before it is saved, its number taken meanwhile, a move, a chapter in the middle, the plain
   sentence with no connection, the old way and the new way leaving the same files, and every earlier piece's check.
+
+## The one saving system, step 1: chapters, second half (2026-11-11)
+
+The sixth piece: deleting a scene or a chapter. What Kyle sees and where things go is as before (the note about Delete
+in the chapter list section); how it is saved changed.
+
+- **A delete is one save.** The scenes go to the book's Archive with the line saying when they were deleted; a chapter
+  left with no scene takes its beats, plan, scrap, to-dos, scene notes and change list to
+  `Archive/Deleted chapter N <date>/`, its title options go there too, the chapters after it close up by one, and the
+  Rewrite tab's ticks and the Chapter Titles note follow. All of it lands together, or nothing changes. Before, it was
+  two saves a note and one more for every note that followed (about 200 for a chapter in the middle of Quest Declined
+  2), and a failure part-way left a chapter half deleted. The vault's history has one line: "delete: S-031 The Offer",
+  with what went with it under it.
+- **Nothing is destroyed and nothing is written over**, as before: each note goes to the Archive as the vault has it at
+  the moment of the save (so a change the team made a moment ago is in the archived copy), and an older archived copy
+  with the same name keeps its name; the new one is "name (2)".
+- **Whether a chapter is empty is decided on the vault at the save**, not on what the device last saw: if another
+  device added a scene to that chapter meanwhile, the chapter stays and only the deleted scene goes.
+- **The list and the Archive show it at once.** The save's answer is put into the saved copy on the device: the
+  scenes leave the chapter list, the later chapters show their new numbers, and Book tools, Archive counts the deleted
+  scenes and can Restore them, all without a sync (`foldSaved` in `src/vault/apply.ts` now also keeps each book's
+  archive list, and leaves out of the notes any file the app holds no note for).
+- **It still needs the connection** ("Connect to the internet to delete: the words go to the Archive first."), and
+  what waits for the book goes up first, for the same reason as a move: a delete can change chapter numbers.
+- A scene that is no longer in the book when the save is made: "That scene is not in the book as the vault has it now.
+  Press Sync and look at the chapter list.", and nothing changes.
+- **How it is built.** A `delete` op (`src/vault/ops.ts`) planned by `planDelete` in `src/vault/chapters.ts` on the
+  save's tree: archive the scenes, then for each emptied chapter (the last first) archive its notes and run the same
+  closing-up the chapters op has. Like the chapters op it is sent at once and never waits in the outbox.
+- The old way (Settings, Saving) keeps the old code.
+- Checked with tests that run the old way and the new way on the same book and compare every file (seven deletes on
+  the demo book: one scene, a scene with no chapter, a last chapter, a middle chapter, the first chapter, two chapters
+  at once, a chapter and a scene of another; and a middle and a late chapter on a copy of Quest Declined 2 when the
+  vault is beside the repository: 200 saves and 8 saves the old way, 1 each the new way), and in Chromium at 1180 x
+  820, 1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: the last chapter, a
+  middle chapter with two scenes, the Archive count, Restore from the list the save left, no note fetched again by the
+  next sync, the plain sentence with no connection, the open scene's chapter (the page moves on), the old way and the
+  new way leaving the same files, and every earlier piece's check.

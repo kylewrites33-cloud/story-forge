@@ -32,6 +32,10 @@ export type Op =
    * outbox: everything else that waits is addressed by file names that carry chapter numbers, so it is sent at once,
    * after what waits, or not at all (until chapters have IDs of their own, step 5 of the redesign). */
   | { kind: 'chapters'; path: string; book: string; change: ChapterChange; why: string }
+  /** Scenes deleted from a book (planDelete in src/vault/chapters.ts): each goes to the book's Archive, and a chapter
+   * left with no scene goes with its notes and the chapters after it close up. `path` is the book note's, `scenes` the
+   * scenes' paths, `at` when Kyle did it. Like `chapters` it never waits in the outbox: it can change chapter numbers. */
+  | { kind: 'delete'; path: string; book: string; scenes: string[]; at: string }
   /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
    * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
    * if another note took it meanwhile. */
@@ -57,6 +61,11 @@ export function newId(now: Date = new Date()): string {
 /** A change to a book's chapter numbers, with new notes that go in with it (the scene of a new chapter), as one action. */
 export function chaptersAction(book: string, change: ChapterChange, why: string, also: Op[] = [], now: Date = new Date()): Action {
   return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'chapters' as const, path: book + '/Book.md', book, change, why } as Op].concat(also) };
+}
+
+/** Scenes deleted from a book, as one action. */
+export function deleteAction(book: string, scenes: string[], now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'delete', path: book + '/Book.md', book, scenes, at: now.toISOString() }] };
 }
 
 /** Choices that belong together (a card moved and the card that takes over its chapter's name) as one action: one save. */

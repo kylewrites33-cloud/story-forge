@@ -38,7 +38,7 @@ export function safeTitle(s: string): string {
   return String(s || '').replace(/[\\/:*?"<>|#^[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90).trim();
 }
 
-function today(d: Date): string {
+export function today(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }

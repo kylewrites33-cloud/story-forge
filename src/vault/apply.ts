@@ -5,7 +5,7 @@ import { marksMessage, setStatuses } from '../lib/changes.ts';
 import { applyToData, applyToText, commitMessage } from '../lib/ideas.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { PHASE } from '../lib/sync.ts';
-import { assemble, makeNote, resortScenes } from '../lib/vault-index.ts';
+import { archiveFiles, assemble, makeNote, resortScenes, selectFiles } from '../lib/vault-index.ts';
 import { changeOf } from '../lib/write-queue.ts';
 import type { NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Action, Edit } from './ops.ts';
@@ -80,12 +80,27 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
 }
 
 /** The saved copy with notes the app just saved put in, and files a save took out (a note that got a new file name
- * leaves its old one) taken out. A note that is new to it is put where its kind goes. */
+ * leaves its old one) taken out. A note that is new to it is put where its kind goes. A save can also touch files the
+ * saved copy holds no note for (a deleted scene's copy in the Archive, the Chapter Titles note): those stay out of the
+ * notes, and a scene that went to a book's Archive joins that book's archive list, where Restore finds it. */
 export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schema | null, removed: string[] = []): VaultIndex {
   if (!saved.length && !removed.length) return index;
   const notes = { ...index.notes };
   let reshaped = false;
   removed.forEach((p) => { if (notes[p]) { delete notes[p]; reshaped = true; } });
-  saved.forEach((n) => { if (!notes[n.path]) reshaped = true; notes[n.path] = n; });
-  return reshaped && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes });
+  const files = saved.map((n) => ({ path: n.path, sha: n.sha }));
+  const read = schema ? new Set(selectFiles(schema, files, PHASE).map((f) => f.path)) : null;
+  saved.forEach((n) => {
+    if (!notes[n.path]) { if (read && !read.has(n.path)) return; reshaped = true; }
+    notes[n.path] = n;
+  });
+  const out = reshaped && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes });
+  const books = out.books.map((b) => {
+    const add = archiveFiles(files, b.folder);
+    const had = b.archive || [];
+    if (!add.length && !had.some((f) => removed.indexOf(f.path) >= 0)) return b;
+    const archive = had.filter((f) => removed.indexOf(f.path) < 0 && !add.some((a) => a.path === f.path)).concat(add).sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0));
+    return { ...b, archive };
+  });
+  return books.some((b, i) => b !== out.books[i]) ? { ...out, books } : out;
 }

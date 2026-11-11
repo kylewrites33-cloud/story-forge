@@ -24,7 +24,7 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { chaptersAction, choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
+import { chaptersAction, deleteAction, choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
@@ -696,6 +696,20 @@ export function App() {
     const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
     const going = scenes.filter((n) => paths.indexOf(n.path) >= 0);
     const now = new Date();
+    if (!oldSaving()) {
+      try {
+        // What waits for this book goes up first: a chapter left empty closes the ones after it up, and what waits is
+        // addressed by their numbers.
+        await beforeRenames(book.folder);
+        // One save: the scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up,
+        // or nothing changes (2026-11-11; before, two saves a note and one more for every note that followed).
+        const res = await sendNow(deleteAction(book.folder, paths, now));
+        res.removed.forEach((p) => putDraft(source.key, p, null));
+        return null;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    }
     try {
       for (const n of going) {
         await archiveScene(source, n, now);
@@ -725,7 +739,7 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, beforeRenames]);
+  }, [source, runSync, beforeRenames, sendNow]);
 
   /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {

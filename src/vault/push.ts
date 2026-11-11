@@ -9,7 +9,7 @@ import { editMessage, editText } from './apply.ts';
 import { make } from './makers.ts';
 import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
-import { planChapters } from './chapters.ts';
+import { planChapters, planDelete } from './chapters.ts';
 import { Tree } from './tree.ts';
 
 /** The line for the vault's history: the first change's own line, with the others named under it. */
@@ -65,6 +65,10 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
         lines.push((await planChapters(t, op.book, op.change, op.why, opts.known)).message);
         continue;
       }
+      if (op.kind === 'delete') {
+        lines.push((await planDelete(t, op.book, op.scenes, new Date(op.at), opts.known)).message);
+        continue;
+      }
       if (op.kind === 'create') {
         // New notes take their IDs from the files the vault has now, and from the ones this same save adds before them.
         const files = await t.files();
@@ -114,7 +118,7 @@ async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<
 async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
   const out: Pushed = { saved: [], renames: {}, removed: [] };
   for (const op of action.ops) {
-    if (op.kind === 'chapters') {
+    if (op.kind === 'chapters' || op.kind === 'delete') {
       // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
       const p = await pushActions(source, [{ ...action, ops: [op] }]);
       out.saved.push(...p.saved);
