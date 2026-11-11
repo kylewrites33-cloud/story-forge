@@ -79,3 +79,27 @@ export function addOwn(body: string, chapter: number, text: string): string {
   else return body;
   return lines.join('\n');
 }
+
+/** The note after chapters were renumbered (one added, moved or deleted): every `## Chapter N` heading on its new
+ * number and the sections back in number order. `map` gives a chapter's new number, or null when the chapter is gone:
+ * its section is taken out and handed back in `gone`. Lines above the first heading stay on top, and a note whose
+ * numbers do not change comes back as it was. */
+export function renumberTitles(text: string, map: (ch: number) => number | null): { text: string; gone: string } {
+  const head: string[] = [];
+  const secs: { from: number; to: number | null; lines: string[] }[] = [];
+  for (const line of text.split('\n')) {
+    const h = HEAD.exec(line);
+    if (h) secs.push({ from: Number(h[1]), to: map(Number(h[1])), lines: [line] });
+    else if (secs.length) secs[secs.length - 1].lines.push(line);
+    else head.push(line);
+  }
+  if (!secs.some((s) => s.to !== s.from)) return { text, gone: '' };
+  const tidy = (s: { lines: string[] }) => s.lines.join('\n').replace(/\s+$/, '');
+  const kept = secs.filter((s) => s.to != null).map((s, i) => ({ s, i })).sort((a, b) => (a.s.to as number) - (b.s.to as number) || a.i - b.i)
+    .map(({ s }) => tidy({ lines: [s.lines[0].replace(/\d+/, String(s.to))].concat(s.lines.slice(1)) }));
+  const top = head.join('\n').replace(/\s+$/, '');
+  return {
+    text: (top ? [top] : []).concat(kept).join('\n\n') + '\n',
+    gone: secs.filter((s) => s.to == null).map(tidy).join('\n\n')
+  };
+}

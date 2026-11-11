@@ -18,12 +18,18 @@ export function rewriteDone(book: { data: Record<string, unknown> } | null | und
 
 /** The book note's text with chapter `chapter` marked through (or not), every other line as it was. */
 export function withRewriteDone(text: string, chapter: number, done: boolean): string {
-  const s = Frontmatter.split(text);
-  if (!s.hasFm) throw new Error('The book note has no properties, so the app cannot mark the chapter. Ask the team to fix it.');
   const parsed = Frontmatter.parse(text);
   if (parsed.error) throw new Error('The book note\'s properties cannot be read (' + parsed.error + '). Ask the team to fix it, then try again.');
-  const now = rewriteDone({ data: parsed.data as Record<string, unknown> });
-  const next = done ? now.concat(now.indexOf(chapter) < 0 ? [chapter] : []).sort((a, b) => a - b) : now.filter((n) => n !== chapter);
+  const now = rewriteDone({ data: (parsed.data || {}) as Record<string, unknown> });
+  return withRewriteList(text, done ? now.concat(now.indexOf(chapter) < 0 ? [chapter] : []) : now.filter((n) => n !== chapter));
+}
+
+/** The book note's text with `chapters` as its `rewrite_done` list (no line when the list is empty), every other line
+ * as it was. Also used when chapters are renumbered (`renumberLists` in chapters.ts). */
+export function withRewriteList(text: string, chapters: number[]): string {
+  const s = Frontmatter.split(text);
+  if (!s.hasFm) throw new Error('The book note has no properties, so the app cannot mark the chapter. Ask the team to fix it.');
+  const next = chapters.filter((n, i, a) => Number.isInteger(n) && n > 0 && a.indexOf(n) === i).sort((a, b) => a - b);
   const eol = s.yaml && s.yaml.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
   const lines = s.yaml ? s.yaml.split(/\r?\n/) : [];
   let at = -1;

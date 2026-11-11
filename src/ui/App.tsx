@@ -12,7 +12,7 @@ import { createTask, type NewTask } from '../lib/tasks.ts';
 import { bookTodos, createTodo, type NewTodo } from '../lib/todos.ts';
 import { createJob, defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
-import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, makeRoom } from '../lib/chapters.ts';
+import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts, putDraft, typedWords } from '../lib/drafts.ts';
@@ -204,7 +204,12 @@ export function App() {
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
     const title = chapterTitle.trim();
     try {
-      if (at <= last) await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
+      if (at <= last) {
+        // Keep or No choices still waiting on this device are saved by file name, so they go up before the names change.
+        await flushChoices(source);
+        await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
+        await renumberLists(source, cur.index.notes, book.folder, roomMap(at - 1), 'A new chapter ' + at + ' was added in the Sparrow app.');
+      }
       const made = await createScene(source, { bookFolder: book.folder, title: title || 'Chapter ' + at, chapter: at, chapterTitle: title, order: orderBetween(prev, next), status: 'drafted', body: '' },
         new Date(), 'Added in the Sparrow app.');
       await runSync();
@@ -515,7 +520,9 @@ export function App() {
     const last = nums.length ? Math.max(...nums) : 0;
     if (!Number.isInteger(to) || to < 1 || to > last) return 'Choose a chapter number from 1 to ' + last + '.';
     try {
+      await flushChoices(source);
       await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
+      await renumberLists(source, cur.index.notes, book.folder, moveMap(from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
       await runSync();
       return null;
     } catch (e) {
@@ -544,11 +551,17 @@ export function App() {
         .sort((a, b) => b - a);
       for (const ch of emptied) {
         const fresh = snapRef.current ? snapRef.current.index.notes : cur.index.notes;
+        await flushChoices(source);
         const extra = chapterNotes(fresh, book.folder, ch);
         const dir = book.folder + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
         for (const n of extra) await archiveNote(source, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
         await applyShifts(source, chapterCloseUp(fresh, book.folder, ch, going.map((n) => n.path).concat(extra.map((n) => n.path))),
           'Chapter ' + ch + ' was deleted in the Sparrow app, so the chapters after it close up by one.');
+        const titles = await renumberLists(source, fresh, book.folder, closeMap(ch), 'Chapter ' + ch + ' was deleted in the Sparrow app.');
+        if (titles && source.write) {
+          await source.write(dir + 'Chapter ' + ch + ' title options.md', '> [!note] Archived\n> The title options of chapter ' + ch + ', deleted in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.\n\n' + titles + '\n', '',
+            'archive: title options of deleted chapter ' + ch + '\n\nIts chapter was deleted in the Sparrow app. They left Chapter Titles.md and are kept here.');
+        }
         await runSync();
       }
       if (!emptied.length) await runSync();

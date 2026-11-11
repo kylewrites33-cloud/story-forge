@@ -52,7 +52,7 @@ src/ui/ChapterPage.tsx   the whole chapter as one page
 src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its own draft and saves
 src/lib/brackets.ts      {braces} (asks for the team): finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
-src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps renamed)
+src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps, change lists renamed; rewrite ticks and Chapter Titles follow)
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, keeping, story calls
