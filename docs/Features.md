@@ -106,7 +106,12 @@ add a dated line here when you add or change one.
   one, Down one, or a chapter number to jump to; the panel stays under the chapter so Up can be pressed again. The
   chapters in between close up by one; every note with a chapter number changes, the moving chapter's scenes take new
   reading-order numbers, and its beats, plan and scrap pass through a "(moving)" name so no two files clash. Needs a
-  connection. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
+  connection. Since 2026-11-11 the Edit room follows a chapter that is added, moved or deleted (found in the code
+  structure review; before this they stayed on the old number): its change list (`Changes/Chapter N changes.md`) is
+  renumbered and renamed like the beats, the chapters marked through in the Rewrite tab (`rewrite_done` on the book
+  note) take their new numbers, and the sections of `Chapter Titles.md` are renumbered and put back in order. A deleted
+  chapter's change list and title options go to the Archive with its other notes. Keep or No choices still waiting on
+  the device are sent first, because they are stored by file name. Outside the writing screen a sidebar on the left (Sudowrite and Novelcrafter style, `src/ui/Shell.tsx`)
   holds Books and Series, the open book's cover and title, Keep writing, the book's boards grouped as Write, Plan, Codex,
   Review and Publish, and at its foot Chat, Jobs, To-do, sync and Settings. From 1100 px it shows names; from 700 px it is
   a strip of icons with short names that the menu button opens in full; narrower, a slim top bar opens it over the page. A Chapter Grid

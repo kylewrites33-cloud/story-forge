@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, makeRoom, shiftedText } from '../src/lib/chapters.ts';
+import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap, shiftedText } from '../src/lib/chapters.ts';
+import { rewriteDone } from '../src/lib/rewrite.ts';
+import { parseTitles, renumberTitles } from '../src/lib/titles.ts';
 import { archiveNote, archiveScene, archivedWhy } from '../src/lib/scenes.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { MemSource } from './helpers.ts';
@@ -131,4 +133,61 @@ test('an older copy in the Archive is never overwritten: the second gets its own
   const to = await archiveScene(src, notes[p], new Date(2026, 9, 27));
   assert.equal(to, BOOK + '/Archive/S-002 Two (2).md');
   assert.equal(src.files.get(BOOK + '/Archive/S-002 Two.md'), 'older copy');
+});
+
+// The Edit room's lists follow a chapter that is added, moved or deleted (2026-11-11).
+const changes = (ch: number, was = ch) => '---\ntype: chapter-changes\ntitle: Chapter ' + ch + ' changes\nchapter: ' + ch + '\nstep: "41"\n---\n\n## C-01 · small\nWritten for the old chapter ' + was + '.\n';
+const TITLES = '---\ntype: chapter-titles\ntitle: Chapter Titles\n---\n\nRound 1.\n\n## Chapter 1\nWas: Frost\n- [x] Ash\n- [ ] None of these\n\n## Chapter 2\nWas: Ledger\n- [ ] Ink\n- [x] None of these\n\n## Chapter 3\nWas:\n- [ ] Bell\n- [ ] None of these\n';
+const editFiles: Record<string, string> = {
+  ...files,
+  [BOOK + '/Book.md']: '---\ntype: book\ntitle: Ash Bell\nrewrite_done: [1, 2]\nstage: editing\n---\n\nNotes.\n',
+  [BOOK + '/Chapter Titles.md']: TITLES,
+  [BOOK + '/Changes/Chapter 1 changes.md']: changes(1),
+  [BOOK + '/Changes/Chapter 2 changes.md']: changes(2),
+  [BOOK + '/Changes/Chapter 3 changes.md']: changes(3)
+};
+const editNotes = () => Object.fromEntries(Object.entries(editFiles).map(([p, t]) => [p, makeNote(p, 'x', t)]));
+const editSource = () => { const src = new MemSource(); Object.entries(editFiles).forEach(([p, t]) => src.files.set(p, t)); return src; };
+
+test('moving a chapter takes its change list, its rewrite tick and its title options with it', async () => {
+  const src = editSource(), all = editNotes();
+  const scenes = Object.values(all).filter((n) => n.type === 'scene' && n.path.startsWith(BOOK + '/'));
+  await applyShifts(src, chapterMove(all, BOOK, scenes, 3, 1), 'Moved.');
+  const gone = await renumberLists(src, all, BOOK, moveMap(3, 1), 'Moved.');
+  assert.equal(gone, '');
+  // Chapter 3's change list is now chapter 1's, name, title and number; the others moved down one.
+  assert.equal(src.files.get(BOOK + '/Changes/Chapter 1 changes.md'), changes(1, 3));
+  assert.equal(src.files.get(BOOK + '/Changes/Chapter 2 changes.md'), changes(2, 1));
+  assert.equal(src.files.get(BOOK + '/Changes/Chapter 3 changes.md'), changes(3, 2));
+  assert.deepEqual([...src.files.keys()].filter((p) => p.includes('/Changes/')).map((p) => p.slice(BOOK.length + 9)).sort(), ['Chapter 1 changes.md', 'Chapter 2 changes.md', 'Chapter 3 changes.md']);
+  // Kyle was through chapters 1 and 2; they are chapters 2 and 3 now.
+  const book = src.files.get(BOOK + '/Book.md') as string;
+  assert.equal(book, editFiles[BOOK + '/Book.md'].replace('rewrite_done: [1, 2]', 'rewrite_done: [2, 3]'));
+  // The title sections carry their new numbers, in order, with Kyle's ticks and the lines above them as they were.
+  const titles = src.files.get(BOOK + '/Chapter Titles.md') as string;
+  assert.ok(titles.startsWith('---\ntype: chapter-titles\ntitle: Chapter Titles\n---\n\nRound 1.\n\n## Chapter 1\nWas:\n- [ ] Bell'));
+  assert.deepEqual(parseTitles(titles).map((c) => [c.chapter, c.was, c.none]), [[1, '', false], [2, 'Frost', false], [3, 'Ledger', true]]);
+});
+
+test('a new chapter in the middle moves the later lists up, and nothing is saved when nothing changes', async () => {
+  const src = editSource(), all = editNotes();
+  await makeRoom(src, chapterShifts(all, BOOK, 1), 2);
+  await renumberLists(src, all, BOOK, roomMap(1), 'Added.');
+  assert.deepEqual(rewriteDone({ data: { rewrite_done: /rewrite_done: \[(.*)\]/.exec(src.files.get(BOOK + '/Book.md') as string)![1].split(',') } }), [1, 3]);
+  assert.deepEqual(parseTitles(src.files.get(BOOK + '/Chapter Titles.md') as string).map((c) => c.chapter), [1, 3, 4]);
+  assert.equal(src.files.get(BOOK + '/Changes/Chapter 4 changes.md'), changes(4, 3));
+  assert.ok(!src.files.has(BOOK + '/Changes/Chapter 2 changes.md'));
+  const before = src.writes.length;
+  await renumberLists(src, all, BOOK, roomMap(9), 'Added at the end.');
+  assert.equal(src.writes.length, before);
+});
+
+test('a deleted chapter leaves the lists, and its title options are handed back for the Archive', async () => {
+  const src = editSource(), all = editNotes();
+  assert.ok(chapterNotes(all, BOOK, 2).some((n) => n.type === 'chapter-changes'));
+  const gone = await renumberLists(src, all, BOOK, closeMap(2), 'Deleted.');
+  assert.equal(gone, '## Chapter 2\nWas: Ledger\n- [ ] Ink\n- [x] None of these');
+  assert.ok((src.files.get(BOOK + '/Book.md') as string).includes('rewrite_done: [1]\n'));
+  assert.deepEqual(parseTitles(src.files.get(BOOK + '/Chapter Titles.md') as string).map((c) => [c.chapter, c.was]), [[1, 'Frost'], [2, '']]);
+  assert.deepEqual(renumberTitles(TITLES, (ch) => ch), { text: TITLES, gone: '' });
 });

@@ -3,13 +3,19 @@
 // by number (beats, plan, scrap, to-dos, scene notes). Beats, plans and scraps are also named "Chapter N beats.md" and
 // so on, so those files get the new number in their name as well. Reading order is each scene's `order`, so a chapter
 // that moves takes new orders between its new neighbours.
+// The Edit room's change lists ("Chapter N changes.md") are chapter notes too and follow the same way. Two lists are
+// kept by chapter number outside any chapter note, and `renumberLists` moves them along: the chapters Kyle is through
+// in the Rewrite tab (`rewrite_done` on the book note) and the sections of Chapter Titles.md (2026-11-11: before this
+// a chapter added, moved or deleted during an edit left all three pointing at the wrong chapter).
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
+import { rewriteDone, withRewriteList } from './rewrite.ts';
+import { renumberTitles, TITLES_FILE } from './titles.ts';
 import type { NoteRecord, VaultSource } from './types.ts';
 
 /** Note types that carry a `chapter` number. The ones in NAMED are also named after their chapter. */
-const CHAPTER_TYPES = ['scene', 'task', 'scene-notes', 'chapter-beats', 'chapter-plan', 'chapter-scrap'];
-const NAMED = ['chapter-beats', 'chapter-plan', 'chapter-scrap'];
+const CHAPTER_TYPES = ['scene', 'task', 'scene-notes', 'chapter-beats', 'chapter-plan', 'chapter-scrap', 'chapter-changes'];
+const NAMED = ['chapter-beats', 'chapter-plan', 'chapter-scrap', 'chapter-changes'];
 
 export interface Shift {
   path: string;
@@ -146,7 +152,8 @@ export function chapterCloseUp(notes: Record<string, NoteRecord>, bookFolder: st
     .sort((a, b) => a.from - b.from || a.path.localeCompare(b.path));
 }
 
-/** The notes that belong to chapter `ch` by number and are not scenes (beats, plan, scrap, to-dos, scene notes). */
+/** The notes that belong to chapter `ch` by number and are not scenes (beats, plan, scrap, to-dos, scene notes, the
+ * Edit room's change list). */
 export function chapterNotes(notes: Record<string, NoteRecord>, bookFolder: string, ch: number): NoteRecord[] {
   return Object.values(notes).filter((n) => n.path.startsWith(bookFolder + '/') && n.type !== 'scene' && CHAPTER_TYPES.indexOf(n.type) >= 0 &&
     toNumber(n.data.chapter) === ch && !/\/(Archive|Snapshots|Exports)\//.test(n.path.slice(bookFolder.length)));
@@ -166,4 +173,58 @@ export function chapterTitleEdits(scenes: NoteRecord[], title: string): string[]
     const had = typeof n.data.chapter_title === 'string' && n.data.chapter_title !== '';
     return clean ? (i === 0 || had) && n.data.chapter_title !== clean : had;
   }).map((n) => n.path);
+}
+
+/** A chapter's number after a change, for the lists kept by number: `null` means the chapter is gone. */
+export type ChapterMap = (ch: number) => number | null;
+/** A new chapter goes in after chapter `after`. */
+export const roomMap = (after: number): ChapterMap => (ch) => (ch > after ? ch + 1 : ch);
+/** Chapter `from` becomes chapter `to`; the chapters in between close up by one. */
+export const moveMap = (from: number, to: number): ChapterMap => (ch) =>
+  ch === from ? to : to < from ? (ch >= to && ch < from ? ch + 1 : ch) : (ch > from && ch <= to ? ch - 1 : ch);
+/** Chapter `gone` is deleted; the chapters after it close up by one. */
+export const closeMap = (gone: number): ChapterMap => (ch) => (ch === gone ? null : ch > gone ? ch - 1 : ch);
+
+/** The book's two lists kept by chapter number follow a renumbering: `rewrite_done` on the book note and the
+ * `## Chapter N` sections of Chapter Titles.md. Each is one save and only when it changes. Returns the title options of
+ * a deleted chapter (or ''), so the caller can put them in the Archive. Throws a plain sentence. */
+export async function renumberLists(source: VaultSource, notes: Record<string, NoteRecord>, bookFolder: string, map: ChapterMap, why: string): Promise<string> {
+  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
+  const readFresh = source.readFresh.bind(source), write = source.write.bind(source);
+  const save = async (path: string, what: string, change: (text: string) => string) => {
+    try {
+      for (let attempt = 0; ; attempt++) {
+        const { text, sha } = await readFresh(path);
+        const next = change(text);
+        if (next === text) return;
+        try {
+          await write(path, next, sha, 'chapters: ' + what + ' follows the new chapter numbers\n\n' + why);
+          return;
+        } catch (e) {
+          if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
+          throw e;
+        }
+      }
+    } catch (e) {
+      throw new Error('The chapters have their new numbers, but ' + what + ' could not follow (' + (e as Error).message + '). Tell the team so they can set it right.');
+    }
+  };
+  const bookPath = bookFolder + '/Book.md';
+  if (notes[bookPath] && rewriteDone(notes[bookPath]).length) {
+    await save(bookPath, 'the list of chapters you are through in the Rewrite tab', (text) => {
+      const now = rewriteDone({ data: (Frontmatter.parse(text).data || {}) as Record<string, unknown> });
+      const next = now.map(map).filter((n): n is number => n != null);
+      return next.join() === now.join() ? text : withRewriteList(text, next);
+    });
+  }
+  let gone = '';
+  const titlesPath = bookFolder + '/' + TITLES_FILE;
+  if (notes[titlesPath]) {
+    await save(titlesPath, 'the chapter titles list', (text) => {
+      const r = renumberTitles(text, map);
+      gone = r.gone;
+      return r.text;
+    });
+  }
+  return gone;
 }
