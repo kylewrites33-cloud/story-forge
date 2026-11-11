@@ -113,6 +113,57 @@ function likeness(a: string, b: string): number {
   return a.trim() === b.trim() ? 1 : Math.min(0.999, similarity(a, b));
 }
 
+/** A paragraph's words, counted, for comparing it with many others. */
+interface Bag { count: Map<string, number>; size: number; trimmed: string }
+function bag(s: string): Bag {
+  const count = new Map<string, number>();
+  const w = words(s);
+  w.forEach((x) => count.set(x, (count.get(x) || 0) + 1));
+  return { count, size: w.length, trimmed: s.trim() };
+}
+/** likeness() from two bags: the same number, without splitting the words again. */
+function bagLikeness(a: Bag, b: Bag): number {
+  if (a.trimmed === b.trimmed) return 1;
+  if (!a.size && !b.size) return 0.999;
+  if (!a.size || !b.size) return 0;
+  const [small, big] = a.count.size <= b.count.size ? [a.count, b.count] : [b.count, a.count];
+  let same = 0;
+  small.forEach((c, w) => { const d = big.get(w); if (d) same += Math.min(c, d); });
+  return Math.min(0.999, (2 * same) / (a.size + b.size));
+}
+
+// Typing in the page beside the Rewrite tab lines the chapter up again at every key (Kyle, 2026-11-11: "Typing in
+// Sparrow is suddenly real slow"). Comparing every paragraph of his with every one of the Writer's took a fifth of a
+// second a key in a long chapter. A key changes one paragraph, so each paragraph's row of likenesses is kept, by its
+// words, for the last few rewrites shown, and only the paragraph being typed in is compared again.
+const KEEP = 8;
+const seen = new Map<string, { theirs: Bag[]; rows: Map<string, Float64Array> }>();
+function likenessRows(mine: string[], theirs: string[]): Float64Array[] {
+  const key = theirs.join('\u0000');
+  let c = seen.get(key);
+  if (c) { seen.delete(key); seen.set(key, c); }
+  else {
+    c = { theirs: theirs.map(bag), rows: new Map() };
+    seen.set(key, c);
+    if (seen.size > KEEP) seen.delete(seen.keys().next().value as string);
+  }
+  const cache = c;
+  const out = mine.map((p) => {
+    let row = cache.rows.get(p);
+    if (!row) {
+      const b = bag(p);
+      row = new Float64Array(cache.theirs.length);
+      for (let j = 0; j < cache.theirs.length; j++) row[j] = bagLikeness(b, cache.theirs[j]);
+    }
+    return row;
+  });
+  // Keep only the rows of the paragraphs on the page now, so old versions of the one being typed do not pile up.
+  const fresh = new Map<string, Float64Array>();
+  mine.forEach((p, i) => fresh.set(p, out[i]));
+  cache.rows = fresh;
+  return out;
+}
+
 /** The least alike two paragraphs can be and still sit side by side. */
 export const MATCH = 0.3;
 
@@ -122,8 +173,7 @@ export function align(mine: string[], theirs: string[]): Row[] {
   const n = mine.length, m = theirs.length;
   // Best total likeness of the first i of Kyle's against the first j of the rewrite's (Needleman-Wunsch, gaps free).
   const S: Float64Array[] = Array.from({ length: n + 1 }, () => new Float64Array(m + 1));
-  const sim: Float64Array[] = Array.from({ length: n }, () => new Float64Array(m));
-  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) sim[i][j] = likeness(mine[i], theirs[j]);
+  const sim: Float64Array[] = likenessRows(mine, theirs);
   for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
     const s = sim[i - 1][j - 1];
     const pair = s >= MATCH ? S[i - 1][j - 1] + s : -Infinity;

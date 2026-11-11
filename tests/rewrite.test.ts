@@ -45,6 +45,22 @@ test('similar paragraphs line up, and added or cut ones get rows of their own', 
   assert.deepEqual(r2.map((r) => [r.mine, r.theirs]), [[0, null], [null, 0], [1, 1]]);
 });
 
+test('lining up again after one paragraph changes keeps every row and stays quick', () => {
+  const para = (k: number) => Array.from({ length: 60 }, (_, i) => 'word' + ((k * 7 + i * 13) % 97)).join(' ') + '.';
+  const mine = Array.from({ length: 90 }, (_, k) => para(k));
+  const theirs = mine.map((p, k) => (k % 5 ? p.replace('word', 'other') : p));
+  const first = align(mine, theirs);
+  const typed = mine.slice(); typed[40] += ' And a few more words typed';
+  const t0 = performance.now();
+  const again = align(typed, theirs);
+  const ms = performance.now() - t0;
+  // Every paragraph still sits beside its own rewrite, the typed one too.
+  assert.deepEqual(first.map((r) => [r.mine, r.theirs]), mine.map((_, k) => [k, k]));
+  assert.deepEqual(again.map((r) => [r.mine, r.theirs]), mine.map((_, k) => [k, k]));
+  // Only the typed paragraph is compared again (it took about 180 ms a key in a long chapter before, 2026-11-11).
+  assert.ok(ms < 40, 'took ' + ms.toFixed(1) + ' ms');
+});
+
 test('bringing a paragraph over replaces Kyle\'s, or puts a new one in after the one before it', () => {
   const text = 'One.\n\nTwo.\n\nThree.\n';
   const mine = paragraphs(text);
