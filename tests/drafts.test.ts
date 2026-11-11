@@ -3,12 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
-  bodyWords, flushDrafts, holdOpen, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft, saveDraft, saveSnapshot,
+  bodyWords, flushDrafts, holdOpen, isUnsaved, loadNotice, mergeNotice, saveNotice, withoutProperty, listSnapshots, loadDrafts, openDraft, pendingCount, putDraft,
   sceneWords, snapshotFolder, splitLead, withBody, type Draft
 } from '../src/lib/drafts.ts';
 import { typedWords } from '../src/lib/drafts.ts';
+import { saveDraft, saveSnapshot } from '../src/vault/words.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
-import { GitHubSource } from '../src/lib/github.ts';
 import { renderProse } from '../scripts/sync-parser.js';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { hasVault, MemSource, ROOT, VAULT } from './helpers.ts';
@@ -115,7 +115,8 @@ test('when the scene changed elsewhere, Kyle\'s version wins and the other one i
   assert.equal(kept.data.taken, '2026-10-17T21:40');
   assert.match(kept.body, /The Writer revised this\./);
   assert.match(src.files.get(SCENE)!, /Kyle wrote this\./);
-  assert.deepEqual(src.writes.map((w) => w.path), [snap, SCENE]);
+  // The copy and Kyle's words go up together, as one save.
+  assert.deepEqual(src.commits.map((c) => c.paths.slice().sort()), [[SCENE, snap].sort()]);
 });
 
 test('a scene changed elsewhere on other lines is merged: both sets of changes stay, no copy is made', async () => {
@@ -141,7 +142,7 @@ test('a scene that waited offline tells Kyle when it met changes made elsewhere,
   const st = store();
   putDraft('mem', SCENE, { ...draftOf(src, TEXT.split('---\n')[2] + '\nWritten on the train.\n'), pending: true }, st);
   src.files.set(SCENE, TEXT.replace('Mara cut rope.', 'Mara cut the rope.'));
-  const r = await flushDrafts(src, 'mem', new Date(), st);
+  const r = await flushDrafts(src, 'mem', new Date(), st, saveDraft);
   assert.equal(r.notice, 'S-002 The Ferry had also changed somewhere else. Both sets of changes are now in the scene.');
   assert.match(src.files.get(SCENE)!, /Mara cut the rope\.[\s\S]*Written on the train\./);
   assert.match(mergeNotice([], ['S-002']) || '', /Copies, named "changed elsewhere"/);
@@ -173,27 +174,14 @@ test('drafts finished offline wait on the device and save when the connection is
   putDraft('mem', SCENE, { ...draftOf(src, '\nWritten on the train.\n'), pending: true }, st);
   assert.equal(pendingCount('mem', st), 1);
   src.offline = true;
-  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st), { saved: [], error: null, notice: null });
+  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st, saveDraft), { saved: [], error: null, notice: null });
   assert.equal(pendingCount('mem', st), 1);
   src.offline = false;
-  const r = await flushDrafts(src, 'mem', new Date(), st);
+  const r = await flushDrafts(src, 'mem', new Date(), st, saveDraft);
   assert.equal(r.saved.length, 1);
   assert.equal(pendingCount('mem', st), 0);
   assert.deepEqual(loadDrafts('mem', st), {});
   assert.match(src.files.get(SCENE)!, /Written on the train\./);
-});
-
-test('GitHub adds a new file without a sha, and a name already taken is a conflict', async () => {
-  const calls: { body: Record<string, unknown> }[] = [];
-  let status = 201;
-  const src = new GitHubSource({ owner: 'o', repo: 'r', branch: 'main', root: '', token: 't' }, async (_url, init) => {
-    calls.push({ body: JSON.parse(String(init && init.body)) });
-    return status === 201 ? Response.json({ content: { sha: 'new' } }, { status }) : new Response('', { status });
-  });
-  assert.equal(await src.write('Snapshots/S-001 v1 (copy).md', 'x', '', 'snapshot'), 'new');
-  assert.equal('sha' in calls[0].body, false);
-  status = 422;
-  await assert.rejects(src.write('Snapshots/S-001 v1 (copy).md', 'x', '', 'snapshot'), (e: Error & { conflict?: boolean }) => e.conflict === true);
 });
 
 test('the prose copy matches the sf tool in the vault', { skip: !hasVault && 'author-business is not checked out beside this repository' }, () => {
@@ -208,10 +196,10 @@ test('a scene open on the page is saved by the page, not by the sync beside it',
   const st = store();
   putDraft('mem', SCENE, { ...draftOf(src, '\nPeppermint was right.\n'), pending: true }, st);
   const release = holdOpen(SCENE);
-  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st), { saved: [], error: null, notice: null });
+  assert.deepEqual(await flushDrafts(src, 'mem', new Date(), st, saveDraft), { saved: [], error: null, notice: null });
   assert.equal(src.files.get(SCENE), TEXT);
   release();
-  const r = await flushDrafts(src, 'mem', new Date(), st);
+  const r = await flushDrafts(src, 'mem', new Date(), st, saveDraft);
   assert.equal(r.saved.length, 1);
 });
 

@@ -1,0 +1,10 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Archive/S-006 Thaw Market.md": "---\ntype: scene\nid: S-006\ntitle: Thaw Market\nchapter: 3\norder: 6\nday: 14\nthreads:\n  - \"[[The Warden's Hunt]]\"\npov: \"[[Tobin Quill]]\"\ncast:\n  - \"[[Tobin Quill]]\"\n  - \"[[The Warden]]\"\ntension: 6\noutcome: yes\nmood: -4\ncard_draft:\n  - outcome\nstatus: planned\ngoal: Sell the clapper for passage south.\nturn: The buyer pays in the Warden's coin.\nhook: The coin is still warm.\n---\n\n> [!note] Archived\n> Joined onto the end of S-005 The Ledger in the Sparrow app on 2026-11-11. Its words are there now; this is the note as it was.\n",
+  "Series/Ember Road/Books/1 Ash Bell/Notes to the Team/Joined S-006 into S-005 2026-11-11.md": "---\ntype: note\ntitle: Joined S-006 into S-005 2026-11-11\nto: Continuity Keeper\nstatus: open\ncreated: 2026-11-11\n---\n\nKyle joined S-006 Thaw Market onto the end of S-005 The Ledger in the Sparrow app. S-006 no longer exists (its old note is in the Archive). Point every note that still names S-006 (progressions, promises, beats, Story So Far) at S-005 or wherever fits now. `sf validate` lists them.\n",
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-005 The Ledger.md": "---\ntype: scene\nid: S-005\ntitle: The Ledger\nchapter: 3\nchapter_title: Ledger\norder: 5\nday: 5\nthreads:\n  - \"[[Who Cracked the Bell]]\"\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\nplace: \"[[Cinder Ford]]\"\ntension: 6\noutcome: yes\nmood: 0\ncard_draft:\n  - tension\n  - outcome\n  - mood\nstatus: planned\ngoal: Find the year the bell was last recast.\nturn: The page for that year has been cut out with a razor.\nwords: 0\n---\n\nCard notes: the ferry tolls are in the same ledger, in Tobin's hand.\n\nTyped just before the join.\n\n"
+ },
+ "gone": [
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-006 Thaw Market.md"
+ ]
+}

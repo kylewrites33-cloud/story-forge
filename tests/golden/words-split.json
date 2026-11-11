@@ -1,0 +1,11 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-005 The Ledger.md": "---\ntype: scene\nid: S-005\ntitle: The Ledger\nchapter: 3\nchapter_title: Ledger\norder: 5\nday: 5\nthreads:\n  - \"[[Who Cracked the Bell]]\"\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\nplace: \"[[Cinder Ford]]\"\ntension: 6\noutcome: yes\nmood: 0\ncard_draft:\n  - tension\n  - outcome\n  - mood\nstatus: planned\ngoal: Find the year the bell was last recast.\nturn: The page for that year has been cut out with a razor.\nwords: 0\n---\n\nCard notes: the ferry tolls are in the same ledger, in Tobin's hand.\n",
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-009 The Second Half.md": "---\ntype: scene\nid: S-009\ntitle: The Second Half\nstatus: planned\nkind: story\nchapter: 3\nchapter_title: Ledger\norder: 5.5\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\nplace: \"[[Cinder Ford]]\"\ncreated: 2026-11-11\n---\n\nTyped just before the split.\n",
+  "Series/Ember Road/Books/1 Ash Bell/Snapshots/S-005 v1 (before split).md": "---\ntype: snapshot\nof: Series/Ember Road/Books/1 Ash Bell/Scenes/S-005 The Ledger.md\nversion: 1\nlabel: before split\ntaken: 2026-11-11T15:00\nwords: 18\n---\n\nCard notes: the ferry tolls are in the same ledger, in Tobin's hand.\n\nTyped just before the split.\n"
+ },
+ "gone": [],
+ "also": {
+  "created": "Series/Ember Road/Books/1 Ash Bell/Scenes/S-009 The Second Half.md"
+ }
+}

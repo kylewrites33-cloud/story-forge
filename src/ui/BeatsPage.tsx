@@ -139,9 +139,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   /** Each scene's words as Kyle types, for the heading's counts. */
   onWords?: (words: Record<string, number>) => void;
   /** Files saved as they are through the one saving system (a deleted beat's words on their way to the Archive). */
-  onFiles?: (files: DeviceFile[]) => Promise<void>;
+  onFiles: (files: DeviceFile[]) => Promise<void>;
 }) {
-  const canSave = Boolean(source.readFresh && source.write);
+  const canSave = Boolean(source.readFresh && source.commit);
   const [st, setSt] = useState<State>(() => start(source, group, bookFolder, beatsNote));
   const ref = useRef(st);
   ref.current = st;
@@ -387,8 +387,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
       try {
         const why = 'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.';
         const path = deletedBeatPath(bookFolder, chapter, at, b.title, now), words = deletedBeatText(b, chapter, at, now);
-        if (onFiles) await onFiles([{ path, taken: 'next', text: words, message: why }]);
-        else await source.write!(path, words, '', why);
+        await onFiles([{ path, taken: 'next', text: words, message: why }]);
       } catch (e) {
         setDeleting(false);
         setMenu(null);

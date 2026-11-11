@@ -99,20 +99,6 @@ async function toBase64(file: Blob): Promise<string> {
   return btoa(out);
 }
 
-/** A picture from the device becomes the book's cover: the full-size picture is kept untouched in the book's Cover/
- * folder, and a small copy cut to 6 by 9 becomes Cover.jpg, which is what the app shows. Two commits, made with Kyle's key. */
-export async function addCover(source: VaultSource, book: BookEntry, file: File, now = new Date()): Promise<void> {
-  if (!source.writeBytes) throw new Error('Covers need your own vault, not the demo.');
-  const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82, COVER_SHAPE);
-  try {
-    await source.writeBytes(originalPath(book.folder, file.name, now), await toBase64(file), '', 'books: full-size cover for ' + book.title);
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) throw new Error('A picture with that name is already in the Cover folder. Wait a moment and try again.');
-    throw e;
-  }
-  await saveCover(source, book, small);
-}
-
 /** A new cover as the one saving system saves it: the full-size picture and the small copy, together. */
 export async function coverFiles(book: BookEntry, file: File, now = new Date()): Promise<DeviceFile[]> {
   const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82, COVER_SHAPE);
@@ -120,17 +106,4 @@ export async function coverFiles(book: BookEntry, file: File, now = new Date()):
     { path: book.folder + '/Cover.jpg', taken: 'replace', base64: small, message: 'books: cover for ' + book.title },
     { path: originalPath(book.folder, file.name, now), taken: 'next', base64: await toBase64(file), message: 'books: full-size cover for ' + book.title }
   ];
-}
-
-/** Save a picture as the book's Cover.jpg, replacing the one there. One commit, made with Kyle's key. */
-export async function saveCover(source: VaultSource, book: BookEntry, base64: string): Promise<void> {
-  if (!source.writeBytes) throw new Error('Covers need your own vault, not the demo.');
-  const path = book.folder + '/Cover.jpg';
-  const old = book.cover && book.cover.path === path ? book.cover.sha : '';
-  try {
-    await source.writeBytes(path, base64, old, 'books: cover for ' + book.title);
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) throw new Error('The cover changed somewhere else. Press Sync, then try again.');
-    throw e;
-  }
 }

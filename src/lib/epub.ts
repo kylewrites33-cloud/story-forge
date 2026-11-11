@@ -257,18 +257,3 @@ export function splitNote(text: string): { head: string; body: string } {
   const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text);
   return m ? { head: m[0].endsWith('\n') ? m[0] : m[0] + '\n', body: text.slice(m[0].length) } : { head: '', body: text };
 }
-
-/** Save Kyle's words as the note's body, keeping its properties. Re-reads first; throws a plain sentence if it changed. */
-export async function saveMatterBody(source: VaultSource, book: BookEntry, body: string, sha: string): Promise<string> {
-  if (!source.write) throw new Error('Saving needs your own vault, not the demo.');
-  const p = matterPath(book);
-  const now = source.readFresh ? await source.readFresh(p) : null;
-  if (now && now.sha !== sha) throw new Error('The front and back matter changed somewhere else since you opened it. Close it and open it again to see the newest words.');
-  const head = splitNote(now ? now.text : '').head;
-  try {
-    return await source.write(p, head + body.replace(/\s+$/, '') + '\n', sha, 'book matter: ' + book.title);
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) throw new Error('The front and back matter changed somewhere else since you opened it. Close it and open it again to see the newest words.');
-    throw e;
-  }
-}

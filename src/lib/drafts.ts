@@ -229,27 +229,6 @@ export function planSnapshot(files: FileEntry[], note: { path: string; data: Rec
   };
 }
 
-/** Save a body as the note's next snapshot, in sf snapshot's format. Returns the new file's path. */
-export async function saveSnapshot(source: VaultSource, note: { path: string; data: Record<string, unknown> }, body: string, label: string, now: Date): Promise<string> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const clean = safeName(label) || 'copy';
-  const stem = stemOf(note.path, note.data);
-  for (let attempt = 0; ; attempt++) {
-    const have = await listSnapshots(source, { path: note.path, sha: '', type: '', data: note.data, body: '', error: null });
-    const version = have.reduce((mx, s) => Math.max(mx, s.version), 0) + 1;
-    const dest = snapshotFolder(note.path) + '/' + stem + ' v' + version + ' (' + clean + ').md';
-    const text = Frontmatter.join({ type: 'snapshot', of: note.path, version, label: clean, taken: nowStamp(now), words: bodyWords(body) }, body);
-    try {
-      await source.write(dest, text, '', 'snapshot: ' + stem + ' v' + version + ' (' + clean + ')\n\nSaved in the Sparrow app.');
-      return dest;
-    } catch (e) {
-      // Another copy took that number a moment ago: count again once.
-      if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
-      throw e;
-    }
-  }
-}
-
 export interface SaveResult {
   note: NoteRecord;
   /** Where the other version went, when the scene had changed elsewhere on the same lines Kyle changed. */
@@ -277,7 +256,7 @@ export interface Landed {
 /** A draft made on its note's text as the vault has it now (`text`; null when the vault has no such note): what
  * changed elsewhere is merged in line by line, Kyle's lines winning where both changed the same ones; only the body,
  * the computed `words` line and what Kyle set (status, target) change. The one saving system's save uses this
- * (src/vault/push.ts); `saveDraft` below is the same steps the old way. Throws a plain sentence when it cannot be made. */
+ * (src/vault/push.ts). Throws a plain sentence when it cannot be made. */
 export function draftOnto(path: string, text: string | null, d: DraftWords): Landed {
   const file = path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '');
   if (text == null) {
@@ -305,54 +284,6 @@ export function draftOnto(path: string, text: string | null, d: DraftWords): Lan
   if (d.freshHeadline) next = withoutProperty(next, 'headline');
   const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || path;
   return { next, other, merged: body !== d.body, cur, message: verbFor(cur.type, false) + name + '\n\nWritten in the Sparrow app.' };
-}
-
-/** Save a draft to the vault: re-read the scene, merge in what changed elsewhere, keep a clashing version as a
- * snapshot, write Kyle's body. */
-export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promise<SaveResult> {
-  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
-  let clash: string | null = null;
-  if (d.create && !d.baseSha) {
-    const text = d.create + d.body;
-    const data = makeNote(d.path, '', text).data;
-    try {
-      const sha = await source.write(d.path, text, '', verbFor(String(data.type || ''), true) + (data.title || d.path) + '\n\nWritten in the Sparrow app.');
-      return { note: makeNote(d.path, sha, text), clash, merged: false };
-    } catch (e) {
-      // Made somewhere else a moment ago: save over it the usual way, keeping the other version as a copy.
-      if (!(e as { conflict?: boolean }).conflict) throw e;
-    }
-  }
-  for (let attempt = 0; ; attempt++) {
-    const { text, sha } = await source.readFresh(d.path);
-    const cur = makeNote(d.path, sha, text);
-    if (cur.error) throw new Error('This scene\'s properties cannot be read (' + cur.error + '). Ask the team to fix it, then try again.');
-    let body = d.body;
-    if (cur.body !== d.baseBody && cur.body !== d.body) {
-      const m = merge3(d.baseBody, d.body, cur.body);
-      if (m.clash && !clash) clash = await saveSnapshot(source, cur, cur.body, 'changed elsewhere', now);
-      body = m.text;
-    }
-    const merged = body !== d.body;
-    const set: Record<string, unknown> = {};
-    if (d.status && cur.data.status !== d.status) set.status = d.status;
-    if (cur.type === 'scene') {
-      const w = sceneWords(d.status || cur.data.status, body);
-      if (cur.data.words !== w) set.words = w;
-    }
-    if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;
-    let next = withBody(text, body, set);
-    if (d.freshHeadline) next = withoutProperty(next, 'headline');
-    if (next === text) return { note: cur, clash, merged };
-    const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || d.path;
-    try {
-      const newSha = await source.write(d.path, next, sha, verbFor(cur.type, false) + name + '\n\nWritten in the Sparrow app.');
-      return { note: makeNote(d.path, newSha, next), clash, merged };
-    } catch (e) {
-      if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
-      throw e;
-    }
-  }
 }
 
 function verbFor(type: string, adding: boolean): string {
@@ -398,10 +329,10 @@ export function holdOpen(path: string): () => void {
   };
 }
 
-/** Save every draft Kyle finished while offline. A draft that saves is forgotten; one that fails stays, with its error.
- * A scene open on the page is left to the page. */
+/** Save every draft Kyle finished while offline, through `save` (the one saving system's `saveDraft`, src/vault/words.ts).
+ * A draft that saves is forgotten; one that fails stays, with its error. A scene open on the page is left to the page. */
 export async function flushDrafts(source: VaultSource, sourceKey: string, now: Date, storage: Store = defaultStore(),
-  save: (source: VaultSource, d: Draft, now: Date) => Promise<SaveResult> = saveDraft): Promise<DraftFlush> {
+  save: (source: VaultSource, d: Draft, now: Date) => Promise<SaveResult>): Promise<DraftFlush> {
   const saved: NoteRecord[] = [];
   let error: string | null = null;
   const mergedIn: string[] = [], clashed: string[] = [];

@@ -2,8 +2,7 @@
 // elsewhere; a version that clashed with Kyle's is kept as a copy in that same save; a copy he asks for is one save.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import * as old from '../src/lib/drafts.ts';
-import { flushDrafts, openDraft, putDraft, loadDrafts, type Draft } from '../src/lib/drafts.ts';
+import { flushDrafts, openDraft, putDraft, loadDrafts, type Draft, type SaveResult } from '../src/lib/drafts.ts';
 import { sync } from '../src/lib/sync.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { VaultIndex } from '../src/lib/types.ts';
@@ -11,7 +10,7 @@ import { editRecord, editText } from '../src/vault/apply.ts';
 import { wordsAction } from '../src/vault/ops.ts';
 import { pushAction } from '../src/vault/push.ts';
 import { copyOp, saveDraft, saveSnapshot, saveWords } from '../src/vault/words.ts';
-import { DEMO, FsSource, MemSource } from './helpers.ts';
+import { DEMO, FsSource, leaves, MemSource } from './helpers.ts';
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
 const SCENE = BOOK + '/Scenes/S-005 The Ledger.md';
@@ -24,26 +23,22 @@ async function vault(): Promise<MemSource> {
   return src;
 }
 const indexOf = async (src: MemSource): Promise<VaultIndex> => (await sync(src, null)).index;
-/** The same thing done the old way and the new way, each on its own copy of the vault. */
-async function both(prepare: (src: MemSource, index: VaultIndex) => Promise<Draft> | Draft, then: (r: old.SaveResult, src: MemSource, way: 'old' | 'new') => void = () => undefined): Promise<{ was: MemSource; now: MemSource }> {
-  const was = await vault(), now = await vault();
-  const a = await old.saveDraft(was, await prepare(was, await indexOf(was)), NOW);
-  then(a, was, 'old');
-  const b = await saveDraft(now, await prepare(now, await indexOf(now)), NOW);
-  then(b, now, 'new');
-  assert.deepEqual([...now.files].sort(), [...was.files].sort(), 'the vault is as the old way left it');
-  assert.deepEqual({ ...b.note, sha: '' }, { ...a.note, sha: '' });
-  assert.equal(b.merged, a.merged);
-  assert.equal(b.clash, a.clash);
-  return { was, now };
+/** A save from the writing page on a fresh copy of the vault, held to what is written down for it: the vault it
+ * leaves, the note it answers with, and whether it merged or clashed. */
+async function saved(name: string, prepare: (src: MemSource, index: VaultIndex) => Promise<Draft> | Draft, then: (r: SaveResult) => void = () => undefined): Promise<MemSource> {
+  const now = await vault();
+  const r = await saveDraft(now, await prepare(now, await indexOf(now)), NOW);
+  then(r);
+  leaves('words-' + name, (await vault()).files, now.files, { merged: r.merged, clash: r.clash, note: { ...r.note, sha: '' } });
+  return now;
 }
 const typed = (index: VaultIndex, path: string, change: (body: string) => string, more: Partial<Draft> = {}): Draft => {
   const d = openDraft(index.notes[path], undefined, NOW);
   return { ...d, body: change(d.body), ...more };
 };
 
-test('a scene\'s words: one save that changes the body and the word count and nothing else, as the old way wrote it', async () => {
-  const { now } = await both((_s, index) => typed(index, SCENE, (b) => b.replace(/\s+$/, '') + '\n\nThe ferry did not come back.\n'));
+test('a scene\'s words: one save that changes the body and the word count and nothing else, as the note-by-note way wrote it', async () => {
+  const now = await saved('body-only', (_s, index) => typed(index, SCENE, (b) => b.replace(/\s+$/, '') + '\n\nThe ferry did not come back.\n'));
   assert.equal(now.commits.length, 1);
   assert.deepEqual(now.commits[0].paths, [SCENE]);
   assert.match(now.commits[0].message, /^scenes: edit S-005 The Ledger\n\nWritten in the Sparrow app\.$/);
@@ -51,7 +46,7 @@ test('a scene\'s words: one save that changes the body and the word count and no
 });
 
 test('what Kyle set beside the words goes in the same save: status, target, and a headline cleared for the team to write again', async () => {
-  await both((src, index) => {
+  await saved('status-target-headline', (src, index) => {
     src.files.set(SCENE, src.files.get(SCENE)!.replace('\nstatus:', '\nheadline: An old line.\nstatus:'));
     return typed(index, SCENE, (b) => b + 'More.\n', { status: 'revised', target: 1800, freshHeadline: true });
   }, (r) => {
@@ -62,7 +57,7 @@ test('what Kyle set beside the words goes in the same save: status, target, and 
 });
 
 test('a scene that changed elsewhere on other lines: both sets of changes are in it, in one save', async () => {
-  const { now } = await both((src, index) => {
+  const now = await saved('merged-elsewhere', (src, index) => {
     const d = typed(index, SCENE, (b) => b.replace(/\s+$/, '') + '\n\nA last line from the desk.\n');
     // The iPad changed the first paragraph meanwhile.
     const text = src.files.get(SCENE)!;
@@ -75,14 +70,13 @@ test('a scene that changed elsewhere on other lines: both sets of changes are in
   assert.match(now.files.get(SCENE)!, /A last line from the desk\./);
 });
 
-test('the same lines changed in two places: Kyle\'s are saved and the other version is kept as a copy, in one save where it took two', async () => {
-  const { was, now } = await both((src, index) => {
+test('the same lines changed in two places: Kyle\'s are saved and the other version is kept as a copy, in one save', async () => {
+  const now = await saved('clash-copy', (src, index) => {
     const first = index.notes[SCENE].body.split('\n').find((l) => l.trim())!;
     const d = typed(index, SCENE, (b) => b.replace(first, first + ' Mine.'));
     src.files.set(SCENE, src.files.get(SCENE)!.replace(first, first + ' Theirs.'));
     return d;
   }, (r) => { assert.equal(r.clash, BOOK + '/Snapshots/S-005 v1 (changed elsewhere).md'); });
-  assert.equal(was.writes.length, 2, 'two saves the old way');
   assert.equal(now.commits.length, 1);
   assert.deepEqual(now.commits[0].paths.slice().sort(), [SCENE, BOOK + '/Snapshots/S-005 v1 (changed elsewhere).md'].sort());
   assert.match(now.files.get(SCENE)!, / Mine\./);
@@ -93,12 +87,12 @@ test('a chapter\'s first beats start their note; made elsewhere a moment before,
   const path = BOOK + '/Chapter Beats/Chapter 3 beats.md';
   const create = '---\ntype: chapter-beats\ntitle: Chapter 3 beats\nchapter: 3\n---\n';
   const draft = (): Draft => ({ path, baseSha: '', baseBody: '', body: '\n## The ledger\nShe finds it.\n', target: null, startWords: 0, updatedAt: NOW.toISOString(), pending: false, create });
-  const { now } = await both((src) => { src.files.delete(path); return draft(); });
+  const now = await saved('first-beats', (src) => { src.files.delete(path); return draft(); });
   assert.equal(now.files.get(path), create + '\n## The ledger\nShe finds it.\n');
   assert.match(now.commits[0].message, /^beats: add Chapter 3 beats\n/);
   // The team wrote beats for the chapter meanwhile: nothing of theirs or of Kyle's is lost.
-  const two = await both((src) => { src.files.set(path, create + '\n## Theirs\nOther beats.\n'); return draft(); });
-  const kept = [...two.now.files].filter(([p]) => p === path || p.startsWith(BOOK + '/Snapshots/')).map(([, text]) => text).join('\n');
+  const two = await saved('first-beats-both-kept', (src) => { src.files.set(path, create + '\n## Theirs\nOther beats.\n'); return draft(); });
+  const kept = [...two.files].filter(([p]) => p === path || p.startsWith(BOOK + '/Snapshots/')).map(([, text]) => text).join('\n');
   assert.match(kept, /## The ledger\nShe finds it\./);
   assert.match(kept, /## Theirs\nOther beats\./);
 });
@@ -133,15 +127,12 @@ test('the words edit on screen equals its saved text', async () => {
   assert.deepEqual(editRecord(makeNote(SCENE, 'x', text), edit.edit), makeNote(SCENE, 'x', next));
 });
 
-test('a copy Kyle asks for is one save, numbered after the copies the vault has, as the old way wrote it', async () => {
-  const was = await vault(), now = await vault();
+test('a copy Kyle asks for is one save, numbered after the copies the vault has, as the note-by-note way wrote it', async () => {
+  const now = await vault();
   const note = (await indexOf(now)).notes[SCENE];
-  for (const label of ['before the big cut', 'Kyle: (try) two']) {
-    const a = await old.saveSnapshot(was, note, note.body, label, NOW);
-    const b = await saveSnapshot(now, note, note.body, label, NOW);
-    assert.equal(b, a);
-  }
-  assert.deepEqual([...now.files].sort(), [...was.files].sort());
+  assert.equal(await saveSnapshot(now, note, note.body, 'before the big cut', NOW), BOOK + '/Snapshots/S-005 v1 (before the big cut).md');
+  assert.equal(await saveSnapshot(now, note, note.body, 'Kyle: (try) two', NOW), BOOK + '/Snapshots/S-005 v2 (Kyle try two).md');
+  leaves('words-copies', (await vault()).files, now.files);
   assert.equal(now.commits.length, 2);
   assert.deepEqual(now.commits.map((c) => c.message.split('\n')[0]), ['snapshot: S-005 v1 (before the big cut)', 'snapshot: S-005 v2 (Kyle try two)']);
   // Another device took the next number while this copy was on its way: it takes the one after.
@@ -177,7 +168,7 @@ test('words finished with no connection go up through the same save when it is b
 
 // ---- split and join ----
 
-import { archiveForJoin, archivePath, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../src/lib/scenes.ts';
+import { archivePath, joinedBody, splitAt } from '../src/lib/scenes.ts';
 import { splitLead } from '../src/lib/drafts.ts';
 import { foldSaved } from '../src/vault/apply.ts';
 import { parseSchema } from '../src/lib/schema.ts';
@@ -187,7 +178,7 @@ import { demoSchemaText } from './helpers.ts';
 const schema = parseSchema(demoSchemaText());
 const bookOf = (index: VaultIndex) => index.books.find((b) => b.folder === BOOK)!;
 
-test('a split is one save where it took three: the copy, the new scene and this scene, as the old way left them', async () => {
+test('a split is one save: the copy, the new scene and this scene', async () => {
   const plan = (index: VaultIndex) => {
     const scenes = bookOf(index).scenes.map((p) => index.notes[p]);
     const at = scenes.findIndex((n) => n.path === SCENE);
@@ -197,21 +188,14 @@ test('a split is one save where it took three: the copy, the new scene and this 
     const parts = splitAt(text, text.indexOf('\n\n', 20) + 2);
     return { note, next, d, lead, parts };
   };
-  const was = await vault();
-  const a = plan(await indexOf(was));
-  const made = await splitOff(was, a.note, a.next, a.d.body, a.parts.after, 'The Second Half', BOOK, NOW);
-  await old.saveDraft(was, { ...a.d, body: a.lead + a.parts.before, freshHeadline: true }, NOW);
-  assert.equal(was.writes.length, 3, 'three saves the old way');
-
   const now = await vault();
   const index = await indexOf(now);
   const b = plan(index);
   const r = await splitWords(now, b.note, b.next, b.d, b.lead + b.parts.before, b.parts.after, 'The Second Half', BOOK, NOW);
   assert.equal(now.commits.length, 1);
-  assert.deepEqual(now.commits[0].paths.slice().sort(), [SCENE, made.path, BOOK + '/Snapshots/S-005 v1 (before split).md'].sort());
+  assert.deepEqual(now.commits[0].paths.slice().sort(), [SCENE, r.created.path, BOOK + '/Snapshots/S-005 v1 (before split).md'].sort());
   assert.match(now.commits[0].message, /^scenes: add S-\d+ The Second Half\n\nSaved together with:\n- snapshot: S-005 v1 \(before split\)\n- scenes: edit S-005 The Ledger\n\nSplit from S-005 The Ledger in the Sparrow app\.$/);
-  assert.deepEqual([...now.files].sort(), [...was.files].sort(), 'the vault is as the old way left it');
-  assert.equal(r.created.path, made.path);
+  leaves('words-split', (await vault()).files, now.files, { created: r.created.path });
   assert.equal(r.created.body.trim(), b.parts.after.trim());
   assert.match(now.files.get(BOOK + '/Snapshots/S-005 v1 (before split).md')!, /Typed just before the split\./);
   // No word is in both scenes or in neither.
@@ -234,20 +218,12 @@ test('a split that cannot be saved changes nothing', async () => {
   assert.ok(before.length > left.length);
 });
 
-test('a join is one save where it took four: both sets of words, the joined scene in the Archive, the team\'s note', async () => {
+test('a join is one save: both sets of words, the joined scene in the Archive, the team\'s note', async () => {
   const plan = (index: VaultIndex) => {
     const scenes = bookOf(index).scenes.map((p) => index.notes[p]);
     const at = scenes.findIndex((n) => n.path === SCENE);
     return { note: scenes[at], next: scenes[at + 1], d: typed(index, SCENE, (b) => b.replace(/\s+$/, '') + '\n\nTyped just before the join.\n') };
   };
-  const was = await vault();
-  const a = plan(await indexOf(was));
-  const taken = await archiveForJoin(was, a.note, a.next, NOW);
-  await old.saveDraft(was, { ...a.d, body: joinedBody(a.d.body, taken.body), freshHeadline: true }, NOW);
-  await removeJoined(was, a.next, taken.sha, 'S-005 The Ledger');
-  await noteJoinForTeam(was, BOOK, a.next, a.note, [], NOW);
-  assert.equal(was.writes.length, 4, 'four saves the old way');
-
   const now = await vault();
   const index = await indexOf(now);
   const b = plan(index);
@@ -256,7 +232,7 @@ test('a join is one save where it took four: both sets of words, the joined scen
   assert.equal(now.commits.length, 1);
   assert.equal(now.commits[0].paths.length, 4);
   assert.match(now.commits[0].message, /^scenes: join S-006 .* into S-005 The Ledger\n\nSaved together with:\n- scenes: edit S-005 The Ledger\n/);
-  assert.deepEqual([...now.files].sort(), [...was.files].sort(), 'the vault is as the old way left it');
+  leaves('words-join', (await vault()).files, now.files);
   assert.equal(r.told, true);
   assert.equal(r.note.body, joined);
   assert.ok(now.files.has(archivePath(b.next.path)) && !now.files.has(b.next.path));

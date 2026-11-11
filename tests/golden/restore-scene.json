@@ -1,0 +1,8 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Scenes/S-003 The Warden.md": "---\ntype: scene\nid: S-003\ntitle: The Warden\nsubtitle: That night, the Warden's house\nchapter: 2\nchapter_title: Thaw\norder: 3\nday: 1\nthreads:\n  - \"[[The Warden's Hunt]]\"\npov: \"[[Mara Quill]]\"\ncast:\n  - \"[[Mara Quill]]\"\n  - \"[[The Warden]]\"\ntension: 4\noutcome: yes-but\nmood: -3\nstatus: final\nlabels:\n  - needs research\n  - flashback\n---\n\nCard notes: the Warden arrives.\n"
+ },
+ "gone": [
+  "Series/Ember Road/Books/1 Ash Bell/Archive/S-003 The Warden.md"
+ ]
+}

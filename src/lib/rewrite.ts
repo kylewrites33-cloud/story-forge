@@ -25,7 +25,7 @@ export function withRewriteDone(text: string, chapter: number, done: boolean): s
 }
 
 /** The book note's text with `chapters` as its `rewrite_done` list (no line when the list is empty), every other line
- * as it was. Also used when chapters are renumbered (`renumberLists` in chapters.ts). */
+ * as it was. Also used when chapters are renumbered (src/vault/chapters.ts). */
 export function withRewriteList(text: string, chapters: number[]): string {
   const s = Frontmatter.split(text);
   if (!s.hasFm) throw new Error('The book note has no properties, so the app cannot mark the chapter. Ask the team to fix it.');

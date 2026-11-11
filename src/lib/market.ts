@@ -1,6 +1,6 @@
 // Publisher Rocket exports Kyle adds from the app. They are saved as they are, beside the market notes, for the Market
 // Analyst to read; the app never reads or changes them after that.
-import type { DeviceFile, FileEntry, VaultSource } from './types.ts';
+import type { DeviceFile, FileEntry } from './types.ts';
 
 export const ROCKET_FOLDER = 'Market/Rocket Exports';
 
@@ -38,24 +38,4 @@ export function rocketProblem(name: string, bytes: number): string | null {
 export function rocketFile(seriesFolder: string, name: string, text: string): DeviceFile {
   const file = rocketName(name, []);
   return { path: rocketFolder(seriesFolder) + '/' + file, taken: 'next', text: text.replace(/^\uFEFF/, ''), message: 'market: add Rocket file ' + file + '\n\nAdded on the Market board in the Sparrow app.' };
-}
-
-/** Save the file into the series' Rocket Exports folder as Kyle's commit (no Agent trailer). Returns the path it was saved at. */
-export async function addRocketFile(source: VaultSource, seriesFolder: string, taken: string[], name: string, text: string): Promise<string> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const used = taken.slice();
-  for (let attempt = 0; ; attempt++) {
-    const file = rocketName(name, used);
-    const path = rocketFolder(seriesFolder) + '/' + file;
-    try {
-      await source.write(path, text.replace(/^\uFEFF/, ''), '', 'market: add Rocket file ' + file + '\n\nAdded on the Market board in the Sparrow app.');
-      return path;
-    } catch (e) {
-      const err = e as Error & { conflict?: boolean; status?: number };
-      // A file of that name arrived since the last sync: take the next free name.
-      if (err.conflict && attempt < 5) { used.push(file); continue; }
-      if (err.status === 0) throw new Error('Cannot reach GitHub. Connect to the internet and add the file again.');
-      throw err;
-    }
-  }
 }

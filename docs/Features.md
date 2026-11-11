@@ -1583,9 +1583,40 @@ sign waited for. So:
 - **Kept:** a board choice's shape and what it changes moved to `src/vault/choice.ts`; choices and Edit room answers
   left waiting in the two older lists on a device that has not opened the app since 2026-11-11 still move into the
   outbox once (`loadOutbox`).
-- **Still to go, in the next piece:** the older one-note-at-a-time functions that nothing in the app calls any more
-  (in `scenes.ts`, `chapters.ts`, `books.ts`, `bookdrafts.ts`, `covers.ts`, `market.ts`, `recipes.ts`, `docx.ts`,
-  `drafts.ts`, the timer), their tests, and Crow's two direct writes.
+- **Gone with it, the same day:** the older one-note-at-a-time code nothing called any more. See the next section.
 - Checked with the unit tests (the tests that compared the old way with the new now state what the new way must
   leave), and every browser check again in Chromium at the three sizes and WebKitGTK at the two iPad sizes; the first
   check now also holds that Settings shows no switch and that a device carrying the old mark saves the one way.
+
+### The one saving system, step 1: one way to change the vault (2026-11-11)
+
+Nothing Kyle sees changes. What changed is underneath: the app now has exactly one way to change the vault, so a new
+feature cannot save around the saving system by accident.
+
+- **A vault source has one write: `commit`** (`VaultSource` in `src/lib/types.ts`). `write`, `writeMany`, `writeBytes`
+  and `remove` are gone from the source, from `GitHubSource` and from the demo vault, with GitHub's one-file-at-a-time
+  calls and their "saved again after a 409" patch (2026-11-05), which one save for many files never needed. Whether a
+  vault can be changed is asked one way everywhere: `source.commit`.
+- **The older saving functions are deleted** (about 600 lines): in `scenes.ts` (`createScene`, `splitOff`,
+  `archiveForJoin`, `removeJoined`, `archiveNote`, `archiveScene`, `noteJoinForTeam`, `restoreArchived`,
+  `renameScene`), `chapters.ts` (`applyShifts`, `makeRoom`, `renumberLists`), `books.ts` (`createSeries`,
+  `createBook`), `bookdrafts.ts` (`saveBookDraft`), `covers.ts` (`addCover`, `saveCover`), `docx.ts` (`saveBackup`,
+  `makeBackupFolder`), `epub.ts` (`saveMatterBody`), `market.ts` (`addRocketFile`), `recipes.ts` (`saveRecipe`),
+  `drafts.ts` (the old `saveDraft` and `saveSnapshot`) and the timer's own sending (`flushLog`, `flushTyped`,
+  `flushTyping`). What is left in those modules works out text, names and places; `src/vault/` does the saving.
+- **Screens no longer carry a second way to save.** The Word backup and Front and back matter (`Home.tsx`), Chapter
+  titles, the notes box and Restore (`EditorPanels.tsx`), a deleted beat's words (`BeatsPage.tsx`) and the timer's log
+  (`Pomodoro.tsx`) only hand their change to the saving system; the fallbacks that wrote to GitHub themselves are out.
+- **Crow's picture for a character** (`src/study/StudyApp.tsx`) is saved through the saving system too (a file from
+  the device, replacing the one there). It was the last direct write in the code.
+- **What the old code did is written down, not lost.** Before it was removed, each test that compared "the old way"
+  with the new one wrote what the old way left in the vault to `tests/golden/<case>.json` (32 cases: every chapter
+  added or moved, scenes deleted, a split, a join, copies, a clash, a renamed scene and recipe, a new series and book,
+  a draft of the book, a restored scene, Rocket files, a day of the Writing Log). The tests now hold the saving system
+  to those files, byte for byte (`leaves` in `tests/helpers.ts`). The older functions' own tests were moved onto the
+  saving system rather than dropped, among them the one that adds, splits and joins scenes in a copy of the demo vault
+  and runs the vault's own validator over the result. The check on the real Quest Declined 2 (when the vault is beside
+  this repository) no longer compares with the old code; it holds that every scene lands at the chapter number the
+  change gives it, with no word changed.
+- Checked with the unit tests and every browser check in Chromium at the three sizes and WebKitGTK at the two iPad
+  sizes, plus a new check that a picture added in Crow is one save.

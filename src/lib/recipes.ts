@@ -4,9 +4,8 @@
 import { Frontmatter } from './frontmatter.js';
 import { basename } from './links.ts';
 import { safeTitle } from './scenes.ts';
-import { makeNote } from './vault-index.ts';
 import { freePath } from './notes.ts';
-import type { FileEntry, Made, NoteRecord, VaultIndex, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
 export const RECIPES_FOLDER = 'Recipes';
 
@@ -77,26 +76,4 @@ export function editRecipeText(text: string, useFor: string, body: string): stri
   // An unchanged instruction keeps its own spacing, so a save with nothing new writes nothing.
   if (body.trim() === s.body.trim()) return out;
   return s.open + (s.yaml || '') + s.close + '\n' + body.trim() + '\n';
-}
-
-/** Save Kyle's changes to a recipe: re-read it, change use_for and the instruction, and, when he renamed it, move the
- * file to its new name (the old file goes only after the new one is saved). Returns the saved note. */
-export async function saveRecipe(source: VaultSource, note: NoteRecord, r: RecipeFields): Promise<NoteRecord> {
-  if (!source.write || !source.readFresh) throw new Error('This vault cannot be changed from the app.');
-  if (!r.body.trim()) throw new Error('A recipe needs its instruction. Write it, or leave the recipe as it was.');
-  const title = safeTitle(r.title) || recipeName(note);
-  const { text, sha } = await source.readFresh(note.path);
-  let next = editRecipeText(text, r.use_for, r.body);
-  if (title === recipeName(note)) {
-    if (next === text) return makeNote(note.path, sha, text);
-    const newSha = await source.write(note.path, next, sha, 'recipes: edit ' + title + '\n\nEdited in the Sparrow app.');
-    return makeNote(note.path, newSha, next);
-  }
-  if (!source.remove) throw new Error('This vault cannot rename notes from the app. Keep the old name, or ask the team to rename it.');
-  next = Frontmatter.setScalar(next, 'title', title);
-  const { files } = await source.tree();
-  const path = freePath(RECIPES_FOLDER, title, files.map((f) => f.path).filter((p) => p !== note.path));
-  const newSha = await source.write(path, next, '', 'recipes: rename ' + recipeName(note) + ' to ' + title + '\n\nRenamed in the Sparrow app.');
-  await source.remove(note.path, sha, 'recipes: rename ' + recipeName(note) + ' to ' + title + '\n\nThe recipe now lives in ' + path + '.');
-  return makeNote(path, newSha, next);
 }

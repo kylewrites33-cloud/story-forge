@@ -841,18 +841,18 @@ export function App() {
         <Editor key={route.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
           nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
           book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
-          onAdd={book && source.write ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
-          onAddChapter={book && source.write && source.readFresh ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
-          onRenameChapter={book && source.write ? onRenameChapter : undefined}
-          onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
-          onDeleteScenes={book && source.write && source.readFresh && source.remove ? (paths) => onDeleteScenes(book, paths) : undefined}
+          onAdd={book && source.commit ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
+          onAddChapter={book && source.commit ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
+          onRenameChapter={book && source.commit ? onRenameChapter : undefined}
+          onMoveChapter={book && source.commit ? (from, to) => onMoveChapter(book, from, to) : undefined}
+          onDeleteScenes={book && source.commit ? (paths) => onDeleteScenes(book, paths) : undefined}
           onRestore={book ? (path) => onRestore(book, path) : undefined}
           onNotes={book ? (was, body) => onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
           onFiles={onFiles}
-          onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
-          todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} onMarks={source.write ? onMarks : undefined} waiting={waiting}
-          onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
-          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} onLog={onLog} />}
+          onJob={book && source.commit ? onJob : undefined} onChat={book && source.commit ? onChat : undefined}
+          todos={book ? bookTodos(view, book) : []} onTodo={source.commit ? onDecide : undefined} onMarks={source.commit ? onMarks : undefined} waiting={waiting}
+          onAddTodo={book && source.commit ? (t) => onAddTodo(book.folder, t) : undefined}
+          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLog={onLog} />}
           codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
@@ -866,11 +866,11 @@ export function App() {
           recipes={recipeNotes(view).map(recipeName)}
           flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
           changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
-          rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.write ? (ch, done) => onRewriteThrough(book, ch, done) : undefined } : null}
+          rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.commit ? (ch, done) => onRewriteThrough(book, ch, done) : undefined } : null}
           drafts={book ? {
             saved: book.drafts || [],
             onSave: async () => {
-              if (!source.write) return 'Saving a draft needs your own vault, not the demo.';
+              if (!source.commit) return 'Saving a draft needs your own vault, not the demo.';
               if (!navigator.onLine) return 'Connect to the internet to save a draft.';
               try {
                 await saveDraft(book);
@@ -912,7 +912,7 @@ export function App() {
     if (book && group) {
       return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
         checkOpts={checkOptionsFor(view, book.folder)}
-        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} onLog={onLog} />} />;
+        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLog={onLog} />} />;
     }
   }
 
@@ -925,31 +925,31 @@ export function App() {
   } else if (route.name === 'write' || route.name === 'chapter' || route.name === 'beats') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
   } else if (route.name === 'jobs') {
-    body = <JobsScreen index={view} waiting={waiting} onDecide={source.write ? onDecide : undefined} syncing={syncing} />;
+    body = <JobsScreen index={view} waiting={waiting} onDecide={source.commit ? onDecide : undefined} syncing={syncing} />;
   } else if (route.name === 'chat') {
-    body = <ChatScreen index={view} thread={route.thread} book={route.book} onChat={source.write ? onChat : undefined}
-      onDecide={source.write ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
+    body = <ChatScreen index={view} thread={route.thread} book={route.book} onChat={source.commit ? onChat : undefined}
+      onDecide={source.commit ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
   } else if (route.name === 'todo') {
-    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddTask : undefined}
-      schema={schema} book={activeBook(view)} onRewrite={source.write ? onRewrite : undefined} />;
+    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.commit ? onAddTask : undefined}
+      schema={schema} book={activeBook(view)} onRewrite={source.commit ? onRewrite : undefined} />;
   } else if (route.name === 'team') {
-    body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.write)} />
-      : <TeamScreen source={source} index={view} schema={schema} canTalk={Boolean(source.write)}
-        extra={<ForgeSpecialist onJob={source.write ? onJob : undefined} book={(activeBook(view) || view.books[0] || { folder: '' }).folder} />} />;
+    body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.commit)} />
+      : <TeamScreen source={source} index={view} schema={schema} canTalk={Boolean(source.commit)}
+        extra={<ForgeSpecialist onJob={source.commit ? onJob : undefined} book={(activeBook(view) || view.books[0] || { folder: '' }).folder} />} />;
   } else if (route.name === 'skills') {
     body = <SkillsScreen index={view} skill={route.skill} />;
   } else if (route.name === 'history') {
     body = <HistoryScreen source={source} index={view} who={route.who} />;
   } else if (route.name === 'workflow') {
-    body = <WorkflowScreen index={view} step={route.step} onNote={source.write && source.readFresh ? onWorkflowNote : undefined} />;
+    body = <WorkflowScreen index={view} step={route.step} onNote={source.commit ? onWorkflowNote : undefined} />;
   } else if (route.name === 'recipes') {
-    body = <RecipesScreen index={view} onAdd={source.write ? onAddRecipe : undefined} onSave={source.write && source.readFresh ? onSaveRecipe : undefined} />;
+    body = <RecipesScreen index={view} onAdd={source.commit ? onAddRecipe : undefined} onSave={source.commit ? onSaveRecipe : undefined} />;
   } else if (route.name === 'flow') {
     const book = view.books.find((b) => b.folder === route.folder);
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
     else {
       body = <FlowScreen index={view} book={book} stage={route.stage} step={route.step} sourceKey={source.key} waiting={waiting}
-        onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} onResults={source.write ? onResults : undefined} />;
+        onJob={source.commit ? onJob : undefined} onDecide={source.commit ? onDecide : undefined} onResults={source.commit ? onResults : undefined} />;
     }
   } else if (route.name === 'note' && view.notes[route.path] && view.notes[route.path].type === 'session') {
     body = <SessionView index={view} note={view.notes[route.path]} />;
@@ -960,12 +960,12 @@ export function App() {
     body = (
       <>
         <NoteView schema={schema} index={view} path={route.path} />
-        {nb && who && <FromTheWorkflow index={view} book={nb} names={[who].concat(nameList(n.data.aliases))} title={who} onResults={source.write ? onResults : undefined} />}
+        {nb && who && <FromTheWorkflow index={view} book={nb} names={[who].concat(nameList(n.data.aliases))} title={who} onResults={source.commit ? onResults : undefined} />}
       </>
     );
   } else if (route.name === 'series') {
-    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} onCreateBook={source.write ? onCreateBook : undefined} />
-      : <Home source={source} index={view} series onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
+    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} onCreateBook={source.commit ? onCreateBook : undefined} />
+      : <Home source={source} index={view} series onCreateSeries={source.commit ? onCreateSeries : undefined} onCreateBook={source.commit ? onCreateBook : undefined} />;
   } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board') {
     const book = view.books.find((b) => b.folder === route.folder);
     const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas' : 'chapter-grid';
@@ -973,10 +973,10 @@ export function App() {
     else {
       let screen;
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={onFiles} onMatter={onWords} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={onTitles} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
-      else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={onFiles} onMatter={onWords} onCover={source.commit ? onCover : undefined} onDecide={source.commit ? onDecide : undefined} />;
+      else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.commit ? onDecide : undefined} />;
+      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage index={view} book={book} onChange={onTitles} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.commit ? onRenameChapter : undefined} />;
+      else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.commit ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
         calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}
         rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean), rewriteDone(view.notes[book.path]))} />;
@@ -989,28 +989,28 @@ export function App() {
           return rn && named ? { title: named.chapter || named.scene || 'Your scene',
             where: [named.chapter ? named.scene : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
         };
-        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keepFor={keepFor} onJob={source.write ? onJob : undefined} onDecide={source.write ? onDecide : undefined} />;
+        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keepFor={keepFor} onJob={source.commit ? onJob : undefined} onDecide={source.commit ? onDecide : undefined} />;
       }
-      else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.write ? onDecide : undefined} onAdd={source.write ? onAddNote : undefined} />;
+      else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.commit ? onDecide : undefined} onAdd={source.commit ? onAddNote : undefined} />;
       else if (boardKey === 'sessions') screen = <SessionsScreen index={view} book={book} />;
-      else if (SEEING_BOARDS.indexOf(boardKey) >= 0) screen = <SeeingBoard board={boardKey} schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onJob={source.write ? onJob : undefined} />;
-      else if (boardKey === 'taste') screen = <TastePage source={source} index={view} book={book} onJob={source.write ? onJob : undefined} />;
-      else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
-      else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.write ? onDecide : undefined} waiting={waiting} />;
+      else if (SEEING_BOARDS.indexOf(boardKey) >= 0) screen = <SeeingBoard board={boardKey} schema={schema} index={view} book={book} onDecide={source.commit ? onDecide : undefined} />;
+      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onJob={source.commit ? onJob : undefined} />;
+      else if (boardKey === 'taste') screen = <TastePage source={source} index={view} book={book} onJob={source.commit ? onJob : undefined} />;
+      else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.commit ? onDecide : undefined} waiting={waiting} />;
+      else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.commit ? onDecide : undefined} waiting={waiting} />;
       else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.write ? onAddRocket : undefined} onRewrite={source.write ? onRewrite : undefined} />;
+        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.commit ? onAddRocket : undefined} onRewrite={source.commit ? onRewrite : undefined} />;
       } else if (boardKey === 'chapter-grid') {
-        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.write ? onAddScene : undefined}
-          onAddMany={source.write ? onAddMany : undefined} onMove={source.write ? onMove : undefined}
-          source={source} onJob={source.write ? onJob : undefined}
-          onRename={source.remove ? onRename : undefined} onImport={source.write ? onImport : undefined} />;
+        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.commit ? onAddScene : undefined}
+          onAddMany={source.commit ? onAddMany : undefined} onMove={source.commit ? onMove : undefined}
+          source={source} onJob={source.commit ? onJob : undefined}
+          onRename={source.commit ? onRename : undefined} onImport={source.commit ? onImport : undefined} />;
       }
       else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
       body = screen;
     }
   } else {
-    body = <Home source={source} index={view} series={false} onCreateSeries={source.write ? onCreateSeries : undefined} onCreateBook={source.write ? onCreateBook : undefined} />;
+    body = <Home source={source} index={view} series={false} onCreateSeries={source.commit ? onCreateSeries : undefined} onCreateBook={source.commit ? onCreateBook : undefined} />;
   }
 
   // The top bar shows the boards of the book on screen, or else of the active book.
@@ -1073,12 +1073,12 @@ export function App() {
   const showSide = Boolean(view) && place !== 'chat' && place !== 'settings';
   const side = showSide && view ? (close: () => void) => {
     return <TeamSide index={view} sourceKey={source.key} book={sideBook ? sideBook.folder : ''} page={pageContext(pageView())}
-      onChat={source.write ? onChat : undefined} onClose={close} />;
+      onChat={source.commit ? onChat : undefined} onClose={close} />;
   } : null;
 
   return (
     <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
-      timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLogged={foldNotes} onLog={onLog} />}
+      timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLog={onLog} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || notice || (!online && (waitingN > 0 || drafts > 0))) && (
         <div class="banner" role="status">

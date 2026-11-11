@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { addRocketFile, MAX_BYTES, rocketFiles, rocketName, rocketProblem } from '../src/lib/market.ts';
-import type { FileEntry, VaultSource } from '../src/lib/types.ts';
+import { MAX_BYTES, rocketFile, rocketFiles, rocketName, rocketProblem } from '../src/lib/market.ts';
+import type { FileEntry } from '../src/lib/types.ts';
+import { filesAction } from '../src/vault/ops.ts';
+import { pushAction } from '../src/vault/push.ts';
+import { MemSource } from './helpers.ts';
 
 const SERIES = 'Series/Quest Declined';
 
@@ -29,21 +32,14 @@ test('only CSV files of a sendable size are added, with a plain sentence otherwi
 });
 
 test('adding a Rocket file commits it as Kyle\'s, and takes the next name when one appeared since the last sync', async () => {
-  const writes: { path: string; text: string; message: string }[] = [];
-  const source: VaultSource = {
-    key: 't', label: 't',
-    tree: async () => ({ files: [], truncated: false }),
-    read: async () => '',
-    write: async (path, text, sha, message) => {
-      assert.equal(sha, '');
-      if (path.endsWith('/e.csv')) throw Object.assign(new Error('taken'), { conflict: true });
-      writes.push({ path, text, message });
-      return 'sha';
-    }
-  };
-  const path = await addRocketFile(source, SERIES, [], 'e.csv', '﻿Title,Author\n');
-  assert.equal(path, SERIES + '/Market/Rocket Exports/e (2).csv');
-  assert.equal(writes[0].text, 'Title,Author\n');
-  assert.match(writes[0].message, /^market: add Rocket file e \(2\)\.csv/);
-  assert.doesNotMatch(writes[0].message, /Agent:/);
+  const src = new MemSource();
+  src.files.set(SERIES + '/Market/Rocket Exports/e.csv', 'Taken since the last sync.\n');
+  const f = rocketFile(SERIES, 'e.csv', '\uFEFFTitle,Author\n');
+  const res = await pushAction(src, filesAction([f]));
+  const path = SERIES + '/Market/Rocket Exports/e (2).csv';
+  assert.equal(res.renames[f.path], path);
+  assert.equal(src.files.get(path), 'Title,Author\n');
+  assert.equal(src.files.get(f.path), 'Taken since the last sync.\n');
+  assert.match(src.commits[0].message, /^market: add Rocket file e \(2\)\.csv/);
+  assert.doesNotMatch(src.commits[0].message, /Agent:/);
 });

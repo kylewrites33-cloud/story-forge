@@ -3,10 +3,7 @@
 // scene it absorbs to the book's Archive folder (with a note saying why) before removing it from Scenes.
 // IDs never change and are never reused; the `order` property places a scene in reading order.
 import { Frontmatter } from './frontmatter.js';
-import { saveSnapshot } from './drafts.ts';
-import { applyToText, editChange } from './ideas.ts';
-import { makeNote } from './vault-index.ts';
-import type { FileEntry, Made, NoteRecord, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord } from './types.ts';
 
 /** The next free scene ID in a book, from a fresh file list, the way `sf next-id scene` counts
  * (every file in the book except Snapshots, Exports and Archive). */
@@ -83,27 +80,6 @@ export function planScene(files: FileEntry[], s: NewScene, now: Date, keep = '',
   return { id, path: s.bookFolder + '/Scenes/' + id + ' ' + title + '.md', text: sceneText(id, { ...s, title }, now), message: 'scenes: add ' + id + ' ' + title + '\n\n' + why };
 }
 
-/** Add a scene to the vault. Returns the new note. */
-export async function createScene(source: VaultSource, s: NewScene, now: Date, why: string): Promise<NoteRecord> {
-  if (!source.write) throw new Error('This vault cannot be changed from the app.');
-  const title = safeTitle(s.title);
-  if (!title) throw new Error('Give the scene a title first.');
-  for (let attempt = 0; ; attempt++) {
-    const { files } = await source.tree();
-    const id = nextSceneId(files, s.bookFolder);
-    const path = s.bookFolder + '/Scenes/' + id + ' ' + title + '.md';
-    const text = sceneText(id, { ...s, title }, now);
-    try {
-      const sha = await source.write(path, text, '', 'scenes: add ' + id + ' ' + title + '\n\n' + why);
-      return makeNote(path, sha, text);
-    } catch (e) {
-      // Someone else took that ID a moment ago: count again once.
-      if ((e as { conflict?: boolean }).conflict && attempt === 0) continue;
-      throw e;
-    }
-  }
-}
-
 /** Where a scene goes when it is joined into another: the book's Archive folder, same file name. */
 export function archivePath(path: string): string {
   const m = /^(Series\/[^/]+\/Books\/[^/]+)\/(.*)$/.exec(path);
@@ -127,78 +103,6 @@ export function joinedBody(body: string, nextBody: string): string {
 /** Split support: the body before the cursor (kept in this scene) and after it (the new scene). */
 export function splitAt(body: string, at: number): { before: string; after: string } {
   return { before: body.slice(0, at).replace(/\s+$/, '') + '\n', after: body.slice(at).replace(/^\s+/, '') };
-}
-
-/** Save the words after the cursor as a new scene right after this one. A copy of the whole scene is saved first.
- * The caller then saves this scene with the words before the cursor (through the writing screen's normal save). */
-export async function splitOff(source: VaultSource, note: NoteRecord, next: NoteRecord | null, wholeBody: string, after: string,
-  title: string, bookFolder: string, now: Date): Promise<NoteRecord> {
-  await saveSnapshot(source, note, wholeBody, 'before split', now);
-  const status = String(note.data.status || 'drafted');
-  return createScene(source, {
-    bookFolder, title, chapter: num(note.data.chapter), chapterTitle: typeof note.data.chapter_title === 'string' ? note.data.chapter_title : '',
-    order: orderBetween(note, next), status, from: note, body: after
-  }, now, 'Split from ' + [note.data.id, note.data.title].filter(Boolean).join(' ') + ' in the Sparrow app.');
-}
-
-/** Take the next scene's words for joining: move its note to the Archive (with a note saying why), and return its body.
- * The caller saves the joined body into this scene, then calls `removeJoined`. */
-export async function archiveForJoin(source: VaultSource, into: NoteRecord, next: NoteRecord, now: Date): Promise<{ body: string; sha: string }> {
-  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
-  const fresh = await source.readFresh(next.path);
-  const cur = makeNote(next.path, fresh.sha, fresh.text);
-  const why = joinedWhy(into, now);
-  const dest = archivePath(next.path);
-  let destSha = '';
-  try {
-    destSha = (await source.readFresh(dest)).sha;
-  } catch (e) {
-    if ((e as { status?: number }).status !== 404 && !/has no/.test((e as Error).message)) throw e;
-  }
-  await source.write(dest, archivedText(fresh.text, why), destSha,
-    'scenes: archive ' + [cur.data.id, cur.data.title].filter(Boolean).join(' ') + '\n\n' + why);
-  return { body: cur.body, sha: fresh.sha };
-}
-
-/** Remove the joined scene from Scenes once its words are saved in the scene it joined. */
-export async function removeJoined(source: VaultSource, next: NoteRecord, sha: string, intoName: string): Promise<void> {
-  if (!source.remove) throw new Error('This vault cannot be changed from the app.');
-  await source.remove(next.path, sha, 'scenes: join ' + [next.data.id, next.data.title].filter(Boolean).join(' ') + ' into ' + intoName +
-    '\n\nJoined in the Sparrow app. The note as it was is in the book\'s Archive folder.');
-}
-
-/** A free name in the Archive: the plain one, or "name (2).md" and so on, so an older archived copy is never overwritten. */
-async function freeArchivePath(source: VaultSource, dest: string): Promise<string> {
-  if (!source.readFresh) throw new Error('This vault cannot be changed from the app.');
-  for (let n = 1; ; n++) {
-    const p = n === 1 ? dest : dest.replace(/\.md$/, ' (' + n + ').md');
-    try {
-      await source.readFresh(p);
-    } catch (e) {
-      if ((e as { status?: number }).status === 404 || /has no/.test((e as Error).message)) return p;
-      throw e;
-    }
-  }
-}
-
-/** Delete a note from the app (Kyle, 2026-10-27: "hard press it and delete it"). Nothing is destroyed: the note as it
- * stands goes to the Archive first, with a line saying why, and only then leaves its folder. `dest` is where in the
- * Archive it goes (a scene: the book's Archive folder, where Restore finds it). Returns the archived path. */
-export async function archiveNote(source: VaultSource, path: string, dest: string, why: string, now: Date): Promise<string> {
-  if (!source.readFresh || !source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
-  const fresh = await source.readFresh(path);
-  const cur = makeNote(path, fresh.sha, fresh.text);
-  const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '');
-  const line = why + ' on ' + today(now) + '.';
-  const to = await freeArchivePath(source, dest);
-  await source.write(to, archivedText(fresh.text, line), '', 'archive: ' + name + '\n\n' + line + ' The note as it was is in the Archive.');
-  await source.remove(path, fresh.sha, 'delete: ' + name + '\n\n' + line + ' Its copy is in the Archive.');
-  return to;
-}
-
-/** Delete a scene: to the book's Archive folder, where the chapter list's Archive can restore it. */
-export function archiveScene(source: VaultSource, note: NoteRecord, now: Date): Promise<string> {
-  return archiveNote(source, note.path, archivePath(note.path), 'Deleted in the Sparrow app', now);
 }
 
 /** Notes in a book whose properties name a scene ID (progressions at it, beats and promises listing it). */
@@ -225,20 +129,6 @@ export function joinNote(bookFolder: string, from: { data: Record<string, unknow
   return { path, text: Frontmatter.join({ type: 'note', title, to: 'Continuity Keeper', status: 'open', created: today(now) }, body), message: 'notes: ' + title + '\n\nWritten by the Sparrow app after a join.' };
 }
 
-/** After a join, the old ID is gone: leave the team an open note to point notes that name it at the scene it joined.
- * The app only reads some note types, so the list is a start; sf validate finds the rest. */
-export async function noteJoinForTeam(source: VaultSource, bookFolder: string, from: NoteRecord, into: NoteRecord, mentions: NoteRecord[], now: Date): Promise<string | null> {
-  if (!source.write) return null;
-  const { path, text, message } = joinNote(bookFolder, from, into, mentions.map((n) => n.path), now);
-  try {
-    await source.write(path, text, '', message);
-    return path;
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) return null;
-    throw e;
-  }
-}
-
 /** An archived scene's text with the "Archived" callout taken out again. */
 export function unarchivedText(text: string): string {
   const s = Frontmatter.split(text);
@@ -250,53 +140,6 @@ export function unarchivedText(text: string): string {
 export function archivedWhy(text: string): string {
   const m = /> \[!note\] Archived\r?\n> (.*)/.exec(text);
   return m ? m[1].trim() : '';
-}
-
-/** Put an archived scene back in the book's Scenes folder, then take it out of the Archive. Its ID and order are as they
- * were, so it comes back where it stood. */
-export async function restoreArchived(source: VaultSource, entry: FileEntry, bookFolder: string): Promise<NoteRecord> {
-  if (!source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
-  const text = await source.read(entry.path, entry.sha);
-  const name = entry.path.slice(entry.path.lastIndexOf('/') + 1);
-  const dest = bookFolder + '/Scenes/' + name;
-  const back = unarchivedText(text);
-  let sha: string;
-  try {
-    sha = await source.write(dest, back, '', 'scenes: restore ' + name.replace(/\.md$/, '') + '\n\nRestored from the book\'s Archive in the Sparrow app.');
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) throw new Error('A scene called ' + name.replace(/\.md$/, '') + ' is already in Scenes, so this one stays in the Archive.');
-    throw e;
-  }
-  await source.remove(entry.path, entry.sha, 'scenes: ' + name.replace(/\.md$/, '') + ' back from the Archive\n\nIt is in Scenes again.');
-  return makeNote(dest, sha, back);
-}
-
-/** A scene's file name follows its title ("S-012 Grey lies to Rue.md"). A new title writes the note under the new name
- * (title line changed, nothing else) and then removes the old file, so the body is never lost. */
-export async function renameScene(source: VaultSource, note: NoteRecord, title: string): Promise<NoteRecord> {
-  if (!source.readFresh || !source.write || !source.remove) throw new Error('This vault cannot be changed from the app.');
-  const clean = safeTitle(title);
-  if (!clean) throw new Error('Give the scene a title first.');
-  const fresh = await source.readFresh(note.path);
-  const cur = makeNote(note.path, fresh.sha, fresh.text);
-  const id = String(cur.data.id || '');
-  const dir = note.path.slice(0, note.path.lastIndexOf('/'));
-  const dest = dir + '/' + (id ? id + ' ' : '') + clean + '.md';
-  const text = applyToText(fresh.text, editChange({ title: clean }));
-  const why = 'Renamed in the Sparrow app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
-  if (dest === note.path) {
-    const sha = await source.write(note.path, text, fresh.sha, 'scenes: retitle ' + id + '\n\n' + why);
-    return makeNote(note.path, sha, text);
-  }
-  let sha: string;
-  try {
-    sha = await source.write(dest, text, '', 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why);
-  } catch (e) {
-    if ((e as { conflict?: boolean }).conflict) throw new Error('A scene called ' + clean + ' is already there. Choose another title.');
-    throw e;
-  }
-  await source.remove(note.path, fresh.sha, 'scenes: rename ' + id + ' (old file name)\n\n' + why);
-  return makeNote(dest, sha, text);
 }
 
 /** A scene's planning notes (Kyle's outline, Team notes, Open for Kyle questions), kept beside the prose in the book's

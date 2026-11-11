@@ -1,0 +1,8 @@
+{
+ "set": {
+  "Recipes/Ferry Ledger.md": "---\ntype: recipe\ntitle: Ferry Ledger\nuse_for: a ledger page\ncreated: 2026-10-18\n---\n\nThree lines at most.\n"
+ },
+ "gone": [
+  "Recipes/Ledger Entry.md"
+ ]
+}

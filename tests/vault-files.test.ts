@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { backupFile } from '../src/lib/docx.ts';
 import { jobAsk } from '../src/lib/jobs.ts';
-import { addRocketFile, rocketFile } from '../src/lib/market.ts';
+import { rocketFile } from '../src/lib/market.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { sync } from '../src/lib/sync.ts';
 import { addWorkflowNote, WORKFLOW_PATH } from '../src/lib/workflow.ts';
@@ -14,7 +14,7 @@ import { createAction, filesAction, textAction, type Action } from '../src/vault
 import { add, loadOutbox, saveOutbox } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
 import { Tree } from '../src/vault/tree.ts';
-import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, leaves, MemSource } from './helpers.ts';
 
 const SERIES = 'Series/Ember Road';
 const BOOK = SERIES + '/Books/1 Ash Bell';
@@ -83,12 +83,8 @@ test('two notes on the workflow written with no connection both land, in order, 
 
 // ---- files from the device ----
 
-test('a Rocket file is one save, takes the next free name when its name is taken, and matches the old way', async () => {
+test('a Rocket file is one save, and takes the next free name when its name is taken', async () => {
   const csv = '﻿keyword,searches\ncozy fantasy,1200\n';
-  const old = await vault();
-  await addRocketFile(old, SERIES, [], 'Cozy: keywords.csv', csv);
-  await addRocketFile(old, SERIES, ['Cozy keywords.csv'], 'Cozy: keywords.csv', csv);
-
   const src = await vault();
   const f = rocketFile(SERIES, 'Cozy: keywords.csv', csv);
   const one = await pushAction(src, filesAction([f]));
@@ -97,7 +93,7 @@ test('a Rocket file is one save, takes the next free name when its name is taken
   assert.equal(two.renames[f.path], SERIES + '/Market/Rocket Exports/Cozy keywords (2).csv');
   assert.equal(src.commits.length, 2);
   assert.deepEqual(src.commits.map((c) => c.message.split('\n')[0]), ['market: add Rocket file Cozy keywords.csv', 'market: add Rocket file Cozy keywords (2).csv']);
-  assert.deepEqual([...src.files].sort(), [...old.files].sort(), 'the vault is as the old way left it');
+  leaves('rocket-files', (await vault()).files, src.files);
 });
 
 test('a cover is one save of two pictures; the small copy replaces the one there and the full-size one never replaces another', async () => {

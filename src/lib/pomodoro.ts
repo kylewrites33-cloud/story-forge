@@ -10,8 +10,7 @@
 // Minutes typing are counted all the time too (Kyle, 2026-10-29), and go to the day note as `typing_minutes`.
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
-import type { NoteRecord, VaultIndex, VaultSource } from './types.ts';
-import { makeNote } from './vault-index.ts';
+import type { VaultIndex } from './types.ts';
 
 export type Phase = 'idle' | 'work' | 'break';
 
@@ -228,38 +227,6 @@ export function addTypedToDay(text: string, date: string, n: number, now: Date):
   return Frontmatter.join(data, p.body || '');
 }
 
-/** Write the words typed to the vault, one commit per day, as Kyle's commits. Returns the notes written. */
-export async function flushTyped(source: VaultSource, now: Date): Promise<NoteRecord[]> {
-  if (!source.write) return [];
-  const saved: NoteRecord[] = [];
-  for (const date of Object.keys(loadTyped().days).sort()) {
-    const n = loadTyped().days[date];
-    if (!n) continue;
-    const path = logPath(date);
-    for (let attempt = 0; ; attempt++) {
-      const { files } = await source.tree();
-      const exists = files.some((f) => f.path === path);
-      const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
-      const text = addTypedToDay(cur.text, date, n, now);
-      try {
-        const sha = await source.write(path, text, cur.sha, 'log: ' + n + (n === 1 ? ' word' : ' words') + ' typed on ' + date + '\n\nKept by the Sparrow app.');
-        saved.push(makeNote(path, sha, text));
-        break;
-      } catch (e) {
-        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-        throw e;
-      }
-    }
-    // Words typed while it was sending stay for the next time.
-    const t = loadTyped();
-    const left = (t.days[date] || 0) - n;
-    if (left > 0) t.days[date] = left; else delete t.days[date];
-    if (left > 0) t.firstAt = now.getTime();
-    saveTyped(t);
-  }
-  return saved;
-}
-
 // ------------------------------------------------------------------ minutes typing
 
 // Typing time counts on its own, with or without a Pomodoro, and is the main measure of a writing day (Kyle, 2026-10-29:
@@ -328,42 +295,6 @@ export function addTypingToDay(text: string, date: string, minutes: number, now:
   data.typing_minutes = Math.round(((toNumber(data.typing_minutes) || 0) + minutes) * 10) / 10;
   data.updated = stamp;
   return Frontmatter.join(data, p.body || '');
-}
-
-/** Write the typing time to the vault, one commit per day, as Kyle's commits. Returns the notes written. */
-export async function flushTyping(source: VaultSource, now: Date): Promise<NoteRecord[]> {
-  if (!source.write) return [];
-  const saved: NoteRecord[] = [];
-  for (const date of Object.keys(loadTyping().days).sort()) {
-    const minutes = toMinutes(loadTyping().days[date] || 0);
-    if (!(minutes > 0)) {
-      // Seconds left over from an earlier day are too few to send.
-      if (date !== ymd(now)) { const t = loadTyping(); const days = { ...t.days }; delete days[date]; saveTyping({ ...t, days }); }
-      continue;
-    }
-    const path = logPath(date);
-    for (let attempt = 0; ; attempt++) {
-      const { files } = await source.tree();
-      const exists = files.some((f) => f.path === path);
-      const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
-      const text = addTypingToDay(cur.text, date, minutes, now);
-      try {
-        const sha = await source.write(path, text, cur.sha, 'log: ' + minutes + (minutes === 1 ? ' minute' : ' minutes') + ' typing on ' + date + '\n\nKept by the Sparrow app.');
-        saved.push(makeNote(path, sha, text));
-        break;
-      } catch (e) {
-        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-        throw e;
-      }
-    }
-    // Time typed while it was sending, and the part of a tenth not sent, stay for the next time.
-    const t = loadTyping();
-    const left = (t.days[date] || 0) - minutes * 60000;
-    const days = { ...t.days };
-    if (left > 0 && date === ymd(now)) days[date] = left; else delete days[date];
-    saveTyping({ ...t, days, firstAt: now.getTime() });
-  }
-  return saved;
 }
 
 /** A piece of the Writing Log on its way to the vault: a Pomodoro, words typed on a day, or minutes of typing on a day. */
@@ -462,35 +393,6 @@ export function addToDay(text: string, r: PomodoroRecord, now: Date): string {
     body = body.slice(0, start) + (section ? section + '\n' : '') + recordLine(r) + '\n' + (nextHead ? body.slice(end) : '');
   }
   return Frontmatter.join(data, body);
-}
-
-/** Write the waiting Pomodoros to the vault, oldest first, as Kyle's commits. Returns the notes written. */
-export async function flushLog(source: VaultSource, now: Date): Promise<NoteRecord[]> {
-  const list = loadLog(source.key);
-  if (!list.length || !source.write) return [];
-  const saved: NoteRecord[] = [];
-  while (list.length) {
-    const r = list[0];
-    const path = logPath(r.date);
-    for (let attempt = 0; ; attempt++) {
-      const { files } = await source.tree();
-      const exists = files.some((f) => f.path === path);
-      const cur = exists && source.readFresh ? await source.readFresh(path) : { text: '', sha: '' };
-      const text = addToDay(cur.text, r, now);
-      try {
-        const sha = await source.write(path, text, cur.sha, 'log: ' + (r.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + r.time + ' on ' + r.date + ', ' + r.words + ' words\n\nKept by the Sparrow app\'s timer.');
-        saved.push(makeNote(path, sha, text));
-        break;
-      } catch (e) {
-        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-        saveLog(source.key, list);
-        throw e;
-      }
-    }
-    list.shift();
-    saveLog(source.key, list);
-  }
-  return saved;
 }
 
 /** Minutes of writing as Pomodoros, to two places: 40 minutes is "1.6", 44 is "1.76". Stopped ones add up this way

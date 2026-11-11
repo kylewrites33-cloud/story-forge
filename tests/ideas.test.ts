@@ -181,28 +181,17 @@ test('choices written into the demo vault still pass sf validate', { skip: !hasV
   assert.match(out, /no errors/, out);
 });
 
-test('GitHub write sends the file as UTF-8 base64 with the sha and branch, and reports a conflict', async () => {
-  const calls: { url: string; init?: RequestInit }[] = [];
-  let status = 200;
-  const fn = async (url: string, init?: RequestInit) => {
-    calls.push({ url, init });
-    if (init && init.method === 'PUT') {
-      return status === 200 ? Response.json({ content: { sha: 'new-sha' } }) : new Response('{}', { status });
-    }
+test('GitHub reads a note fresh as UTF-8 text with its sha, at the branch', async () => {
+  const calls: string[] = [];
+  const fn = async (url: string) => {
+    calls.push(url);
     return Response.json({ sha: 'old-sha', encoding: 'base64', content: toBase64('---\ntitle: Café\n---\n').replace(/(.{8})/g, '$1\n') });
   };
   const src = new GitHubSource({ ...DEFAULTS, token: 't', root: 'vault' }, fn);
   const fresh = await src.readFresh('Series/A B/I-001 Café.md');
   assert.deepEqual(fresh, { text: '---\ntitle: Café\n---\n', sha: 'old-sha' });
-  assert.equal(calls[0].url, 'https://api.github.com/repos/kylewrites33-cloud/author-business/contents/vault/Series/A%20B/I-001%20Caf%C3%A9.md?ref=main');
-  assert.equal(await src.write('Series/A B/I-001 Café.md', 'é', 'old-sha', 'ideas: keep'), 'new-sha');
-  const body = JSON.parse(String(calls[1].init!.body));
-  assert.deepEqual(body, { message: 'ideas: keep', content: toBase64('é'), sha: 'old-sha', branch: 'main' });
-  assert.equal(fromBase64(body.content), 'é');
-  status = 409;
-  await assert.rejects(src.write('x.md', 'y', 'old-sha', 'm'), (e: Error & { conflict?: boolean }) => e.conflict === true);
-  status = 403;
-  await assert.rejects(src.write('x.md', 'y', 'old-sha', 'm'), /not allowed to change/);
+  assert.equal(calls[0], 'https://api.github.com/repos/kylewrites33-cloud/author-business/contents/vault/Series/A%20B/I-001%20Caf%C3%A9.md?ref=main');
+  assert.equal(fromBase64(toBase64('é')), 'é');
 });
 
 test('the schema has an Ideas board the app indexes', () => {

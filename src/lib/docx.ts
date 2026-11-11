@@ -5,7 +5,7 @@
 import { chapterGroups, chapterHeading } from './board.ts';
 import { Prose, wordCount } from './prose.js';
 import { marks, runs } from './styled.ts';
-import type { BookEntry, DeviceFile, NoteRecord, Schema, VaultIndex, VaultSource } from './types.ts';
+import type { BookEntry, DeviceFile, NoteRecord, Schema, VaultIndex } from './types.ts';
 
 const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -187,30 +187,4 @@ function base64(bytes: Uint8Array): string {
 /** The Word backup as the one saving system saves it: in the book's backup folder, replacing that day's file. */
 export function backupFile(book: BookEntry, bytes: Uint8Array, name: string): DeviceFile {
   return { path: backupFolder(book.seriesName, book.title) + '/' + name, taken: 'replace', base64: base64(bytes), message: 'backups: ' + name };
-}
-
-/** Save the Word file in the book's backup folder. A second export on the same day replaces that day's file (the
- * vault's history keeps the earlier one). Returns where it went. */
-export async function saveBackup(source: VaultSource, book: BookEntry, bytes: Uint8Array, name: string): Promise<string> {
-  if (!source.writeBytes) throw new Error('Backups need your own vault, not the demo.');
-  const path = backupFolder(book.seriesName, book.title) + '/' + name;
-  const message = 'backups: ' + name;
-  try {
-    await source.writeBytes(path, base64(bytes), '', message);
-  } catch (e) {
-    if (!(e as { conflict?: boolean }).conflict) throw e;
-    const { files } = await source.tree();
-    const old = files.find((f) => f.path === path);
-    await source.writeBytes(path, base64(bytes), old ? old.sha : '', message);
-  }
-  return path;
-}
-
-/** An empty backup folder for a new series or book, so the vault shows where its backups will go. */
-export async function makeBackupFolder(source: VaultSource, seriesName: string, bookTitle?: string): Promise<void> {
-  const folder = bookTitle ? backupFolder(seriesName, bookTitle) : backupFolder(seriesName, '').replace(/\/$/, '');
-  if (!source.write) return;
-  try {
-    await source.write(folder + '/.gitkeep', 'Word backups from Export to Word on Book details.\n', '', 'backups: folder for ' + (bookTitle || seriesName));
-  } catch { /* already there, or offline: the first export makes it */ }
 }

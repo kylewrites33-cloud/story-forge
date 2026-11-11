@@ -2,12 +2,12 @@
 // the book's draft saved, a scene brought back from the Archive, and a deleted beat's words on their way there.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { saveBookDraft, savedDrafts } from '../src/lib/bookdrafts.ts';
+import { savedDrafts } from '../src/lib/bookdrafts.ts';
 import { withBody } from '../src/lib/drafts.ts';
 import { matterPath, splitNote, starterMatter } from '../src/lib/epub.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { parseSchema } from '../src/lib/schema.ts';
-import { archivedText, archivePath, restoreArchived } from '../src/lib/scenes.ts';
+import { archivedText, archivePath } from '../src/lib/scenes.ts';
 import { sync } from '../src/lib/sync.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import type { BookEntry, VaultIndex } from '../src/lib/types.ts';
@@ -16,7 +16,7 @@ import { deleteAction, draftAction, filesAction, restoreAction, textAction, type
 import { add, loadOutbox, saveOutbox } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
 import { BRAINDUMP_START, type TextChange } from '../src/vault/text.ts';
-import { DEMO, demoSchemaText, FsSource, MemSource } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, leaves, MemSource } from './helpers.ts';
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
 const DUMP = BOOK + '/Braindump.md';
@@ -144,24 +144,19 @@ test('the front and back matter: started with its first save, then only its word
 
 // ---- the book's draft ----
 
-test('saving the book\'s draft is one save: every scene copied as it is, with the draft\'s note, as the old way left it', async () => {
+test('saving the book\'s draft is one save: every scene copied as it is, with the draft\'s note', async () => {
   const at = new Date('2026-11-11T15:00:00.000Z');
-  const old = await vault();
-  const oldIndex = await indexOf(old);
-  const scenes = oldIndex.books.find((b) => b.folder === BOOK)!.scenes.map((p) => oldIndex.notes[p]);
-  // The demo book has a Draft 1 already, so this is Draft 2.
-  const n = (await saveBookDraft(old, BOOK, scenes, at)).number;
-  assert.equal(n, 2);
-
   const src = await vault();
   const index = await indexOf(src);
+  const scenes = index.books.find((b) => b.folder === BOOK)!.scenes.map((p) => index.notes[p]);
   const copy = (k: number, s: { path: string }) => BOOK + '/Drafts/Draft ' + k + '/' + s.path.slice(s.path.lastIndexOf('/') + 1);
   const first = src.files.get(copy(1, scenes[0]));
+  // The demo book has a Draft 1 already, so this is Draft 2.
   const res = await pushAction(src, { ...draftAction(BOOK, '', at), id: 'd1' }, { known: index.notes });
   assert.equal(src.commits.length, 1);
   assert.equal(src.commits[0].paths.length, scenes.length + 1);
   assert.equal(src.commits[0].message, 'drafts: save Draft 2 of 1 Ash Bell (' + scenes.length + ' scenes)\n\nSaved in the Sparrow app; the scene files are now Draft 3.');
-  assert.deepEqual([...src.files].sort(), [...old.files].sort(), 'the vault is as the old way left it');
+  leaves('book-draft', (await vault()).files, src.files);
   scenes.forEach((s) => assert.equal(src.files.get(copy(2, s)), src.files.get(s.path), 'a copy is the scene byte for byte'));
   assert.match(src.files.get(BOOK + '/Drafts/Draft 2.md')!, new RegExp('^scenes: ' + scenes.length + '$', 'm'));
   // The app reads the number from the save's answer; the copies never join the book's notes.
@@ -194,7 +189,7 @@ test('a book with no scenes has no draft to save', async () => {
 
 // ---- back from the Archive ----
 
-test('a scene comes back from the Archive in one save, as the old way left it, and the lists follow from the save\'s answer', async () => {
+test('a scene comes back from the Archive in one save, and the lists follow from the save\'s answer', async () => {
   const src = await vault();
   const index0 = await indexOf(src);
   const scene = index0.books.find((b) => b.folder === BOOK)!.scenes[2];
@@ -205,17 +200,13 @@ test('a scene comes back from the Archive in one save, as the old way left it, a
   const book = index.books.find((b) => b.folder === BOOK)!;
   assert.ok((book.archive || []).some((f) => f.path === arch));
 
-  const old = new MemSource();
-  src.files.forEach((v, k) => old.files.set(k, v));
-  await restoreArchived(old, { path: arch, sha: (await old.tree()).files.find((f) => f.path === arch)!.sha }, BOOK);
-  assert.equal(old.writes.length, 2, 'two saves the old way');
-
+  const archived = new Map(src.files);
   const before = src.commits.length;
   const res = await pushAction(src, restoreAction(BOOK, arch));
   assert.equal(src.commits.length, before + 1);
   assert.deepEqual(src.commits[before].paths.sort(), [arch, scene].sort());
   assert.match(src.commits[before].message, /^scenes: restore /);
-  assert.deepEqual([...src.files].sort(), [...old.files].sort(), 'the vault is as the old way left it');
+  leaves('restore-scene', archived, src.files);
   const folded = foldSaved(index, res.saved, schema, res.removed, res.texts);
   const fresh = await indexOf(src);
   assert.deepEqual(folded.notes[scene], fresh.notes[scene]);

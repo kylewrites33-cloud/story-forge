@@ -136,7 +136,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
    * with everything else. */
   onNotes?: (was: string, body: string) => void;
   /** Files saved as they are, one save (a deleted beat's words on their way to the Archive). */
-  onFiles?: (files: DeviceFile[]) => Promise<void>;
+  onFiles: (files: DeviceFile[]) => Promise<void>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -213,7 +213,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [, setBeatRev] = useState(0);
   const [beatsChip, setBeatsChip] = useState({ text: 'Saved', cls: 'good' });
   const bookFolder = book ? book.folder : null;
-  const canSave = Boolean(source.readFresh && source.write);
+  const canSave = Boolean(source.readFresh && source.commit);
   const [draft, setDraftState] = useState<Draft>(() => openDraft(note, loadDrafts(source.key)[note.path], new Date()));
   const draftRef = useRef(draft);
   const [state, setState] = useState<Saving>('idle');
@@ -1568,7 +1568,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               </button>
               {toolsOpen && (
                 <>
-                  {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} onRestore={onRestore} />}
+                  {book.archive && book.archive.length > 0 && onRestore && <ArchiveList source={source} files={book.archive} canSave={canSave} onChanged={onChanged} onRestore={onRestore} />}
                   <nav class="side-boards" aria-label="Boards">
                     {boardLinks(schema, book.folder).map((l) => (
                       <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
@@ -1831,7 +1831,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {tab === 'card' && (picked
               ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} now={codexNow ? codexNow(picked.note) : null} />
               : <CardPanel schema={schema} note={note} status={sceneStatus} onDrafted={() => setDraft({ ...draftRef.current, status: 'drafted' })} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
-            {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} onWords={onNotes} />}
+            {tab === 'notes' && <NotesPanel bookFolder={bookFolder} note={braindump || null} canSave={canSave} onWords={onNotes} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
             {tab === 'copies' && (

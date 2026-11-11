@@ -1,0 +1,22 @@
+{
+ "set": {
+  "Series/Ember Road/Books/1 Ash Bell/Chapter Beats/Chapter 3 beats.md": "---\ntype: chapter-beats\ntitle: Chapter 3 beats\nchapter: 3\n---\n\n## Theirs\nOther beats.\n\n## The ledger\nShe finds it.\n"
+ },
+ "gone": [],
+ "also": {
+  "merged": true,
+  "clash": null,
+  "note": {
+   "path": "Series/Ember Road/Books/1 Ash Bell/Chapter Beats/Chapter 3 beats.md",
+   "sha": "",
+   "type": "chapter-beats",
+   "data": {
+    "type": "chapter-beats",
+    "title": "Chapter 3 beats",
+    "chapter": 3
+   },
+   "body": "\n## Theirs\nOther beats.\n\n## The ledger\nShe finds it.\n",
+   "error": null
+  }
+ }
+}

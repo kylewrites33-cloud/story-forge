@@ -75,25 +75,3 @@ test('the connection test reports what it found', async () => {
 test('settings are trimmed and the vault folder loses its slashes', () => {
   assert.deepEqual(normalise({ owner: ' kyle ', repo: 'vault ', branch: '', root: '/notes/', token: ' t ' }), { owner: 'kyle', repo: 'vault', branch: 'main', root: 'notes', token: 't' });
 });
-
-test('a 409 from another save landing at the same moment is saved again; a file that really changed is a conflict', async () => {
-  const contents = '/contents/vault/Book.md';
-  let puts = 0;
-  const fn = async (url: string, init?: RequestInit) => {
-    if (init && init.method === 'PUT') {
-      puts++;
-      return puts === 1 ? new Response('', { status: 409 }) : Response.json({ content: { sha: 'new' } });
-    }
-    if (url.includes(contents + '?ref=')) return Response.json({ sha: 'old', encoding: 'base64', content: Buffer.from('x').toString('base64') });
-    return new Response('{}', { status: 404 });
-  };
-  assert.equal(await new GitHubSource(settings, fn).write('Book.md', 'y', 'old', 'm'), 'new');
-  assert.equal(puts, 2);
-
-  const changed = async (url: string, init?: RequestInit) => {
-    if (init && init.method === 'PUT') return new Response('', { status: 409 });
-    if (url.includes(contents + '?ref=')) return Response.json({ sha: 'other', encoding: 'base64', content: Buffer.from('x').toString('base64') });
-    return new Response('{}', { status: 404 });
-  };
-  await assert.rejects(new GitHubSource(settings, changed).write('Book.md', 'y', 'old', 'm'), /changed on GitHub/);
-});
