@@ -114,6 +114,19 @@ export function merge3(base: string, mine: string, theirs: string): Merged {
   return { text: out.join('\n'), added, clash };
 }
 
+
+/** The open page's read of its scene: is the version just read from the vault (`fresh`) one the page has not taken in
+ * yet? `seen` holds the versions the page started from or merged before. `told` is the version the app's copy of the
+ * vault named when the page went to read; it is marked as settled, so the page does not read for it again. The
+ * question is asked before the mark is made: `told` and `fresh` are the same version whenever the app's copy of the
+ * vault is current, and marking first made every line from elsewhere look already seen (2026-11-11: none had come
+ * into an open page since the live read was built). */
+export function takeFresh(seen: Set<string>, told: string, fresh: string): boolean {
+  const known = seen.has(fresh);
+  seen.add(told);
+  return !known;
+}
+
 /** How a cursor position in `before` moves when the text becomes `after` (one changed stretch in the middle). */
 export function mapFor(before: string, after: string): (n: number) => number {
   let pre = 0;

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { answeredKeys, askItems, askingKeys, bracketKey, fillAnswers, fillJob, fillJobsFor, findBrackets, locate, placeAnswer } from '../src/lib/brackets.ts';
 import { jobText } from '../src/lib/jobs.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
-import { hunks, mapFor, merge3 } from '../src/lib/live.ts';
+import { hunks, mapFor, merge3, takeFresh } from '../src/lib/live.ts';
 import { styledHtml, textOf } from '../src/lib/styled.ts';
 
 const PAGE = 'Mara stood at the gate. She was wearing {...} and her hands were cold.\n\n' +
@@ -130,4 +130,19 @@ test('a line both sides added comes in once, not again (2026-10-21, S-051)', () 
   assert.deepEqual(merge3('One.\n\nTwo.', 'One!\n\nTwo. More', 'One!\n\nTwo.'), { text: 'One!\n\nTwo. More', added: [], clash: false });
   // A new line the other side added that Kyle does not have still comes in.
   assert.equal(merge3('One.\n\nTwo.', 'One.\n\nTwo. More', 'One.\n\nNew.\n\nTwo.').text, 'One.\n\nNew.\n\nTwo. More');
+});
+
+test('the open page takes in a version it was just told about, once', () => {
+  // The page opened on version A.
+  const seen = new Set(['A']);
+  // The app's copy of the vault now names B, and the fresh read brings B too (the usual case): B is new to the page.
+  assert.equal(takeFresh(seen, 'B', 'B'), true);
+  assert.ok(seen.has('B'), 'and settled, so the page does not read for B again');
+  // Told about B again, the page would not even read; if it did, B is no longer new.
+  assert.equal(takeFresh(seen, 'B', 'B'), false);
+  // The app's copy is behind: it names C, and the read brings the newer D. D is new; C is settled.
+  assert.equal(takeFresh(seen, 'C', 'D'), true);
+  assert.ok(seen.has('C'));
+  // A read that brings back a version the page started from (an older answer from GitHub) is not taken in again.
+  assert.equal(takeFresh(seen, 'E', 'A'), false);
 });

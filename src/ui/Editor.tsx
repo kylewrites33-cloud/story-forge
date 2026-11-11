@@ -23,7 +23,7 @@ import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
 import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
-import { lineAt, loadDots, mapFor, merge3, saveDots } from '../lib/live.ts';
+import { lineAt, loadDots, mapFor, merge3, saveDots, takeFresh } from '../lib/live.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
 import { trackWords, wordsNotTyped } from '../lib/pomodoro.ts';
 import type { ComponentChildren } from 'preact';
@@ -363,6 +363,18 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // While the scene is open, only this page saves it (the 30-second sync leaves it alone).
   useEffect(() => holdOpen(note.path), [note.path]);
 
+  // The connection is back with this scene still open and words waiting on the device: send them now, not at the next
+  // key press (nothing else sends an open scene). The listener stays the same one for as long as the page is open: one
+  // that is taken off and put back each time the page redraws can miss the event, because the redraw the event itself
+  // causes takes it off first (seen in WebKit, 2026-11-11).
+  const saveNow = useRef(save);
+  saveNow.current = save;
+  useEffect(() => {
+    const back = () => { if (draftRef.current.pending && isUnsaved(draftRef.current)) saveNow.current(false); };
+    window.addEventListener('online', back);
+    return () => window.removeEventListener('online', back);
+  }, []);
+
   // Leaving the page or putting the iPad down: try to save, and keep it waiting on the device either way.
   useEffect(() => {
     const away = () => {
@@ -652,10 +664,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     merging.current = true;
     source.readFresh(note.path).then(({ text: raw, sha }) => {
       const fresh = makeNote(note.path, sha, raw);
-      // The version the read brought is settled either way: never fetch for it again.
-      seen.current.add(note.sha);
+      // A save is on its way: it merges what it meets, and this runs again when it lands.
+      if (saving.current) return;
+      // Already in the page (merged before, or a version the page started from)? The version the app was told about
+      // is settled either way: never fetch for it again.
+      const isNew = takeFresh(seen.current, note.sha, sha);
       const d = draftRef.current;
-      if (fresh.error || saving.current || sha === d.baseSha || fresh.body === d.baseBody || seen.current.has(sha)) return;
+      if (fresh.error || sha === d.baseSha || fresh.body === d.baseBody || !isNew) return;
       if (fresh.body === d.body) { setDraft({ ...d, baseSha: sha, baseBody: fresh.body }); return; }
       const r = merge3(d.baseBody, d.body, fresh.body);
       const before = pageText();
