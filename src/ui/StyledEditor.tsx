@@ -304,6 +304,22 @@ function scroller(el: Element | null): HTMLElement {
   return e || (document.scrollingElement as HTMLElement) || document.documentElement;
 }
 
+/** The top and bottom, on the screen, of the part of a scrolling page where its words can be seen: the page's own box,
+ * less the bars that stay at its top or foot while it scrolls. */
+export function inSight(box: HTMLElement): [number, number] {
+  if (box === document.scrollingElement || box === document.documentElement) return [0, window.innerHeight];
+  const bb = box.getBoundingClientRect();
+  let from = bb.top, to = bb.bottom;
+  for (const c of Array.from(box.children)) {
+    if (getComputedStyle(c).position !== 'sticky') continue;
+    const q = c.getBoundingClientRect();
+    if (q.height < 1 || q.height > bb.height / 2) continue;
+    if (q.top <= bb.top + 16) from = Math.max(from, q.bottom);
+    else if (q.bottom >= bb.bottom - 16) to = Math.min(to, q.top);
+  }
+  return [from, to];
+}
+
 /** Scroll the page so the selection sits about a third of the way down. It measures the selection itself: a plain line
  * has the whole editor as its parent, and centring that sent the page far off (Kyle, 2026-10-28). */
 export function showSelection() {
@@ -726,12 +742,17 @@ export function StyledEditor({ value, onChange, onCaret, label, commands, option
         const lit = document.createElement('div');
         lit.className = 'shown-words';
         lit.setAttribute('aria-hidden', 'true');
+        // The boxes sit over the whole screen, so each is cut to the part of the page in sight: none over the bars above
+        // the page, the bars that stay at its top, or what is below it (Kyle, 2026-11-11: "the highlights run past the
+        // word processor section when you scroll").
         const draw = () => {
           lit.textContent = '';
+          const [from, to] = inSight(box);
           Array.from(r.getClientRects()).forEach((q) => {
-            if (q.width < 1 || q.height < 1) return;
+            const t = Math.max(q.top, from), h = Math.min(q.bottom, to) - t;
+            if (q.width < 1 || h < 1) return;
             const d = document.createElement('div');
-            d.style.cssText = 'left:' + q.left + 'px;top:' + q.top + 'px;width:' + q.width + 'px;height:' + q.height + 'px';
+            d.style.cssText = 'left:' + q.left + 'px;top:' + t + 'px;width:' + q.width + 'px;height:' + h + 'px';
             lit.appendChild(d);
           });
         };
