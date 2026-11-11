@@ -21,6 +21,7 @@ import { activeBook, makeNote } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { ChapterTitlesPage } from './ChapterTitles.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
+import { saveDraft as saveWritten } from '../vault/words.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
@@ -281,7 +282,7 @@ export function App() {
     try {
       // The outbox first: a new scene must be in the vault before the words Kyle wrote in it can be saved to it.
       const pushError = await pushNow();
-      const written = await flushDrafts(source, source.key, new Date());
+      const written = await flushDrafts(source, source.key, new Date(), undefined, saveWritten);
       await foldNotes(written.saved);
       if (written.notice) setNotice(written.notice);
       const saveError = pushError || written.error;

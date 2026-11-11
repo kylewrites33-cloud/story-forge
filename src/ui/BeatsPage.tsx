@@ -11,7 +11,8 @@ import {
 } from '../lib/beats.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { matcher, type CodexEntry } from '../lib/codex.ts';
-import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, saveDraft, type Draft } from '../lib/drafts.ts';
+import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, type Draft } from '../lib/drafts.ts';
+import { saveDraft } from '../vault/words.ts';
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import type { OnJob } from '../lib/jobs.ts';

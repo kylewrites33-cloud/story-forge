@@ -3,7 +3,7 @@
 // where the team's two or three versions wait until he picks one. Nothing on the page changes before he does.
 import { useState } from 'preact/hooks';
 import { resultBody, type OnJob } from '../lib/jobs.ts';
-import { saveSnapshot } from '../lib/drafts.ts';
+import { saveSnapshot } from '../vault/words.ts';
 import {
   askedPassage, loadOptionsDone, modeLabel, OPTION_MODES, optionAnswers, optionsJob, optionsState, passageAt, saveOptionsDone, swapIn, type OptionMode
 } from '../lib/options.ts';

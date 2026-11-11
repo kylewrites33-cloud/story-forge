@@ -1,9 +1,10 @@
 // Saves that take in a whole book and have nothing to do with chapter numbers: the book's draft saved (every scene
-// copied to `Drafts/Draft N/`), and a scene brought back from the book's Archive. Each is one save, made on the vault
-// as it is at that moment.
+// copied to `Drafts/Draft N/`), a scene brought back from the book's Archive, and a scene joined onto the one before
+// it. Each is one save, made on the vault as it is at that moment.
 import { bodyWords } from '../lib/drafts.ts';
 import { DRAFTS_FOLDER, draftNoteText, savedDrafts, workingNumber } from '../lib/bookdrafts.ts';
-import { unarchivedText } from '../lib/scenes.ts';
+import { archivedText, archivePath, joinedWhy, joinNote, unarchivedText } from '../lib/scenes.ts';
+import { makeNote } from '../lib/vault-index.ts';
 import type { NoteRecord } from '../lib/types.ts';
 import { bookNotes } from './chapters.ts';
 import type { Tree } from './tree.ts';
@@ -47,4 +48,30 @@ export async function planRestore(tree: Tree, path: string, book: string): Promi
   tree.write(to, unarchivedText(text));
   tree.remove(path);
   return { to, message: 'scenes: restore ' + name + '\n\nRestored from the book\'s Archive in the Sparrow app. It is in Scenes again and its archived copy is gone, in one save.' };
+}
+
+/** The joined scene's side of a join: its note as the vault has it goes to the book's Archive (under a name no older
+ * archived copy has) with a line saying where its words went, it leaves Scenes, and the team gets an open note to
+ * point what still names it at the scene it joined (unless one from today is already there). The words go into the
+ * other scene by that scene's own edit in the same save. Throws a plain sentence when either scene is gone, or when
+ * the joined scene's words are no longer the ones that were joined: nothing is saved then. */
+export async function planJoin(tree: Tree, path: string, into: string, book: string, body: string, mentions: string[], at: Date): Promise<{ message: string; told: string | null }> {
+  const name = (n: { path: string; data: Record<string, unknown> }) => [n.data.id, n.data.title].filter(Boolean).join(' ') || fileName(n.path).replace(/\.md$/, '');
+  const text = await tree.read(path);
+  if (text == null) throw new Error(fileName(path).replace(/\.md$/, '') + ' is not in the vault any more, so it was not joined. Press Sync and look at the chapter list.');
+  const intoText = await tree.read(into);
+  if (intoText == null) throw new Error(fileName(into).replace(/\.md$/, '') + ' is not in the vault any more, so nothing was joined onto it. Press Sync and look at the chapter list.');
+  const from = makeNote(path, '', text), to = makeNote(into, '', intoText);
+  if (from.body !== body) throw new Error(name(from) + ' changed somewhere else a moment ago, so it was not joined. Press Join again to join it as it is now.');
+  const files = await tree.files();
+  const taken = new Set(files.map((f) => f.path.toLowerCase()));
+  const dest = archivePath(path);
+  let kept = dest;
+  for (let n = 2; taken.has(kept.toLowerCase()); n++) kept = dest.replace(/\.md$/, ' (' + n + ').md');
+  tree.write(kept, archivedText(text, joinedWhy(to, at)));
+  tree.remove(path);
+  const note = joinNote(book, from, to, mentions, at);
+  const told = taken.has(note.path.toLowerCase()) ? null : note.path;
+  if (told) tree.write(note.path, note.text);
+  return { told, message: 'scenes: join ' + name(from) + ' into ' + name(to) + '\n\nJoined in the Sparrow app. The note as it was is in the book\'s Archive folder.' + (told ? ' The team has a note to update what still names it.' : '') + ' One save.' };
 }
