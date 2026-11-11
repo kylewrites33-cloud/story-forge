@@ -5,6 +5,7 @@
 // note; the cover is the newest full-size picture in the book's Cover/ folder. The vault tool's `sf compile --epub`
 // makes the same file (Epub.build in sf.js); keep the two in step.
 import { exportName, isScreen, manuscript, pieces, zip } from './docx.ts';
+import { Frontmatter } from './frontmatter.js';
 import type { Manuscript } from './docx.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from './types.ts';
 
@@ -246,9 +247,9 @@ export async function loadMatter(source: VaultSource, index: VaultIndex, book: B
   if (source.readFresh) {
     try { return await source.readFresh(p); } catch { /* not there yet, or offline: fall back to the saved copy */ }
   }
+  // The note as the app shows it, which has words that are still waiting to save.
   const n = index.notes[p];
-  if (!n) return null;
-  try { return { text: await source.read(p, n.sha), sha: n.sha }; } catch { return null; }
+  return n ? { text: Frontmatter.join(n.data, n.body), sha: n.sha } : null;
 }
 
 /** A note's text split at the end of its properties block. */

@@ -24,8 +24,8 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { chaptersAction, deleteAction, choiceAction, createAction, filesAction, marksAction, newId, textAction, type Action } from '../vault/ops.ts';
-import { changeRecord, type TextChange } from '../vault/text.ts';
+import { chaptersAction, deleteAction, choiceAction, createAction, draftAction, filesAction, marksAction, newId, restoreAction, textAction, type Action } from '../vault/ops.ts';
+import { BRAINDUMP_START, changeRecord, type TextChange } from '../vault/text.ts';
 import { logPath, type LogItem } from '../lib/pomodoro.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
@@ -700,6 +700,28 @@ export function App() {
     } catch (e) { return (e as Error).message; }
   }, [source, runSync, setOutbox, runFlush]);
 
+  /** The book's draft saved: every scene copied to `Drafts/Draft N/` with its note, as one save through the one saving
+   * system, made on the vault as it is at that moment (2026-11-11). Answers the draft's number. */
+  const saveDraft = useCallback(async (book: BookEntry): Promise<number> => {
+    if (oldSaving() || !source.commit) {
+      const cur = snapRef.current;
+      return (await saveBookDraft(source, book.folder, cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [], new Date())).number;
+    }
+    const res = await sendNow(draftAction(book.folder));
+    const made = res.saved.map((n) => /\/Drafts\/Draft (\d+)\.md$/.exec(n.path)).find(Boolean);
+    return made ? Number(made[1]) : 0;
+  }, [source, sendNow]);
+
+  /** A scene brought back from the book's Archive: in Scenes again and out of the Archive in one save. */
+  const onRestore = useCallback(async (book: BookEntry, path: string): Promise<void> => { await sendNow(restoreAction(book.folder, path)); }, [sendNow]);
+
+  /** Words Kyle wrote in a box of their own (the front and back matter, the book's Braindump): they show at once and
+   * wait with everything else (2026-11-11; before, they needed the connection). */
+  const onWords = useCallback((path: string, change: Extract<TextChange, { what: 'words' }>): void => {
+    setOutbox(add(outboxRef.current, textAction([{ path, change }])));
+    runFlush();
+  }, [setOutbox, runFlush]);
+
   /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
    * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
   const onRewriteThrough = useCallback(async (book: BookEntry, chapter: number, done: boolean): Promise<string | null> => {
@@ -717,9 +739,9 @@ export function App() {
       if (!navigator.onLine || !scenes.length) return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details when you are connected.';
       try {
         await flushed;
-        const d = await saveBookDraft(source, book.folder, scenes, new Date());
+        const number = await saveDraft(book);
         await runSync();
-        return 'Chapter ' + chapter + ' is through, the last one. Draft ' + d.number + ' is saved; your pages are now draft ' + (d.number + 1) + '.';
+        return 'Chapter ' + chapter + ' is through, the last one. Draft ' + number + ' is saved; your pages are now draft ' + (number + 1) + '.';
       } catch (e) {
         await runSync().catch(() => undefined);
         return 'Chapter ' + chapter + ' is through, the last one, but the draft did not save: ' + (e as Error).message + ' Save it from Book details.';
@@ -744,7 +766,7 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, setOutbox, runFlush]);
+  }, [source, runSync, setOutbox, runFlush, saveDraft]);
 
   /** The Writing Log: finished Pomodoros and the typing counts, handed over by the timer. They wait with everything
    * else and each handing-over is one save (2026-11-11; before, the timer sent them itself, one save for each). */
@@ -987,6 +1009,9 @@ export function App() {
           onRenameChapter={book && source.write ? onRenameChapter : undefined}
           onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
           onDeleteScenes={book && source.write && source.readFresh && source.remove ? (paths) => onDeleteScenes(book, paths) : undefined}
+          onRestore={book && source.commit && !oldSaving() ? (path) => onRestore(book, path) : undefined}
+          onNotes={book && source.commit && !oldSaving() ? (was, body) => onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
+          onFiles={source.commit && !oldSaving() ? onFiles : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} onMarks={source.write ? onMarks : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
@@ -1011,7 +1036,7 @@ export function App() {
               if (!source.write) return 'Saving a draft needs your own vault, not the demo.';
               if (!navigator.onLine) return 'Connect to the internet to save a draft.';
               try {
-                await saveBookDraft(source, book.folder, book.scenes.map((p) => view.notes[p]).filter(Boolean), new Date());
+                await saveDraft(book);
                 await runSync();
                 return null;
               } catch (e) { return (e as Error).message; }
@@ -1111,7 +1136,7 @@ export function App() {
     else {
       let screen;
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={source.commit && !oldSaving() ? onFiles : undefined} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={source.commit && !oldSaving() ? onFiles : undefined} onMatter={source.commit && !oldSaving() ? onWords : undefined} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={source.commit && !oldSaving() ? onTitles : undefined} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;

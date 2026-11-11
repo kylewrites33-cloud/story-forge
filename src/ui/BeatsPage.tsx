@@ -18,7 +18,7 @@ import type { OnJob } from '../lib/jobs.ts';
 import { loadLook } from '../lib/page.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
-import type { NoteRecord, VaultSource } from '../lib/types.ts';
+import type { DeviceFile, NoteRecord, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
@@ -108,7 +108,7 @@ function beatDropAt(y: number, dragged: string): string | null | undefined {
   return undefined;
 }
 
-export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords }: {
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords, onFiles }: {
   source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
@@ -137,6 +137,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   head?: ComponentChildren;
   /** Each scene's words as Kyle types, for the heading's counts. */
   onWords?: (words: Record<string, number>) => void;
+  /** Files saved as they are through the one saving system (a deleted beat's words on their way to the Archive). */
+  onFiles?: (files: DeviceFile[]) => Promise<void>;
 }) {
   const canSave = Boolean(source.readFresh && source.write);
   const [st, setSt] = useState<State>(() => start(source, group, bookFolder, beatsNote));
@@ -382,8 +384,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
       setDeleting(true);
       const now = new Date();
       try {
-        await source.write!(deletedBeatPath(bookFolder, chapter, at, b.title, now), deletedBeatText(b, chapter, at, now), '',
-          'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.');
+        const why = 'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.';
+        const path = deletedBeatPath(bookFolder, chapter, at, b.title, now), words = deletedBeatText(b, chapter, at, now);
+        if (onFiles) await onFiles([{ path, taken: 'next', text: words, message: why }]);
+        else await source.write!(path, words, '', why);
       } catch (e) {
         setDeleting(false);
         setMenu(null);
