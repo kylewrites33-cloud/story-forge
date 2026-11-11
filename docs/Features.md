@@ -1620,3 +1620,35 @@ feature cannot save around the saving system by accident.
   change gives it, with no word changed.
 - Checked with the unit tests and every browser check in Chromium at the three sizes and WebKitGTK at the two iPad
   sizes, plus a new check that a picture added in Crow is one save.
+
+## One list of pages (2026-11-11)
+
+Step 2 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Redesign.md`). Kyle, 2026-11-11, on the card
+"Start step 2 of the cleanup, one list of the app's pages?": "Yes, start step 2". Nothing he sees changes.
+
+- **Before.** What the app's pages are was written in five files: the rooms and which boards each holds (`rooms.ts`), each
+  page's name, icon and address (`Rooms.tsx`, `boardLinks` in `StoryBoards.tsx`, `seeingLinks` in `Seeing.tsx`), and in
+  `App.tsx` a chain of over 30 "if this address or board, draw that", a table of top bar titles, a table of what to tell the team chat, and
+  a reading loop that looked at the address bar to decide how often to read the vault. A new page meant editing all five.
+- **Now.** `src/app/pages.ts` lists every page once: its id, name, address, room, its place under Book tools on the writing
+  page, what it tells the team chat (`where`, `tells`), and how often it wants the vault read again (`reread`, `waiting`).
+  `src/app/screens.tsx` holds what each page draws, one entry for each page of the list; the compiler fails if a page has
+  none. The sidebar, the top bar and its menu, Book tools, the chat's "sent from" lines and the reading loop all read the
+  list. `App.tsx` looks the page up and hands it the app (`AppCtx`: the vault as shown, and `Actions`, everything a page
+  can ask the app to do); it is about 250 lines shorter and no longer names a single board.
+- **A new page** is one entry in `pages.ts` and one in `screens.tsx`.
+- **Kept exactly:** every name, address, order and icon; the schema's title for a board still wins; a board the vault's
+  schema lacks is still not listed; Places, Items and Lore still come with Characters; History still shows under Agents;
+  the market research stage of the workflow is still Market's "Research steps"; old links to the Edit Queue still open
+  To-do; an unknown board still says "The app has no ... board yet".
+- **Two small changes, neither on screen.** (1) The team chat is now told the name of the pages that are not boards:
+  "the Book details page", "the Story calls page", "the Places page" and so on, where it was told only "this page".
+  (2) The reading loop no longer tries to read the vault each minute on Jobs or Chat while the iPad is offline; coming
+  back online reads it at once, as before.
+- **Checked.** `tests/pages.test.ts` holds the list to what the older page map gave for the demo schema, written down on
+  the day it was removed (`tests/golden/pages.json`: every board, no boards, no Characters, three boards renamed by the
+  schema); the same comparison passed against the real vault's schema. A browser check (`pages.mjs`, project files
+  `app/saving-checks/`) wrote down the sidebar, the top bar, its menu, Book tools and the page's words for 65 addresses at
+  four sizes (iPad 1180x820 and 1366x1024, desktop 1440x900, phone 390x844) from the app before the change, and the app
+  after it matches all 260.
+

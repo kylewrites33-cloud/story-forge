@@ -126,7 +126,10 @@ test('each page tells the team chat where Kyle is and what is on screen', async 
   assert.ok(ids(href.board('matrix', BOOK)).length > 0);
   assert.deepEqual(ids(href.board('arcs', BOOK)), ids(href.board('matrix', BOOK)));
   assert.ok(ids(href.board('characters', BOOK)).length > 0);
-  assert.equal(tell(href.board('details', BOOK)).name, 'this page');
+  assert.equal(tell(href.board('details', BOOK)).name, 'the Book details page');
+  assert.equal(tell(href.board('story-calls', BOOK)).name, 'the Story calls page');
+  assert.equal(tell(href.board('places', BOOK)).name, 'the Places page');
+  assert.equal(tellingOf(page('places'), parseHash(href.board('places', BOOK)), parseSchema(variants().nochars), index, book, book).name, 'this page', 'a page the schema leaves out');
   assert.equal(tell(href.board('nothing-here', BOOK)).name, 'this page');
 
   assert.equal(tell('#/todo', null).name, 'the To-do list');

@@ -18,7 +18,7 @@ import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { jobNotes } from '../lib/jobs.ts';
 import { optionJobsFor } from '../lib/options.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
-import { href, type Route } from './route.ts';
+import { href, parseHash, type Route } from './route.ts';
 
 export interface Room {
   key: string;
@@ -194,7 +194,8 @@ export function pageOf(route: Route): Page | null {
     case 'home': case 'books': return page('books');
     case 'book': return page('chapter-grid');
     case 'ideas': return page('ideas');
-    case 'board': { const p = page(route.board); return p && p.of === 'book' ? p : null; }
+    // A board address opens a book's page whose own address is a board's; Steps and Research steps live at Workflow mode's.
+    case 'board': { const p = page(route.board); return p && p.of === 'book' && parseHash(p.to(route.folder)).name !== 'flow' ? p : null; }
     case 'flow': return page('steps');
     default: return page(route.name);
   }
@@ -245,7 +246,10 @@ export function barTitle(p: Page | null, route: Route, schema: Schema | null, bo
 /** What the team chat is told about the page Kyle sent from: where he is, the book, and what is on screen. */
 export function tellingOf(p: Page | null, route: Route, schema: Schema | null, index: VaultIndex | null, navBook: BookEntry | null, sideBook: BookEntry | null): PageView {
   const name = route.name === 'flow' ? null : boardName(p, schema, navBook);
-  const v: PageView = { name: name ? 'the ' + name + ' board' : (p && p.where) || 'this page', book: sideBook };
+  // A book's page that is not one of the boards says its line in its room: "the Book details page" (until 2026-11-11
+  // these, and Places, Items and Lore, were only "this page").
+  const line = !name && p && p.of === 'book' && !p.where && schema && has(schema, p) ? 'the ' + (p.inRoom || nameOf(schema, p)) + ' page' : null;
+  const v: PageView = { name: name ? 'the ' + name + ' board' : (p && p.where) || line || 'this page', book: sideBook };
   if (!index || !p || !p.tells) return v;
   const told = p.tells({ index, book: navBook, route });
   if (told.notes) v.notes = told.notes;

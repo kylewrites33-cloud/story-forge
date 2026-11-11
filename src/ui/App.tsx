@@ -9,80 +9,42 @@ import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
 import { rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
-import { bookTodos, type NewTodo } from '../lib/todos.ts';
+import { type NewTodo } from '../lib/todos.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { mentionsOf, orderBetween, safeTitle, sceneNotesFor } from '../lib/scenes.ts';
+import { orderBetween, safeTitle } from '../lib/scenes.ts';
 import { chapterTitleEdits } from '../lib/chapters.ts';
 import { fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
-import { moveDrafts, putDraft, typedWords } from '../lib/drafts.ts';
+import { moveDrafts, putDraft } from '../lib/drafts.ts';
 import type { BookEntry, DeviceFile, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
-import { activeBook, makeNote } from '../lib/vault-index.ts';
-import { chapterGroups, sceneLabel } from '../lib/board.ts';
-import { ChapterTitlesPage } from './ChapterTitles.tsx';
+import { activeBook } from '../lib/vault-index.ts';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { saveDraft as saveWritten } from '../vault/words.ts';
 import type { Choice } from '../vault/choice.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
 import { chaptersAction, deleteAction, choiceAction, createAction, draftAction, filesAction, marksAction, newId, restoreAction, textAction, type Action } from '../vault/ops.ts';
-import { BRAINDUMP_START, changeRecord, type TextChange } from '../vault/text.ts';
+import { changeRecord, type TextChange } from '../vault/text.ts';
 import { logPath, type LogItem } from '../lib/pomodoro.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
-import { IdeasBoard } from './IdeasBoard.tsx';
-import { TastePage } from './Taste.tsx';
-import { STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
-import { StoryBoardScreen } from './StoryBoards.tsx';
 import { Shell } from './Shell.tsx';
-import { CODEX_PAGES, CodexBoard } from './Codex.tsx';
-import { DecideQueue } from './Decide.tsx';
-import { ChangesOverview } from './Changes.tsx';
 import { rewriteDone, rewriteProgress } from '../lib/rewrite.ts';
-import { decideQueue } from '../lib/overview.ts';
 import { barTitle, folderOf, pageOf, tellingOf } from '../app/pages.ts';
-import { href, parseHash, useRoute } from '../app/route.ts';
-import { ChapterGrid, NoteView } from './screens.tsx';
-import { BookDetails, downloadWord, Home, SeriesPage } from './Home.tsx';
+import { APP_SCREENS, BOOK_SCREENS, WRITE_SCREENS, type Actions, type AppBase, type AppCtx } from '../app/screens.tsx';
+import { href, useRoute } from '../app/route.ts';
 import { coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
-import { SettingsScreen } from './SettingsScreen.tsx';
-import { Editor } from './Editor.tsx';
 import { PomodoroTimer } from './Pomodoro.tsx';
-import { TodoList } from './TodoList.tsx';
-import { JobsScreen } from './Jobs.tsx';
-import { codexFor } from '../lib/codex.ts';
-import { ChapterPage } from './ChapterPage.tsx';
-import { beatsNoteFor } from '../lib/beats.ts';
-import { changesNoteFor, chapterChanges, countLike, isStoryCall, type ChangeStatus } from '../lib/changes.ts';
-import { copyFor } from '../lib/bookdrafts.ts';
-import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
-import { fillJobsFor } from '../lib/brackets.ts';
-import { optionJobsFor } from '../lib/options.ts';
-import { checkOptions } from '../lib/lintcheck.ts';
-import { planFor, scrapFor } from '../lib/plans.ts';
-import { MatrixBoard } from './Matrix.tsx';
-import { TensionBoard } from './TensionPage.tsx';
-import { ArcsBoard } from './ArcsPage.tsx';
-import { codexNow } from '../lib/codexnow.ts';
-import { SEEING_BOARDS, SeeingBoard } from './Seeing.tsx';
-import { ChatScreen } from './Chat.tsx';
-import { HistoryScreen, MemberPage, SkillsScreen, TeamScreen } from './Team.tsx';
+import { type ChangeStatus } from '../lib/changes.ts';
 import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from '../lib/chat.ts';
 import { pageContext } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
 import type { NewNote } from '../lib/notes.ts';
-import { recipeName, recipeNotes, type RecipeFields } from '../lib/recipes.ts';
-import { OverviewPage } from './Overview.tsx';
-import { NotesScreen } from './NotesToTeam.tsx';
-import { SessionsScreen, SessionView } from './Sessions.tsx';
-import { RecipesScreen } from './Recipes.tsx';
-import { WorkflowScreen } from './Workflow.tsx';
+import { recipeName, type RecipeFields } from '../lib/recipes.ts';
 import { WORKFLOW_PATH } from '../lib/workflow.ts';
-import { ForgeSpecialist } from './Forge.tsx';
-import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
-import { flowResults, type NewResult } from '../lib/flow.ts';
-import { nameList, toNumber } from '../lib/links.ts';
+import { type NewResult } from '../lib/flow.ts';
+import { toNumber } from '../lib/links.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -236,7 +198,7 @@ export function App() {
       // A new note saved under another ID than it was shown with: what Kyle wrote in it follows, and so does the page.
       if (Object.keys(res.renames).length) {
         moveDrafts(source.key, res.renames);
-        const at = parseHash(location.hash);
+        const at = routeRef.current;
         if ('path' in at && res.renames[at.path]) location.replace(location.hash.replace(encodeURIComponent(at.path), encodeURIComponent(res.renames[at.path])));
       }
       await foldNotes(res.saved, true, res.removed, res.texts);
@@ -812,197 +774,41 @@ export function App() {
     setSettings(saveSettings({ ...settings, token: '' }));
   };
 
-  // The writing screen fills the page with its own bars: no menu or sync bar.
-  if ((route.name === 'write' || route.name === 'beats') && view && schema) {
-    const note = view.notes[route.path];
-    if (note) {
-      if (lastOpened.current !== route.path) { lastOpened.current = route.path; noteRecent(source.key, route.path); }
-      const book = view.books.find((b) => route.path.startsWith(b.folder + '/')) || null;
-      const at = book ? book.scenes.indexOf(route.path) : -1;
-      const next = book && at >= 0 && at + 1 < book.scenes.length ? view.notes[book.scenes[at + 1]] || null : null;
-      const prev = book && at > 0 ? view.notes[book.scenes[at - 1]] || null : null;
-      const groups = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)) : [];
-      // Beats mode: the chapter by its beats in the page's place.
-      const chapter = typeof note.data.chapter === 'number' ? note.data.chapter : null;
-      const beats = route.name === 'beats' && book && chapter != null ? {
-        note: beatsNoteFor(view.notes, book.folder, chapter),
-        asking: jobNotes(view).find((j) => String(j.data.kind || '') === 'beats' && String(j.data.target || '') === 'Chapter ' + chapter && String(j.data.book || '') === book.folder
-          && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null
-      } : null;
-      return (
-        <Editor key={route.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
-          nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
-          book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
-          onAdd={book && source.commit ? (chapter, chapterTitle, title) => onAddScene(book, chapter, chapterTitle, title) : undefined}
-          onAddChapter={book && source.commit ? (after, chapterTitle) => onAddChapter(book, after, chapterTitle) : undefined}
-          onRenameChapter={book && source.commit ? onRenameChapter : undefined}
-          onMoveChapter={book && source.commit ? (from, to) => onMoveChapter(book, from, to) : undefined}
-          onDeleteScenes={book && source.commit ? (paths) => onDeleteScenes(book, paths) : undefined}
-          onRestore={book ? (path) => onRestore(book, path) : undefined}
-          onNotes={book ? (was, body) => onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
-          onFiles={onFiles}
-          onJob={book && source.commit ? onJob : undefined} onChat={book && source.commit ? onChat : undefined}
-          todos={book ? bookTodos(view, book) : []} onTodo={source.commit ? onDecide : undefined} onMarks={source.commit ? onMarks : undefined} waiting={waiting}
-          onAddTodo={book && source.commit ? (t) => onAddTodo(book.folder, t) : undefined}
-          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLog={onLog} />}
-          codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
-          codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
-          sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
-          fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
-          optionJobs={book && note.data.id ? optionJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
-          checkOpts={book ? checkOptionsFor(view, book.folder) : undefined}
-          convo={book && note.data.id ? conversation(view, String(note.data.id), book.folder) : null}
-          plan={book ? planFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
-          scrap={book ? scrapFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
-          chapterBeats={book ? beatsNoteFor(view.notes, book.folder, typeof note.data.chapter === 'number' ? note.data.chapter : null) : null}
-          recipes={recipeNotes(view).map(recipeName)}
-          flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
-          changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
-          rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.commit ? (ch, done) => onRewriteThrough(book, ch, done) : undefined } : null}
-          drafts={book ? {
-            saved: book.drafts || [],
-            onSave: async () => {
-              if (!source.commit) return 'Saving a draft needs your own vault, not the demo.';
-              if (!navigator.onLine) return 'Connect to the internet to save a draft.';
-              try {
-                await saveDraft(book);
-                await runSync();
-                return null;
-              } catch (e) { return (e as Error).message; }
-            },
-            onExport: async (n) => {
-              try {
-                const notes = { ...view.notes };
-                const d = n == null ? null : (book.drafts || []).find((x) => x.number === n);
-                if (n != null && !d) return 'Draft ' + n + ' is not in the vault.';
-                // A saved draft: each scene's words as its copy holds them; a scene the draft did not have is left out.
-                if (d) for (const p of book.scenes) {
-                  const s = view.notes[p];
-                  if (!s) continue;
-                  const f = copyFor(d, s);
-                  notes[p] = f ? { ...makeNote(p, f.sha, await source.read(f.path, f.sha)), path: p } : { ...s, body: '' };
-                }
-                const m = manuscript(schema, { ...view, notes }, book);
-                if (!m.scenes) return 'This draft has no written scenes, so there is nothing to export.';
-                const data = view.notes[book.path] ? view.notes[book.path].data : {};
-                const working = (book.drafts || []).reduce((x, y) => Math.max(x, y.number), 0) + 1;
-                const name = exportName(book).replace(/\.docx$/, '_Draft ' + (n == null ? working : n) + '.docx');
-                downloadWord(buildDocx(book.title, typeof data.author === 'string' ? data.author : '', m) as Uint8Array<ArrayBuffer>, name);
-                return null;
-              } catch (e) { return 'The Word file could not be made: ' + (e as Error).message; }
-            }
-          } : undefined}
-          backTo={book ? href.book(book.folder) : href.note(route.path)} onSaved={(n) => { foldNotes([n]); }} onChanged={runSync} />
-      );
-    }
-  }
+  // What the pages are handed: the vault as shown, and the things a page can ask the app to do (`src/app/screens.tsx`).
+  const acts: Actions = {
+    onDecide, onMarks, onJob, onChat, onAddScene, onAddMany, onAddChapter, onMove, onMoveChapter, onDeleteScenes, onRename, onRenameChapter, onRestore,
+    onImport, onAddRocket, onCover, onFiles, onWords, onTitles, onRewrite, onRewriteThrough, onAddTask, onAddTodo, onAddNote, onAddRecipe, onSaveRecipe,
+    onWorkflowNote, onResults, onCreateSeries, onCreateBook, onLog, saveDraft, runSync, onSave, onForget,
+    foldNotes: (saved) => foldNotes(saved),
+    noteOpened: (path) => { if (lastOpened.current !== path) { lastOpened.current = path; noteRecent(source.key, path); } }
+  };
+  const base: AppBase = { source, settings, demo: source instanceof DemoSource, syncing, act: acts };
+  const app: AppCtx | null = schema && view ? { ...base, schema, index: view, waiting } : null;
+  const pg = pageOf(route);
 
-  if (route.name === 'chapter' && view && schema) {
-    const note = view.notes[route.path];
-    const book = note ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null;
-    const group = book ? chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((g) => g.scenes.some((n) => n.path === route.path)) : null;
-    if (book && group) {
-      return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
-        checkOpts={checkOptionsFor(view, book.folder)}
-        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLog={onLog} />} />;
-    }
+  // The writing screen fills the page with its own bars: no menu or sync bar.
+  if (pg && pg.of === 'write' && app) {
+    const full = WRITE_SCREENS[pg.id as keyof typeof WRITE_SCREENS](app, route);
+    if (full) return full;
   }
 
   const drafts = pendingCount(source.key);
   let body;
-  if (route.name === 'settings') {
-    body = <SettingsScreen settings={settings} onSave={onSave} onForget={onForget} />;
-  } else if (!snap || !schema || !view) {
+  if (pg && pg.id === 'settings') {
+    body = APP_SCREENS.settings(base);
+  } else if (!snap || !app) {
     body = <p class="empty">{!loaded || syncing ? 'Loading the vault…' : 'Nothing saved yet. Connect to the internet and press Sync.'}</p>;
-  } else if (route.name === 'write' || route.name === 'chapter' || route.name === 'beats') {
+  } else if (pg && pg.of === 'write') {
     body = <p class="empty">That scene is not in the saved copy. Press Sync, then try again.</p>;
-  } else if (route.name === 'jobs') {
-    body = <JobsScreen index={view} waiting={waiting} onDecide={source.commit ? onDecide : undefined} syncing={syncing} />;
-  } else if (route.name === 'chat') {
-    body = <ChatScreen index={view} thread={route.thread} book={route.book} onChat={source.commit ? onChat : undefined}
-      onDecide={source.commit ? onDecide : undefined} waiting={waiting} demo={source instanceof DemoSource} />;
-  } else if (route.name === 'todo') {
-    body = <TodoList index={view} waiting={waiting} onDecide={onDecide} onAdd={source.commit ? onAddTask : undefined}
-      schema={schema} book={activeBook(view)} onRewrite={source.commit ? onRewrite : undefined} />;
-  } else if (route.name === 'team') {
-    body = route.slug ? <MemberPage source={source} index={view} schema={schema} slug={route.slug} canTalk={Boolean(source.commit)} />
-      : <TeamScreen source={source} index={view} schema={schema} canTalk={Boolean(source.commit)}
-        extra={<ForgeSpecialist onJob={source.commit ? onJob : undefined} book={(activeBook(view) || view.books[0] || { folder: '' }).folder} />} />;
-  } else if (route.name === 'skills') {
-    body = <SkillsScreen index={view} skill={route.skill} />;
-  } else if (route.name === 'history') {
-    body = <HistoryScreen source={source} index={view} who={route.who} />;
-  } else if (route.name === 'workflow') {
-    body = <WorkflowScreen index={view} step={route.step} onNote={source.commit ? onWorkflowNote : undefined} />;
-  } else if (route.name === 'recipes') {
-    body = <RecipesScreen index={view} onAdd={source.commit ? onAddRecipe : undefined} onSave={source.commit ? onSaveRecipe : undefined} />;
-  } else if (route.name === 'flow') {
-    const book = view.books.find((b) => b.folder === route.folder);
+  } else if (folderOf(route)) {
+    // A book's page, for the book its address names.
+    const book = app.index.books.find((b) => b.folder === folderOf(route));
     if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
-    else {
-      body = <FlowScreen index={view} book={book} stage={route.stage} step={route.step} sourceKey={source.key} waiting={waiting}
-        onJob={source.commit ? onJob : undefined} onDecide={source.commit ? onDecide : undefined} onResults={source.commit ? onResults : undefined} />;
-    }
-  } else if (route.name === 'note' && view.notes[route.path] && view.notes[route.path].type === 'session') {
-    body = <SessionView index={view} note={view.notes[route.path]} />;
-  } else if (route.name === 'note') {
-    const n = view.notes[route.path];
-    const nb = n && n.type === 'character' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) || activeBook(view) : null;
-    const who = n ? String(n.data.name || n.data.title || '').trim() : '';
-    body = (
-      <>
-        <NoteView schema={schema} index={view} path={route.path} />
-        {nb && who && <FromTheWorkflow index={view} book={nb} names={[who].concat(nameList(n.data.aliases))} title={who} onResults={source.commit ? onResults : undefined} />}
-      </>
-    );
-  } else if (route.name === 'series') {
-    body = route.folder ? <SeriesPage source={source} index={view} folder={route.folder} onCreateBook={source.commit ? onCreateBook : undefined} />
-      : <Home source={source} index={view} series onCreateSeries={source.commit ? onCreateSeries : undefined} onCreateBook={source.commit ? onCreateBook : undefined} />;
-  } else if (route.name === 'ideas' || route.name === 'book' || route.name === 'board') {
-    const book = view.books.find((b) => b.folder === route.folder);
-    const boardKey = route.name === 'board' ? route.board : route.name === 'ideas' ? 'ideas' : 'chapter-grid';
-    if (!book) body = <p class="empty">That book is not in the vault. <a href={href.books()}>See all books</a>.</p>;
-    else {
-      let screen;
-      if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={onFiles} onMatter={onWords} onCover={source.commit ? onCover : undefined} onDecide={source.commit ? onDecide : undefined} />;
-      else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.commit ? onDecide : undefined} />;
-      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage index={view} book={book} onChange={onTitles} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.commit ? onRenameChapter : undefined} />;
-      else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.commit ? onDecide : undefined} calls />;
-      else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
-        calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}
-        rewrite={rewriteProgress(book.rewrite || [], book.scenes.map((p) => view.notes[p]).filter(Boolean), rewriteDone(view.notes[book.path]))} />;
-      else if (boardKey === 'matrix') screen = <MatrixBoard schema={schema} index={view} book={book} />;
-      else if (boardKey === 'overview') {
-        const scenesOf = book.scenes.map((p) => view.notes[p]).filter(Boolean);
-        const keepFor = (path: string) => {
-          const rn = view.notes[path];
-          const named = rn ? sceneLabel(scenesOf, rn) : null;
-          return rn && named ? { title: named.chapter || named.scene || 'Your scene',
-            where: [named.chapter ? named.scene : '', typedWords(rn).toLocaleString('en-US') + ' words'].filter(Boolean).join(' · ') } : null;
-        };
-        screen = <OverviewPage schema={schema} index={view} book={book} sourceKey={source.key} keepFor={keepFor} onJob={source.commit ? onJob : undefined} onDecide={source.commit ? onDecide : undefined} />;
-      }
-      else if (boardKey === 'notes') screen = <NotesScreen index={view} book={book} waiting={waiting} onDecide={source.commit ? onDecide : undefined} onAdd={source.commit ? onAddNote : undefined} />;
-      else if (boardKey === 'sessions') screen = <SessionsScreen index={view} book={book} />;
-      else if (SEEING_BOARDS.indexOf(boardKey) >= 0) screen = <SeeingBoard board={boardKey} schema={schema} index={view} book={book} onDecide={source.commit ? onDecide : undefined} />;
-      else if (boardKey === 'ideas') screen = <IdeasBoard schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onJob={source.commit ? onJob : undefined} />;
-      else if (boardKey === 'taste') screen = <TastePage source={source} index={view} book={book} onJob={source.commit ? onJob : undefined} />;
-      else if (boardKey === 'tension') screen = <TensionBoard schema={schema} index={view} book={book} onDecide={source.commit ? onDecide : undefined} waiting={waiting} />;
-      else if (boardKey === 'arcs') screen = <ArcsBoard index={view} book={book} onDecide={source.commit ? onDecide : undefined} waiting={waiting} />;
-      else if ((STORY_BOARDS as readonly string[]).indexOf(boardKey) >= 0) {
-        screen = <StoryBoardScreen schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} board={boardKey as StoryBoard} onAddRocket={source.commit ? onAddRocket : undefined} onRewrite={source.commit ? onRewrite : undefined} />;
-      } else if (boardKey === 'chapter-grid') {
-        screen = <ChapterGrid schema={schema} index={view} book={book} waiting={waiting} onDecide={onDecide} onAdd={source.commit ? onAddScene : undefined}
-          onAddMany={source.commit ? onAddMany : undefined} onMove={source.commit ? onMove : undefined}
-          source={source} onJob={source.commit ? onJob : undefined}
-          onRename={source.commit ? onRename : undefined} onImport={source.commit ? onImport : undefined} />;
-      }
-      else screen = <p class="empty">The app has no {boardKey} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
-      body = screen;
-    }
+    else if (pg && pg.of === 'book') body = BOOK_SCREENS[pg.id as keyof typeof BOOK_SCREENS](app, book, route);
+    else body = <p class="empty">The app has no {route.name === 'board' ? route.board : ''} board yet. <a href={href.book(book.folder)}>Back to the Chapter Grid</a>.</p>;
   } else {
-    body = <Home source={source} index={view} series={false} onCreateSeries={source.commit ? onCreateSeries : undefined} onCreateBook={source.commit ? onCreateBook : undefined} />;
+    const id = (pg && pg.of === 'app' ? pg.id : 'books') as Exclude<keyof typeof APP_SCREENS, 'settings'>;
+    body = APP_SCREENS[id](app, route);
   }
 
   // The top bar shows the boards of the book on screen, or else of the active book.
@@ -1011,7 +817,6 @@ export function App() {
       (route.name === 'note' ? view.books.find((b) => route.path.startsWith(b.folder + '/')) : null) ||
       (route.name === 'home' || route.name === 'books' || route.name === 'series' ? null : activeBook(view))
     : null;
-  const pg = pageOf(route);
 
   // The sync line, the waiting choices and drafts, shrunk to one button in the top bar. Pressing it syncs.
   const waitingText = [
@@ -1046,11 +851,4 @@ export function App() {
       <main>{body}</main>
     </Shell>
   );
-}
-
-/** What Check (AI phrases) takes from the vault: the book's Style Guide and the vault's Config, as sf lint does. */
-function checkOptionsFor(view: VaultIndex, bookFolder: string) {
-  const guide = view.notes[bookFolder + '/Style Guide.md'];
-  const config = view.notes['System/Config.md'];
-  return checkOptions(guide ? guide.data : null, config ? config.data : null);
 }

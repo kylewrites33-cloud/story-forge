@@ -74,9 +74,7 @@ src/lib/workflow.ts      the workflow from System/Workflow.md: stages, steps, wh
 src/ui/Workflow.tsx      the Workflow page: each stage's table, filters, notes
 src/lib/flow.ts          Workflow mode: steps paired into tasks, where each stands (Check too), the mode per book, results as idea notes (planResult, for the `result` maker), the step job's ask
 src/ui/Flow.tsx          Workflow mode's screens (home, stage, step), the Workflow | Writing switch, the writing screen's Workflow tab, From the workflow on character pages
-src/lib/rooms.ts         the book's six rooms and which pages each holds (Plan's Steps, the Codex's four kinds); the Team room's places
 src/lib/find.ts          Find in the top bar: chapters, scenes, codex names and ideas matching what Kyle types
-src/ui/Rooms.tsx         each room's pages and their addresses (listed in the sidebar and the top bar's menu)
 src/ui/Find.tsx          the Find button and box in the top bar
 src/ui/Codex.tsx         the Codex pages: a list and the entry side by side, for characters, places, items and lore
 src/ui/Decide.tsx        Decide one at a time: every card waiting on Kyle, one at a time, with Undo
@@ -90,7 +88,7 @@ src/lib/plotgrid.ts      Plot Grid: threads or cast by scene, gaps, the threads 
 src/lib/timeline.ts      Timeline: scenes by story day, flashbacks, time jumps, scenes with no day
 src/lib/themes.ts        Themes heatmap: keyword counts per chapter, cards that link a theme, the matching lines
 src/lib/castweb.ts       Cast web: presence, relationships and how tense they are, one character's ties in two columns
-src/ui/Seeing.tsx        the five pages' links (sidebar Plan and Review) and which one to show
+src/ui/Seeing.tsx        which of the five seeing pages to show (their names and addresses are in src/app/pages.ts)
 src/ui/SeeingParts.tsx   their shared head, scene header rows by chapter and warning list
 src/ui/Promises.tsx, PlotGrid.tsx, Timeline.tsx, Themes.tsx, CastWeb.tsx   the five pages
 src/lib/lint.js          the vault tool's linter, copied as is (do not edit; see CLAUDE.md)
@@ -133,13 +131,17 @@ src/lib/settings.ts      connection settings, kept in this browser only
 src/lib/links.ts         wiki-link helpers, ported from the vault tool (link names, name lists, numbers)
 src/lib/format.ts        how property values read on cards and in the note view
 src/lib/warnings.ts      the shape of one warning and of a check, shared by the seeing-the-book pages
-src/ui/route.ts          the app's addresses (#/...) and the hook that reads them
 src/ui/screens.tsx       the Chapter Grid, the note view and small shared screens
 src/ui/IdeasBoard.tsx    the Ideas board: piles, cards, keep, later, drop, reasons
 src/ui/StoryBoards.tsx   the boards for every other proposal type
 src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates, sounds
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
+src/app/                 the frame around the pages (2026-11-11, step 2 of the code structure redesign)
+src/app/pages.ts         THE ONE LIST OF PAGES: each page's id, name, address, room, place under Book tools, what it tells the team chat, how often it wants the vault read again; the rooms; `pageOf(route)`. A new page is one entry here and one in screens.tsx
+src/app/screens.tsx      what each page of the list draws, one entry a page (the compiler fails if one is missing); `Actions`, everything a page can ask the app to do; `AppCtx`, the app as a page sees it
+src/app/route.ts         the app's addresses (#/...) and the hook that reads them
+tests/golden/pages.json  what the older page map (rooms.ts, Rooms.tsx, StoryBoards.tsx, Seeing.tsx) gave for the demo schema on the day it was removed; tests/pages.test.ts holds the list to it
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
 src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, a new note by its maker, a book's chapters renumbered, scenes deleted, a scene or recipe given a new title and file name, a file from the device saved as it is, the book's draft saved, a scene back from the Archive, or the next scene joined onto this one), Edit (a change kept as what he meant: a board choice, answers on a chapter's changes, a small change to a note's text, or a scene's words with the words they started from)
 src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result, scene, series, book, copy): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
