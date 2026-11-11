@@ -8,9 +8,10 @@ import { DEFAULTS } from '../src/lib/settings.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
 import { enqueue, overlay, saveQueue, loadQueue, type Choice } from '../src/lib/write-queue.ts';
 import { editRecord, editText, foldSaved, overlayActions } from '../src/vault/apply.ts';
-import { choiceAction, createAction, type Edit } from '../src/vault/ops.ts';
+import { choiceAction, createAction, marksAction, type Edit } from '../src/vault/ops.ts';
 import { add, choicesOf, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
+import { parseChanges } from '../src/lib/changes.ts';
 import { taskNotes } from '../src/lib/tasks.ts';
 import { bookTodos } from '../src/lib/todos.ts';
 import { sync } from '../src/lib/sync.ts';
@@ -55,8 +56,9 @@ test('an edit does the same to a note on screen as it does to the note\'s saved 
       const saved = makeNote(f.path, 'x', editText(text, e)).data;
       Object.keys({ ...onScreen, ...saved }).forEach((k) => {
         const a = onScreen[k], b = saved[k];
-        if (a == null || a === '') { assert.ok(b == null || b === '', f.path + ' ' + e.choice.decision + ': ' + k + ' should be empty, saved as ' + JSON.stringify(b)); return; }
-        assert.equal(String(b), String(a), f.path + ' ' + e.choice.decision + ': ' + k);
+        const what = e.type === 'choice' ? e.choice.decision : e.type;
+        if (a == null || a === '') { assert.ok(b == null || b === '', f.path + ' ' + what + ': ' + k + ' should be empty, saved as ' + JSON.stringify(b)); return; }
+        assert.equal(String(b), String(a), f.path + ' ' + what + ': ' + k);
       });
       checked++;
     }
@@ -404,6 +406,83 @@ test('the outbox keeps a new note across closing the app, and drops one it canno
 });
 
 // ---- GitHub: one commit through git's own objects ----
+
+// ---- the Edit room: Kyle's answers on the team's changes ----
+
+const CH1 = BOOK + '/Changes/Chapter 1 changes.md';
+
+test('answers on a chapter\'s changes show at once, join the ones that wait, and say the same on screen as in the saved text', async () => {
+  const src = new FsSource(DEMO);
+  const snap = await sync(src, null);
+  const text = await src.read(CH1);
+  const note = snap.index.notes[CH1];
+  assert.deepEqual(parseChanges(note.body).changes.map((c) => c.status).slice(0, 3), ['open', 'open', 'open']);
+  let box = add([], marksAction(CH1, { 'C-01': 'kept' }));
+  box = add(box, marksAction(CH1, { 'C-02': 'no', 'C-01': 'other' }));
+  // One op carries every answer for the note, the newer answer to a change winning.
+  assert.equal(waitingCount(box), 1);
+  const op = box[0].ops[0];
+  assert.deepEqual(op.kind === 'edit' && op.edit.type === 'marks' ? op.edit.marks : null, { 'C-01': 'other', 'C-02': 'no' });
+  const shown = overlayActions(snap.index, box).notes[CH1];
+  assert.deepEqual(parseChanges(shown.body).changes.map((c) => c.status).slice(0, 3), ['other', 'no', 'open']);
+  assert.equal(shown.sha, note.sha);
+  assert.equal(snap.index.notes[CH1].body, note.body, 'the saved copy is untouched');
+  assert.ok(waitingOf(box)[CH1]);
+  // The two forms agree.
+  const e: Edit = { type: 'marks', marks: { 'C-01': 'other', 'C-02': 'no' } };
+  assert.equal(makeNote(CH1, 'x', editText(text, e)).body, editRecord(note, e).body);
+  assert.equal(editText(text, e).split('\n').filter((l, i) => l !== text.split('\n')[i]).length, 2, 'only the two Kyle lines change');
+});
+
+test('answers and the to-dos they tick off go up as one save, on top of what the team wrote meanwhile', async () => {
+  for (const legacy of [false, true]) {
+    const src = new MemSource();
+    const changes = '---\ntype: chapter-changes\nchapter: 1\n---\nIntro.\n\n## C-01 · small\nScene: S-001\nWhy: To-do T-002: the ferry time.\nKyle: open\n\nWas:\n> noon\n\nNow:\n> dawn\n\n## C-02 · line\nScene: S-001\nWhy: Sense.\nKyle: open\n\nWas:\n> a\n\nNow:\n> b\n';
+    src.files.set('B/Changes/Chapter 1 changes.md', changes);
+    src.files.set('B/Tasks/T-002 Ferry.md', TASK('T-002', 'Ferry'));
+    const act = marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept' }, [edit('B/Tasks/T-002 Ferry.md', { status: 'done', done_note: 'Edit room: C-01 kept.' })]);
+    // The team adds a change to the note between the app's read and its save.
+    if (!legacy) src.race = () => { src.files.set('B/Changes/Chapter 1 changes.md', src.files.get('B/Changes/Chapter 1 changes.md')! + '\n## C-03 · small\nScene: S-001\nWhy: Typo.\nKyle: open\n\nWas:\n> teh\n\nNow:\n> the\n'); };
+    const res = await pushAll(src, [act], { legacy });
+    assert.equal(res.error, null);
+    assert.deepEqual(res.done, [act.id]);
+    const saved = src.files.get('B/Changes/Chapter 1 changes.md')!;
+    assert.deepEqual(parseChanges(saved).changes.map((c) => [c.id, c.status]), legacy ? [['C-01', 'kept'], ['C-02', 'open']] : [['C-01', 'kept'], ['C-02', 'open'], ['C-03', 'open']]);
+    assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^status: done$/m);
+    assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^done_note: "?Edit room: C-01 kept\."?$/m);
+    if (!legacy) {
+      assert.equal(src.commits.length, 1, 'one save for the answer and its to-do');
+      assert.deepEqual(src.commits[0].paths.sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
+      assert.match(src.commits[0].message, /^changes: Kyle kept C-01 in Chapter 1 changes\n\nSaved together with:\n- tasks: /);
+    } else {
+      assert.match(src.writes[0].message, /^changes: Kyle kept C-01 in Chapter 1 changes\n\nChosen in the Sparrow app\.$/);
+    }
+    assert.deepEqual(res.saved.map((n) => n.path).sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
+    // Sent again (the answer was lost on the way back): nothing changes.
+    const n = src.writes.length;
+    assert.equal((await pushAll(src, [act], { legacy })).error, null);
+    assert.equal(src.writes.length, n);
+    // A later answer that carries the saved one with it names only what is new.
+    assert.equal((await pushAll(src, [marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept', 'C-02': 'no' })], { legacy })).error, null);
+    assert.match(src.writes[src.writes.length - 1].message, /^changes: Kyle said no to C-02 in Chapter 1 changes\n/);
+  }
+});
+
+test('answers left in the Edit room\'s old list move into the outbox once, under any newer answer already waiting', () => {
+  const s = store();
+  s.setItem('story-forge.change-choices.k', JSON.stringify({ [CH1]: { 'C-01': 'kept', 'C-02': 'no' }, 'B/Changes/Chapter 2 changes.md': { 'C-05': 'mine' }, 'B/empty.md': {} }));
+  saveOutbox('k', [marksAction(CH1, { 'C-02': 'kept' })], s);
+  const box = loadOutbox('k', s);
+  const marks = (path: string) => box.flatMap((a) => a.ops).filter((op) => op.path === path).map((op) => (op.kind === 'edit' && op.edit.type === 'marks' ? op.edit.marks : null));
+  assert.deepEqual(marks(CH1), [{ 'C-01': 'kept', 'C-02': 'kept' }]);
+  assert.deepEqual(marks('B/Changes/Chapter 2 changes.md'), [{ 'C-05': 'mine' }]);
+  assert.equal(waitingCount(box), 2);
+  assert.equal(s.getItem('story-forge.change-choices.k'), null, 'the old list is let go');
+  assert.deepEqual(loadOutbox('k', s), box, 'and it moves only once');
+  // An op the app cannot read is dropped, the rest stays.
+  s.setItem('story-forge.outbox.k', JSON.stringify([{ id: 'a', at: AT, ops: [{ kind: 'edit', path: CH1, edit: { type: 'marks' } }] }, ...box]));
+  assert.deepEqual(loadOutbox('k', s).map((a) => a.id), box.map((a) => a.id));
+});
 
 test('a blob sha worked out in the app is the one git gives', async () => {
   assert.equal(await blobSha(''), 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391');

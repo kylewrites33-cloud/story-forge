@@ -1,8 +1,9 @@
 // The outbox: everything Kyle has done that the vault does not have yet, in order. It lives in this browser's
 // localStorage, one list per vault, so nothing is lost when the connection drops or the app closes.
+import { clearChoices, loadChoices, type ChangeStatus } from '../lib/changes.ts';
 import { loadQueue, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { isMaker } from './makers.ts';
-import { choiceAction, type Action, type Op } from './ops.ts';
+import { choiceAction, marksAction, type Action, type Op } from './ops.ts';
 
 const KEY = 'story-forge.outbox.';
 
@@ -11,7 +12,7 @@ const store = (): Store => globalThis.localStorage ?? null;
 
 function validOp(op: Op): boolean {
   if (!op || typeof op.path !== 'string') return false;
-  if (op.kind === 'edit') return Boolean(op.edit && op.edit.type === 'choice' && op.edit.choice);
+  if (op.kind === 'edit') return Boolean(op.edit && ((op.edit.type === 'choice' && op.edit.choice) || (op.edit.type === 'marks' && op.edit.marks && typeof op.edit.marks === 'object')));
   if (op.kind === 'create') return isMaker(op.make) && typeof op.text === 'string' && typeof op.id === 'string' && Boolean(op.payload);
   return false;
 }
@@ -21,7 +22,8 @@ function valid(a: unknown): a is Action {
   return Boolean(x && typeof x.id === 'string' && typeof x.at === 'string' && Array.isArray(x.ops) && x.ops.every(validOp));
 }
 
-/** The waiting actions for a vault. Choices left in the old queue (before 2026-11-11) move over the first time, once. */
+/** The waiting actions for a vault. What was left in the two older lists moves over the first time, once: choices in
+ * the old queue (before 2026-11-11) and answers on the team's changes (the Edit room's own list until then). */
 export function loadOutbox(sourceKey: string, s: Store = store()): Action[] {
   let list: Action[] = [];
   try {
@@ -32,13 +34,17 @@ export function loadOutbox(sourceKey: string, s: Store = store()): Action[] {
     list = [];
   }
   const old = loadQueue(sourceKey, s);
-  if (old.length) {
+  const marks = loadChoices(sourceKey, s);
+  const notes = Object.keys(marks).filter((path) => marks[path] && typeof marks[path] === 'object' && Object.keys(marks[path]).length);
+  if (old.length || notes.length) {
     list = old.reduce((acc, c) => add(acc, choiceAction([c], new Date(c.at || Date.now()))), list);
+    // An answer already waiting in the outbox is newer than the same one in the old list.
+    list = notes.reduce((acc, path) => add(acc, marksAction(path, { ...marks[path], ...waitingMarks(acc, path) })), list);
     saveOutbox(sourceKey, list, s);
-    // Only let go of the old list once the new one is safely written.
+    // Only let go of the old lists once the new one is safely written.
     let kept = false;
     try { kept = Boolean(s && s.getItem(KEY + sourceKey)); } catch { kept = false; }
-    if (kept) saveQueue(sourceKey, [], s);
+    if (kept) { saveQueue(sourceKey, [], s); clearChoices(sourceKey, s); }
   }
   return list;
 }
@@ -54,15 +60,36 @@ export function saveOutbox(sourceKey: string, list: Action[], s: Store = store()
 }
 
 /** The choice an op carries, if it is one. */
-const choiceOf = (op: Op): Choice | null => (op.kind === 'edit' ? op.edit.choice : null);
-const sameSpot = (a: Op, b: Op): boolean => { const x = choiceOf(a), y = choiceOf(b); return Boolean(x && y && sameSlot(x, y)); };
+const choiceOf = (op: Op): Choice | null => (op.kind === 'edit' && op.edit.type === 'choice' ? op.edit.choice : null);
+/** The answers on a chapter's changes an op carries, if it is that. */
+const marksOf = (op: Op): Record<string, ChangeStatus> | null => (op.kind === 'edit' && op.edit.type === 'marks' ? op.edit.marks : null);
+/** Do two ops stand in the same place: the same choice slot on the same note, or answers on the same changes note? */
+const sameSpot = (a: Op, b: Op): boolean => {
+  const x = choiceOf(a), y = choiceOf(b);
+  if (x && y) return sameSlot(x, y);
+  return Boolean(marksOf(a) && marksOf(b) && a.path === b.path);
+};
+
+/** Every answer waiting for one changes note, the newer winning. */
+function waitingMarks(list: Action[], path: string): Record<string, ChangeStatus> {
+  let out: Record<string, ChangeStatus> = {};
+  list.forEach((a) => a.ops.forEach((op) => { const m = marksOf(op); if (m && op.path === path) out = { ...out, ...m }; }));
+  return out;
+}
 
 /** Add an action. A newer choice replaces a waiting one in the same place on the same note (a second Keep after a Drop);
- * a second edit to a note that has not saved yet joins the first, so neither is lost. An action left with nothing to do
- * goes. A new note never replaces anything. */
+ * a second edit to a note that has not saved yet joins the first, so neither is lost, and so do answers on the same
+ * chapter's changes, the newer answer to a change winning. An action left with nothing to do goes. A new note never
+ * replaces anything. */
 export function add(list: Action[], action: Action): Action[] {
   const ops = action.ops.map((op): Op => {
-    if (op.kind !== 'edit' || op.edit.choice.decision !== 'edit') return op;
+    if (op.kind !== 'edit') return op;
+    if (op.edit.type === 'marks') {
+      let marks: Record<string, ChangeStatus> = {};
+      list.forEach((a) => a.ops.forEach((x) => { if (sameSpot(x, op)) marks = { ...marks, ...marksOf(x)! }; }));
+      return { ...op, edit: { ...op.edit, marks: { ...marks, ...op.edit.marks } } };
+    }
+    if (op.edit.choice.decision !== 'edit') return op;
     const c = op.edit.choice;
     let fields: Record<string, string> = {};
     list.forEach((a) => a.ops.forEach((x) => { if (sameSpot(x, op)) fields = { ...fields, ...(choiceOf(x)!.fields || {}) }; }));
@@ -102,7 +129,7 @@ export function waitingCount(list: Action[]): number {
 
 /** An op pointed at a note's new path. */
 function repoint(op: Op, to: string): Op {
-  return op.kind === 'edit' ? { ...op, path: to, edit: { ...op.edit, choice: { ...op.edit.choice, path: to } } } : { ...op, path: to };
+  return op.kind === 'edit' && op.edit.type === 'choice' ? { ...op, path: to, edit: { ...op.edit, choice: { ...op.edit.choice, path: to } } } : { ...op, path: to };
 }
 
 /** The outbox after a push: actions that went up (or whose notes are gone) leave, failures keep their sentence.

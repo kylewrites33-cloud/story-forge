@@ -713,7 +713,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   uses the arrows or picks a change on the page, and follows the page as he scrolls (a card already in sight stays put, and scrolling the column itself is never pulled back, 2026-10-28); changes no longer on the page come
   last (2026-10-28, Kyle: "Why are the changes on the right column not in sequential order? Take inspiration from
   Microsoft Word's structure"); such a card says its words are gone from the page and offers I wrote my own and Back to Draft 1, 2026-10-28, Kyle: "I did indeed write my own version, but I don't see no like it's asking me to do"; "maybe reject should instead be revert to draft one". Back to Draft 1 finds Kyle's version by the words around the change in the scene's Draft 1 copy and puts Draft 1's words back, recorded as Rejected; with no Draft 1 the card offers Reject). Decided cards fold away with Undo. Accept puts the words in as Kyle's own save;
-  his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline). Without changes, the
+  his choice goes on the change's `Kyle:` line in the note (waiting on the device when offline; through the outbox since 2026-11-11). Without changes, the
   tab offers "Ask the Writer for changes on chapter N" (job kind `revise`). The chapter list shows each chapter's count.
 - **Finding the spot** (2026-10-28, Kyle: "the word processor screen then loses the place of where I wanted to type. And
   then if I tap the card, it doesn't bring me to the spot"; "right after I tap the italicize button, the word processing
@@ -1196,4 +1196,31 @@ through the outbox like a board choice. Nothing on either screen changed but thi
 - Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
   demo vault and a pretend GitHub: add online, add with GitHub out of reach and the app closed and opened, start or
   tick while it waits, the team taking the number meanwhile, the Map and the List, the box beside the page, the old way.
+
+## The one saving system, step 1: the Edit room's answers (2026-11-11)
+
+The third piece. Accept, Accept the other, Reject, Undo, Accept all, Accept everywhere, Edit then accept, Mark my
+changes as done and Back to Draft 1 on the team's changes now go through the outbox. Nothing on the screen changed.
+
+- **One save for an answer and its to-dos.** An answer sets the change's `Kyle:` line in the chapter's changes note,
+  and a to-do the change carries out is ticked off (or opened again on Undo). Before, the note and each to-do were
+  separate saves from two different waiting lists. Now they are one action and one save.
+- **One waiting list.** The Edit room kept its own list on the device (`story-forge.change-choices.<vault>`), sent by
+  its own code. Answers now wait in the outbox with everything else: they show at once on every screen (the cards, the
+  counts on the chapter list, the Overview and Edit > Changes), count in the Sync button's line, and survive closing
+  the app. What was left in the old list moves into the outbox the first time the app opens, once.
+- **Answers to one chapter join.** Several answers that wait for the same changes note are one change to it, the newer
+  answer to a change winning, so a run of Accepts made faster than GitHub saves them goes up in a few saves, not one
+  each. The vault's history says "Kyle kept C-04 in Chapter 12 changes" as before, or "Kyle chose on 3 changes in ...".
+- **Saved on top of the team's newest version**, like every action: if the Writer added or reworded changes in the
+  note meanwhile, only the `Kyle:` lines Kyle answered are set, on the note as the vault has it at the save.
+- **Adding, moving or deleting a chapter** sends what waits for the book first, because answers wait by their note's
+  file name and those names are about to change. If answers still wait after that, the app says "Your answers on the
+  team's changes have not saved yet. Press Sync, then try again." and changes nothing.
+- The saved copy of the vault on the device is now written a moment after the last save lands (and when the app is
+  put away), not once for each save: writing it copies the whole vault, which a long run of Accepts would feel.
+- The accepted words themselves still go into the scene through the writing page's own saving, which moves last.
+- Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
+  demo vault and a pretend GitHub: Accept with a to-do ticked in the same save, Reject, Undo opening the to-do again,
+  answers made with GitHub out of reach and the app closed and opened, the old list moving over, and the old way.
 

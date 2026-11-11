@@ -1,6 +1,7 @@
 // What a waiting change does to a note. There are two forms and they must agree (a test holds them to it):
 // to the note as the screens hold it (properties and body), so Kyle sees his change at once, and to the note's text as
 // the vault has it, changing only the lines the change touches, for the save.
+import { marksMessage, setStatuses } from '../lib/changes.ts';
 import { applyToData, applyToText, commitMessage } from '../lib/ideas.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { PHASE } from '../lib/sync.ts';
@@ -11,24 +12,32 @@ import type { Action, Edit } from './ops.ts';
 
 /** The note as the screens should show it once this edit is in. */
 export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
+  if (edit.type === 'marks') return { ...note, body: setStatuses(note.body, edit.marks) };
   return { ...note, data: applyToData(note.data, changeOf(note.data, edit.choice)) };
 }
 
 /** The note's text with this edit made. Every line the edit does not touch stays as it was. */
 export function editText(text: string, edit: Edit): string {
+  if (edit.type === 'marks') return setStatuses(text, edit.marks);
   const data = Frontmatter.parse(text).data || {};
   return applyToText(text, changeOf(data, edit.choice));
 }
 
 /** The line this edit leaves in the vault's history, from the note as it was before the edit. No Agent trailer: it is Kyle's. */
-export function editMessage(text: string, edit: Edit): string {
+export function editMessage(text: string, edit: Edit, path: string): string {
+  if (edit.type === 'marks') {
+    // Only the answers that are new to the note are named: one an earlier save already put there changes nothing.
+    const fresh: typeof edit.marks = {};
+    Object.keys(edit.marks).forEach((id) => { if (setStatuses(text, { [id]: edit.marks[id] }) !== text) fresh[id] = edit.marks[id]; });
+    return marksMessage(path, Object.keys(fresh).length ? fresh : edit.marks);
+  }
   const data = Frontmatter.parse(text).data || {};
   return commitMessage(data, edit.choice.decision, edit.choice.fields);
 }
 
 /** Does this edit change where a scene sits in its book? */
 function reorders(edit: Edit): boolean {
-  return edit.choice.decision === 'move';
+  return edit.type === 'choice' && edit.choice.decision === 'move';
 }
 
 /** The index with these notes in it, when some of them are new to it: every list of notes (a book's scenes, the

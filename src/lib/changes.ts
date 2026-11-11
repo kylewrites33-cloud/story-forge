@@ -17,7 +17,7 @@
 //   > He arrived with good timing, just as the cart tipped.
 //
 // A new passage also has `Or:` with a second version. Paragraphs inside a quote are `> ` lines with a `>` line between.
-import type { NoteRecord, VaultSource } from './types.ts';
+import type { NoteRecord } from './types.ts';
 
 export const CHANGES_FOLDER = 'Changes';
 export const CHANGES_TYPE = 'chapter-changes';
@@ -323,9 +323,27 @@ export function openCount(note: NoteRecord | null): number {
 }
 
 // ---- Saving Kyle's choices ----
-// A choice saves the one line straight away, re-reading the note first. Offline, it waits on this device and goes up
-// with the next sync.
+// Since 2026-11-11 a choice is an edit in the outbox (src/vault): it shows at once, waits on the device and goes up
+// with everything else. What a choice does to the note, and the line it leaves in the vault's history, are here.
 
+/** The note's text (or its body) with each of these changes' `Kyle:` lines set, every other line as it was. */
+export function setStatuses(text: string, marks: Record<string, ChangeStatus>): string {
+  let next = text;
+  Object.keys(marks).forEach((id) => { next = setStatus(next, id, marks[id]); });
+  return next;
+}
+
+const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for', rewrite: 'took the rewrite for' };
+
+/** The line Kyle's choices on one changes note leave in the vault's history. */
+export function marksMessage(path: string, marks: Record<string, ChangeStatus>): string {
+  const ids = Object.keys(marks);
+  const what = ids.length === 1 ? 'Kyle ' + SAID[marks[ids[0]]] + ' ' + ids[0] : 'Kyle chose on ' + ids.length + ' changes';
+  return 'changes: ' + what + ' in ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '') + '\n\nChosen in the Sparrow app.';
+}
+
+// Before 2026-11-11 choices waited in a list of their own on the device. What is left in it moves into the outbox the
+// first time the app opens (src/vault/outbox.ts); these two read it and let go of it.
 type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
 const KEY = 'story-forge.change-choices.';
 const store = (): Store | null => { try { return globalThis.localStorage ?? null; } catch { return null; } };
@@ -333,56 +351,8 @@ const store = (): Store | null => { try { return globalThis.localStorage ?? null
 export function loadChoices(sourceKey: string, s: Store | null = store()): Record<string, Record<string, ChangeStatus>> {
   try { const v = s && s.getItem(KEY + sourceKey); const o = v ? JSON.parse(v) : {}; return o && typeof o === 'object' ? o : {}; } catch { return {}; }
 }
-function storeChoices(sourceKey: string, all: Record<string, Record<string, ChangeStatus>>, s: Store | null = store()) {
-  try { if (!s) return; if (Object.keys(all).length) s.setItem(KEY + sourceKey, JSON.stringify(all)); else s.removeItem(KEY + sourceKey); } catch { /* lasts until reload */ }
-}
-
-/** Kyle's choices still waiting on this device, laid over the changes as the vault has them. */
-export function withChoices(changes: Change[], path: string, sourceKey: string, s: Store | null = store()): Change[] {
-  const mine = loadChoices(sourceKey, s)[path];
-  return mine ? changes.map((c) => (mine[c.id] ? { ...c, status: mine[c.id] } : c)) : changes;
-}
-
-const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for', rewrite: 'took the rewrite for' };
-
-/** Save Kyle's choices on one changes note: kept on this device first, then written to the vault as one commit. */
-export async function saveChoices(source: VaultSource, path: string, choices: Record<string, ChangeStatus>, s: Store | null = store()): Promise<void> {
-  const all = loadChoices(source.key, s);
-  all[path] = { ...(all[path] || {}), ...choices };
-  storeChoices(source.key, all, s);
-  await flushChoices(source, s);
-}
-
-/** Send every choice waiting on this device. Throws when the connection is down; the choices stay for next time. */
-export async function flushChoices(source: VaultSource, s: Store | null = store()): Promise<number> {
-  if (!source.readFresh || !source.write) return 0;
-  const all = loadChoices(source.key, s);
-  let sent = 0;
-  for (const path of Object.keys(all)) {
-    const mine = all[path];
-    for (let attempt = 0; ; attempt++) {
-      const { text, sha } = await source.readFresh(path);
-      let next = text;
-      Object.keys(mine).forEach((id) => { next = setStatus(next, id, mine[id]); });
-      const ids = Object.keys(mine);
-      const what = ids.length === 1 ? 'Kyle ' + SAID[mine[ids[0]]] + ' ' + ids[0] : 'Kyle chose on ' + ids.length + ' changes';
-      try {
-        if (next !== text) await source.write(path, next, sha, 'changes: ' + what + ' in ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '') + '\n\nChosen in the Sparrow app.');
-        break;
-      } catch (e) {
-        if ((e as { conflict?: boolean }).conflict && attempt < 3) continue;
-        throw e;
-      }
-    }
-    const now = loadChoices(source.key, s);
-    // Choices made while this one was saving stay for the next round.
-    const left: Record<string, ChangeStatus> = {};
-    Object.keys(now[path] || {}).forEach((id) => { if (now[path][id] !== mine[id]) left[id] = now[path][id]; });
-    if (Object.keys(left).length) now[path] = left; else delete now[path];
-    storeChoices(source.key, now, s);
-    sent++;
-  }
-  return sent;
+export function clearChoices(sourceKey: string, s: Store | null = store()): void {
+  try { if (s) s.removeItem(KEY + sourceKey); } catch { /* nothing to let go of */ }
 }
 
 /** Every chapter of the book with a changes note: how many changes wait in it and the scene to open for them. */

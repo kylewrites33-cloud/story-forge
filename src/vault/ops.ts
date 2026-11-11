@@ -2,6 +2,7 @@
 // Everything Kyle does that changes the vault is an Action: a list of small changes that go up together as one save,
 // or not at all. Actions wait in the outbox (outbox.ts), show on every screen at once (apply.ts) and go up when the
 // connection allows (push.ts).
+import type { ChangeStatus } from '../lib/changes.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import type { FileEntry } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';
@@ -10,7 +11,10 @@ import { make, type MakerName, type Payloads } from './makers.ts';
  * again on a newer version of the note if the team or another device changed it meanwhile. */
 export type Edit =
   /** A choice on a board: keep, later, drop, a card moved on the Chapter Grid, or properties Kyle edited. */
-  | { type: 'choice'; choice: Choice };
+  | { type: 'choice'; choice: Choice }
+  /** Kyle's answers to the team's changes in a chapter's changes note (the Edit room): each change's ID with keep, no
+   * and the rest. Only those changes' `Kyle:` lines change. */
+  | { type: 'marks'; marks: Record<string, ChangeStatus> };
 
 /** One change to one file. */
 export type Op =
@@ -43,6 +47,16 @@ export function choiceAction(choices: Choice[], now: Date = new Date()): Action 
     id: newId(now),
     at: choices.length ? choices[0].at : now.toISOString(),
     ops: choices.map((choice) => ({ kind: 'edit' as const, path: choice.path, edit: { type: 'choice' as const, choice } }))
+  };
+}
+
+/** Answers on a chapter's changes, with the to-dos they tick off or open again, as one action: one save. */
+export function marksAction(path: string, marks: Record<string, ChangeStatus>, also: Choice[] = [], now: Date = new Date()): Action {
+  return {
+    id: newId(now),
+    at: now.toISOString(),
+    ops: [{ kind: 'edit' as const, path, edit: { type: 'marks' as const, marks } } as Op]
+      .concat(also.map((choice) => ({ kind: 'edit' as const, path: choice.path, edit: { type: 'choice' as const, choice } })))
   };
 }
 

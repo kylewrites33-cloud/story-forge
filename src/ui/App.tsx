@@ -24,7 +24,7 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { choiceAction, createAction, type Action } from '../vault/ops.ts';
+import { choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
 import { add, loadOutbox, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAll } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
@@ -53,7 +53,7 @@ import { JobsScreen } from './Jobs.tsx';
 import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
-import { changesNoteFor, chapterChanges, countLike, flushChoices, isStoryCall } from '../lib/changes.ts';
+import { changesNoteFor, chapterChanges, countLike, isStoryCall, type ChangeStatus } from '../lib/changes.ts';
 import { copyFor, saveBookDraft } from '../lib/bookdrafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
@@ -136,6 +136,22 @@ export function App() {
     setOutbox(add(outboxRef.current, createAction(name, payload, paths.map((path) => ({ path, sha: '' })))));
   }, [setOutbox]);
 
+  // Writing the saved copy to the device copies the whole vault, so after a save it is written once things go quiet,
+  // not once for each save (Keep after Keep in the Edit room), and at once when the app is put away.
+  const snapTimer = useRef(0);
+  const writeSnapNow = useCallback(() => {
+    if (!snapTimer.current) return;
+    clearTimeout(snapTimer.current);
+    snapTimer.current = 0;
+    if (snapRef.current) void writeSnapshot(snapRef.current);
+  }, []);
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') writeSnapNow(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', writeSnapNow);
+    return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', writeSnapNow); writeSnapNow(); };
+  }, [writeSnapNow]);
+
   /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. */
   const foldNotes = useCallback(async (saved: NoteRecord[]) => {
     const cur = snapRef.current;
@@ -143,8 +159,9 @@ export function App() {
     const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current) };
     snapRef.current = next;
     setSnap(next);
-    await writeSnapshot(next);
-  }, [source]);
+    clearTimeout(snapTimer.current);
+    snapTimer.current = window.setTimeout(writeSnapNow, 1500);
+  }, [source, writeSnapNow]);
 
   // One lane for sending the outbox up and for reading the vault down, so the two never cross: a sync that started
   // before a save landed could otherwise finish after it and put the older note back on the screen until the next sync.
@@ -184,6 +201,14 @@ export function App() {
   const runFlush = useCallback((): Promise<string | null> => inLane('push', pushNow).catch((e: Error) => { setError(e.message); return e.message; }), [inLane, pushNow]);
   const runFlushRef = useRef(runFlush);
   runFlushRef.current = runFlush;
+  /** Before a chapter is added, moved or deleted: what waits for this book goes up first. Answers on the team's changes
+   * wait by their note's file name, and those names are about to change, so they must be in the vault before that. */
+  const beforeRenames = useCallback(async (bookFolder: string) => {
+    const waits = (dir: string) => outboxRef.current.some((a) => a.ops.some((op) => op.path.startsWith(bookFolder + dir)));
+    if (!waits('/')) return;
+    await runFlush();
+    if (waits('/Changes/')) throw new Error('Your answers on the team\'s changes have not saved yet. Press Sync, then try again.');
+  }, [runFlush]);
 
   const runSync = useCallback((): Promise<void> => inLane('sync', async () => {
     if (!navigator.onLine) return;
@@ -193,8 +218,6 @@ export function App() {
       await foldNotes(written.saved);
       if (written.notice) setNotice(written.notice);
       const saveError = (await pushNow()) || written.error;
-      // Keep or No on the team's changes, chosen while offline.
-      await flushChoices(source).catch(() => 0);
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       snapRef.current = next;
       setSnap(next);
@@ -245,7 +268,7 @@ export function App() {
     try {
       if (at <= last) {
         // Keep or No choices still waiting on this device are saved by file name, so they go up before the names change.
-        await flushChoices(source);
+        await beforeRenames(book.folder);
         await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
         await renumberLists(source, cur.index.notes, book.folder, roomMap(at - 1), 'A new chapter ' + at + ' was added in the Sparrow app.');
       }
@@ -258,7 +281,7 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, beforeRenames]);
 
   /** A card dragged to a new place on the Chapter Grid: give it an order between its new neighbours (and the chapter it went into). */
   const onMove = useCallback((book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => {
@@ -540,6 +563,14 @@ export function App() {
     runFlush();
   }, [act, runFlush]);
 
+  /** Keep, No and the rest on the team's changes to a chapter (the Edit room), with the to-dos those answers tick off
+   * or open again: one action, so one save (2026-11-11; before, each note was its own save from a list of its own). */
+  const onMarks = useCallback((path: string, marks: Record<string, ChangeStatus>, ticks: { path: string; fields: Record<string, string> }[]) => {
+    const at = new Date().toISOString();
+    setOutbox(add(outboxRef.current, marksAction(path, marks, ticks.map((t) => ({ path: t.path, decision: 'edit' as const, reason: '', at, fields: t.fields })))));
+    runFlush();
+  }, [setOutbox, runFlush]);
+
   /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
   const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to move a chapter.';
@@ -550,7 +581,7 @@ export function App() {
     const last = nums.length ? Math.max(...nums) : 0;
     if (!Number.isInteger(to) || to < 1 || to > last) return 'Choose a chapter number from 1 to ' + last + '.';
     try {
-      await flushChoices(source);
+      await beforeRenames(book.folder);
       await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
       await renumberLists(source, cur.index.notes, book.folder, moveMap(from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
       await runSync();
@@ -559,7 +590,7 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, beforeRenames]);
 
   /** Delete scenes from the chapter list (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it").
    * Each scene goes to the book's Archive (Restore brings it back). A chapter left with no scenes takes its beats, plan,
@@ -581,7 +612,7 @@ export function App() {
         .sort((a, b) => b - a);
       for (const ch of emptied) {
         const fresh = snapRef.current ? snapRef.current.index.notes : cur.index.notes;
-        await flushChoices(source);
+        await beforeRenames(book.folder);
         const extra = chapterNotes(fresh, book.folder, ch);
         const dir = book.folder + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
         for (const n of extra) await archiveNote(source, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
@@ -600,7 +631,7 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, beforeRenames]);
 
   /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
@@ -716,7 +747,7 @@ export function App() {
           onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
           onDeleteScenes={book && source.write && source.readFresh && source.remove ? (paths) => onDeleteScenes(book, paths) : undefined}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
-          todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} waiting={waiting}
+          todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} onMarks={source.write ? onMarks : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
           timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} />}
           codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
