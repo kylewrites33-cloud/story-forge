@@ -3,7 +3,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { safeTitle } from './scenes.ts';
 import { makeNote } from './vault-index.ts';
-import type { NoteRecord, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultSource } from './types.ts';
 
 function today(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -32,6 +32,23 @@ export async function createSeries(source: VaultSource, name: string, genre: str
   return add(source, 'Series/' + clean + '/Series.md', seriesText(clean, genre, now), 'vault: new series ' + clean + '\n\nStarted in the Sparrow app.', 'A series called ' + clean);
 }
 
+/** A new series as the one saving system makes it: the series note, and an empty backup folder so the vault shows
+ * where its Word backups will go. Throws a plain sentence when the name is missing or taken. */
+export function planSeries(files: FileEntry[], name: string, genre: string, now: Date): Made {
+  const clean = safeTitle(name);
+  if (!clean) throw new Error('Give the series a name first.');
+  const path = 'Series/' + clean + '/Series.md';
+  if (files.some((f) => f.path.toLowerCase() === path.toLowerCase())) throw new Error('A series called ' + clean + ' is already in the vault. Choose another name.');
+  return { id: path, path, text: seriesText(clean, genre, now), message: 'vault: new series ' + clean + '\n\nStarted in the Sparrow app.', also: [{ path: backupKeep(clean), text: KEEP_TEXT }] };
+}
+
+const KEEP_TEXT = 'Word backups from Export to Word on Book details.\n';
+/** The file that holds a new series' or book's backup folder open (the folder is named as Export to Word names it). */
+function backupKeep(seriesName: string, bookTitle?: string): string {
+  const safe = (s: string) => s.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim();
+  return 'Book Backups/' + safe(seriesName) + (bookTitle ? '/' + safe(bookTitle) : '') + '/.gitkeep';
+}
+
 /** The word target every new book starts with (Kyle, 2026-10-27); he changes it on the book's Overview. */
 export const NEW_BOOK_WORDS = 60000;
 
@@ -51,6 +68,16 @@ export async function createBook(source: VaultSource, seriesFolder: string, seri
   if (!(number > 0)) throw new Error('Give the book a number, such as 1.');
   return add(source, seriesFolder + '/Books/' + number + ' ' + clean + '/Book.md', bookText(clean, seriesName, number, now),
     'vault: new book ' + clean + '\n\nStarted in the Sparrow app.', 'A book called ' + number + ' ' + clean);
+}
+
+/** A new book as the one saving system makes it: the book note and its empty backup folder. */
+export function planBook(files: FileEntry[], seriesFolder: string, seriesName: string, title: string, number: number, now: Date): Made {
+  const clean = safeTitle(title);
+  if (!clean) throw new Error('Give the book a title first.');
+  if (!(number > 0)) throw new Error('Give the book a number, such as 1.');
+  const path = seriesFolder + '/Books/' + number + ' ' + clean + '/Book.md';
+  if (files.some((f) => f.path.toLowerCase() === path.toLowerCase())) throw new Error('A book called ' + number + ' ' + clean + ' is already in the vault. Choose another name.');
+  return { id: path, path, text: bookText(clean, seriesName, number, now), message: 'vault: new book ' + clean + '\n\nStarted in the Sparrow app.', also: [{ path: backupKeep(seriesName, clean), text: KEEP_TEXT }] };
 }
 
 /** Manuscript files the app can bring in: Word, plain text and Markdown, up to 20 MB. */

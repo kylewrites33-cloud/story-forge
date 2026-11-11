@@ -25,7 +25,7 @@ src/lib/jobs.ts          Ask the team: job notes by status, a new job with the n
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes (planScene, for the `scene` maker), split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
-src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
+src/lib/books.ts         new series and books (planSeries and planBook are their makers' plans), manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
 src/lib/bookstatus.ts    where each book is for the Books page: stage, percent of it done, where Continue opens
 src/lib/bookstages.ts    the Overview's six stages (market research to publishing) with a percent each, and the publish date
@@ -141,12 +141,13 @@ src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
-src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, a new note by its maker, a book's chapters renumbered, or scenes deleted), Edit (a change kept as what he meant: a board choice, or answers on a chapter's changes)
-src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result, scene): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
+src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, a new note by its maker, a book's chapters renumbered, scenes deleted, or a scene or recipe given a new title and file name), Edit (a change kept as what he meant: a board choice, answers on a chapter's changes, or a small change to a note's text)
+src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result, scene, series, book): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
 src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied; a save's answer put into the saved copy (notes in, files that left out, each book's archive list)
+src/vault/text.ts        the small changes to a note's text, kept as what Kyle meant: a chapter title ticked or written, a chapter through in the Rewrite tab, a recipe's words; on screen and in the saved text by the same code
 src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push; what went up but is not in the saved copy on the device yet
 src/vault/tree.ts        the vault as one save sees it: the files at the start with the save's own changes on top, so each op meets what the one before it did
 src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following; the delete op: scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up, as one save
-src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; the old way behind the switch
+src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it; the old way behind the switch
 src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
 

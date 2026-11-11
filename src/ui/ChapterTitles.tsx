@@ -5,11 +5,15 @@
 import { useEffect, useState } from 'preact/hooks';
 import { addOwn, NONE, parseTitles, pickedTitle, setPick, TITLES_FILE } from '../lib/titles.ts';
 import type { BookEntry, NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { TextChange } from '../vault/text.ts';
 import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 
-export function ChapterTitlesPage({ source, index, book, groups, onRename }: {
+export function ChapterTitlesPage({ source, index, book, groups, onRename, onChange }: {
   source: VaultSource; index: VaultIndex; book: BookEntry;
+  /** The one saving system: a choice goes to the outbox, shows at once and works with no connection. Without it the
+   * page saves each choice itself, with the connection (the old way). */
+  onChange?: (path: string, change: TextChange) => void;
   /** The book's chapters and their scenes, to rename a chapter when Kyle picks its title. */
   groups: { num: number | null; title: string; scenes: NoteRecord[] }[];
   onRename?: (scenes: NoteRecord[], title: string) => void;
@@ -23,7 +27,7 @@ export function ChapterTitlesPage({ source, index, book, groups, onRename }: {
   useEffect(() => { setBody(null); }, [note ? note.sha : '']);
   const text = body != null ? body : note ? note.body : '';
   const chapters = parseTitles(text);
-  const canWrite = Boolean(source.readFresh && source.write);
+  const canWrite = Boolean(onChange || (source.readFresh && source.write));
 
   const save = async (change: (t: string) => string, what: string) => {
     setBody(change(text));
@@ -50,14 +54,16 @@ export function ChapterTitlesPage({ source, index, book, groups, onRename }: {
     if (g && onRename && title && title !== g.title) onRename(g.scenes, title);
   };
   const pick = (chapter: number, was: string, title: string, on: boolean) => {
-    save((t) => setPick(t, chapter, title, on), (on ? 'picked ' : 'unticked ') + (title === NONE ? 'None of these' : '"' + title + '"') + ' for chapter ' + chapter);
+    if (onChange) onChange(path, { what: 'title-pick', chapter, title, on });
+    else save((t) => setPick(t, chapter, title, on), (on ? 'picked ' : 'unticked ') + (title === NONE ? 'None of these' : '"' + title + '"') + ' for chapter ' + chapter);
     if (title === NONE) { if (on) rename(chapter, was); return; }
     rename(chapter, on ? title : was);
   };
   const writeOwn = (chapter: number, words: string) => {
     const clean = words.replace(/\s+/g, ' ').trim();
     if (!clean) return;
-    save((t) => addOwn(t, chapter, clean), 'wrote "' + clean + '" for chapter ' + chapter);
+    if (onChange) onChange(path, { what: 'title-own', chapter, title: clean });
+    else save((t) => addOwn(t, chapter, clean), 'wrote "' + clean + '" for chapter ' + chapter);
     rename(chapter, clean);
     setOwn(null);
   };

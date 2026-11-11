@@ -95,6 +95,8 @@ export interface Made {
   path: string;
   text: string;
   message: string;
+  /** Other files that go in with the note if the vault does not have them yet (a new book's empty backup folder). */
+  also?: { path: string; text: string }[];
 }
 
 /** What one save changes: whole files to write, files to remove, and the line for the vault's history. */

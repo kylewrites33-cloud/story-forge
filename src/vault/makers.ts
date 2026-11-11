@@ -2,6 +2,7 @@
 // device), so a create names its maker and carries what Kyle typed; the maker turns that into a note, given the files
 // the vault has. It runs twice: when Kyle adds the note, so it shows at once with the ID it will most likely get, and
 // again at the save, on the files the vault has at that moment, so two devices can never give one ID to two notes.
+import { planBook, planSeries } from '../lib/books.ts';
 import { planResult, type NewResult } from '../lib/flow.ts';
 import { planJob, type NewJob } from '../lib/jobs.ts';
 import { planNote, type NewNote } from '../lib/notes.ts';
@@ -27,6 +28,10 @@ export interface Payloads {
   result: { book: string; r: NewResult; at: string };
   /** A new scene in a book's Scenes folder: one added to a chapter, or the one scene of a new chapter. */
   scene: { s: NewScene; at: string; why?: string };
+  /** A new series from the home page. */
+  series: { name: string; genre: string; at: string };
+  /** A new book in a series. */
+  book: { seriesFolder: string; seriesName: string; title: string; number: number; at: string };
 }
 export type MakerName = keyof Payloads;
 
@@ -39,7 +44,9 @@ const MAKERS: { [K in MakerName]: Maker<K> } = {
   note: (files, p, keep) => planNote(files, p.book, p.n, new Date(p.at), keep),
   recipe: (files, p, keep) => planRecipe(files, p.r, new Date(p.at), keep),
   result: (files, p, keep) => planResult(files, p.book, p.r, new Date(p.at), keep),
-  scene: (files, p, keep) => planScene(files, p.s, new Date(p.at), keep, p.why)
+  scene: (files, p, keep) => planScene(files, p.s, new Date(p.at), keep, p.why),
+  series: (files, p) => planSeries(files, p.name, p.genre, new Date(p.at)),
+  book: (files, p) => planBook(files, p.seriesFolder, p.seriesName, p.title, p.number, new Date(p.at))
 };
 
 export function isMaker(name: unknown): name is MakerName {

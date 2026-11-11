@@ -4,6 +4,7 @@ import { clearChoices, loadChoices, type ChangeStatus } from '../lib/changes.ts'
 import { loadQueue, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
 import { isMaker } from './makers.ts';
 import { choiceAction, marksAction, type Action, type Op } from './ops.ts';
+import { validChange } from './text.ts';
 
 const KEY = 'story-forge.outbox.';
 const LANDED = 'story-forge.landed.';
@@ -13,7 +14,8 @@ const store = (): Store => globalThis.localStorage ?? null;
 
 function validOp(op: Op): boolean {
   if (!op || typeof op.path !== 'string') return false;
-  if (op.kind === 'edit') return Boolean(op.edit && ((op.edit.type === 'choice' && op.edit.choice) || (op.edit.type === 'marks' && op.edit.marks && typeof op.edit.marks === 'object')));
+  if (op.kind === 'edit') return Boolean(op.edit && ((op.edit.type === 'choice' && op.edit.choice) || (op.edit.type === 'marks' && op.edit.marks && typeof op.edit.marks === 'object') || (op.edit.type === 'text' && validChange(op.edit.change))));
+  if (op.kind === 'retitle') return typeof op.title === 'string' && Boolean(op.title) && (op.what === 'scene' || op.what === 'recipe');
   if (op.kind === 'create') return isMaker(op.make) && typeof op.text === 'string' && typeof op.id === 'string' && Boolean(op.payload);
   return false;
 }
@@ -125,7 +127,7 @@ export function add(list: Action[], action: Action): Action[] {
       list.forEach((a) => a.ops.forEach((x) => { if (sameSpot(x, op)) marks = { ...marks, ...marksOf(x)! }; }));
       return { ...op, edit: { ...op.edit, marks: { ...marks, ...op.edit.marks } } };
     }
-    if (op.edit.choice.decision !== 'edit') return op;
+    if (op.edit.type !== 'choice' || op.edit.choice.decision !== 'edit') return op;
     const c = op.edit.choice;
     let fields: Record<string, string> = {};
     list.forEach((a) => a.ops.forEach((x) => { if (sameSpot(x, op)) fields = { ...fields, ...(choiceOf(x)!.fields || {}) }; }));
