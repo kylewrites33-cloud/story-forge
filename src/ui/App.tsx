@@ -11,7 +11,7 @@ import { addRocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { bookTodos, type NewTodo } from '../lib/todos.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, sceneNotesFor } from '../lib/scenes.ts';
+import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, safeTitle, sceneNotesFor } from '../lib/scenes.ts';
 import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
@@ -24,7 +24,8 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { chaptersAction, deleteAction, choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
+import { chaptersAction, deleteAction, choiceAction, createAction, marksAction, newId, textAction, type Action } from '../vault/ops.ts';
+import { changeRecord, type TextChange } from '../vault/text.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
@@ -535,6 +536,20 @@ export function App() {
 
   /** A scene card's new title: the file is renamed to match, then the boards sync. */
   const onRename = useCallback(async (note: NoteRecord, title: string): Promise<string | null> => {
+    if (!oldSaving()) {
+      // The new title shows at once and waits with everything else; the save renames the file, and the words kept on
+      // the device and what waits for the scene follow it to the new name (2026-11-11; before, it needed the connection).
+      const clean = safeTitle(title);
+      if (!clean) return 'Give the scene a title first.';
+      const id = String(note.data.id || '');
+      const dest = note.path.slice(0, note.path.lastIndexOf('/')) + '/' + (id ? id + ' ' : '') + clean + '.md';
+      const cur = snapRef.current;
+      if (dest !== note.path && cur && Object.keys(cur.index.notes).some((p) => p.toLowerCase() === dest.toLowerCase())) return 'A scene called ' + clean + ' is already there. Choose another title.';
+      const at = new Date();
+      setOutbox(add(outboxRef.current, { id: newId(at), at: at.toISOString(), ops: [{ kind: 'retitle', path: note.path, title: clean, what: 'scene' }] }));
+      runFlush();
+      return null;
+    }
     if (!navigator.onLine) return 'Connect to the internet to change a title.';
     const d = loadDrafts(source.key)[note.path];
     if (d && d.body !== d.baseBody) return 'This scene has writing that has not reached the vault yet. Open it and press Done first, then change the title.';
@@ -545,7 +560,7 @@ export function App() {
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, setOutbox, runFlush]);
 
   /** Save a manuscript from the device in the book's Research folder, unchanged, and ask the team to bring it in as scenes. */
   const onImport = useCallback(async (book: BookEntry, file: File): Promise<{ error: boolean; text: string }> => {
@@ -569,14 +584,21 @@ export function App() {
   }, [source]);
 
   const onCreateSeries = useCallback(async (name: string, genre: string): Promise<string | null> => {
+    if (!oldSaving()) {
+      // A new series is a new note like any other: it shows at once and goes up when the connection allows.
+      try { const a = create('series', { name, genre, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.series(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+    }
     if (!navigator.onLine) return 'Connect to the internet to start a series.';
     try { const n = await createSeries(source, name, genre, new Date()); await makeBackupFolder(source, String(n.data.name || name)); await runSync(); location.hash = href.series(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+  }, [source, runSync, create, runFlush]);
 
   const onCreateBook = useCallback(async (seriesFolder: string, seriesName: string, title: string, number: number): Promise<string | null> => {
+    if (!oldSaving()) {
+      try { const a = create('book', { seriesFolder, seriesName, title, number, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.book(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+    }
     if (!navigator.onLine) return 'Connect to the internet to start a book.';
     try { const n = await createBook(source, seriesFolder, seriesName, title, number, new Date()); await makeBackupFolder(source, seriesName, String(n.data.title || title)); await runSync(); location.hash = href.book(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+  }, [source, runSync, create, runFlush]);
 
   /** Rewrite now: after the Rewrite choice reaches the vault, ask the team to do the rewrite. */
   const onRewrite = useCallback(async (path: string, reason: string) => {
@@ -596,9 +618,18 @@ export function App() {
     try { create('recipe', { r, at: new Date().toISOString() }); runFlush(); return null; } catch (e) { return (e as Error).message; }
   }, [create, runFlush]);
   const onSaveRecipe = useCallback(async (note: NoteRecord, r: RecipeFields): Promise<string | null> => {
+    if (!oldSaving()) {
+      // The recipe's words change at once and wait with everything else; a new name renames its file at the save.
+      if (!r.body.trim()) return 'A recipe needs its instruction. Write it, or leave the recipe as it was.';
+      const title = safeTitle(r.title) || recipeName(note);
+      const rename: Action['ops'] = title === recipeName(note) ? [] : [{ kind: 'retitle', path: note.path, title, what: 'recipe' }];
+      setOutbox(add(outboxRef.current, textAction([{ path: note.path, change: { what: 'recipe', use_for: r.use_for, body: r.body } }], rename)));
+      runFlush();
+      return null;
+    }
     if (!navigator.onLine) return 'Connect to the internet to change a recipe.';
     try { await saveRecipe(source, note, r); await runSync(); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+  }, [source, runSync, setOutbox, runFlush]);
 
   const onWorkflowNote = useCallback(async (note: string): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to add a note to the workflow.';
@@ -616,6 +647,28 @@ export function App() {
   /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
    * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
   const onRewriteThrough = useCallback(async (book: BookEntry, chapter: number, done: boolean): Promise<string | null> => {
+    if (!oldSaving()) {
+      // The mark shows at once and waits with everything else (2026-11-11; before, it needed the connection).
+      const change: TextChange = { what: 'through', chapter, done };
+      const cur = snapRef.current;
+      const shown = cur ? overlayActions(cur.index, outboxRef.current, schemaRef.current).notes[book.path] : null;
+      setOutbox(add(outboxRef.current, textAction([{ path: book.path, change }])));
+      const flushed = runFlush();
+      const scenes = cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [];
+      const after = shown ? rewriteProgress(book.rewrite || [], scenes, rewriteDone(changeRecord(shown, change))) : null;
+      if (!done || !after || !after.total || after.through < after.done || after.done < after.total) return null;
+      // The last chapter: Draft 2 is saved (the copies in Drafts/Draft N/), which needs the connection.
+      if (!navigator.onLine || !scenes.length) return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details when you are connected.';
+      try {
+        await flushed;
+        const d = await saveBookDraft(source, book.folder, scenes, new Date());
+        await runSync();
+        return 'Chapter ' + chapter + ' is through, the last one. Draft ' + d.number + ' is saved; your pages are now draft ' + (d.number + 1) + '.';
+      } catch (e) {
+        await runSync().catch(() => undefined);
+        return 'Chapter ' + chapter + ' is through, the last one, but the draft did not save: ' + (e as Error).message + ' Save it from Book details.';
+      }
+    }
     if (!navigator.onLine) return 'Connect to the internet to mark the chapter.';
     if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
     try {
@@ -635,7 +688,13 @@ export function App() {
       await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, setOutbox, runFlush]);
+
+  /** The Chapter titles page: a tick, or a title Kyle wrote. It shows at once and waits with everything else. */
+  const onTitles = useCallback((path: string, change: TextChange) => {
+    setOutbox(add(outboxRef.current, textAction([{ path, change }])));
+    runFlush();
+  }, [setOutbox, runFlush]);
 
   /** Workflow mode: results Kyle brought in or wrote, saved as idea notes in the book's Ideas folder, then a sync so every screen has them. */
   const onResults = useCallback(async (book: BookEntry, list: NewResult[]): Promise<string | null> => {
@@ -985,7 +1044,7 @@ export function App() {
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
       else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
+      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={source.commit && !oldSaving() ? onTitles : undefined} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
         calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}

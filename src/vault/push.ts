@@ -2,6 +2,10 @@
 // written together, or nothing is written. If the vault moved while the save was being made (the team, another device),
 // the source asks for the plan again on the newer notes, so Kyle's change lands on top and nothing of theirs is lost.
 import { Frontmatter } from '../lib/frontmatter.js';
+import { applyToText, editChange } from '../lib/ideas.ts';
+import { freePath } from '../lib/notes.ts';
+import { recipeName, RECIPES_FOLDER } from '../lib/recipes.ts';
+import { safeTitle } from '../lib/scenes.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import { saveChoice } from '../lib/write-queue.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
@@ -27,6 +31,37 @@ function sameNote(found: string, shown: string): boolean {
   const x = a.data || {}, y = b.data || {};
   // The same kind, ID, title and day, and the words Kyle wrote still open it (the team may have written under them since).
   return ['type', 'id', 'title', 'created'].every((k) => String(x[k]) === String(y[k])) && String(a.body || '').trim().startsWith(String(b.body || '').trim());
+}
+
+/** A note's new title on the save's tree: the title line changes and nothing else, and the file takes the name that
+ * goes with it (the old name leaves in the same save, so the words are never in two places or in none). Answers null
+ * when the note is gone or already has that title. Throws a plain sentence when the name is taken. */
+async function planRetitle(t: Tree, path: string, title: string, what: 'scene' | 'recipe'): Promise<{ to: string; message: string } | null> {
+  const text = await t.read(path);
+  if (text == null) return null;
+  const cur = makeNote(path, '', text);
+  const clean = safeTitle(title);
+  if (!clean) throw new Error(what === 'scene' ? 'Give the scene a title first.' : 'Give the recipe a name first.');
+  const dir = path.slice(0, path.lastIndexOf('/'));
+  const files = (await t.files()).map((f) => f.path).filter((p) => p !== path);
+  if (what === 'recipe') {
+    const was = recipeName(cur);
+    if (clean === was) return null;
+    const to = freePath(RECIPES_FOLDER, clean, files);
+    t.write(to, Frontmatter.setScalar(text, 'title', clean));
+    if (to !== path) t.remove(path);
+    return { to, message: 'recipes: rename ' + was + ' to ' + clean + '\n\nRenamed in the Sparrow app.' };
+  }
+  const id = String(cur.data.id || '');
+  const to = dir + '/' + (id ? id + ' ' : '') + clean + '.md';
+  const next = applyToText(text, editChange({ title: clean }));
+  if (to === path && next === text) return null;
+  const why = 'Renamed in the Sparrow app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
+  if (to === path) { t.write(path, next); return { to, message: 'scenes: retitle ' + id + '\n\n' + why }; }
+  if (files.some((p) => p.toLowerCase() === to.toLowerCase())) throw new Error('A scene called ' + clean + ' is already there. Choose another title.');
+  t.write(to, next);
+  t.remove(path);
+  return { to, message: 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why };
 }
 
 export interface Pushed {
@@ -77,8 +112,16 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
         if (there != null && sameNote(there, op.text)) continue;
         const made = make(op.make, files, op.payload, op.id);
         t.write(made.path, made.text);
+        (made.also || []).forEach((f) => { if (!files.some((x) => x.path === f.path)) t.write(f.path, f.text); });
         if (made.path !== op.path) renames[op.path] = made.path;
         lines.push(made.message);
+        continue;
+      }
+      if (op.kind === 'retitle') {
+        const from = renames[op.path] || op.path;
+        const line = await planRetitle(t, from, op.title, op.what);
+        if (line && line.to !== from) renames[op.path] = line.to;
+        if (line) lines.push(line.message);
         continue;
       }
       const path = renames[op.path] || op.path;
@@ -118,11 +161,12 @@ async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<
 async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
   const out: Pushed = { saved: [], renames: {}, removed: [] };
   for (const op of action.ops) {
-    if (op.kind === 'chapters' || op.kind === 'delete') {
+    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle') {
       // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
       const p = await pushActions(source, [{ ...action, ops: [op] }]);
       out.saved.push(...p.saved);
       out.removed.push(...p.removed);
+      Object.assign(out.renames, p.renames);
       continue;
     }
     if (op.kind === 'create') {

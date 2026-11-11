@@ -9,16 +9,19 @@ import { archiveFiles, assemble, makeNote, resortScenes, selectFiles } from '../
 import { changeOf } from '../lib/write-queue.ts';
 import type { NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Action, Edit } from './ops.ts';
+import { changeMessage, changeRecord, changeText } from './text.ts';
 
 /** The note as the screens should show it once this edit is in. */
 export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
   if (edit.type === 'marks') return { ...note, body: setStatuses(note.body, edit.marks) };
+  if (edit.type === 'text') return changeRecord(note, edit.change);
   return { ...note, data: applyToData(note.data, changeOf(note.data, edit.choice)) };
 }
 
 /** The note's text with this edit made. Every line the edit does not touch stays as it was. */
 export function editText(text: string, edit: Edit): string {
   if (edit.type === 'marks') return setStatuses(text, edit.marks);
+  if (edit.type === 'text') return changeText(text, edit.change);
   const data = Frontmatter.parse(text).data || {};
   return applyToText(text, changeOf(data, edit.choice));
 }
@@ -31,6 +34,7 @@ export function editMessage(text: string, edit: Edit, path: string): string {
     Object.keys(edit.marks).forEach((id) => { if (setStatuses(text, { [id]: edit.marks[id] }) !== text) fresh[id] = edit.marks[id]; });
     return marksMessage(path, Object.keys(fresh).length ? fresh : edit.marks);
   }
+  if (edit.type === 'text') return changeMessage(text, edit.change, path);
   const data = Frontmatter.parse(text).data || {};
   return commitMessage(data, edit.choice.decision, edit.choice.fields);
 }
@@ -65,6 +69,12 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
   actions.forEach((a) => a.ops.forEach((op) => {
     if (op.kind === 'create') {
       if (!notes[op.path]) { notes[op.path] = makeNote(op.path, '', op.text); added = true; }
+      return;
+    }
+    if (op.kind === 'retitle') {
+      // The new title shows at once; the file keeps its name until the save moves it.
+      const n = notes[op.path];
+      if (n) notes[op.path] = { ...n, data: { ...n.data, title: op.title } };
       return;
     }
     // A change to chapter numbers never waits (ops.ts), so there is none to show here.

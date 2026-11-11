@@ -6,6 +6,7 @@ import type { ChangeStatus } from '../lib/changes.ts';
 import type { Choice } from '../lib/write-queue.ts';
 import type { FileEntry } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';
+import type { TextChange } from './text.ts';
 
 /** A change to a note that is already in the vault, kept as what Kyle meant and not as new text, so it can be made
  * again on a newer version of the note if the team or another device changed it meanwhile. */
@@ -14,7 +15,10 @@ export type Edit =
   | { type: 'choice'; choice: Choice }
   /** Kyle's answers to the team's changes in a chapter's changes note (the Edit room): each change's ID with keep, no
    * and the rest. Only those changes' `Kyle:` lines change. */
-  | { type: 'marks'; marks: Record<string, ChangeStatus> };
+  | { type: 'marks'; marks: Record<string, ChangeStatus> }
+  /** A small change to one note's text (text.ts): a tick on the Chapter titles page, a chapter marked through in the
+   * Rewrite tab, a recipe's words. */
+  | { type: 'text'; change: TextChange };
 
 /** A change to a book's chapter numbers. */
 export type ChapterChange =
@@ -36,6 +40,10 @@ export type Op =
    * left with no scene goes with its notes and the chapters after it close up. `path` is the book note's, `scenes` the
    * scenes' paths, `at` when Kyle did it. Like `chapters` it never waits in the outbox: it can change chapter numbers. */
   | { kind: 'delete'; path: string; book: string; scenes: string[]; at: string }
+  /** A note's new title, with its file renamed to match (a scene's "S-012 Title.md", a recipe's "Title.md"). `path` is
+   * the note as it is named now. It shows at once under the old file name; the save moves the file, and what waits for
+   * the note, the words kept on the device and the open page follow it to the new name. */
+  | { kind: 'retitle'; path: string; title: string; what: 'scene' | 'recipe' }
   /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
    * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
    * if another note took it meanwhile. */
@@ -66,6 +74,11 @@ export function chaptersAction(book: string, change: ChapterChange, why: string,
 /** Scenes deleted from a book, as one action. */
 export function deleteAction(book: string, scenes: string[], now: Date = new Date()): Action {
   return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'delete', path: book + '/Book.md', book, scenes, at: now.toISOString() }] };
+}
+
+/** Small changes to notes' text (text.ts), saved together as one action. */
+export function textAction(changes: { path: string; change: TextChange }[], also: Op[] = [], now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: changes.map((c): Op => ({ kind: 'edit', path: c.path, edit: { type: 'text', change: c.change } })).concat(also) };
 }
 
 /** Choices that belong together (a card moved and the card that takes over its chapter's name) as one action: one save. */

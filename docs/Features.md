@@ -156,7 +156,7 @@ add a dated line here when you add or change one.
   on the card, or named), Edit Queue (editorial notes and to-dos; part of To-do since 2026-10-22), and Appears in on character, place, item and lore notes.
   New book and New series on the home page (a new book starts with a 60,000-word target, Kyle 2026-10-27: "make the
   default words target for every new created book 60,000 words"; changed on its Overview); Bring in a manuscript (file saved unchanged in the book's Research folder,
-  then an `import` job); Edit card changes a scene's title (the file is renamed). Rewrite can ask the team to rewrite
+  then an `import` job); Edit card changes a scene's title (the file is renamed; since 2026-11-11 with no connection too, see "the small saves"). Rewrite can ask the team to rewrite
   now (a `rewrite` job); Table read of this chapter (`table-read`) and Ask the team for more ideas (`ideas`). These kinds
   have full steps in the job's ## Ask, so the runner's coordinator can run them without its own prompt.
   The writing screen's toolbar (Kyle, 2026-10-18) has Undo and Redo; Bold, Italic, Highlight and Normal; Find, Split and
@@ -918,7 +918,7 @@ good idea too".
 
 - Edit > Chapter titles reads the book's `Chapter Titles.md` (schema type `chapter-titles`): one `## Chapter N` section
   with `Was:` and `- [ ]` option lines ending in `- [ ] None of these`.
-- One tick per chapter. Ticking a title renames the chapter (its scenes' `chapter_title`, through the write queue);
+- One tick per chapter (since 2026-11-11 a tick works with no connection, see "the small saves"). Ticking a title renames the chapter (its scenes' `chapter_title`, through the write queue);
   unticking puts the `Was:` name back. Write my own adds his title as a ticked line. None of these asks for four more.
 - The team writes each round in chat: four new options only in chapters marked None of these, None unticked, nothing
   removed (vault skill `chapter-titles`).
@@ -1346,3 +1346,46 @@ in the chapter list section); how it is saved changed.
   middle chapter with two scenes, the Archive count, Restore from the list the save left, no note fetched again by the
   next sync, the plain sentence with no connection, the open scene's chapter (the page moves on), the old way and the
   new way leaving the same files, and every earlier piece's check.
+
+## The one saving system, step 1: the small saves (2026-11-11)
+
+The seventh piece: five small things that each had a save of their own and each said "Connect to the internet". What
+Kyle sees is as before, except that each shows at once, waits on the device with everything else when there is no
+connection, and goes up as one save.
+
+- **A scene's title** (Edit card on a scene's card, and the title on the writing page). The new title shows at once.
+  The save changes the title line and gives the file the name that goes with it, in the same save, so the words are
+  never in two places or in none. Before, it needed the connection and refused while the scene had writing that had
+  not reached the vault ("Open it and press Done first"); now the words kept on the device, and anything else waiting
+  for that scene, follow it to the new name. A second new title before the first has gone up is fine. A name another
+  scene already has: "A scene called X is already there. Choose another title." If the open page is that scene, the
+  page moves to the new name by itself.
+- **A changed recipe** (Team, Recipes, Edit). The words change at once; a new name renames its file at the save. One
+  save where it was two (the words, then the rename).
+- **Chapter titles** (Edit, Chapter titles). A tick, an untick, None of these and Write my own each show at once and
+  wait. Each changes only its chapter's lines in `Chapter Titles.md` as the vault has the note at the save, so a round
+  the team added a moment ago is kept. The chapter's own rename went through the saving system already.
+- **Done with this chapter in the Rewrite tab.** The mark shows at once and waits. The one part that still needs the
+  connection is the last chapter, where Draft 2 is saved by itself: with no connection it says "Chapter N is through,
+  the last one. Save the draft from Book details when you are connected." (saved drafts move with the copies, later).
+- **New series and New book** on the home page. Each shows at once and opens, with no connection too, and goes up as
+  one save with its Book Backups folder (two saves before). A name already in the vault: "A series called X is already
+  in the vault. Choose another name."
+- **How it is built.** Two new things an action can hold (`src/vault/ops.ts`). A `text` edit carries what Kyle meant
+  (`src/vault/text.ts`: a title ticked, a title written, a chapter through, a recipe's words) and is made on the note
+  as the vault has it at the save; the same code makes the note on screen, and a test holds the two together. A
+  `retitle` op renames a scene or a recipe on the save's tree; what it renamed comes back in the save's answer, and
+  the outbox, the drafts kept on the device and the open page follow. New series and books are two more makers
+  (`planSeries` and `planBook` in `src/lib/books.ts`), and a maker can now bring a second file with it (the backup
+  folder's placeholder).
+- The old way (Settings, Saving) keeps the old code for all five.
+- **Still need the connection** until their own pieces: a note on the workflow, covers, Rocket files, bringing in a
+  manuscript, split and join, copies and saved drafts. The writing page's own saves stay on the old way for now.
+- Checked with tests that run the old way and the new way and compare the files (a recipe changed and renamed, a
+  scene renamed, a new series and book), and tests for a tick landing on a note the team changed meanwhile, the
+  Rewrite mark with no connection, waiting changes and words on the device following a rename, a taken name, and a
+  scene that is gone; and in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes
+  against a pretend GitHub: a recipe changed and renamed with no connection and the app closed and opened, a tick on
+  Chapter titles, a scene's new title from its card, a new series and its first book, one save each when the
+  connection is back, no note fetched again by the next sync, and every earlier piece's check. The Rewrite tab's mark
+  was checked by the tests only (the demo book has no rewrite).
