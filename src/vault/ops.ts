@@ -16,9 +16,22 @@ export type Edit =
    * and the rest. Only those changes' `Kyle:` lines change. */
   | { type: 'marks'; marks: Record<string, ChangeStatus> };
 
-/** One change to one file. */
+/** A change to a book's chapter numbers. */
+export type ChapterChange =
+  /** Room for a new chapter after chapter `after`: every later chapter moves up one. */
+  | { type: 'room'; after: number }
+  /** Chapter `from` becomes chapter `to`; the chapters in between close up by one. */
+  | { type: 'move'; from: number; to: number }
+  /** Chapter `gone` has left the book; the chapters after it close up by one. */
+  | { type: 'close'; gone: number };
+
+/** One change to the vault: to one file, or (chapters) to every note that carries a chapter number. */
 export type Op =
   | { kind: 'edit'; path: string; edit: Edit }
+  /** A book's chapters renumbered (src/vault/chapters.ts). `path` is the book note's. This op never waits in the
+   * outbox: everything else that waits is addressed by file names that carry chapter numbers, so it is sent at once,
+   * after what waits, or not at all (until chapters have IDs of their own, step 5 of the redesign). */
+  | { kind: 'chapters'; path: string; book: string; change: ChapterChange; why: string }
   /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
    * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
    * if another note took it meanwhile. */
@@ -39,6 +52,11 @@ let n = 0;
 export function newId(now: Date = new Date()): string {
   n = (n + 1) % 1679616;
   return now.getTime().toString(36) + '-' + n.toString(36) + Math.floor(Math.random() * 1679616).toString(36);
+}
+
+/** A change to a book's chapter numbers, with new notes that go in with it (the scene of a new chapter), as one action. */
+export function chaptersAction(book: string, change: ChapterChange, why: string, also: Op[] = [], now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'chapters' as const, path: book + '/Book.md', book, change, why } as Op].concat(also) };
 }
 
 /** Choices that belong together (a card moved and the card that takes over its chapter's name) as one action: one save. */

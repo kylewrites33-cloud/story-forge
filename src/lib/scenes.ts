@@ -6,7 +6,7 @@ import { Frontmatter } from './frontmatter.js';
 import { saveSnapshot } from './drafts.ts';
 import { applyToText, editChange } from './ideas.ts';
 import { makeNote } from './vault-index.ts';
-import type { FileEntry, NoteRecord, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultSource } from './types.ts';
 
 /** The next free scene ID in a book, from a fresh file list, the way `sf next-id scene` counts
  * (every file in the book except Snapshots, Exports and Archive). */
@@ -64,6 +64,23 @@ export function sceneText(id: string, s: NewScene, now: Date): string {
   if (s.from) ['act', 'pov', 'cast', 'place'].forEach((k) => { if (s.from!.data[k] != null && s.from!.data[k] !== '') data[k] = s.from!.data[k]; });
   data.created = today(now);
   return Frontmatter.join(data, '\n' + s.body.replace(/^\s+/, ''));
+}
+
+/** A new scene, worked out from the files the vault has (for the `scene` maker, src/vault/makers.ts): the next free
+ * S-number in the book, or `keep`, the ID it was shown with, unless a scene in the book took that number meanwhile.
+ * Throws a plain sentence when there is no title. */
+export function planScene(files: FileEntry[], s: NewScene, now: Date, keep = '', why = 'Added in the Sparrow app.'): Made {
+  const title = safeTitle(s.title);
+  if (!title) throw new Error('Give the scene a title first.');
+  const want = /^S-(\d+)$/.exec(keep);
+  const prefix = s.bookFolder + '/';
+  const taken = want && files.some((f) => {
+    if (!f.path.startsWith(prefix) || /\/(Snapshots|Exports|Archive)\//.test(f.path)) return false;
+    const m = /^S-(\d+)/.exec(f.path.slice(f.path.lastIndexOf('/') + 1));
+    return Boolean(m) && parseInt(m![1], 10) === parseInt(want[1], 10);
+  });
+  const id = want && !taken ? keep : nextSceneId(files, s.bookFolder);
+  return { id, path: s.bookFolder + '/Scenes/' + id + ' ' + title + '.md', text: sceneText(id, { ...s, title }, now), message: 'scenes: add ' + id + ' ' + title + '\n\n' + why };
 }
 
 /** Add a scene to the vault. Returns the new note. */

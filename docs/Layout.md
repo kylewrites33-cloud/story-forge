@@ -16,14 +16,14 @@ src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
 src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see CLAUDE.md)
 src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML that keeps every character
-src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes
+src/lib/drafts.ts        the writing screen's drafts: kept on the device, saved to the vault, snapshots, clashes; words that follow a new note saved under another name (moveDrafts)
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, adding one from the device
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a new to-do is (planTask: next free ID, path, text)
 src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, what a new one is (planTodo, in the book's Tasks folder)
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes
 src/lib/jobs.ts          Ask the team: job notes by status, a new job with the next free ID (planJob, for the `job` maker), Kyle's words for kinds and statuses
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
-src/lib/scenes.ts        new scenes, split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
+src/lib/scenes.ts        new scenes (planScene, for the `scene` maker), split and join: next free ID, order between neighbours, archive before removing; rename, restore; a scene's notes
 src/lib/codex.ts         the codex: names that light up, mentions, presence per scene (Matrix, Appears in), longest absence
 src/lib/books.ts         new series and books, manuscript files for Bring in a manuscript
 src/lib/markdown.ts      small, escaping Markdown reader for the note view, tables included
@@ -141,10 +141,12 @@ src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
-src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, or a new note by its maker), Edit (a change kept as what he meant: a board choice, or answers on a chapter's changes)
-src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
+src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, a new note by its maker, or a book's chapters renumbered), Edit (a change kept as what he meant: a board choice, or answers on a chapter's changes)
+src/vault/makers.ts      the makers of new notes, by name (task, todo, job, note, recipe, result, scene): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
 src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied
 src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push; what went up but is not in the saved copy on the device yet
+src/vault/tree.ts        the vault as one save sees it: the files at the start with the save's own changes on top, so each op meets what the one before it did
+src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; the old way behind the switch
 src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
 
