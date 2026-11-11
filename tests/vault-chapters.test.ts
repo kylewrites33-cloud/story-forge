@@ -1,14 +1,16 @@
 // The one saving system, chapters: a new scene by its maker, and a book's chapters renumbered as one save.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyShifts, chapterMove, chapterShifts, makeRoom, moveMap, renumberLists, roomMap } from '../src/lib/chapters.ts';
+import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../src/lib/chapters.ts';
 import { loadDrafts, moveDrafts, putDraft, type Draft } from '../src/lib/drafts.ts';
 import { parseSchema } from '../src/lib/schema.ts';
+import { archiveNote, archiveScene, restoreArchived } from '../src/lib/scenes.ts';
 import { sync } from '../src/lib/sync.ts';
 import { compareScenes } from '../src/lib/vault-index.ts';
-import type { NoteRecord, VaultIndex } from '../src/lib/types.ts';
+import type { NoteRecord, VaultIndex, VaultSource } from '../src/lib/types.ts';
+import { toNumber } from '../src/lib/links.ts';
 import { foldSaved, overlayActions } from '../src/vault/apply.ts';
-import { chaptersAction, createAction, type Action } from '../src/vault/ops.ts';
+import { chaptersAction, createAction, deleteAction, type Action } from '../src/vault/ops.ts';
 import { add, loadOutbox, saveOutbox } from '../src/vault/outbox.ts';
 import { pushAction, pushAll } from '../src/vault/push.ts';
 import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
@@ -258,9 +260,128 @@ test('scenes stay in reading order by their numbers after every move', async () 
   }
 });
 
+// ---- scenes deleted ----
+
+/** The old way of deleting scenes, as the page did it: two saves a note, then one for every note that follows. */
+async function oldDelete(src: VaultSource, book: string, index: VaultIndex, paths: string[], now: Date): Promise<void> {
+  const scenes = index.books.find((b) => b.folder === book)!.scenes.map((p) => index.notes[p]);
+  const going = scenes.filter((n) => paths.indexOf(n.path) >= 0);
+  for (const n of going) await archiveScene(src, n, now);
+  const emptied = Array.from(new Set(going.map((n) => toNumber(n.data.chapter)).filter((c): c is number => c != null)))
+    .filter((c) => !scenes.some((n) => paths.indexOf(n.path) < 0 && toNumber(n.data.chapter) === c))
+    .sort((a, b) => b - a);
+  let fresh = index.notes;
+  for (const ch of emptied) {
+    const extra = chapterNotes(fresh, book, ch);
+    const dir = book + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
+    for (const n of extra) await archiveNote(src, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
+    await applyShifts(src, chapterCloseUp(fresh, book, ch, going.map((n) => n.path).concat(extra.map((n) => n.path))), 'Why.');
+    const titles = await renumberLists(src, fresh, book, closeMap(ch), 'Why.');
+    if (titles) await src.write!(dir + 'Chapter ' + ch + ' title options.md', '> [!note] Archived\n> The title options of chapter ' + ch + ', deleted in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.\n\n' + titles + '\n', '', 'archive');
+    fresh = (await sync(src, null)).index.notes;
+  }
+}
+const scenePath = (index: VaultIndex, id: string) => scenesOf(index).find((n) => n.data.id === id)!.path;
+const NOW = new Date(2026, 10, 11, 12, 0, 0);
+
+for (const ids of [['S-002'], ['S-007'], ['S-008'], ['S-003', 'S-004'], ['S-001', 'S-002'], ['S-005', 'S-006', 'S-008'], ['S-003', 'S-004', 'S-006']]) {
+  test('scenes deleted in one save leave the vault exactly as the old note-by-note way did: ' + ids.join(', '), async () => {
+    const a = await vault(), b = await vault();
+    const before = await indexOf(b);
+    const paths = ids.map((id) => scenePath(before, id));
+    await oldDelete(a, BOOK, await indexOf(a), paths, NOW);
+    const res = await pushAction(b, deleteAction(BOOK, paths, NOW), { known: before.notes });
+    assert.deepEqual([...b.files].sort(), [...a.files].sort());
+    assert.equal(b.commits.length, 1, 'one save');
+    assert.ok(a.writes.length > 1);
+    assert.ok(!/Agent:/.test(b.commits[0].message));
+    paths.forEach((p) => assert.ok(!b.files.has(p) && res.removed.indexOf(p) >= 0));
+    // The saved copy on the device, with what the save answered put in, is what a fresh read of the vault gives:
+    // the notes, the reading order and the scene archive, where Restore finds what was deleted.
+    const folded = foldSaved(before, res.saved, schema, res.removed);
+    const fresh = await indexOf(b);
+    assert.deepEqual(Object.keys(folded.notes).sort(), Object.keys(fresh.notes).sort());
+    Object.keys(fresh.notes).forEach((p) => assert.deepEqual(folded.notes[p], fresh.notes[p], p));
+    assert.deepEqual(scenesOf(folded).map((n) => n.path), scenesOf(fresh).map((n) => n.path));
+    const bookOf = (i: VaultIndex) => i.books.find((x) => x.folder === BOOK)!;
+    // (The vault in memory lists files in the order they were added; GitHub lists them by name, as the saved copy keeps them.)
+    const byPath = (l: { path: string }[] = []) => l.slice().sort((x, y) => (x.path < y.path ? -1 : 1));
+    assert.deepEqual(bookOf(folded).archive, byPath(bookOf(fresh).archive));
+    assert.equal(bookOf(fresh).archive!.length, bookOf(before).archive!.length + ids.length);
+  });
+}
+
+test('deleting a scene: it goes to the Archive as it was, with the day and why, and Restore brings it back', async () => {
+  const src = await vault();
+  const index = await indexOf(src);
+  const path = scenePath(index, 'S-002');
+  const was = src.files.get(path)!;
+  const res = await pushAction(src, deleteAction(BOOK, [path], NOW));
+  const kept = BOOK + '/Archive/S-002 The Ferry.md';
+  assert.ok(src.files.get(kept)!.indexOf('> [!note] Archived\n> Deleted in the Sparrow app on 2026-11-11.\n') > 0);
+  assert.match(src.commits[0].message, /^delete: S-002 The Ferry\n\nDeleted in the Sparrow app on 2026-11-11\. The scene as it was is in the book's Archive\.\n\nOne save\.$/);
+  // Its chapter still has a scene, so no chapter number changes.
+  assert.equal(src.commits[0].paths.length, 2);
+  const folded = foldSaved(index, res.saved, schema, res.removed);
+  const entry = folded.books.find((b) => b.folder === BOOK)!.archive!.find((f) => f.path === kept)!;
+  await restoreArchived(src, entry, BOOK);
+  assert.equal(src.files.get(path), was);
+  assert.ok(!src.files.has(kept));
+});
+
+test('deleting a chapter\'s only scenes: its notes go to the Archive with them, the chapters after it close up, the lists follow', async () => {
+  const src = await vault();
+  const index = await indexOf(src);
+  await pushAction(src, deleteAction(BOOK, [scenePath(index, 'S-003'), scenePath(index, 'S-004')], NOW));
+  const dir = BOOK + '/Archive/Deleted chapter 2 2026-11-11/';
+  assert.match(src.files.get(dir + 'Chapter 2 beats.md')!, /Its chapter 2 was deleted in the Sparrow app on 2026-11-11\.\n[^]*Beats of two\./);
+  assert.match(src.files.get(dir + 'Chapter 2 changes.md')!, /Changes of two\./);
+  assert.match(src.files.get(BOOK + '/Chapter Beats/Chapter 2 beats.md')!, /Beats of three\./);
+  assert.match(src.files.get(BOOK + '/Chapter Plans/Chapter 2 plan.md')!, /Plan of three\./);
+  assert.match(src.files.get(BOOK + '/Changes/Chapter 3 changes.md')!, /Changes of four\./);
+  assert.ok(!src.files.has(BOOK + '/Changes/Chapter 4 changes.md'));
+  assert.match(src.files.get(BOOK + '/Book.md')!, /^rewrite_done: \[1, 2\]$/m);
+  const after = await indexOf(src);
+  assert.deepEqual(scenesOf(after).map((n) => n.data.chapter).filter((c) => typeof c === 'number'), [1, 1, 2, 2, 3]);
+  assert.equal(src.commits.length, 1);
+  assert.match(src.commits[0].message, /^delete: S-003 The Warden and 1 more\n\nDeleted in the Sparrow app on 2026-11-11\. The scenes as they were are in the book's Archive\.\n\nChapter 2 had no scene left, so it is gone: its \d+ other notes are in Archive\/Deleted chapter 2 2026-11-11\/, and the chapters after it close up by one \(\d+ notes followed\)\.\n\nOne save\.$/);
+});
+
+test('an older archived copy with the same name is never written over', async () => {
+  const src = await vault();
+  const index = await indexOf(src);
+  src.files.set(BOOK + '/Archive/S-002 The Ferry.md', 'An older copy.\n');
+  await pushAction(src, deleteAction(BOOK, [scenePath(index, 'S-002')], NOW));
+  assert.equal(src.files.get(BOOK + '/Archive/S-002 The Ferry.md'), 'An older copy.\n');
+  assert.match(src.files.get(BOOK + '/Archive/S-002 The Ferry (2).md')!, /Deleted in the Sparrow app on 2026-11-11\./);
+});
+
+test('a scene that is no longer in the book: nothing is saved and the app says so; one that still is goes alone', async () => {
+  const src = await vault();
+  const index = await indexOf(src);
+  const start = new Map(src.files);
+  await assert.rejects(pushAction(src, deleteAction(BOOK, [BOOK + '/Scenes/S-050 Gone.md'], NOW)), /That scene is not in the book as the vault has it now\. Press Sync and look at the chapter list\./);
+  assert.deepEqual([...src.files].sort(), [...start].sort());
+  assert.equal(src.commits.length, 0);
+  const res = await pushAction(src, deleteAction(BOOK, [BOOK + '/Scenes/S-050 Gone.md', scenePath(index, 'S-002')], NOW));
+  assert.deepEqual(res.removed, [scenePath(index, 'S-002')]);
+});
+
+test('if the vault moved while the delete was being made, it is worked out again: a scene the team just added keeps its chapter', async () => {
+  const src = await vault();
+  const index = await indexOf(src);
+  // Chapter 4 has one scene on the device. While the save is made, another device adds a second scene to chapter 4.
+  src.race = () => { src.files.set(BOOK + '/Scenes/S-020 Raced.md', '---\ntype: scene\nid: S-020\ntitle: Raced\nstatus: drafted\nchapter: 4\norder: 99\n---\n\nWords.\n'); };
+  await pushAction(src, deleteAction(BOOK, [scenePath(index, 'S-008')], NOW), { known: index.notes });
+  assert.equal(src.builds, 2);
+  assert.equal(src.commits.length, 1);
+  assert.ok(src.files.has(BOOK + '/Changes/Chapter 4 changes.md'), 'chapter 4 still has a scene, so its notes stay');
+  assert.ok(![...src.files.keys()].some((p) => /Deleted chapter/.test(p)));
+});
+
 // ---- on a copy of the real book, when the vault is checked out beside this repository ----
 
-test('Quest Declined 2: a chapter moved, and one added in the middle, as one save each, leave the book as the old way did', { skip: !hasVault }, async () => {
+test('Quest Declined 2: a chapter moved, one added in the middle and one deleted, as one save each, leave the book as the old way did', { skip: !hasVault }, async () => {
   const QD2 = 'Series/Quest Declined/Books/2 Quest Declined 2';
   const disk = new FsSource(VAULT);
   const all = (await disk.tree()).files.filter((f) => !f.path.startsWith('.git/') && (f.path.startsWith(QD2 + '/') || f.path.startsWith('System/')) && /\.(md|json)$/.test(f.path));
@@ -292,5 +413,27 @@ test('Quest Declined 2: a chapter moved, and one added in the middle, as one sav
     Object.keys(fresh.notes).forEach((p) => assert.deepEqual(folded.notes[p], fresh.notes[p], p));
     assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.scenes, fresh.books.find((x) => x.folder === QD2)!.scenes);
     console.log('  ' + JSON.stringify(change) + ': old way ' + a.writes.length + ' saves, new way 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
+  }
+  // A chapter deleted (one scene a chapter in this book): its notes to the Archive and the chapters after it closed up.
+  for (const ch of [12, 37]) {
+    const a = copy(), b = copy();
+    const index = (await sync(a, null)).index;
+    const scenes = index.books.find((x) => x.folder === QD2)!.scenes.map((p) => index.notes[p]);
+    const paths = scenes.filter((n) => toNumber(n.data.chapter) === ch).map((n) => n.path);
+    if (!paths.length) continue;
+    await oldDelete(a, QD2, index, paths, NOW);
+    const reads: string[] = [];
+    const commit = b.commit.bind(b);
+    b.commit = (build) => commit((head) => build({ read: (p) => { reads.push(p); return head.read(p); }, files: head.files }));
+    const res = await pushAction(b, deleteAction(QD2, paths, NOW), { known: index.notes });
+    assert.deepEqual([...b.files].sort(), [...a.files].sort(), 'delete chapter ' + ch);
+    assert.equal(b.commits.length, 1);
+    const folded = foldSaved(index, res.saved, realSchema, res.removed);
+    const fresh = (await sync(b, null)).index;
+    assert.deepEqual(Object.keys(folded.notes).sort(), Object.keys(fresh.notes).sort());
+    Object.keys(fresh.notes).forEach((p) => assert.deepEqual(folded.notes[p], fresh.notes[p], p));
+    assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.scenes, fresh.books.find((x) => x.folder === QD2)!.scenes);
+    assert.deepEqual(folded.books.find((x) => x.folder === QD2)!.archive, (fresh.books.find((x) => x.folder === QD2)!.archive || []).slice().sort((x, y) => (x.path < y.path ? -1 : 1)));
+    console.log('  delete chapter ' + ch + ': old way ' + a.writes.length + ' saves, new way 1 save of ' + b.commits[0].paths.length + ' files, ' + reads.length + ' notes read');
   }
 });
