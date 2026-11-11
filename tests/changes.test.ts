@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { rewriteSpan,
-  applyChange, findWords, finalText, flushChoices, loadChoices, parseChanges, placeChanges, revertChange, saveChoices, segments, setStatus, withChoices
+  applyChange, findWords, finalText, marksMessage, parseChanges, placeChanges, revertChange, segments, setStatus, setStatuses
 } from '../src/lib/changes.ts';
 
 const BODY = `Touched about a fifth of the chapter. Carries out call I-014.
@@ -93,31 +93,19 @@ test('keeping a change and taking it back again', () => {
   assert.equal(revertChange(other.text, c, 'other'), TEXT);
 });
 
-function memStore() {
-  const m = new Map<string, string>();
-  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } };
-}
 
-test('a choice waits on the device, then saves the one line', async () => {
-  const s = memStore();
-  const files = new Map([['B/Changes/Chapter 3 changes.md', '---\ntype: chapter-changes\n---\n' + BODY]]);
-  let online = false;
-  const messages: string[] = [];
-  const source = {
-    key: 'k', label: 'k',
-    tree: async () => ({ files: [], truncated: false }),
-    read: async () => '',
-    readFresh: async (p: string) => { if (!online) throw new Error('offline'); return { text: files.get(p)!, sha: 'x' }; },
-    write: async (p: string, t: string, _sha: string, msg: string) => { files.set(p, t); messages.push(msg); return 'y'; }
-  };
-  await assert.rejects(saveChoices(source, 'B/Changes/Chapter 3 changes.md', { 'C-01': 'kept' }, s));
-  assert.deepEqual(loadChoices('k', s), { 'B/Changes/Chapter 3 changes.md': { 'C-01': 'kept' } });
-  assert.equal(withChoices(parseChanges(BODY).changes, 'B/Changes/Chapter 3 changes.md', 'k', s)[0].status, 'kept');
-  online = true;
-  assert.equal(await flushChoices(source, s), 1);
-  assert.deepEqual(loadChoices('k', s), {});
-  assert.match(files.get('B/Changes/Chapter 3 changes.md')!, /## C-01 · small\nScene: S-003\nWhy: Typo.\nKyle: kept/);
-  assert.match(messages[0], /^changes: Kyle kept C-01 in Chapter 3 changes/);
+test('choices on several changes set each one line, and leave the line the vault\'s history shows', () => {
+  const text = '---\ntype: chapter-changes\n---\n' + BODY;
+  const next = setStatuses(text, { 'C-01': 'kept', 'C-02': 'no' });
+  assert.match(next, /## C-01 · small\nScene: S-003\nWhy: Typo.\nKyle: kept/);
+  assert.deepEqual(parseChanges(next.slice(next.indexOf(BODY.slice(0, 20)))).changes.map((c) => c.status).slice(0, 2), ['kept', 'no']);
+  assert.equal(setStatuses(text, {}), text);
+  // The lines the choices do not touch are as they were.
+  const a = text.split('\n'), b = next.split('\n');
+  assert.equal(a.length, b.length);
+  assert.equal(a.filter((l, i) => l !== b[i]).length, 2);
+  assert.match(marksMessage('B/Changes/Chapter 3 changes.md', { 'C-01': 'kept' }), /^changes: Kyle kept C-01 in Chapter 3 changes\n\nChosen in the Sparrow app\.$/);
+  assert.match(marksMessage('B/Changes/Chapter 3 changes.md', { 'C-01': 'kept', 'C-02': 'no' }), /^changes: Kyle chose on 2 changes in Chapter 3 changes\n/);
 });
 
 test('a story call offers its fixes as buttons', async () => {

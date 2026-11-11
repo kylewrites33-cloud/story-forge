@@ -7,7 +7,7 @@ import { saveChoice } from '../lib/write-queue.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { editMessage, editText } from './apply.ts';
 import { make } from './makers.ts';
-import type { Action } from './ops.ts';
+import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
 
 /** The line for the vault's history: the first change's own line, with the others named under it. */
@@ -79,7 +79,7 @@ export async function pushActions(source: VaultSource, actions: Action[]): Promi
       const text = now.get(path);
       if (text === undefined) continue;
       const next = editText(text, op.edit);
-      if (next !== text) lines.push(editMessage(text, op.edit));
+      if (next !== text) lines.push(editMessage(text, op.edit, path));
       now.set(path, next);
     }
     const writes = [...now].filter(([path, text]) => !was.has(path) || text !== was.get(path)!.text).map(([path, text]) => ({ path, text }));
@@ -90,6 +90,21 @@ export async function pushActions(source: VaultSource, actions: Action[]): Promi
 
 /** Save one action as one step. */
 export const pushAction = (source: VaultSource, action: Action): Promise<Pushed> => pushActions(source, [action]);
+
+/** One edit to one note the old way: read it, change it, write it, and again if it changed in between. */
+async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<NoteRecord> {
+  if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
+  for (let attempt = 0; ; attempt++) {
+    const { text, sha } = await source.readFresh(path);
+    const next = editText(text, edit);
+    if (next === text) return makeNote(path, sha, text);
+    try {
+      return makeNote(path, await source.write(path, next, sha, editMessage(text, edit, path)), next);
+    } catch (e) {
+      if (!((e as { conflict?: boolean }).conflict && attempt < 3)) throw e;
+    }
+  }
+}
 
 /** The old way, one note at a time through the calls the app made before. Kept behind a switch in Settings until the
  * new way has run on the real book (2026-11-11); a failure part-way can leave an action half saved, as it always could. */
@@ -118,7 +133,8 @@ async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> 
     }
     const path = out.renames[op.path] || op.path;
     try {
-      out.saved.push(await saveChoice(source, path === op.path ? op.edit.choice : { ...op.edit.choice, path }));
+      if (op.edit.type === 'choice') out.saved.push(await saveChoice(source, path === op.path ? op.edit.choice : { ...op.edit.choice, path }));
+      else out.saved.push(await saveEdit(source, path, op.edit));
     } catch (e) {
       if ((e as { status?: number }).status !== 404) throw e;
     }

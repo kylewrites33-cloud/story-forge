@@ -40,7 +40,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, changesIn, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, saveChoices, swapsOf, todoTicks, withChoices, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, changesIn, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
@@ -106,7 +106,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -145,6 +145,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   todos?: NoteRecord[];
   /** Tick or untick a to-do (a status edit through the write queue). */
   onTodo?: OnTodo;
+  /** Kyle's answers on the chapter's changes, with the to-dos they tick off or open again: one save (the outbox). */
+  onMarks?: (path: string, marks: Record<string, ChangeStatus>, ticks: { path: string; fields: Record<string, string> }[]) => void;
   onAddTodo?: (t: NewTodo) => Promise<string | null>;
   /** Choices waiting to save, by path, for the to-dos' Saving badge. */
   waiting?: Record<string, Choice>;
@@ -858,14 +860,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // ---- The team's changes (Workflow 1.2, step 41) ----
   const [chView, setChViewState] = useState<ChangesView>(loadView);
   const setChView = (v: ChangesView) => { setChViewState(v); saveView(v); };
-  const [chTick, setChTick] = useState(0);
   const [chCur, setChCur] = useState<string | null>(null);
   const curRef = useRef<string | null>(null);
   curRef.current = chCur;
   const chNote = changes ? changes.note : null;
   const sceneId = String(note.data.id || '');
-  const chParsed = useMemo(() => (chNote ? parseChanges(chNote.body) : { intro: '', changes: [] as Change[] }), [chNote ? chNote.path + '@' + chNote.sha : '']);
-  const chAll = useMemo(() => (chNote ? withChoices(chParsed.changes, chNote.path, source.key) : []), [chParsed, chTick]);
+  // The note comes with Kyle's waiting answers already in it (the outbox), so its body, not its sha, says when to read it again.
+  const chParsed = useMemo(() => (chNote ? parseChanges(chNote.body) : { intro: '', changes: [] as Change[] }), [chNote ? chNote.path : '', chNote ? chNote.body : '']);
+  const chAll = chParsed.changes;
   const chMine = chAll.filter((c) => !c.scene || !sceneId || c.scene === sceneId);
   const chPlace = useMemo(() => placeChanges(text, chMine, sceneId), [text, chAll, sceneId]);
   // The Edit room shows the whole chapter too: every scene's changes marked on the one page and every card in the
@@ -895,19 +897,19 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chList.length > 0;
   readOnly.current = showMarks || shownDraft != null;
   const record = (choices: Record<string, ChangeStatus>) => {
-    if (!chNote) return;
-    // Kept on this device at once; it reaches the vault now, or with the next sync when offline.
-    saveChoices(source, chNote.path, choices).catch(() => { /* waits on this device */ });
-    setChTick((n) => n + 1);
-    // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28).
-    if (!onTodo) return;
+    if (!chNote || !onMarks) return;
+    // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28). They go
+    // up in the same save as the answers.
     const after = chAll.map((c) => (choices[c.id] ? { ...c, status: choices[c.id] } : c));
+    const ticks: { path: string; fields: Record<string, string> }[] = [];
     todoTicks(after, Object.keys(choices)).forEach((t) => {
       const n = (todos || []).find((x) => String(x.data.id || '') === t.id);
       if (!n) return;
-      if (t.done && isOpen(n)) onTodo(n.path, 'edit', '', { status: 'done', done_note: t.note });
-      else if (!t.done && !isOpen(n) && /^Edit room:/.test(String(n.data.done_note || ''))) onTodo(n.path, 'edit', '', { status: 'open', done_note: '' });
+      if (t.done && isOpen(n)) ticks.push({ path: n.path, fields: { status: 'done', done_note: t.note } });
+      else if (!t.done && !isOpen(n) && /^Edit room:/.test(String(n.data.done_note || ''))) ticks.push({ path: n.path, fields: { status: 'open', done_note: '' } });
     });
+    // Shown at once and kept on this device; it reaches the vault now, or when the connection is back.
+    onMarks(chNote.path, choices, ticks);
   };
   const putText = (t: string) => {
     wordsNotTyped(bodyWords(t) - bodyWords(pageText()));

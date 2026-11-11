@@ -55,7 +55,7 @@ src/lib/live.ts          the open page stays live: line merge with a newer versi
 src/lib/chapters.ts      a chapter's number and name: making room for a new chapter, moving a chapter, renaming (beats, plans, scraps, change lists renamed; rewrite ticks and Chapter Titles follow)
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
-src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, keeping, story calls
+src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, what Kyle's answer does to the note, story calls
 src/lib/bookdrafts.ts    a book's saved drafts (Drafts/Draft N/): finding them, saving the next as one commit, a scene's copy
 src/lib/rewrite.ts       the Writer's rewrite (Drafts/Rewrite/): a scene's copy, paragraphs lined up with Kyle's, bringing one over
 src/lib/titles.ts        Chapter Titles.md: the title options per chapter, Kyle's tick, his own title
@@ -141,7 +141,7 @@ src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
-src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, or a new note by its maker), Edit (a change kept as what he meant)
+src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, or a new note by its maker), Edit (a change kept as what he meant: a board choice, or answers on a chapter's changes)
 src/vault/makers.ts      the makers of new notes, by name (task, todo): what Kyle typed plus the vault's file list gives the note; run at add and again at the save
 src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied
 src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push
