@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useLockedPage } from './viewport.ts';
 import {
-  bodyWords, holdOpen, isUnsaved, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead, type Draft
+  bodyWords, holdOpen, isUnsaved, loadDrafts, openDraft, putDraft, splitLead, type Draft
 } from '../lib/drafts.ts';
+import { joinWords, newWords, saveDraft, saveSnapshot, splitWords } from '../vault/words.ts';
 import { toNumber } from '../lib/links.ts';
 import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, splitOff } from '../lib/scenes.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
@@ -390,6 +391,36 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     };
   }, [source, save, setDraft]);
 
+  /** A change to this scene's words that goes up in one save with other things (a split's new scene, a join's archived
+   * scene): `send` gets the draft as it stands and the scene's new body, and makes the save. Only when it has landed
+   * does the page take the new body, so a save that fails leaves every word where it was. Answers a plain sentence
+   * when it did not happen. */
+  const sendWith = async <R extends { note: NoteRecord; merged: boolean; clash: string | null }>(body: string, send: (d: Draft, body: string) => Promise<R>,
+    then: (r: R) => Promise<void>, offline: string): Promise<string | null> => {
+    if (saving.current) return 'This scene is still saving. Try again in a moment.';
+    if (quiet.current) clearTimeout(quiet.current);
+    saving.current = true;
+    setState('saving');
+    const d = draftRef.current;
+    try {
+      const r = await send(d, body);
+      onSaved(r.note);
+      const now = draftRef.current;
+      // Words that arrive from another scene are not Kyle's typing: they count in neither the Pomodoro nor the day.
+      wordsNotTyped(bodyWords(body) - bodyWords(now.body));
+      setDraft({ ...now, body, baseSha: r.merged ? '' : r.note.sha, baseBody: body, target: now.target === d.target ? null : now.target, status: now.status === d.status ? null : now.status, freshHeadline: undefined, pending: false, error: undefined });
+      reload();
+      setState('saved');
+      await then(r);
+      return null;
+    } catch (e) {
+      setState(isUnsaved(draftRef.current) ? 'idle' : 'saved');
+      return offlineError(e) ? offline : (e as Error).message;
+    } finally {
+      saving.current = false;
+    }
+  };
+
   /** Split at the cursor: the words after it become a new scene right after this one. */
   const split = async (newTitle: string): Promise<string | null> => {
     if (!bookFolder || !canSave) return 'Splitting needs your own vault, not the demo.';
@@ -401,6 +432,14 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const parts = splitAt(words, at);
     if (!parts.after.trim()) return 'Put the cursor where the new scene should start, then press Split.';
     if (!parts.before.trim()) return 'The cursor is at the very start. Put it where the new scene should start.';
+    if (newWords(source)) {
+      // One save: a copy of the whole scene, the new scene, and this scene with the words before the cursor.
+      return sendWith(lead + parts.before, (dd, body) => splitWords(source, note, next, dd, body, parts.after, newTitle, bookFolder, new Date()), async (r) => {
+        await onChanged();
+        setMade(r.created);
+        setMessage(null);
+      }, 'Connect to the internet to split a scene.');
+    }
     try {
       const created = await splitOff(source, note, next, d.body, parts.after, newTitle, bookFolder, new Date());
       setDraft({ ...draftRef.current, body: lead + parts.before, freshHeadline: true });
@@ -421,6 +460,22 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!navigator.onLine) return 'Connect to the internet to join scenes.';
     // The next scene may be on this page with words typed into it: they reach the vault before it is joined.
     if (!(await saveSiblings(true))) return 'The next scene did not save yet, so it was not joined. Try again in a moment.';
+    if (newWords(source) && bookFolder && source.readFresh) {
+      // One save: this scene with both sets of words, the next scene's note to the Archive, and the team's note.
+      let nextBody = '';
+      try {
+        const fresh = await source.readFresh(next.path);
+        nextBody = makeNote(next.path, fresh.sha, fresh.text).body;
+      } catch (e) {
+        return offlineError(e) ? 'Connect to the internet to join scenes.' : (e as Error).message;
+      }
+      return sendWith(joinedBody(draftRef.current.body, nextBody), (dd, body) => joinWords(source, note, next, dd, body, nextBody, nextMentions, bookFolder, new Date()), async (r) => {
+        setMade(null);
+        await onChanged();
+        setMessage(String(next.data.id || 'The next scene') + ' is joined onto the end. Its old note is in the book\'s Archive folder.' +
+          (r.told ? ' The team has a note to update anything that still names ' + String(next.data.id || 'it') + '.' : ''));
+      }, 'Connect to the internet to join scenes.');
+    }
     try {
       const taken = await archiveForJoin(source, note, next, new Date());
       const joined = joinedBody(draftRef.current.body, taken.body);

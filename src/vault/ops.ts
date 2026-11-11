@@ -4,6 +4,7 @@
 // connection allows (push.ts).
 import type { ChangeStatus } from '../lib/changes.ts';
 import type { Choice } from '../lib/write-queue.ts';
+import type { DraftWords } from '../lib/drafts.ts';
 import type { DeviceFile, FileEntry } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';
 import type { TextChange } from './text.ts';
@@ -18,7 +19,12 @@ export type Edit =
   | { type: 'marks'; marks: Record<string, ChangeStatus> }
   /** A small change to one note's text (text.ts): a tick on the Chapter titles page, a chapter marked through in the
    * Rewrite tab, a recipe's words. */
-  | { type: 'text'; change: TextChange };
+  | { type: 'text'; change: TextChange }
+  /** The words of a scene (or a chapter's beats, plan or scrap) as Kyle wrote them on the writing page, with the words
+   * he started from: what changed elsewhere since is merged in line by line, and a version that clashes with his is
+   * kept as a copy in the same save (`draftOnto` in src/lib/drafts.ts). The page sends it at once and keeps the words
+   * on the device itself until they are in the vault, so it never waits in the outbox. */
+  | { type: 'body'; words: DraftWords; at: string };
 
 /** A change to a book's chapter numbers. */
 export type ChapterChange =
@@ -54,6 +60,12 @@ export type Op =
    * note's, `note` a line Kyle may add, `at` when he did it. It never waits in the outbox: the copies are the book as
    * it stands when the save is made. */
   | { kind: 'draft'; path: string; book: string; note: string; at: string }
+  /** A scene joined onto the end of the one before it (planJoin in src/vault/book.ts): its note goes to the book's
+   * Archive with a line saying where its words went, and the team gets a note to point what still names it at the
+   * scene it joined. The words themselves arrive with the `body` edit of that scene, in the same action. `path` is the
+   * joined scene's, `into` the scene it joined, `body` its words as they were joined (the save stops if the vault's
+   * differ by then), `mentions` the notes the app saw naming it. Sent at once, never waits. */
+  | { kind: 'join'; path: string; into: string; book: string; body: string; mentions: string[]; at: string }
   /** A scene brought back from the book's Archive (planRestore in src/vault/book.ts): it is in Scenes again and its
    * archived copy leaves, in the same save. `path` is the archived file's. It never waits in the outbox either: the
    * Archive is a list of files the device only knows from its last look at the vault. */
@@ -104,6 +116,13 @@ export function restoreAction(book: string, path: string, now: Date = new Date()
  * one action: one save. */
 export function filesAction(files: DeviceFile[], also: Op[] = [], now: Date = new Date()): Action {
   return { id: newId(now), at: now.toISOString(), ops: files.map((f): Op => ({ kind: 'file', ...f })).concat(also) };
+}
+
+/** The words of one note from the writing page, with ops that go in the same save (a copy first, a new scene). */
+export function wordsAction(path: string, words: DraftWords, also: Op[] = [], now: Date = new Date()): Action {
+  const { baseBody, body, target, status, freshHeadline, create } = words;
+  const edit: Edit = { type: 'body', words: { baseBody, body, target, status, freshHeadline, create }, at: now.toISOString() };
+  return { id: newId(now), at: now.toISOString(), ops: also.concat([{ kind: 'edit', path, edit }]) };
 }
 
 /** Small changes to notes' text (text.ts), saved together as one action. */

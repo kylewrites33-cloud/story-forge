@@ -147,8 +147,7 @@ export async function archiveForJoin(source: VaultSource, into: NoteRecord, next
   if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
   const fresh = await source.readFresh(next.path);
   const cur = makeNote(next.path, fresh.sha, fresh.text);
-  const intoName = [into.data.id, into.data.title].filter(Boolean).join(' ');
-  const why = 'Joined onto the end of ' + intoName + ' in the Sparrow app on ' + today(now) + '. Its words are there now; this is the note as it was.';
+  const why = joinedWhy(into, now);
   const dest = archivePath(next.path);
   let destSha = '';
   try {
@@ -208,20 +207,31 @@ export function mentionsOf(notes: NoteRecord[], id: string): NoteRecord[] {
   return notes.filter((n) => n.data.id !== id && re.test(JSON.stringify(n.data)));
 }
 
-/** After a join, the old ID is gone: leave the team an open note to point notes that name it at the scene it joined.
- * The app only reads some note types, so the list is a start; sf validate finds the rest. */
-export async function noteJoinForTeam(source: VaultSource, bookFolder: string, from: NoteRecord, into: NoteRecord, mentions: NoteRecord[], now: Date): Promise<string | null> {
-  if (!source.write) return null;
+/** What a joined scene's archived copy says about where its words went. */
+export function joinedWhy(into: { data: Record<string, unknown> }, now: Date): string {
+  return 'Joined onto the end of ' + [into.data.id, into.data.title].filter(Boolean).join(' ') + ' in the Sparrow app on ' + today(now) + '. Its words are there now; this is the note as it was.';
+}
+
+/** The open note the team gets after a join (the old ID is gone): its path, text and history line. `mentions` are the
+ * paths of the notes the app saw naming the joined scene. */
+export function joinNote(bookFolder: string, from: { data: Record<string, unknown> }, into: { data: Record<string, unknown> }, mentions: string[], now: Date): { path: string; text: string; message: string } {
   const fromId = String(from.data.id || ''), intoId = String(into.data.id || '');
   const title = 'Joined ' + fromId + ' into ' + intoId + ' ' + now.toISOString().slice(0, 10);
   const path = bookFolder + '/Notes to the Team/' + title + '.md';
   const body = '\nKyle joined ' + [fromId, from.data.title].filter(Boolean).join(' ') + ' onto the end of ' + [intoId, into.data.title].filter(Boolean).join(' ') +
     ' in the Sparrow app. ' + fromId + ' no longer exists (its old note is in the Archive). Point every note that still names ' + fromId +
     ' (progressions, promises, beats, Story So Far) at ' + intoId + ' or wherever fits now. `sf validate` lists them.\n' +
-    (mentions.length ? '\nThe app saw these:\n\n' + mentions.map((n) => '- [[' + n.path.slice(n.path.lastIndexOf('/') + 1).replace(/\.md$/, '') + ']]').join('\n') + '\n' : '');
-  const text = Frontmatter.join({ type: 'note', title, to: 'Continuity Keeper', status: 'open', created: today(now) }, body);
+    (mentions.length ? '\nThe app saw these:\n\n' + mentions.map((p) => '- [[' + p.slice(p.lastIndexOf('/') + 1).replace(/\.md$/, '') + ']]').join('\n') + '\n' : '');
+  return { path, text: Frontmatter.join({ type: 'note', title, to: 'Continuity Keeper', status: 'open', created: today(now) }, body), message: 'notes: ' + title + '\n\nWritten by the Sparrow app after a join.' };
+}
+
+/** After a join, the old ID is gone: leave the team an open note to point notes that name it at the scene it joined.
+ * The app only reads some note types, so the list is a start; sf validate finds the rest. */
+export async function noteJoinForTeam(source: VaultSource, bookFolder: string, from: NoteRecord, into: NoteRecord, mentions: NoteRecord[], now: Date): Promise<string | null> {
+  if (!source.write) return null;
+  const { path, text, message } = joinNote(bookFolder, from, into, mentions.map((n) => n.path), now);
   try {
-    await source.write(path, text, '', 'notes: ' + title + '\n\nWritten by the Sparrow app after a join.');
+    await source.write(path, text, '', message);
     return path;
   } catch (e) {
     if ((e as { conflict?: boolean }).conflict) return null;

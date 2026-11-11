@@ -2,6 +2,7 @@
 // to the note as the screens hold it (properties and body), so Kyle sees his change at once, and to the note's text as
 // the vault has it, changing only the lines the change touches, for the save.
 import { marksMessage, setStatuses } from '../lib/changes.ts';
+import { draftOnto } from '../lib/drafts.ts';
 import { applyToData, applyToText, commitMessage } from '../lib/ideas.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { PHASE } from '../lib/sync.ts';
@@ -15,6 +16,7 @@ import { changeMessage, changeRecord, changeText, startsNote } from './text.ts';
 export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
   if (edit.type === 'marks') return { ...note, body: setStatuses(note.body, edit.marks) };
   if (edit.type === 'text') return changeRecord(note, edit.change);
+  if (edit.type === 'body') return makeNote(note.path, note.sha, draftOnto(note.path, Frontmatter.join(note.data, note.body), edit.words).next);
   return { ...note, data: applyToData(note.data, changeOf(note.data, edit.choice)) };
 }
 
@@ -22,6 +24,8 @@ export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
 export function editText(text: string, edit: Edit): string {
   if (edit.type === 'marks') return setStatuses(text, edit.marks);
   if (edit.type === 'text') return changeText(text, edit.change);
+  // The save itself (push.ts) uses draftOnto directly, to keep a clashing version as a copy; this is the text alone.
+  if (edit.type === 'body') return draftOnto('', text || null, edit.words).next;
   const data = Frontmatter.parse(text).data || {};
   return applyToText(text, changeOf(data, edit.choice));
 }
@@ -35,6 +39,7 @@ export function editMessage(text: string, edit: Edit, path: string): string {
     return marksMessage(path, Object.keys(fresh).length ? fresh : edit.marks);
   }
   if (edit.type === 'text') return changeMessage(text, edit.change, path);
+  if (edit.type === 'body') return draftOnto(path, text || null, edit.words).message;
   const data = Frontmatter.parse(text).data || {};
   return commitMessage(data, edit.choice.decision, edit.choice.fields);
 }

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { beatStart, parseBeats } from '../lib/beats.ts';
 import {
-  bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, saveDraft, saveSnapshot, splitLead, withBody, type Draft,
+  bodyWords, isUnsaved, listSnapshots, loadDrafts, openDraft, putDraft, splitLead, withBody, type Draft,
   type SnapshotEntry
 } from '../lib/drafts.ts';
+import { saveDraft, saveSnapshot } from '../vault/words.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { archivedWhy, restoreArchived } from '../lib/scenes.ts';
 import { formatValue, isEmptyValue, label as fieldLabel, sceneHeader } from '../lib/format.ts';

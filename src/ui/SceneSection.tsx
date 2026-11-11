@@ -3,7 +3,8 @@
 // draft on the device (every keystroke) and its own saves: two quiet minutes, five minutes of steady typing, putting
 // the iPad down, leaving the page. A draft left unsaved on the device is saved by the next sync, as on the whole-chapter page.
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { bodyWords, holdOpen, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, saveDraft, splitLead, type Draft } from '../lib/drafts.ts';
+import { bodyWords, holdOpen, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, splitLead, type Draft } from '../lib/drafts.ts';
+import { saveDraft } from '../vault/words.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';

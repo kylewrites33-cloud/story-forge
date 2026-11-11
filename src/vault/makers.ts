@@ -3,6 +3,7 @@
 // the vault has. It runs twice: when Kyle adds the note, so it shows at once with the ID it will most likely get, and
 // again at the save, on the files the vault has at that moment, so two devices can never give one ID to two notes.
 import { planBook, planSeries } from '../lib/books.ts';
+import { planSnapshot } from '../lib/drafts.ts';
 import { planResult, type NewResult } from '../lib/flow.ts';
 import { planJob, type NewJob } from '../lib/jobs.ts';
 import { planNote, type NewNote } from '../lib/notes.ts';
@@ -28,6 +29,9 @@ export interface Payloads {
   result: { book: string; r: NewResult; at: string };
   /** A new scene in a book's Scenes folder: one added to a chapter, or the one scene of a new chapter. */
   scene: { s: NewScene; at: string; why?: string };
+  /** A copy of a note's words (a snapshot in the book's Snapshots folder), numbered after the copies the vault has.
+   * `of` is the note's path and `id` its ID, `label` what the copy is called. */
+  copy: { of: string; id: string; body: string; label: string; at: string };
   /** A new series from the home page. */
   series: { name: string; genre: string; at: string };
   /** A new book in a series. */
@@ -45,6 +49,7 @@ const MAKERS: { [K in MakerName]: Maker<K> } = {
   recipe: (files, p, keep) => planRecipe(files, p.r, new Date(p.at), keep),
   result: (files, p, keep) => planResult(files, p.book, p.r, new Date(p.at), keep),
   scene: (files, p, keep) => planScene(files, p.s, new Date(p.at), keep, p.why),
+  copy: (files, p) => planSnapshot(files, { path: p.of, data: p.id ? { id: p.id } : {} }, p.body, p.label, new Date(p.at)),
   series: (files, p) => planSeries(files, p.name, p.genre, new Date(p.at)),
   book: (files, p) => planBook(files, p.seriesFolder, p.seriesName, p.title, p.number, new Date(p.at))
 };

@@ -9,7 +9,7 @@ import { Frontmatter } from './frontmatter.js';
 import { Prose, wordCount } from './prose.js';
 import { makeNote } from './vault-index.ts';
 import { merge3 } from './live.ts';
-import type { NoteRecord, VaultSource } from './types.ts';
+import type { FileEntry, Made, NoteRecord, VaultSource } from './types.ts';
 
 export interface Draft {
   path: string;
@@ -197,11 +197,10 @@ export interface SnapshotEntry {
   label: string;
 }
 
-/** The snapshots of one note that the vault has, newest first, from a fresh file list. */
-export async function listSnapshots(source: VaultSource, note: NoteRecord): Promise<SnapshotEntry[]> {
+/** The snapshots of one note among the vault's files, newest first. */
+export function snapshotsIn(files: FileEntry[], note: { path: string; data: Record<string, unknown> }): SnapshotEntry[] {
   const dir = snapshotFolder(note.path) + '/';
   const stem = stemOf(note.path, note.data) + ' v';
-  const { files } = await source.tree();
   return files
     .filter((f) => f.path.startsWith(dir) && f.path.indexOf('/', dir.length) < 0 && f.path.slice(dir.length).startsWith(stem))
     .map((f) => {
@@ -209,6 +208,25 @@ export async function listSnapshots(source: VaultSource, note: NoteRecord): Prom
       return { path: f.path, sha: f.sha, version: m ? Number(m[1]) : 0, label: m && m[2] ? m[2] : '' };
     })
     .sort((a, b) => b.version - a.version);
+}
+
+/** The snapshots of one note that the vault has, newest first, from a fresh file list. */
+export async function listSnapshots(source: VaultSource, note: NoteRecord): Promise<SnapshotEntry[]> {
+  return snapshotsIn((await source.tree()).files, note);
+}
+
+/** A body as its note's next snapshot (a copy), worked out from the files the vault has, in sf snapshot's format: for
+ * the `copy` maker (src/vault/makers.ts) and for the copy a save keeps of a version that clashed with Kyle's. */
+export function planSnapshot(files: FileEntry[], note: { path: string; data: Record<string, unknown> }, body: string, label: string, now: Date): Made {
+  const clean = safeName(label) || 'copy';
+  const stem = stemOf(note.path, note.data);
+  const version = snapshotsIn(files, note).reduce((mx, x) => Math.max(mx, x.version), 0) + 1;
+  const path = snapshotFolder(note.path) + '/' + stem + ' v' + version + ' (' + clean + ').md';
+  return {
+    id: 'v' + version, path,
+    text: Frontmatter.join({ type: 'snapshot', of: note.path, version, label: clean, taken: nowStamp(now), words: bodyWords(body) }, body),
+    message: 'snapshot: ' + stem + ' v' + version + ' (' + clean + ')\n\nSaved in the Sparrow app.'
+  };
 }
 
 /** Save a body as the note's next snapshot, in sf snapshot's format. Returns the new file's path. */
@@ -238,6 +256,55 @@ export interface SaveResult {
   clash: string | null;
   /** Lines from the other version came into the saved scene, so it holds more than the draft did. */
   merged: boolean;
+}
+
+/** The part of a draft that goes to the vault: Kyle's words, the words he started from, and what he set beside them. */
+export type DraftWords = Pick<Draft, 'baseBody' | 'body' | 'target' | 'status' | 'freshHeadline' | 'create'>;
+
+export interface Landed {
+  /** The note's text with the draft in it. */
+  next: string;
+  /** The body the vault had, when it had changed elsewhere on the same lines Kyle changed: it is kept as a copy. */
+  other: string | null;
+  /** Lines from the other version came in, so the note holds more than the draft did. */
+  merged: boolean;
+  /** The line for the vault's history. */
+  message: string;
+  /** The note as the vault had it (null when the draft starts it). */
+  cur: NoteRecord | null;
+}
+
+/** A draft made on its note's text as the vault has it now (`text`; null when the vault has no such note): what
+ * changed elsewhere is merged in line by line, Kyle's lines winning where both changed the same ones; only the body,
+ * the computed `words` line and what Kyle set (status, target) change. The one saving system's save uses this
+ * (src/vault/push.ts); `saveDraft` below is the same steps the old way. Throws a plain sentence when it cannot be made. */
+export function draftOnto(path: string, text: string | null, d: DraftWords): Landed {
+  const file = path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '');
+  if (text == null) {
+    if (!d.create) throw new Error(file + ' is not in the vault any more: it was moved, renamed or deleted somewhere else. Your words are still on this device. Press Sync, open the scene again and they will be there.');
+    const next = d.create + d.body;
+    const data = makeNote(path, '', next).data;
+    return { next, other: null, merged: false, cur: null, message: verbFor(String(data.type || ''), true) + (data.title || path) + '\n\nWritten in the Sparrow app.' };
+  }
+  const cur = makeNote(path, '', text);
+  if (cur.error) throw new Error('This scene\'s properties cannot be read (' + cur.error + '). Ask the team to fix it, then try again.');
+  let body = d.body, other: string | null = null;
+  if (cur.body !== d.baseBody && cur.body !== d.body) {
+    const m = merge3(d.baseBody, d.body, cur.body);
+    if (m.clash) other = cur.body;
+    body = m.text;
+  }
+  const set: Record<string, unknown> = {};
+  if (d.status && cur.data.status !== d.status) set.status = d.status;
+  if (cur.type === 'scene') {
+    const w = sceneWords(d.status || cur.data.status, body);
+    if (cur.data.words !== w) set.words = w;
+  }
+  if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;
+  let next = withBody(text, body, set);
+  if (d.freshHeadline) next = withoutProperty(next, 'headline');
+  const name = [cur.data.id, cur.data.title].filter(Boolean).join(' ') || path;
+  return { next, other, merged: body !== d.body, cur, message: verbFor(cur.type, false) + name + '\n\nWritten in the Sparrow app.' };
 }
 
 /** Save a draft to the vault: re-read the scene, merge in what changed elsewhere, keep a clashing version as a
@@ -333,13 +400,14 @@ export function holdOpen(path: string): () => void {
 
 /** Save every draft Kyle finished while offline. A draft that saves is forgotten; one that fails stays, with its error.
  * A scene open on the page is left to the page. */
-export async function flushDrafts(source: VaultSource, sourceKey: string, now: Date, storage: Store = defaultStore()): Promise<DraftFlush> {
+export async function flushDrafts(source: VaultSource, sourceKey: string, now: Date, storage: Store = defaultStore(),
+  save: (source: VaultSource, d: Draft, now: Date) => Promise<SaveResult> = saveDraft): Promise<DraftFlush> {
   const saved: NoteRecord[] = [];
   let error: string | null = null;
   const mergedIn: string[] = [], clashed: string[] = [];
   for (const d of Object.values(loadDrafts(sourceKey, storage)).filter((x) => x.pending && !openHere.has(x.path))) {
     try {
-      const r = await saveDraft(source, d, now);
+      const r = await save(source, d, now);
       saved.push(r.note);
       if (r.clash) clashed.push(nameOf(d, r.note));
       else if (r.merged) mergedIn.push(nameOf(d, r.note));

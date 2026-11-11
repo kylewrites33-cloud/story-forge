@@ -2,6 +2,7 @@
 // written together, or nothing is written. If the vault moved while the save was being made (the team, another device),
 // the source asks for the plan again on the newer notes, so Kyle's change lands on top and nothing of theirs is lost.
 import { Frontmatter } from '../lib/frontmatter.js';
+import { draftOnto, planSnapshot } from '../lib/drafts.ts';
 import { applyToText, editChange } from '../lib/ideas.ts';
 import { freePath } from '../lib/notes.ts';
 import { recipeName, RECIPES_FOLDER } from '../lib/recipes.ts';
@@ -14,7 +15,7 @@ import { editMessage, editText } from './apply.ts';
 import { make } from './makers.ts';
 import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
-import { planDraft, planRestore } from './book.ts';
+import { planDraft, planJoin, planRestore } from './book.ts';
 import { planChapters, planDelete } from './chapters.ts';
 import { startsNote } from './text.ts';
 import { Tree } from './tree.ts';
@@ -67,8 +68,8 @@ async function planRetitle(t: Tree, path: string, title: string, what: 'scene' |
   return { to, message: 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why };
 }
 
-/** Does this edit start its note when the vault does not have it (text.ts, startsNote)? */
-const starts = (edit: Edit): boolean => edit.type === 'text' && startsNote(edit.change);
+/** Does this edit start its note when the vault does not have it (text.ts, startsNote; a chapter's first beats)? */
+const starts = (edit: Edit): boolean => (edit.type === 'text' && startsNote(edit.change)) || (edit.type === 'body' && Boolean(edit.words.create));
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 
@@ -95,6 +96,11 @@ export interface Pushed {
   /** Files the app holds as text and not as notes (the workflow, the team's files) that the save read or wrote, as the
    * vault now has them. */
   texts?: Record<string, { sha: string; text: string }>;
+  /** Notes whose words from the writing page met a version that had changed elsewhere on the same lines: the note's
+   * path (as the action named it) to the copy that version was kept as. */
+  clashes?: Record<string, string>;
+  /** Notes whose words from the writing page took in lines changed elsewhere (as the action named them). */
+  merged?: string[];
 }
 
 export interface PushOptions {
@@ -109,13 +115,17 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
   const ops = actions.flatMap((a) => a.ops);
   const creates = new Set(ops.filter((op) => op.kind === 'create').map((op) => op.path));
   // Notes that are in the vault already and take an edit. A note this save itself adds is not read.
-  const paths = [...new Set(ops.filter((op) => (op.kind === 'edit' || op.kind === 'restore') && !creates.has(op.path)).map((op) => op.path))];
+  const paths = [...new Set(ops.filter((op) => (op.kind === 'edit' || op.kind === 'restore' || op.kind === 'join') && !creates.has(op.path)).map((op) => op.path))];
   // What the last plan read and made, kept for the answer: the plan may run more than once.
   let tree: Tree | null = null;
   let renames: Record<string, string> = {};
+  let clashes: Record<string, string> = {};
+  let merged: string[] = [];
   const res = await source.commit(async (head) => {
     const t = tree = new Tree(head);
     renames = {};
+    clashes = {};
+    merged = [];
     // A note that is gone (moved or renamed elsewhere) cannot take a change; the rest still saves.
     await t.readMany(paths);
     const lines: string[] = [];
@@ -134,6 +144,10 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
       }
       if (op.kind === 'restore') {
         lines.push((await planRestore(t, op.path, op.book)).message);
+        continue;
+      }
+      if (op.kind === 'join') {
+        lines.push((await planJoin(t, op.path, op.into, op.book, op.body, op.mentions, new Date(op.at))).message);
         continue;
       }
       if (op.kind === 'create') {
@@ -164,6 +178,22 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
         continue;
       }
       const path = renames[op.path] || op.path;
+      if (op.edit.type === 'body') {
+        // Words from the writing page: never dropped. A note that is gone stops the save with a plain sentence, and a
+        // version that clashes with Kyle's is kept as a copy in this same save.
+        const was = await t.read(path);
+        const done = draftOnto(path, was, op.edit.words);
+        if (done.other != null && done.cur) {
+          const copy = planSnapshot(await t.files(), done.cur, done.other, 'changed elsewhere', new Date(op.edit.at));
+          t.write(copy.path, copy.text);
+          clashes[op.path] = copy.path;
+        }
+        if (done.merged) merged.push(op.path);
+        if (done.next !== was) lines.push(done.message);
+        if (clashes[op.path]) lines.push('snapshot: the other version, kept as ' + baseName(clashes[op.path]).replace(/\.md$/, ''));
+        t.write(path, done.next);
+        continue;
+      }
       let text = await t.read(path);
       // A note that is gone cannot take a change. A day of the Writing Log that is not there yet starts with its first.
       if (text == null) { if (!starts(op.edit)) continue; text = ''; }
@@ -177,7 +207,7 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
   const t = tree as Tree | null;
   const shas = (res && res.shas) || {};
   const texts = t ? t.texts(shas, (p) => teamFiles([{ path: p, sha: '' }]).length > 0) : {};
-  return { saved: t ? t.saved(shas).filter((n) => !texts[n.path]) : [], renames, removed: t && res ? t.removed() : [], texts };
+  return { saved: t ? t.saved(shas).filter((n) => !texts[n.path]) : [], renames, removed: t && res ? t.removed() : [], texts, clashes, merged };
 }
 
 /** Save one action as one step. */
@@ -205,7 +235,7 @@ async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<
 async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
   const out: Pushed = { saved: [], renames: {}, removed: [] };
   for (const op of action.ops) {
-    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file' || op.kind === 'draft' || op.kind === 'restore') {
+    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file' || op.kind === 'draft' || op.kind === 'restore' || op.kind === 'join' || (op.kind === 'edit' && op.edit.type === 'body')) {
       // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
       const p = await pushActions(source, [{ ...action, ops: [op] }]);
       out.saved.push(...p.saved);

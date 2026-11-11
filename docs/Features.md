@@ -1524,3 +1524,42 @@ The tenth piece. Five more things stop talking to GitHub themselves.
   then saved with GitHub out of reach, still in the box after the app is opened again, and merged with another
   device's line; a scene restored in one save; Draft 2 saved in one save of every scene; the matter saved with GitHub
   out of reach and in the box after opening the app again; a beat deleted with its words in the Archive; the old way.
+
+## The one saving system, step 1: the writing page's own saves, copies, split and join (2026-11-11)
+
+The eleventh and twelfth pieces, the last things that talked to GitHub themselves. Writing still works as it did: the
+words are kept on the device as Kyle types (`src/lib/drafts.ts`, unchanged), and a save sends them at once.
+
+- **A save of a scene's words is one save through the saving system.** The same goes for the chapter page's other
+  scenes, the beats, the plan and scrap boxes and a passage's Options, which all save through the same door
+  (`saveDraft` in `src/vault/words.ts`). What changed elsewhere since Kyle opened the scene is merged in line by line,
+  his line kept on a clash, exactly as before (for the new way the rule is one function, `draftOnto` in
+  `src/lib/drafts.ts`; the old way keeps its own copy of it until the old way is removed, and tests hold the two to
+  the same files).
+- **A clash keeps the other version as a copy in the same save.** Before, the copy ("changed elsewhere") was saved
+  first and the scene after, so a failure between the two left a copy of a clash that never landed.
+- **A copy from the Copies tab is one save**, numbered at the save from the copies the vault has then.
+- **Split is one save** where it was three: a copy of the whole scene ("before split"), the new scene with the words
+  after the cursor, and this scene with the words before it. If it fails, nothing changed and every word is still in
+  the scene. Before, a failure after the first save left the words in both scenes.
+- **Join is one save** where it was four: this scene with both sets of words, the next scene's note in the Archive,
+  that scene out of Scenes, and the note to the team to update what still names it. If the next scene changed
+  somewhere else in the moment between pressing Join and the save, the join stops and says so ("Press Join again to
+  join it as it is now") instead of joining older words.
+- Still the same: a scene's save needs the connection (with none, the words wait on the device and the page says so);
+  copies, split and join need the connection; a scene that is gone from the vault keeps Kyle's words on the device
+  and says to press Sync.
+- **How it is built.** `Edit` has a fourth form, a scene's words (`{ type: 'body' }`: the draft's words, the words it
+  started from, and what Kyle set beside them), landed by `draftOnto`. A new maker, `copy` (`planSnapshot`). A new op,
+  `join` (`planJoin` in `src/vault/book.ts`). `src/vault/words.ts` holds what the pages call: `saveDraft`,
+  `saveSnapshot`, `splitWords`, `joinWords`. These are sent at once (`pushAction`) and never sit in the outbox: the
+  drafts store on the device is already the waiting place for words.
+- The old way (Settings, Saving) keeps all of it as it was.
+- Checked with tests (`tests/vault-words.test.ts`: the old way and the new way leave the same files for a plain save,
+  a status, target and headline change, a merge, a clash, first beats, a scene that is gone and a save whose answer was
+  lost; a clash copy and the scene in one save; a copy and the words in one save; words kept offline going up through
+  the new save; split as one save against three, and failing without changing anything; join as one save against
+  four, stopping when the next scene changed, and never writing over an archived copy), and in Chromium at 1180 x 820,
+  1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: a save; a save that waited
+  with GitHub out of reach and met another device's line; a clash kept as a copy in the same save; a copy; split;
+  join; the old way.
