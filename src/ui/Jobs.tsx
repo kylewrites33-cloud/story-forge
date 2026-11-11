@@ -4,7 +4,7 @@ import { askBody, costLabel, jobGroups, jobLabel, jobNotes, jobStatusLabel, resu
 import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
 import { href } from './route.ts';
 

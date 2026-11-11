@@ -9,7 +9,6 @@ src/lib/vault-index.ts   which files to read, parse them, build series/books/sce
 src/lib/board.ts         Chapter Grid grouping
 src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make; reasons, stars, idea filters
 src/lib/boards.ts        Story Juice and Market boards: which notes, grouped and ordered by the schema; the cast with book deltas
-src/lib/write-queue.ts   a board choice (Choice) and what it changes; the old queue and the old one-note-at-a-time save, kept until Settings' The old way goes
 src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors; commit (one save of many files through git's own objects), blob shas
 src/lib/demo-source.ts   the bundled demo vault as a source
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
@@ -149,7 +148,7 @@ src/vault/outbox.ts      actions waiting on the device (localStorage), newer rep
 src/vault/tree.ts        the vault as one save sees it: the files at the start with the save's own changes on top, so each op meets what the one before it did; files that are not text (pictures, Word files) ride in the same save
 src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following; the delete op: scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up, as one save
 src/vault/book.ts        the draft op (every scene copied to Drafts/Draft N/ with its note, on the vault as it is then), the restore op (a scene back in Scenes and out of the Archive) and the join op (the next scene's note to the Archive, out of Scenes, and the team told), each one save
-src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each; the old functions when the device is on the old way
-src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it; the old way behind the switch
-src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
+src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each
+src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it
+src/vault/choice.ts      a choice on a board (Choice: keep, later, drop, Rewrite, an edit to a card, a card dragged) and what it changes on a note
 

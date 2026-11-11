@@ -13,7 +13,7 @@ import {
   type FlowAsk, type FlowStage, type FlowTask, type NewResult, type TaskStatus
 } from '../lib/flow.ts';
 import { parseWorkflow } from '../lib/workflow.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { useTeam } from './Team.tsx';

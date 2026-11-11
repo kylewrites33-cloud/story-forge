@@ -22,7 +22,7 @@ import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.t
 import { addToScrap, planHead, planPath, scrapHead, scrapPath } from '../lib/plans.ts';
 import { isOpen, type NewTodo } from '../lib/todos.ts';
 import type { Decision } from '../lib/ideas.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 
 type OnTodo = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 

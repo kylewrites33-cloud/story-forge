@@ -4,7 +4,7 @@ import { basename } from '../lib/links.ts';
 import { render } from '../lib/markdown.ts';
 import { dueLabel, taskBook, taskGroups, taskNotes, type NewTask } from '../lib/tasks.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { isBookTodo, todoPlace } from '../lib/todos.ts';
 import { href } from './route.ts';
 import { ProposalCard } from './IdeasBoard.tsx';

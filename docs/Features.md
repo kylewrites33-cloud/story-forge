@@ -1187,8 +1187,8 @@ first piece. The code is `src/vault/`.
   marked as failed.
 - **Saving and syncing take turns** (one lane in `App.tsx`). Before, a sync that began just before a save landed could
   finish after it and put the older note back on the screen until the next sync.
-- **The way back.** Settings, Saving: The new way or The old way, per device. The old way sends the outbox one note at
-  a time as before. It goes when the old saving code goes, once the new way has run on the real book.
+- **The way back** (gone 2026-11-11, see "the old way is out" below). Settings, Saving had The new way or The old way,
+  per device, while features moved over; the old way sent the outbox one note at a time as before.
 - Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
   demo vault and a pretend GitHub: keep, three quick choices, a save the team beat to the branch, GitHub out of reach
   with the app closed and opened, the old queue moving over, and the switch.
@@ -1566,3 +1566,26 @@ words are kept on the device as Kyle types (`src/lib/drafts.ts`, unchanged), and
   1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: a save; a save that waited
   with GitHub out of reach and met another device's line; a clash kept as a copy in the same save; a copy; split;
   join; the old way.
+
+### The one saving system, step 1: the old way is out (2026-11-11)
+
+Kyle wrote and finished chapter 34 of Quest Declined 2 on the new way (five saves of the scene between 2:39 and 3:01pm
+Eastern, each changing only his words, with his Rewrite-tab choices and the Writing Log beside them), which was the
+sign waited for. So:
+
+- **Settings has no Saving section.** There is one way to save. A device that still carries the switch's mark
+  (`sparrow.old-saving` in its storage) is not asked about it.
+- **Out of the app:** the old sender (`pushLegacy` and the `legacy` option in `src/vault/push.ts`), the old queue
+  module (`src/lib/write-queue.ts`: `enqueue`, `overlay`, `saveChoice`, `flush`), the switch (`src/vault/switch.ts`),
+  and every "if the old way" branch in `App.tsx`, `Editor.tsx` and `src/vault/words.ts`. `App.tsx` no longer hands a
+  page a save that may be missing: the notes box, Front and back matter, Chapter titles, the timer's log, Restore and
+  files from the device always go through the saving system.
+- **Kept:** a board choice's shape and what it changes moved to `src/vault/choice.ts`; choices and Edit room answers
+  left waiting in the two older lists on a device that has not opened the app since 2026-11-11 still move into the
+  outbox once (`loadOutbox`).
+- **Still to go, in the next piece:** the older one-note-at-a-time functions that nothing in the app calls any more
+  (in `scenes.ts`, `chapters.ts`, `books.ts`, `bookdrafts.ts`, `covers.ts`, `market.ts`, `recipes.ts`, `docx.ts`,
+  `drafts.ts`, the timer), their tests, and Crow's two direct writes.
+- Checked with the unit tests (the tests that compared the old way with the new now state what the new way must
+  leave), and every browser check again in Chromium at the three sizes and WebKitGTK at the two iPad sizes; the first
+  check now also holds that Settings shows no switch and that a device carrying the old mark saves the one way.

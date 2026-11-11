@@ -6,7 +6,7 @@ import { blobSha, fromBase64, GitHubSource, toBase64 } from '../src/lib/github.t
 import { parseSchema } from '../src/lib/schema.ts';
 import { DEFAULTS } from '../src/lib/settings.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
-import { enqueue, overlay, saveQueue, loadQueue, type Choice } from '../src/lib/write-queue.ts';
+import type { Choice } from '../src/vault/choice.ts';
 import { editRecord, editText, foldSaved, overlayActions } from '../src/vault/apply.ts';
 import { choiceAction, createAction, marksAction, type Edit } from '../src/vault/ops.ts';
 import { add, choicesOf, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../src/vault/outbox.ts';
@@ -68,16 +68,18 @@ test('an edit does the same to a note on screen as it does to the note\'s saved 
   assert.ok(checked > 100, 'checked ' + checked);
 });
 
-test('waiting actions show on every screen at once, the same as the old queue showed them', async () => {
+test('waiting actions show on every screen at once', async () => {
   const src = new FsSource(DEMO);
   const { files } = await src.tree();
   const index = await buildIndex({ schema: parseSchema(demoSchemaText()), files, read: (p, sha) => src.read(p, sha) });
   const book = index.books.find((b) => b.folder === BOOK)!;
   const s6 = book.scenes.find((p) => p.includes('S-006'))!;
-  const idea = book.ideas![0];
-  const choices = [move(s6, 1.5, 1, 'Frost'), decide(idea, 'keep', 'Yes.'), edit(s6, { headline: 'Rope and thaw.' })];
+  const s7 = book.scenes.find((p) => p.includes('S-007'))!;
+  const choices = [move(s6, 1.5, 1, 'Frost'), decide(s7, 'keep', 'Yes.'), edit(s6, { headline: 'Rope and thaw.' })];
   const shown = overlayActions(index, [choiceAction([choices[0]]), choiceAction([choices[1], choices[2]])]);
-  assert.deepEqual(shown, overlay(index, choices));
+  assert.deepEqual([shown.notes[s6].data.order, shown.notes[s6].data.chapter, shown.notes[s6].data.chapter_title, shown.notes[s6].data.headline], [1.5, 1, 'Frost', 'Rope and thaw.']);
+  assert.equal(shown.notes[s7].data.status, 'keep');
+  assert.equal(shown.notes[s7].data.decision_note, 'Yes.');
   assert.deepEqual(shown.books.find((b) => b.folder === BOOK)!.scenes.slice(0, 3).map((p) => shown.notes[p].data.id), ['S-001', 'S-006', 'S-002']);
   assert.equal(index.notes[s6].data.chapter, 3, 'the saved copy itself is untouched');
   assert.equal(overlayActions(index, []), index);
@@ -94,9 +96,7 @@ test('a newer choice replaces a waiting one in its place; edits join; an action 
   box = add(box, choiceAction([edit('a.md', { hook: 'H' })]));
   assert.deepEqual(choicesOf(box).map((c) => c.decision), ['keep', 'move', 'edit']);
   assert.deepEqual(choicesOf(box)[2].fields, { turn: 'T', hook: 'H' });
-  // The same as the old queue did.
-  const old = [decide('a.md', 'later'), decide('a.md', 'keep'), edit('a.md', { turn: 'T' }), move('a.md', 2, 1), edit('a.md', { hook: 'H' })].reduce(enqueue, [] as Choice[]);
-  assert.deepEqual(choicesOf(box), old);
+  assert.deepEqual(choicesOf(box), [decide('a.md', 'keep'), move('a.md', 2, 1), edit('a.md', { turn: 'T', hook: 'H' })]);
 });
 
 test('an action of several notes loses only the part a newer action replaces', () => {
@@ -111,10 +111,10 @@ test('an action of several notes loses only the part a newer action replaces', (
 
 test('the outbox is kept on the device, and choices from the old queue move into it once', () => {
   const s = store();
-  saveQueue('k', [decide('a.md', 'keep', 'Mine.'), move('b.md', 3, 2)], s);
+  s.setItem('story-forge.queue.k', JSON.stringify([decide('a.md', 'keep', 'Mine.'), move('b.md', 3, 2)]));
   const first = loadOutbox('k', s);
   assert.deepEqual(choicesOf(first), [decide('a.md', 'keep', 'Mine.'), move('b.md', 3, 2)]);
-  assert.deepEqual(loadQueue('k', s), [], 'the old queue is emptied');
+  assert.equal(s.getItem('story-forge.queue.k'), null, 'the old queue is emptied');
   const again = loadOutbox('k', s);
   assert.deepEqual(again, first, 'and nothing is added twice');
   saveOutbox('k', [], s);
@@ -248,22 +248,6 @@ test('when GitHub says slow down, everything waits and nothing is marked as fail
   assert.match(Object.values(no.failed)[0], /not allowed to change/);
 });
 
-test('the old way (the switch in Settings) saves the same actions one note at a time', async () => {
-  const src = new MemSource();
-  src.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
-  src.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
-  const act = choiceAction([move(S6, 1.5, 1, 'Frost'), move(S7, 7, 3, 'Ledger'), decide('gone.md', 'keep')]);
-  const res = await pushAll(src, [act], { legacy: true });
-  assert.deepEqual(res.done, [act.id]);
-  assert.equal(src.commits.length, 0);
-  assert.deepEqual(src.writes.map((w) => w.path), [S6, S7]);
-  const fresh = new MemSource();
-  fresh.files.set(S6, scene('S-006', 'Thaw Market', 3, 'Ledger', 6));
-  fresh.files.set(S7, scene('S-007', 'Ledger', 3, '', 7));
-  await pushAll(fresh, [act]);
-  assert.deepEqual([...fresh.files], [...src.files], 'both ways leave the same notes');
-});
-
 // ---- new notes ----
 
 const TASK = (id: string, title: string) => '---\ntype: task\nid: ' + id + '\ntitle: ' + title + '\nowner: Kyle\nstatus: open\ncreated: 2026-11-01\n---\n\nBody.\n';
@@ -318,28 +302,26 @@ test('a new to-do is saved with the ID it was shown with, and what waited for it
 });
 
 test('a new to-do whose save landed but whose answer was lost is not added twice', async () => {
-  for (const legacy of [false, true]) {
-    const src = new MemSource();
-    src.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
-    const a = createAction('task', newTask('Only once'), (await src.tree()).files, NOW);
-    const tick = choiceAction([edit(a.ops[0].path, { status: 'doing' })]);
-    // The first try lands in the vault; the device never hears, so both actions still wait and go up again.
-    assert.equal((await pushAll(src, [a, tick], { legacy })).error, null);
-    const after = new Map(src.files);
-    const again = await pushAll(src, [a, tick], { legacy });
-    assert.equal(again.error, null);
-    assert.deepEqual(again.done, [a.id, tick.id]);
-    assert.deepEqual(again.renames, {});
-    assert.deepEqual([...src.files], [...after], 'nothing new in the vault' + (legacy ? ' (the old way)' : ''));
-    assert.deepEqual(again.saved.map((n) => [n.path, n.data.status]).slice(-1), [['Tasks/T-002 Only once.md', 'doing']]);
-    // Alone too, and a different to-do with the same number is still a different note.
-    assert.deepEqual((await pushAll(src, [a], { legacy })).renames, {});
-    assert.equal(src.files.size, 2);
-    const other = createAction('task', newTask('Another one'), [{ path: 'Tasks/T-001 First.md', sha: '' }], NOW);
-    assert.equal(other.ops[0].path, 'Tasks/T-002 Another one.md');
-    assert.deepEqual((await pushAll(src, [other], { legacy })).renames, { 'Tasks/T-002 Another one.md': 'Tasks/T-003 Another one.md' });
-    assert.equal(src.files.size, 3);
-  }
+  const src = new MemSource();
+  src.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
+  const a = createAction('task', newTask('Only once'), (await src.tree()).files, NOW);
+  const tick = choiceAction([edit(a.ops[0].path, { status: 'doing' })]);
+  // The first try lands in the vault; the device never hears, so both actions still wait and go up again.
+  assert.equal((await pushAll(src, [a, tick])).error, null);
+  const after = new Map(src.files);
+  const again = await pushAll(src, [a, tick]);
+  assert.equal(again.error, null);
+  assert.deepEqual(again.done, [a.id, tick.id]);
+  assert.deepEqual(again.renames, {});
+  assert.deepEqual([...src.files], [...after], 'nothing new in the vault');
+  assert.deepEqual(again.saved.map((n) => [n.path, n.data.status]).slice(-1), [['Tasks/T-002 Only once.md', 'doing']]);
+  // Alone too, and a different to-do with the same number is still a different note.
+  assert.deepEqual((await pushAll(src, [a])).renames, {});
+  assert.equal(src.files.size, 2);
+  const other = createAction('task', newTask('Another one'), [{ path: 'Tasks/T-001 First.md', sha: '' }], NOW);
+  assert.equal(other.ops[0].path, 'Tasks/T-002 Another one.md');
+  assert.deepEqual((await pushAll(src, [other])).renames, { 'Tasks/T-002 Another one.md': 'Tasks/T-003 Another one.md' });
+  assert.equal(src.files.size, 3);
 });
 
 test('if another note took the ID while the to-do waited, it takes the next one and what waits for it follows', async () => {
@@ -370,13 +352,6 @@ test('if another note took the ID while the to-do waited, it takes the next one 
   assert.equal(again.commits.length, 1);
   assert.deepEqual([...again.files], [...src.files].sort((x, y) => [...again.files.keys()].indexOf(x[0]) - [...again.files.keys()].indexOf(y[0])));
   assert.deepEqual(all.renames, { 'Tasks/T-002 Mine.md': 'Tasks/T-003 Mine.md', 'Tasks/T-003 Mine too.md': 'Tasks/T-004 Mine too.md' });
-  // And the old way gives the same notes.
-  const old = new MemSource();
-  old.files.set('Tasks/T-001 First.md', TASK('T-001', 'First'));
-  old.files.set('Tasks/Team/T-002 Theirs.md', TASK('T-002', 'Theirs'));
-  const legacy = await pushAll(old, [a, b, tick], { legacy: true });
-  assert.deepEqual(legacy.done.length, 3);
-  assert.deepEqual(new Map([...old.files].sort()), new Map([...src.files].sort()));
 });
 
 test('a saved new note is put into the saved copy where its kind goes, so it does not blink away before the next sync', async () => {
@@ -466,37 +441,31 @@ test('answers on a chapter\'s changes show at once, join the ones that wait, and
 });
 
 test('answers and the to-dos they tick off go up as one save, on top of what the team wrote meanwhile', async () => {
-  for (const legacy of [false, true]) {
-    const src = new MemSource();
-    const changes = '---\ntype: chapter-changes\nchapter: 1\n---\nIntro.\n\n## C-01 · small\nScene: S-001\nWhy: To-do T-002: the ferry time.\nKyle: open\n\nWas:\n> noon\n\nNow:\n> dawn\n\n## C-02 · line\nScene: S-001\nWhy: Sense.\nKyle: open\n\nWas:\n> a\n\nNow:\n> b\n';
-    src.files.set('B/Changes/Chapter 1 changes.md', changes);
-    src.files.set('B/Tasks/T-002 Ferry.md', TASK('T-002', 'Ferry'));
-    const act = marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept' }, [edit('B/Tasks/T-002 Ferry.md', { status: 'done', done_note: 'Edit room: C-01 kept.' })]);
-    // The team adds a change to the note between the app's read and its save.
-    if (!legacy) src.race = () => { src.files.set('B/Changes/Chapter 1 changes.md', src.files.get('B/Changes/Chapter 1 changes.md')! + '\n## C-03 · small\nScene: S-001\nWhy: Typo.\nKyle: open\n\nWas:\n> teh\n\nNow:\n> the\n'); };
-    const res = await pushAll(src, [act], { legacy });
-    assert.equal(res.error, null);
-    assert.deepEqual(res.done, [act.id]);
-    const saved = src.files.get('B/Changes/Chapter 1 changes.md')!;
-    assert.deepEqual(parseChanges(saved).changes.map((c) => [c.id, c.status]), legacy ? [['C-01', 'kept'], ['C-02', 'open']] : [['C-01', 'kept'], ['C-02', 'open'], ['C-03', 'open']]);
-    assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^status: done$/m);
-    assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^done_note: "?Edit room: C-01 kept\."?$/m);
-    if (!legacy) {
-      assert.equal(src.commits.length, 1, 'one save for the answer and its to-do');
-      assert.deepEqual(src.commits[0].paths.sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
-      assert.match(src.commits[0].message, /^changes: Kyle kept C-01 in Chapter 1 changes\n\nSaved together with:\n- tasks: /);
-    } else {
-      assert.match(src.writes[0].message, /^changes: Kyle kept C-01 in Chapter 1 changes\n\nChosen in the Sparrow app\.$/);
-    }
-    assert.deepEqual(res.saved.map((n) => n.path).sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
-    // Sent again (the answer was lost on the way back): nothing changes.
-    const n = src.writes.length;
-    assert.equal((await pushAll(src, [act], { legacy })).error, null);
-    assert.equal(src.writes.length, n);
-    // A later answer that carries the saved one with it names only what is new.
-    assert.equal((await pushAll(src, [marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept', 'C-02': 'no' })], { legacy })).error, null);
-    assert.match(src.writes[src.writes.length - 1].message, /^changes: Kyle said no to C-02 in Chapter 1 changes\n/);
-  }
+  const src = new MemSource();
+  const changes = '---\ntype: chapter-changes\nchapter: 1\n---\nIntro.\n\n## C-01 · small\nScene: S-001\nWhy: To-do T-002: the ferry time.\nKyle: open\n\nWas:\n> noon\n\nNow:\n> dawn\n\n## C-02 · line\nScene: S-001\nWhy: Sense.\nKyle: open\n\nWas:\n> a\n\nNow:\n> b\n';
+  src.files.set('B/Changes/Chapter 1 changes.md', changes);
+  src.files.set('B/Tasks/T-002 Ferry.md', TASK('T-002', 'Ferry'));
+  const act = marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept' }, [edit('B/Tasks/T-002 Ferry.md', { status: 'done', done_note: 'Edit room: C-01 kept.' })]);
+  // The team adds a change to the note between the app's read and its save.
+  src.race = () => { src.files.set('B/Changes/Chapter 1 changes.md', src.files.get('B/Changes/Chapter 1 changes.md')! + '\n## C-03 · small\nScene: S-001\nWhy: Typo.\nKyle: open\n\nWas:\n> teh\n\nNow:\n> the\n'); };
+  const res = await pushAll(src, [act]);
+  assert.equal(res.error, null);
+  assert.deepEqual(res.done, [act.id]);
+  const saved = src.files.get('B/Changes/Chapter 1 changes.md')!;
+  assert.deepEqual(parseChanges(saved).changes.map((c) => [c.id, c.status]), [['C-01', 'kept'], ['C-02', 'open'], ['C-03', 'open']]);
+  assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^status: done$/m);
+  assert.match(src.files.get('B/Tasks/T-002 Ferry.md')!, /^done_note: "?Edit room: C-01 kept\."?$/m);
+  assert.equal(src.commits.length, 1, 'one save for the answer and its to-do');
+  assert.deepEqual(src.commits[0].paths.sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
+  assert.match(src.commits[0].message, /^changes: Kyle kept C-01 in Chapter 1 changes\n\nSaved together with:\n- tasks: /);
+  assert.deepEqual(res.saved.map((n) => n.path).sort(), ['B/Changes/Chapter 1 changes.md', 'B/Tasks/T-002 Ferry.md']);
+  // Sent again (the answer was lost on the way back): nothing changes.
+  const n = src.writes.length;
+  assert.equal((await pushAll(src, [act])).error, null);
+  assert.equal(src.writes.length, n);
+  // A later answer that carries the saved one with it names only what is new.
+  assert.equal((await pushAll(src, [marksAction('B/Changes/Chapter 1 changes.md', { 'C-01': 'kept', 'C-02': 'no' })])).error, null);
+  assert.match(src.writes[src.writes.length - 1].message, /^changes: Kyle said no to C-02 in Chapter 1 changes\n/);
 });
 
 test('answers left in the Edit room\'s old list move into the outbox once, under any newer answer already waiting', () => {

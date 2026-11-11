@@ -7,22 +7,22 @@ import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
-import { addRocketFile, rocketFile, rocketProblem } from '../lib/market.ts';
+import { rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { bookTodos, type NewTodo } from '../lib/todos.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
-import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renameScene, safeTitle, sceneNotesFor } from '../lib/scenes.ts';
-import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
-import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
+import { mentionsOf, orderBetween, safeTitle, sceneNotesFor } from '../lib/scenes.ts';
+import { chapterTitleEdits } from '../lib/chapters.ts';
+import { fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
-import { loadDrafts, moveDrafts, putDraft, typedWords } from '../lib/drafts.ts';
+import { moveDrafts, putDraft, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, DeviceFile, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { ChapterTitlesPage } from './ChapterTitles.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
 import { saveDraft as saveWritten } from '../vault/words.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
 import { chaptersAction, deleteAction, choiceAction, createAction, draftAction, filesAction, marksAction, newId, restoreAction, textAction, type Action } from '../vault/ops.ts';
@@ -30,7 +30,6 @@ import { BRAINDUMP_START, changeRecord, type TextChange } from '../vault/text.ts
 import { logPath, type LogItem } from '../lib/pomodoro.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
-import { oldSaving } from '../vault/switch.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
@@ -39,14 +38,13 @@ import { Shell } from './Shell.tsx';
 import { CodexBoard } from './Codex.tsx';
 import { DecideQueue } from './Decide.tsx';
 import { ChangesOverview } from './Changes.tsx';
-import { rewriteDone, rewriteProgress, withRewriteDone } from '../lib/rewrite.ts';
+import { rewriteDone, rewriteProgress } from '../lib/rewrite.ts';
 import { decideQueue } from '../lib/overview.ts';
 import { CODEX_PAGES } from '../lib/rooms.ts';
 import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, downloadWord, Home, SeriesPage } from './Home.tsx';
-import { makeBackupFolder } from '../lib/docx.ts';
-import { addCover, coverFiles, coverProblem } from '../lib/covers.ts';
+import { coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
@@ -57,8 +55,7 @@ import { codexFor } from '../lib/codex.ts';
 import { ChapterPage } from './ChapterPage.tsx';
 import { beatsNoteFor } from '../lib/beats.ts';
 import { changesNoteFor, chapterChanges, countLike, isStoryCall, type ChangeStatus } from '../lib/changes.ts';
-import { copyFor, saveBookDraft } from '../lib/bookdrafts.ts';
-import { Frontmatter } from '../lib/frontmatter.js';
+import { copyFor } from '../lib/bookdrafts.ts';
 import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
 import { optionJobsFor } from '../lib/options.ts';
@@ -76,13 +73,13 @@ import { pageContext, type PageView } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
 import { PILES, piles } from '../lib/ideas.ts';
 import type { NewNote } from '../lib/notes.ts';
-import { recipeName, recipeNotes, saveRecipe, type RecipeFields } from '../lib/recipes.ts';
+import { recipeName, recipeNotes, type RecipeFields } from '../lib/recipes.ts';
 import { OverviewPage } from './Overview.tsx';
 import { NotesScreen } from './NotesToTeam.tsx';
 import { SessionsScreen, SessionView } from './Sessions.tsx';
 import { RecipesScreen } from './Recipes.tsx';
 import { WorkflowScreen } from './Workflow.tsx';
-import { addWorkflowNote, WORKFLOW_PATH } from '../lib/workflow.ts';
+import { WORKFLOW_PATH } from '../lib/workflow.ts';
 import { ForgeSpecialist } from './Forge.tsx';
 import { FlowScreen, FromTheWorkflow } from './Flow.tsx';
 import { flowResults, type NewResult } from '../lib/flow.ts';
@@ -222,7 +219,7 @@ export function App() {
     if (!sent.length) return null;
     sent.forEach((a) => sending.current.add(a.id));
     const run = (async (): Promise<string | null> => {
-      const res = await pushAll(source, sent, { legacy: oldSaving() });
+      const res = await pushAll(source, sent);
       if (sourceRef.current !== source) {
         // Kyle pointed the app at another vault while this was saving: settle this vault's own list where it is kept.
         saveOutbox(source.key, settle(loadOutbox(source.key), res.done, res.failed, res.renames));
@@ -314,20 +311,13 @@ export function App() {
   const onAddScene = useCallback(async (book: BookEntry, chapter: number | null, chapterTitle: string, title: string): Promise<string | null> => {
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
-    if (oldSaving() && !navigator.onLine) return 'Connect to the internet to add a scene.';
-    const scenes = oldSaving() ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : scenesShown(book);
+    const scenes = scenesShown(book);
     // After the chapter's last scene, or after the book's last scene for a new chapter.
     const inCh = scenes.filter((n) => chapter != null && n.data.chapter === chapter);
     const prev = inCh.length ? inCh[inCh.length - 1] : chapter == null || !scenes.some((n) => typeof n.data.chapter === 'number' && n.data.chapter > chapter) ? scenes[scenes.length - 1] || null : null;
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
     const s = { bookFolder: book.folder, title, chapter, chapterTitle, order: orderBetween(prev, next), status: 'drafted', body: '' };
     try {
-      if (oldSaving()) {
-        const made = await createScene(source, s, new Date(), 'Added in the Sparrow app.');
-        await runSync();
-        location.hash = href.write(made.path);
-        return null;
-      }
       const made = create('scene', { s, at: new Date().toISOString() });
       runFlush();
       location.hash = href.write(made.ops[0].path);
@@ -335,7 +325,7 @@ export function App() {
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync, runFlush, create, scenesShown]);
+  }, [runFlush, create, scenesShown]);
 
   /** Add a chapter of one scene after chapter `after` (null: after the book's last chapter) and open it for writing.
    * In the middle of the book, the later chapters move up one (Kyle, 2026-10-22). A new last chapter shows at once and
@@ -343,30 +333,17 @@ export function App() {
   const onAddChapter = useCallback(async (book: BookEntry, after: number | null, chapterTitle: string): Promise<string | null> => {
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
-    const old = oldSaving();
-    const scenes = old ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : scenesShown(book);
+    const scenes = scenesShown(book);
     const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
     const last = nums.length ? Math.max(...nums) : 0;
     const at = after == null || after >= last ? last + 1 : after + 1;
-    if (!navigator.onLine && (old || at <= last)) return at <= last && !old ? 'Connect to the internet to add a chapter in the middle of the book: the chapters after it get new numbers.' : 'Connect to the internet to add a chapter.';
+    if (!navigator.onLine && at <= last) return 'Connect to the internet to add a chapter in the middle of the book: the chapters after it get new numbers.';
     const inCh = scenes.filter((n) => toNumber(n.data.chapter) === at - 1);
     const prev = inCh.length ? inCh[inCh.length - 1] : scenes[scenes.length - 1] || null;
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
     const title = chapterTitle.trim();
     const s = { bookFolder: book.folder, title: title || 'Chapter ' + at, chapter: at, chapterTitle: title, order: orderBetween(prev, next), status: 'drafted', body: '' };
     try {
-      if (old) {
-        if (at <= last) {
-          // Keep or No choices still waiting on this device are saved by file name, so they go up before the names change.
-          await beforeRenames(book.folder);
-          await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
-          await renumberLists(source, cur.index.notes, book.folder, roomMap(at - 1), 'A new chapter ' + at + ' was added in the Sparrow app.');
-        }
-        const made = await createScene(source, s, new Date(), 'Added in the Sparrow app.');
-        await runSync();
-        location.hash = href.write(made.path);
-        return null;
-      }
       if (at > last) {
         const made = create('scene', { s, at: new Date().toISOString() });
         runFlush();
@@ -380,10 +357,9 @@ export function App() {
       location.hash = href.write(res.renames[scene.path] || scene.path);
       return null;
     } catch (e) {
-      if (old) await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, runFlush, beforeRenames, create, planned, sendNow, scenesShown]);
+  }, [runFlush, beforeRenames, create, planned, sendNow, scenesShown]);
 
   /** A card dragged to a new place on the Chapter Grid: give it an order between its new neighbours (and the chapter it went into). */
   const onMove = useCallback((book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => {
@@ -428,27 +404,17 @@ export function App() {
     const problem = rocketProblem(file.name, file.size);
     if (problem) return { error: true, text: problem };
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to add a Rocket file.' };
-    if (!oldSaving() && source.commit) {
-      // One save through the one saving system; a name that is taken gets the next free one at the save.
-      try {
-        const f = rocketFile(book.seriesFolder, file.name, await file.text());
-        const res = await sendNow(filesAction([f]));
-        const path = res.renames[f.path] || f.path;
-        await runSync();
-        return { error: false, text: 'Saved ' + path.slice(path.lastIndexOf('/') + 1) + ' in the vault. Ask the team in the project chat to read it.' };
-      } catch (e) {
-        return { error: true, text: (e as Error).message };
-      }
-    }
-    const series = snapRef.current && snapRef.current.index.series.find((s) => s.folder === book.seriesFolder);
+    // One save through the one saving system; a name that is taken gets the next free one at the save.
     try {
-      const path = await addRocketFile(source, book.seriesFolder, (series && series.rocket) || [], file.name, await file.text());
+      const f = rocketFile(book.seriesFolder, file.name, await file.text());
+      const res = await sendNow(filesAction([f]));
+      const path = res.renames[f.path] || f.path;
       await runSync();
       return { error: false, text: 'Saved ' + path.slice(path.lastIndexOf('/') + 1) + ' in the vault. Ask the team in the project chat to read it.' };
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }
-  }, [source, runSync, sendNow]);
+  }, [runSync, sendNow]);
 
   /** Add a to-do to the vault's Tasks folder. It shows at once and is saved when the connection allows (2026-11-11). */
   const onAddTask = useCallback(async (t: NewTask): Promise<string | null> => {
@@ -519,14 +485,13 @@ export function App() {
     if (!navigator.onLine) return 'Connect to the internet to add a cover.';
     try {
       // The full-size picture and the small copy go up as one save (2026-11-11; before, two).
-      if (!oldSaving() && source.commit) await sendNow(filesAction(await coverFiles(book, file)));
-      else await addCover(source, book, file);
+      await sendNow(filesAction(await coverFiles(book, file)));
       await runSync();
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync, sendNow]);
+  }, [runSync, sendNow]);
 
   /** Files from the device saved as they are, as one save (the Word backup of Export to Word). */
   const onFiles = useCallback(async (files: DeviceFile[]): Promise<void> => { await sendNow(filesAction(files)); }, [sendNow]);
@@ -536,118 +501,71 @@ export function App() {
   const onAddMany = useCallback(async (book: BookEntry, list: { chapter: number; chapterTitle: string; title: string }[]): Promise<string | null> => {
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
-    if (!oldSaving()) {
-      try {
-        const scenes = scenesShown(book);
-        let prev: NoteRecord | null = scenes[scenes.length - 1] || null;
-        const at = new Date().toISOString();
-        create('scene', list.map((x) => {
-          const s = { bookFolder: book.folder, title: x.title, chapter: x.chapter, chapterTitle: x.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' };
-          prev = { path: '', sha: '', type: 'scene', data: { order: s.order }, body: '', error: null };
-          return { s, at, why: 'Added from an outline in the Sparrow app.' };
-        }));
-        runFlush();
-        return null;
-      } catch (e) {
-        return (e as Error).message;
-      }
-    }
-    if (!navigator.onLine) return 'Connect to the internet to add scenes.';
-    let prev: NoteRecord | null = book.scenes.length ? cur.index.notes[book.scenes[book.scenes.length - 1]] || null : null;
-    const made: NoteRecord[] = [];
     try {
-      for (const s of list) {
-        const n = await createScene(source, { bookFolder: book.folder, title: s.title, chapter: s.chapter, chapterTitle: s.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' },
-          new Date(), 'Added from an outline in the Sparrow app.');
-        made.push(n);
-        prev = n;
-      }
-      await runSync();
+      const scenes = scenesShown(book);
+      let prev: NoteRecord | null = scenes[scenes.length - 1] || null;
+      const at = new Date().toISOString();
+      create('scene', list.map((x) => {
+        const s = { bookFolder: book.folder, title: x.title, chapter: x.chapter, chapterTitle: x.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' };
+        prev = { path: '', sha: '', type: 'scene', data: { order: s.order }, body: '', error: null };
+        return { s, at, why: 'Added from an outline in the Sparrow app.' };
+      }));
+      runFlush();
       return null;
     } catch (e) {
-      await runSync();
-      return (made.length ? made.length + ' of ' + list.length + ' scenes were added. ' : '') + (e as Error).message;
+      return (e as Error).message;
     }
-  }, [source, runSync, runFlush, create, scenesShown]);
+  }, [runFlush, create, scenesShown]);
 
   const onJobRef = useRef(onJob);
   onJobRef.current = onJob;
 
   /** A scene card's new title: the file is renamed to match, then the boards sync. */
   const onRename = useCallback(async (note: NoteRecord, title: string): Promise<string | null> => {
-    if (!oldSaving()) {
-      // The new title shows at once and waits with everything else; the save renames the file, and the words kept on
-      // the device and what waits for the scene follow it to the new name (2026-11-11; before, it needed the connection).
-      const clean = safeTitle(title);
-      if (!clean) return 'Give the scene a title first.';
-      const id = String(note.data.id || '');
-      const dest = note.path.slice(0, note.path.lastIndexOf('/')) + '/' + (id ? id + ' ' : '') + clean + '.md';
-      const cur = snapRef.current;
-      if (dest !== note.path && cur && Object.keys(cur.index.notes).some((p) => p.toLowerCase() === dest.toLowerCase())) return 'A scene called ' + clean + ' is already there. Choose another title.';
-      const at = new Date();
-      setOutbox(add(outboxRef.current, { id: newId(at), at: at.toISOString(), ops: [{ kind: 'retitle', path: note.path, title: clean, what: 'scene' }] }));
-      runFlush();
-      return null;
-    }
-    if (!navigator.onLine) return 'Connect to the internet to change a title.';
-    const d = loadDrafts(source.key)[note.path];
-    if (d && d.body !== d.baseBody) return 'This scene has writing that has not reached the vault yet. Open it and press Done first, then change the title.';
-    try {
-      await renameScene(source, note, title);
-      await runSync();
-      return null;
-    } catch (e) {
-      return (e as Error).message;
-    }
-  }, [source, runSync, setOutbox, runFlush]);
+    // The new title shows at once and waits with everything else; the save renames the file, and the words kept on
+    // the device and what waits for the scene follow it to the new name (2026-11-11; before, it needed the connection).
+    const clean = safeTitle(title);
+    if (!clean) return 'Give the scene a title first.';
+    const id = String(note.data.id || '');
+    const dest = note.path.slice(0, note.path.lastIndexOf('/')) + '/' + (id ? id + ' ' : '') + clean + '.md';
+    const cur = snapRef.current;
+    if (dest !== note.path && cur && Object.keys(cur.index.notes).some((p) => p.toLowerCase() === dest.toLowerCase())) return 'A scene called ' + clean + ' is already there. Choose another title.';
+    const at = new Date();
+    setOutbox(add(outboxRef.current, { id: newId(at), at: at.toISOString(), ops: [{ kind: 'retitle', path: note.path, title: clean, what: 'scene' }] }));
+    runFlush();
+    return null;
+  }, [setOutbox, runFlush]);
 
   /** Save a manuscript from the device in the book's Research folder, unchanged, and ask the team to bring it in as scenes. */
   const onImport = useCallback(async (book: BookEntry, file: File): Promise<{ error: boolean; text: string }> => {
     const problem = manuscriptProblem(file.name, file.size);
     if (problem) return { error: true, text: problem };
-    if (!navigator.onLine || !source.write) return { error: true, text: 'Connect to the internet to bring in a manuscript.' };
+    if (!navigator.onLine) return { error: true, text: 'Connect to the internet to bring in a manuscript.' };
     try {
       const { files } = await source.tree();
       const path = manuscriptPath(book.folder, file.name, files.map((f) => f.path));
       const why = 'manuscripts: add ' + path.slice(path.lastIndexOf('/') + 1) + '\n\nAdded in the Sparrow app to bring in as scenes.';
-      if (!oldSaving() && source.commit) {
-        // The file and the ask to the team go up as one save, so there is never a manuscript in the vault that nobody
-        // was asked to bring in (2026-11-11; before, two saves).
-        const rel = path.slice(book.folder.length + 1);
-        const ask = planned('job', { j: { title: 'Bring in ' + file.name.replace(/\.[^.]+$/, ''), kind: 'import', target: rel, book: book.folder, ask: jobAsk('import', rel, '') }, at: new Date().toISOString() });
-        // Every manuscript goes up byte for byte, a text file too: it is saved unchanged, and a long one is too big to
-        // travel inside the save's own list of files.
-        await sendNow(filesAction([{ path, taken: 'refuse', message: why, base64: await fileBase64(file) }], ask.ops));
-        return { error: false, text: 'Saved ' + rel + '. The team is bringing it in as scenes; see Jobs.' };
-      }
-      if (/\.docx$/i.test(path)) {
-        if (!source.writeBytes) return { error: true, text: 'This vault cannot take Word files from the app.' };
-        await source.writeBytes(path, await fileBase64(file), '', why);
-      } else await source.write(path, await file.text(), '', why);
+      // The file and the ask to the team go up as one save, so there is never a manuscript in the vault that nobody
+      // was asked to bring in (2026-11-11; before, two saves).
       const rel = path.slice(book.folder.length + 1);
-      const r = await onJobRef.current({ title: 'Bring in ' + file.name.replace(/\.[^.]+$/, ''), kind: 'import', target: rel, book: book.folder, ask: jobAsk('import', rel, '') });
-      return r.error ? r : { error: false, text: 'Saved ' + rel + '. The team is bringing it in as scenes; see Jobs.' };
+      const ask = planned('job', { j: { title: 'Bring in ' + file.name.replace(/\.[^.]+$/, ''), kind: 'import', target: rel, book: book.folder, ask: jobAsk('import', rel, '') }, at: new Date().toISOString() });
+      // Every manuscript goes up byte for byte, a text file too: it is saved unchanged, and a long one is too big to
+      // travel inside the save's own list of files.
+      await sendNow(filesAction([{ path, taken: 'refuse', message: why, base64: await fileBase64(file) }], ask.ops));
+      return { error: false, text: 'Saved ' + rel + '. The team is bringing it in as scenes; see Jobs.' };
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }
   }, [source, planned, sendNow]);
 
   const onCreateSeries = useCallback(async (name: string, genre: string): Promise<string | null> => {
-    if (!oldSaving()) {
-      // A new series is a new note like any other: it shows at once and goes up when the connection allows.
-      try { const a = create('series', { name, genre, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.series(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-    }
-    if (!navigator.onLine) return 'Connect to the internet to start a series.';
-    try { const n = await createSeries(source, name, genre, new Date()); await makeBackupFolder(source, String(n.data.name || name)); await runSync(); location.hash = href.series(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync, create, runFlush]);
+    // A new series is a new note like any other: it shows at once and goes up when the connection allows.
+    try { const a = create('series', { name, genre, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.series(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+  }, [create, runFlush]);
 
   const onCreateBook = useCallback(async (seriesFolder: string, seriesName: string, title: string, number: number): Promise<string | null> => {
-    if (!oldSaving()) {
-      try { const a = create('book', { seriesFolder, seriesName, title, number, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.book(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-    }
-    if (!navigator.onLine) return 'Connect to the internet to start a book.';
-    try { const n = await createBook(source, seriesFolder, seriesName, title, number, new Date()); await makeBackupFolder(source, seriesName, String(n.data.title || title)); await runSync(); location.hash = href.book(n.path.slice(0, n.path.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync, create, runFlush]);
+    try { const a = create('book', { seriesFolder, seriesName, title, number, at: new Date().toISOString() }); runFlush(); const p = a.ops[0].path; location.hash = href.book(p.slice(0, p.lastIndexOf('/'))); return null; } catch (e) { return (e as Error).message; }
+  }, [create, runFlush]);
 
   /** Rewrite now: after the Rewrite choice reaches the vault, ask the team to do the rewrite. */
   const onRewrite = useCallback(async (path: string, reason: string) => {
@@ -667,51 +585,31 @@ export function App() {
     try { create('recipe', { r, at: new Date().toISOString() }); runFlush(); return null; } catch (e) { return (e as Error).message; }
   }, [create, runFlush]);
   const onSaveRecipe = useCallback(async (note: NoteRecord, r: RecipeFields): Promise<string | null> => {
-    if (!oldSaving()) {
-      // The recipe's words change at once and wait with everything else; a new name renames its file at the save.
-      if (!r.body.trim()) return 'A recipe needs its instruction. Write it, or leave the recipe as it was.';
-      const title = safeTitle(r.title) || recipeName(note);
-      const rename: Action['ops'] = title === recipeName(note) ? [] : [{ kind: 'retitle', path: note.path, title, what: 'recipe' }];
-      setOutbox(add(outboxRef.current, textAction([{ path: note.path, change: { what: 'recipe', use_for: r.use_for, body: r.body } }], rename)));
-      runFlush();
-      return null;
-    }
-    if (!navigator.onLine) return 'Connect to the internet to change a recipe.';
-    try { await saveRecipe(source, note, r); await runSync(); return null; } catch (e) { return (e as Error).message; }
-  }, [source, runSync, setOutbox, runFlush]);
+    // The recipe's words change at once and wait with everything else; a new name renames its file at the save.
+    if (!r.body.trim()) return 'A recipe needs its instruction. Write it, or leave the recipe as it was.';
+    const title = safeTitle(r.title) || recipeName(note);
+    const rename: Action['ops'] = title === recipeName(note) ? [] : [{ kind: 'retitle', path: note.path, title, what: 'recipe' }];
+    setOutbox(add(outboxRef.current, textAction([{ path: note.path, change: { what: 'recipe', use_for: r.use_for, body: r.body } }], rename)));
+    runFlush();
+    return null;
+  }, [setOutbox, runFlush]);
 
   const onWorkflowNote = useCallback(async (note: string): Promise<string | null> => {
-    if (!oldSaving() && source.commit) {
-      // The note shows at once under "Kyle's notes" and waits with everything else (2026-11-11; before, it needed the connection).
-      const d = new Date();
-      const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      setOutbox(add(outboxRef.current, textAction([{ path: WORKFLOW_PATH, change: { what: 'workflow-note', note, day } }])));
-      runFlush();
-      return null;
-    }
-    if (!navigator.onLine) return 'Connect to the internet to add a note to the workflow.';
-    if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
-    try {
-      const fresh = await source.readFresh(WORKFLOW_PATH);
-      const d = new Date();
-      const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      await source.write(WORKFLOW_PATH, addWorkflowNote(fresh.text, note, day), fresh.sha, 'workflow: Kyle\'s note');
-      await runSync();
-      return null;
-    } catch (e) { return (e as Error).message; }
-  }, [source, runSync, setOutbox, runFlush]);
+    // The note shows at once under "Kyle's notes" and waits with everything else (2026-11-11; before, it needed the connection).
+    const d = new Date();
+    const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    setOutbox(add(outboxRef.current, textAction([{ path: WORKFLOW_PATH, change: { what: 'workflow-note', note, day } }])));
+    runFlush();
+    return null;
+  }, [setOutbox, runFlush]);
 
   /** The book's draft saved: every scene copied to `Drafts/Draft N/` with its note, as one save through the one saving
    * system, made on the vault as it is at that moment (2026-11-11). Answers the draft's number. */
   const saveDraft = useCallback(async (book: BookEntry): Promise<number> => {
-    if (oldSaving() || !source.commit) {
-      const cur = snapRef.current;
-      return (await saveBookDraft(source, book.folder, cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [], new Date())).number;
-    }
     const res = await sendNow(draftAction(book.folder));
     const made = res.saved.map((n) => /\/Drafts\/Draft (\d+)\.md$/.exec(n.path)).find(Boolean);
     return made ? Number(made[1]) : 0;
-  }, [source, sendNow]);
+  }, [sendNow]);
 
   /** A scene brought back from the book's Archive: in Scenes again and out of the Archive in one save. */
   const onRestore = useCallback(async (book: BookEntry, path: string): Promise<void> => { await sendNow(restoreAction(book.folder, path)); }, [sendNow]);
@@ -726,48 +624,27 @@ export function App() {
   /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
    * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
   const onRewriteThrough = useCallback(async (book: BookEntry, chapter: number, done: boolean): Promise<string | null> => {
-    if (!oldSaving()) {
-      // The mark shows at once and waits with everything else (2026-11-11; before, it needed the connection).
-      const change: TextChange = { what: 'through', chapter, done };
-      const cur = snapRef.current;
-      const shown = cur ? overlayActions(cur.index, outboxRef.current, schemaRef.current).notes[book.path] : null;
-      setOutbox(add(outboxRef.current, textAction([{ path: book.path, change }])));
-      const flushed = runFlush();
-      const scenes = cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [];
-      const after = shown ? rewriteProgress(book.rewrite || [], scenes, rewriteDone(changeRecord(shown, change))) : null;
-      if (!done || !after || !after.total || after.through < after.done || after.done < after.total) return null;
-      // The last chapter: Draft 2 is saved (the copies in Drafts/Draft N/), which needs the connection.
-      if (!navigator.onLine || !scenes.length) return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details when you are connected.';
-      try {
-        await flushed;
-        const number = await saveDraft(book);
-        await runSync();
-        return 'Chapter ' + chapter + ' is through, the last one. Draft ' + number + ' is saved; your pages are now draft ' + (number + 1) + '.';
-      } catch (e) {
-        await runSync().catch(() => undefined);
-        return 'Chapter ' + chapter + ' is through, the last one, but the draft did not save: ' + (e as Error).message + ' Save it from Book details.';
-      }
-    }
-    if (!navigator.onLine) return 'Connect to the internet to mark the chapter.';
-    if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
+    // The mark shows at once and waits with everything else (2026-11-11; before, it needed the connection).
+    const change: TextChange = { what: 'through', chapter, done };
+    const cur = snapRef.current;
+    const shown = cur ? overlayActions(cur.index, outboxRef.current, schemaRef.current).notes[book.path] : null;
+    setOutbox(add(outboxRef.current, textAction([{ path: book.path, change }])));
+    const flushed = runFlush();
+    const scenes = cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [];
+    const after = shown ? rewriteProgress(book.rewrite || [], scenes, rewriteDone(changeRecord(shown, change))) : null;
+    if (!done || !after || !after.total || after.through < after.done || after.done < after.total) return null;
+    // The last chapter: Draft 2 is saved (the copies in Drafts/Draft N/), which needs the connection.
+    if (!navigator.onLine || !scenes.length) return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details when you are connected.';
     try {
-      const fresh = await source.readFresh(book.path);
-      const next = withRewriteDone(fresh.text, chapter, done);
-      await source.write(book.path, next, fresh.sha, 'rewrite: chapter ' + chapter + (done ? ' through' : ' opened again') + ' in the Rewrite tab');
-      const cur = snapRef.current;
-      const scenes = cur ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : [];
-      const after = rewriteProgress(book.rewrite || [], scenes, rewriteDone({ data: Frontmatter.parse(next).data as Record<string, unknown> }));
-      if (!done || !after.total || after.through < after.done || after.done < after.total) { await runSync(); return null; }
-      // The last chapter: Draft 2 is saved (the copies in Drafts/Draft N/), and the scene files go on as the next draft.
-      if (!cur || !scenes.length) { await runSync(); return 'Chapter ' + chapter + ' is through, the last one. Save the draft from Book details.'; }
-      const d = await saveBookDraft(source, book.folder, scenes, new Date());
+      await flushed;
+      const number = await saveDraft(book);
       await runSync();
-      return 'Chapter ' + chapter + ' is through, the last one. Draft ' + d.number + ' is saved; your pages are now draft ' + (d.number + 1) + '.';
+      return 'Chapter ' + chapter + ' is through, the last one. Draft ' + number + ' is saved; your pages are now draft ' + (number + 1) + '.';
     } catch (e) {
       await runSync().catch(() => undefined);
-      return (e as Error).message;
+      return 'Chapter ' + chapter + ' is through, the last one, but the draft did not save: ' + (e as Error).message + ' Save it from Book details.';
     }
-  }, [source, runSync, setOutbox, runFlush, saveDraft]);
+  }, [runSync, setOutbox, runFlush, saveDraft]);
 
   /** The Writing Log: finished Pomodoros and the typing counts, handed over by the timer. They wait with everything
    * else and each handing-over is one save (2026-11-11; before, the timer sent them itself, one save for each). */
@@ -822,75 +699,34 @@ export function App() {
     try {
       // What waits for this book is addressed by file names that are about to change, so it goes up first.
       await beforeRenames(book.folder);
-      if (!oldSaving()) {
-        // One save: every note of the chapters between follows, or nothing changes (2026-11-11; before, one save a note).
-        await sendNow(chaptersAction(book.folder, { type: 'move', from, to }, why));
-        return null;
-      }
-      await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), why);
-      await renumberLists(source, cur.index.notes, book.folder, moveMap(from, to), why);
-      await runSync();
+      // One save: every note of the chapters between follows, or nothing changes (2026-11-11; before, one save a note).
+      await sendNow(chaptersAction(book.folder, { type: 'move', from, to }, why));
       return null;
     } catch (e) {
-      if (oldSaving()) await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, beforeRenames, sendNow]);
+  }, [beforeRenames, sendNow]);
 
   /** Delete scenes from the chapter list (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it").
    * Each scene goes to the book's Archive (Restore brings it back). A chapter left with no scenes takes its beats, plan,
    * scrap, to-dos and scene notes to the Archive too, and the chapters after it close up by one. */
   const onDeleteScenes = useCallback(async (book: BookEntry, paths: string[]): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to delete: the words go to the Archive first.';
-    const cur = snapRef.current;
-    if (!cur) return 'Press Sync first.';
-    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
-    const going = scenes.filter((n) => paths.indexOf(n.path) >= 0);
+    if (!snapRef.current) return 'Press Sync first.';
     const now = new Date();
-    if (!oldSaving()) {
-      try {
-        // What waits for this book goes up first: a chapter left empty closes the ones after it up, and what waits is
-        // addressed by their numbers.
-        await beforeRenames(book.folder);
-        // One save: the scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up,
-        // or nothing changes (2026-11-11; before, two saves a note and one more for every note that followed).
-        const res = await sendNow(deleteAction(book.folder, paths, now));
-        res.removed.forEach((p) => putDraft(source.key, p, null));
-        return null;
-      } catch (e) {
-        return (e as Error).message;
-      }
-    }
     try {
-      for (const n of going) {
-        await archiveScene(source, n, now);
-        putDraft(source.key, n.path, null);
-      }
-      const emptied = Array.from(new Set(going.map((n) => toNumber(n.data.chapter)).filter((c): c is number => c != null)))
-        .filter((c) => !scenes.some((n) => paths.indexOf(n.path) < 0 && toNumber(n.data.chapter) === c))
-        .sort((a, b) => b - a);
-      for (const ch of emptied) {
-        const fresh = snapRef.current ? snapRef.current.index.notes : cur.index.notes;
-        await beforeRenames(book.folder);
-        const extra = chapterNotes(fresh, book.folder, ch);
-        const dir = book.folder + '/Archive/Deleted chapter ' + ch + ' ' + now.toISOString().slice(0, 10) + '/';
-        for (const n of extra) await archiveNote(source, n.path, dir + n.path.slice(n.path.lastIndexOf('/') + 1), 'Its chapter ' + ch + ' was deleted in the Sparrow app', now);
-        await applyShifts(source, chapterCloseUp(fresh, book.folder, ch, going.map((n) => n.path).concat(extra.map((n) => n.path))),
-          'Chapter ' + ch + ' was deleted in the Sparrow app, so the chapters after it close up by one.');
-        const titles = await renumberLists(source, fresh, book.folder, closeMap(ch), 'Chapter ' + ch + ' was deleted in the Sparrow app.');
-        if (titles && source.write) {
-          await source.write(dir + 'Chapter ' + ch + ' title options.md', '> [!note] Archived\n> The title options of chapter ' + ch + ', deleted in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.\n\n' + titles + '\n', '',
-            'archive: title options of deleted chapter ' + ch + '\n\nIts chapter was deleted in the Sparrow app. They left Chapter Titles.md and are kept here.');
-        }
-        await runSync();
-      }
-      if (!emptied.length) await runSync();
+      // What waits for this book goes up first: a chapter left empty closes the ones after it up, and what waits is
+      // addressed by their numbers.
+      await beforeRenames(book.folder);
+      // One save: the scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up,
+      // or nothing changes (2026-11-11; before, two saves a note and one more for every note that followed).
+      const res = await sendNow(deleteAction(book.folder, paths, now));
+      res.removed.forEach((p) => putDraft(source.key, p, null));
       return null;
     } catch (e) {
-      await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, beforeRenames, sendNow]);
+  }, [source, beforeRenames, sendNow]);
 
   /** Rename a chapter: its name lives on its scenes' chapter_title lines, saved through the queue like any edit. */
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
@@ -1010,13 +846,13 @@ export function App() {
           onRenameChapter={book && source.write ? onRenameChapter : undefined}
           onMoveChapter={book && source.write && source.readFresh && source.remove ? (from, to) => onMoveChapter(book, from, to) : undefined}
           onDeleteScenes={book && source.write && source.readFresh && source.remove ? (paths) => onDeleteScenes(book, paths) : undefined}
-          onRestore={book && source.commit && !oldSaving() ? (path) => onRestore(book, path) : undefined}
-          onNotes={book && source.commit && !oldSaving() ? (was, body) => onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
-          onFiles={source.commit && !oldSaving() ? onFiles : undefined}
+          onRestore={book ? (path) => onRestore(book, path) : undefined}
+          onNotes={book ? (was, body) => onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
+          onFiles={onFiles}
           onJob={book && source.write ? onJob : undefined} onChat={book && source.write ? onChat : undefined}
           todos={book ? bookTodos(view, book) : []} onTodo={source.write ? onDecide : undefined} onMarks={source.write ? onMarks : undefined} waiting={waiting}
           onAddTodo={book && source.write ? (t) => onAddTodo(book.folder, t) : undefined}
-          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} onLog={source.commit && !oldSaving() ? onLog : undefined} />}
+          timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLogged={foldNotes} onLog={onLog} />}
           codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
           codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
           sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
@@ -1076,7 +912,7 @@ export function App() {
     if (book && group) {
       return <ChapterPage key={group.key + ':' + book.folder} source={source} group={group} bookTitle={book.title} codex={codexFor(view, book)} startAt={route.path}
         checkOpts={checkOptionsFor(view, book.folder)}
-        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} onLog={source.commit && !oldSaving() ? onLog : undefined} />} />;
+        backTo={href.book(book.folder)} onSaved={(n) => { foldNotes([n]); }} timer={<PomodoroTimer source={source} index={view} variant="bar" onLogged={foldNotes} onLog={onLog} />} />;
     }
   }
 
@@ -1137,9 +973,9 @@ export function App() {
     else {
       let screen;
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={source.commit && !oldSaving() ? onFiles : undefined} onMatter={source.commit && !oldSaving() ? onWords : undefined} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={onFiles} onMatter={onWords} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
-      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={source.commit && !oldSaving() ? onTitles : undefined} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
+      else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={onTitles} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;
       else if (boardKey === 'changes') screen = <ChangesOverview book={book} chapters={chapterChanges(view.notes, book.folder, (ch) => { const g = chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean)).find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; })}
         calls={decideQueue(view, book).filter(isStoryCall).length} firstScene={book.scenes[0] || null}
@@ -1242,7 +1078,7 @@ export function App() {
 
   return (
     <Shell source={source} schema={schema} index={view} book={navBook} board={boardKey} place={place} at={at} demo={source instanceof DemoSource} title={pageTitle} side={side}
-      timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLogged={foldNotes} onLog={source.commit && !oldSaving() ? onLog : undefined} />}
+      timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLogged={foldNotes} onLog={onLog} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
       {(error || notice || (!online && (waitingN > 0 || drafts > 0))) && (
         <div class="banner" role="status">

@@ -2,16 +2,11 @@
 // and scrap boxes) keeps Kyle's words on the device as he types, as before (src/lib/drafts.ts); when it saves, the
 // words go up here as one action, sent at once: the scene with what changed elsewhere merged in, and, when a version
 // clashed with his, that version kept as a copy in the same save. A copy Kyle asks for is one save too.
-// With "The old way" picked in Settings, or a vault that cannot take one save of many files, the older functions run.
-import * as old from '../lib/drafts.ts';
 import type { Draft, SaveResult } from '../lib/drafts.ts';
 import { joinNote, orderBetween } from '../lib/scenes.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { createAction, wordsAction, type Op } from './ops.ts';
 import { pushAction } from './push.ts';
-import { oldSaving } from './switch.ts';
-
-const newWay = (source: VaultSource): boolean => Boolean(source.commit) && !oldSaving();
 
 /** Save a draft's words, with ops that belong in the same save (`also`: a copy made first, a new scene). */
 export async function saveWords(source: VaultSource, d: Draft, now: Date, also: Op[] = []): Promise<SaveResult & { saved: SaveResult['note'][]; renames: Record<string, string> }> {
@@ -24,7 +19,6 @@ export async function saveWords(source: VaultSource, d: Draft, now: Date, also: 
 /** Save a draft to the vault: what changed elsewhere is merged in, a clashing version is kept as a copy, Kyle's words
  * are written. One save. */
 export async function saveDraft(source: VaultSource, d: Draft, now: Date): Promise<SaveResult> {
-  if (!newWay(source)) return old.saveDraft(source, d, now);
   const { note, clash, merged } = await saveWords(source, d, now);
   return { note, clash, merged };
 }
@@ -36,7 +30,6 @@ export function copyOp(note: { path: string; data: Record<string, unknown> }, bo
 
 /** Save a body as the note's next copy. Returns the new file's path. */
 export async function saveSnapshot(source: VaultSource, note: { path: string; data: Record<string, unknown> }, body: string, label: string, now: Date): Promise<string> {
-  if (!newWay(source)) return old.saveSnapshot(source, note, body, label, now);
   const op = copyOp(note, body, label, now, (await source.tree()).files);
   const res = await pushAction(source, { id: 'copy-' + now.getTime().toString(36), at: now.toISOString(), ops: [op] });
   return res.renames[op.path] || op.path;
@@ -73,6 +66,3 @@ export async function joinWords(source: VaultSource, note: NoteRecord, next: Not
   const r = await saveWords(source, { ...d, body: joined, freshHeadline: true }, now, [join]);
   return { note: r.note, clash: r.clash, merged: r.merged, told: r.saved.some((n) => n.path === joinNote(bookFolder, next, note, [], now).path) };
 }
-
-/** Does this vault save the writing page's words the new way now? */
-export const newWords = newWay;

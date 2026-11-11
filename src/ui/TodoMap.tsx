@@ -10,7 +10,7 @@ import {
   type BookPart, type Lane, type MapFilter
 } from '../lib/todomap.ts';
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { href } from './route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;

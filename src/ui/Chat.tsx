@@ -3,7 +3,7 @@ import { conversation, conversations, firstWords, isSceneThread, isThread, loadS
 import type { Decision } from '../lib/ideas.ts';
 import { render } from '../lib/markdown.ts';
 import type { VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
 import { href } from './route.ts';

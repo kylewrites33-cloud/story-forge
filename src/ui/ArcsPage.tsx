@@ -6,7 +6,7 @@ import type { Decision } from '../lib/ideas.ts';
 import { arcEdit, arcIssue, bookArcs, removePoint, setPoint, type Arc, type ArcPoint } from '../lib/arcs.ts';
 import { scenePositions, storyScenes } from '../lib/tension.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { href } from './route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';

@@ -1,13 +1,16 @@
 // The outbox: everything Kyle has done that the vault does not have yet, in order. It lives in this browser's
 // localStorage, one list per vault, so nothing is lost when the connection drops or the app closes.
 import { clearChoices, loadChoices, type ChangeStatus } from '../lib/changes.ts';
-import { loadQueue, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
+import { sameSlot, type Choice } from './choice.ts';
 import { isMaker } from './makers.ts';
 import { choiceAction, marksAction, type Action, type Op } from './ops.ts';
 import { validChange } from './text.ts';
 
 const KEY = 'story-forge.outbox.';
 const LANDED = 'story-forge.landed.';
+/** Where choices waited before the outbox (until 2026-11-11). Read once to move them over; a device that has not opened
+ * the app since then may still hold some. */
+const OLD_QUEUE = 'story-forge.queue.';
 
 type Store = Storage | null;
 const store = (): Store => globalThis.localStorage ?? null;
@@ -25,6 +28,16 @@ function valid(a: unknown): a is Action {
   return Boolean(x && typeof x.id === 'string' && typeof x.at === 'string' && Array.isArray(x.ops) && x.ops.every(validOp));
 }
 
+function oldQueue(sourceKey: string, s: Store): Choice[] {
+  try {
+    const raw = s && s.getItem(OLD_QUEUE + sourceKey);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((c) => c && typeof c.path === 'string' && typeof c.decision === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 /** The waiting actions for a vault. What was left in the two older lists moves over the first time, once: choices in
  * the old queue (before 2026-11-11) and answers on the team's changes (the Edit room's own list until then). */
 export function loadOutbox(sourceKey: string, s: Store = store()): Action[] {
@@ -36,7 +49,7 @@ export function loadOutbox(sourceKey: string, s: Store = store()): Action[] {
   } catch {
     list = [];
   }
-  const old = loadQueue(sourceKey, s);
+  const old = oldQueue(sourceKey, s);
   const marks = loadChoices(sourceKey, s);
   const notes = Object.keys(marks).filter((path) => marks[path] && typeof marks[path] === 'object' && Object.keys(marks[path]).length);
   if (old.length || notes.length) {
@@ -47,7 +60,7 @@ export function loadOutbox(sourceKey: string, s: Store = store()): Action[] {
     // Only let go of the old lists once the new one is safely written.
     let kept = false;
     try { kept = Boolean(s && s.getItem(KEY + sourceKey)); } catch { kept = false; }
-    if (kept) { saveQueue(sourceKey, [], s); clearChoices(sourceKey, s); }
+    if (kept) { try { if (s) s.removeItem(OLD_QUEUE + sourceKey); } catch { /* it is read again next time, and adds nothing twice */ } clearChoices(sourceKey, s); }
   }
   return list;
 }

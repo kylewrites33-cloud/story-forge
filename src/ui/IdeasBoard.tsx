@@ -8,7 +8,7 @@ import { render } from '../lib/markdown.ts';
 import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schema.ts';
 import { EditFields } from './EditFields.tsx';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
-import type { Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../vault/choice.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { EmptyBox } from './screens.tsx';

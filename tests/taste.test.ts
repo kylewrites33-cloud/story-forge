@@ -7,7 +7,9 @@ import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { percent, tasteIdeas, tasteStats, withoutProperties } from '../src/lib/taste.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
-import { enqueue, overlay, type Choice } from '../src/lib/write-queue.ts';
+import { overlayActions } from '../src/vault/apply.ts';
+import { choiceAction } from '../src/vault/ops.ts';
+import { add, choicesOf } from '../src/vault/outbox.ts';
 import { DEMO, demoSchemaText, FsSource } from './helpers.ts';
 
 const schema = parseSchema(demoSchemaText());
@@ -71,14 +73,14 @@ test('reasons are written as a list and stars as a number, touching only their o
   assert.deepEqual(reasonsOf(shown), ['specific']);
 });
 
-test('a keep and then its reasons wait side by side in the queue', () => {
+test('a keep and then its reasons wait side by side', () => {
   const note = makeNote(BOOK + '/Ideas/I-020 The Bell Sleeps.md', 'abc', IDEA.replace('status: keep', 'status: inbox'));
   const index = { notes: { [note.path]: note } } as never;
-  let q: Choice[] = enqueue([], { path: note.path, decision: 'keep', reason: '', at: '2026-10-18T10:00:00Z' });
-  q = enqueue(q, { path: note.path, decision: 'edit', reason: '', at: '2026-10-18T10:00:01Z', fields: { reasons: 'love-it' } });
-  q = enqueue(q, { path: note.path, decision: 'edit', reason: '', at: '2026-10-18T10:00:02Z', fields: { rating: '3' } });
-  assert.equal(q.length, 2);
-  const shown = (overlay(index, q) as { notes: Record<string, { data: Record<string, unknown> }> }).notes[note.path].data;
+  let box = add([], choiceAction([{ path: note.path, decision: 'keep', reason: '', at: '2026-10-18T10:00:00Z' }]));
+  box = add(box, choiceAction([{ path: note.path, decision: 'edit', reason: '', at: '2026-10-18T10:00:01Z', fields: { reasons: 'love-it' } }]));
+  box = add(box, choiceAction([{ path: note.path, decision: 'edit', reason: '', at: '2026-10-18T10:00:02Z', fields: { rating: '3' } }]));
+  assert.equal(choicesOf(box).length, 2);
+  const shown = (overlayActions(index, box) as { notes: Record<string, { data: Record<string, unknown> }> }).notes[note.path].data;
   assert.equal(shown.status, 'keep');
   assert.deepEqual(shown.reasons, ['love-it']);
   assert.equal(shown.rating, 3);

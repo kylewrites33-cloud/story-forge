@@ -10,10 +10,12 @@ import { applyToText, changeFor, commitMessage, piles, stamp } from '../src/lib/
 import { parseSchema } from '../src/lib/schema.ts';
 import { DEFAULTS } from '../src/lib/settings.ts';
 import { PHASE, sync } from '../src/lib/sync.ts';
-import type { VaultSource } from '../src/lib/types.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
-import { enqueue, flush, overlay, saveChoice, type Choice } from '../src/lib/write-queue.ts';
-import { DEMO, FsSource, hasVault, VAULT } from './helpers.ts';
+import { overlayActions } from '../src/vault/apply.ts';
+import { choiceAction } from '../src/vault/ops.ts';
+import { add, choicesOf, settle } from '../src/vault/outbox.ts';
+import { pushAction, pushAll } from '../src/vault/push.ts';
+import { DEMO, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
 
 const IDEA = [
   '---',
@@ -112,27 +114,6 @@ test('Rewrite sends a proposal back to the team with what to change', () => {
   assert.match(commitMessage({ type: 'idea', id: 'I-009', title: 'A' }, 'regenerate'), /^ideas: rewrite I-009 A/);
 });
 
-/** A source over a folder that can also be written, the way the app writes GitHub. */
-class WritableFs extends FsSource {
-  dir2: string;
-  writes: { path: string; message: string }[] = [];
-  bump: string | null = null;
-  constructor(dir: string) { super(dir); this.dir2 = dir; }
-  private sha(text: string) { return 'sha-' + text.length + '-' + [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); }
-  async readFresh(p: string) {
-    const text = fs.readFileSync(path.join(this.dir2, p), 'utf8');
-    return { text, sha: this.sha(text) };
-  }
-  async write(p: string, text: string, sha: string, message: string) {
-    const file = path.join(this.dir2, p);
-    if (this.bump) { fs.appendFileSync(file, this.bump); this.bump = null; }
-    if (this.sha(fs.readFileSync(file, 'utf8')) !== sha) throw Object.assign(new Error('changed'), { conflict: true });
-    fs.writeFileSync(file, text);
-    this.writes.push({ path: p, message });
-    return this.sha(text);
-  }
-}
-
 function copyDemo(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-ideas-'));
   fs.cpSync(DEMO, dir, { recursive: true });
@@ -149,45 +130,51 @@ test('the index lists each book\'s ideas', async () => {
   assert.ok(p.decide.length >= 2 && p.later.length >= 1 && p.dropped.length >= 1);
 });
 
-test('a saved choice reads the note fresh, edits it and redoes the edit once if the note changed meanwhile', async () => {
-  const dir = copyDemo();
-  const src = new WritableFs(dir);
-  src.bump = '\nKyle added a line in Obsidian.\n';
-  const rec = await saveChoice(src, { path: DEMO_IDEA, decision: 'drop', reason: 'Keep the dock.', at: NOW.toISOString() });
-  assert.equal(rec.data.status, 'discard');
-  assert.equal(rec.data.decision_note, 'Keep the dock.');
-  const onDisk = fs.readFileSync(path.join(dir, DEMO_IDEA), 'utf8');
-  assert.ok(onDisk.endsWith('Kyle added a line in Obsidian.\n'), 'Kyle\'s edit is kept');
-  assert.equal(src.writes.length, 1);
+const demoText = (p: string) => fs.readFileSync(path.join(DEMO, p), 'utf8');
+
+test('a saved choice is made on the note as the vault has it, and made again if the note changed meanwhile', async () => {
+  const src = new MemSource();
+  src.files.set(DEMO_IDEA, demoText(DEMO_IDEA));
+  src.race = () => { src.files.set(DEMO_IDEA, src.files.get(DEMO_IDEA)! + '\nKyle added a line in Obsidian.\n'); };
+  const res = await pushAction(src, choiceAction([{ path: DEMO_IDEA, decision: 'drop', reason: 'Keep the dock.', at: NOW.toISOString() }]));
+  assert.equal(res.saved[0].data.status, 'discard');
+  assert.equal(res.saved[0].data.decision_note, 'Keep the dock.');
+  assert.ok(src.files.get(DEMO_IDEA)!.endsWith('Kyle added a line in Obsidian.\n'), 'Kyle\'s edit is kept');
+  assert.equal(src.commits.length, 1);
+  assert.equal(src.builds, 2, 'planned again on the newer note');
 });
 
-test('flush keeps choices it could not send, and the overlay shows them meanwhile', async () => {
-  const dir = copyDemo();
-  const src = new WritableFs(dir);
-  const offline: VaultSource = {
-    key: 'x', label: 'x', tree: src.tree.bind(src), read: src.read.bind(src),
-    readFresh: async () => { throw Object.assign(new Error('Cannot reach GitHub.'), { status: 0 }); },
-    write: src.write.bind(src)
-  };
-  let q: Choice[] = [];
-  q = enqueue(q, { path: DEMO_IDEA, decision: 'later', reason: '', at: NOW.toISOString() });
-  q = enqueue(q, { path: DEMO_IDEA, decision: 'keep', reason: '', at: NOW.toISOString() });
-  assert.equal(q.length, 1, 'the newer choice replaces the older');
-  const res = await flush(offline, q);
-  assert.equal(res.saved.length, 0);
-  assert.equal(res.left.length, 1);
-  const snap = await sync(src, null);
-  assert.equal(overlay(snap.index, res.left).notes[DEMO_IDEA].data.status, 'keep');
-  const ok = await flush(src, res.left);
-  assert.equal(ok.left.length, 0);
+test('a push keeps choices it could not send, and they show meanwhile', async () => {
+  const src = new MemSource();
+  src.files.set(DEMO_IDEA, demoText(DEMO_IDEA));
+  let box = add([], choiceAction([{ path: DEMO_IDEA, decision: 'later', reason: '', at: NOW.toISOString() }]));
+  box = add(box, choiceAction([{ path: DEMO_IDEA, decision: 'keep', reason: '', at: NOW.toISOString() }]));
+  assert.equal(choicesOf(box).length, 1, 'the newer choice replaces the older');
+  src.offline = true;
+  const res = await pushAll(src, box);
+  assert.deepEqual([res.saved.length, res.done, res.failed], [0, [], {}]);
+  assert.match(res.error!, /Cannot reach GitHub/);
+  const left = settle(box, res.done, res.failed, res.renames);
+  assert.equal(left.length, 1);
+  const snap = await sync(new FsSource(DEMO), null);
+  assert.equal(overlayActions(snap.index, left).notes[DEMO_IDEA].data.status, 'keep');
+  src.offline = false;
+  const ok = await pushAll(src, left);
+  assert.equal(settle(left, ok.done, ok.failed, ok.renames).length, 0);
   assert.equal(ok.saved[0].data.status, 'keep');
 });
 
 test('choices written into the demo vault still pass sf validate', { skip: !hasVault && 'author-business is not checked out beside this repository' }, async () => {
   const dir = copyDemo();
-  const src = new WritableFs(dir);
-  await saveChoice(src, { path: DEMO_IDEA, decision: 'later', reason: 'After the outline: it, "settles" it.', at: NOW.toISOString() });
-  await saveChoice(src, { path: 'Series/Ember Road/Books/1 Ash Bell/Ideas/I-001 Tobin Lies.md', decision: 'drop', reason: 'Too mean: Tobin is kind.', at: NOW.toISOString() });
+  const other = 'Series/Ember Road/Books/1 Ash Bell/Ideas/I-001 Tobin Lies.md';
+  const src = new MemSource();
+  [DEMO_IDEA, other].forEach((p) => src.files.set(p, demoText(p)));
+  await pushAll(src, [
+    choiceAction([{ path: DEMO_IDEA, decision: 'later', reason: 'After the outline: it, "settles" it.', at: NOW.toISOString() }]),
+    choiceAction([{ path: other, decision: 'drop', reason: 'Too mean: Tobin is kind.', at: NOW.toISOString() }])
+  ]);
+  [DEMO_IDEA, other].forEach((p) => fs.writeFileSync(path.join(dir, p), src.files.get(p)!));
+  assert.notEqual(src.files.get(other), demoText(other));
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], {
     cwd: dir, env: { ...process.env, SF_VAULT: dir }, encoding: 'utf8'
   });
@@ -225,14 +212,14 @@ test('the schema has an Ideas board the app indexes', () => {
 });
 
 test('an edit changes only the lines Kyle changed, one line each, and two unsaved edits join', async () => {
-  const { enqueue } = await import('../src/lib/write-queue.ts');
   const { editChange } = await import('../src/lib/ideas.ts');
   const text = '---\ntype: scene\nid: S-001\ntitle: A\nstatus: planned\norder: 1\nturn: Old turn\nhook: "Old: hook"\n---\nBody\n';
   const out = applyToText(text, editChange({ turn: 'New\nturn  here', hook: '', status: 'drafted' }));
   assert.equal(out, '---\ntype: scene\nid: S-001\ntitle: A\nstatus: drafted\norder: 1\nturn: New turn here\n---\nBody\n');
-  let q = enqueue([], { path: 'a.md', decision: 'edit', reason: '', at: 'x', fields: { turn: 'T' } });
-  q = enqueue(q, { path: 'a.md', decision: 'accept', reason: '', at: 'y' });
-  q = enqueue(q, { path: 'a.md', decision: 'edit', reason: '', at: 'z', fields: { hook: 'H' } });
+  let box = add([], choiceAction([{ path: 'a.md', decision: 'edit', reason: '', at: 'x', fields: { turn: 'T' } }]));
+  box = add(box, choiceAction([{ path: 'a.md', decision: 'accept', reason: '', at: 'y' }]));
+  box = add(box, choiceAction([{ path: 'a.md', decision: 'edit', reason: '', at: 'z', fields: { hook: 'H' } }]));
+  const q = choicesOf(box);
   assert.equal(q.length, 2);
   assert.deepEqual(q.find((c) => c.decision === 'edit')!.fields, { turn: 'T', hook: 'H' });
   assert.match(commitMessage({ type: 'scene', id: 'S-001', title: 'A' }, 'edit'), /^scenes: edit S-001 A\n\nEdited on the Chapter Grid/);
