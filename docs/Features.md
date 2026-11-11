@@ -1389,3 +1389,45 @@ connection, and goes up as one save.
   Chapter titles, a scene's new title from its card, a new series and its first book, one save each when the
   connection is back, no note fetched again by the next sync, and every earlier piece's check. The Rewrite tab's mark
   was checked by the tests only (the demo book has no rewrite).
+
+## The one saving system, step 1: a note on the workflow, and files from the device (2026-11-11)
+
+The eighth piece. What Kyle sees is as before; how each is saved changed.
+
+- **A note on the workflow** (Team, Workflow, Add a note on the workflow, or Note on a step) shows at once under
+  "Kyle's notes", waits on the device with no connection, and goes up as one save on the workflow as the vault has it
+  then. Two notes written offline both land, in order. Before, it said "Connect to the internet to add a note to the
+  workflow."
+- **Files from the device go up inside one save each**, where some were two:
+  - **A cover**: the small copy (`Cover.jpg`) and the full-size picture in the book's Cover folder land together.
+    Before, the full-size picture was saved first and the small copy second, so a failure in between left a picture
+    in the Cover folder and no cover.
+  - **Bring in a manuscript**: the file and the ask to the team land together, so there is never a manuscript in the
+    vault that nobody was asked to bring in. Every manuscript, a text file too, goes up byte for byte. The ask shows
+    in Jobs from the save's answer, with no sync.
+  - **A Rocket file** and **the Word backup of Export to Word** were one save already and still are, now through the
+    same door as everything else. A Rocket file whose name is taken gets the next free name ("name (2).csv") at the
+    save, on the vault's own file list; a second Word backup on the same day replaces that day's file, as before.
+- **These files still need the connection**, and say so ("Connect to the internet to add a cover." and the like): a
+  picture or a manuscript is too big for the small store on the device where waiting changes are kept.
+- **How it is built.** A `file` op (`src/vault/ops.ts`, `DeviceFile` in `src/lib/types.ts`) carries the file as text or
+  as base64 and says what happens when its name is taken: the next free name, in its place, or stop with a sentence.
+  Like the chapters op it is sent at once and never waits. A save's plan can now hold files that are not text
+  (`blobs` on `CommitPlan`; `Tree.writeBytes`): on GitHub each is sent as a blob first and named in the save's tree,
+  and sent once even when the save has to be planned again because the vault moved. The workflow is a file the app
+  holds as text and not as a note (`index.team`): a waiting edit to it changes that text on screen
+  (`overlayActions`), and the save's answer puts the saved text into the saved copy (`Pushed.texts`, `foldSaved`), so
+  the next sync fetches nothing again. The note itself is one more small text change (`workflow-note` in
+  `src/vault/text.ts`).
+- The old way (Settings, Saving) keeps the old code for all five.
+- **Still on their own saves** until their pieces: split and join, copies and saved drafts, the timer's log and the
+  typing counts, and the writing page's own saves (held on the old way until a save from Kyle's own device has been
+  seen going through the new way).
+- Checked with tests (the workflow note waiting, landing on a version the team changed, and matching a fresh read
+  with no sync; a Rocket file against the old way's files; a cover as one save of two pictures; a manuscript and its
+  ask landing together or not at all; the backup replacing the day's file; a file going up again whole when the
+  vault moved; pictures inside the save against a pretend GitHub, sent once across a retry), and in Chromium at
+  1180 x 820, 1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: the note with
+  no connection and the app closed and opened, a Rocket file twice, a real picture shrunk in that engine and shown as
+  the cover, a manuscript with its ask showing in Jobs, and every earlier piece's check. Export to Word's backup was
+  checked in Chromium only (the WebKit test browser cannot take a download).

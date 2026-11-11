@@ -528,6 +528,8 @@ function fakeGitHub(start: Record<string, string>) {
   const trees = new Map<string, Map<string, string>>([['t0', new Map(Object.entries(start))]]);
   const commits = new Map<string, { tree: string; parent: string | null; message: string }>([['c0', { tree: 't0', parent: null, message: 'start' }]]);
   const state = { head: 'c0', calls: [] as string[], beforePatch: null as (() => void) | null };
+  /** Files that are not text, sent ahead of the save that names them. */
+  const sent = new Map<string, string>();
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   const sha1 = (t: string) => { const b = Buffer.from(t, 'utf8'); return crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob ' + b.length + '\0'), b])).digest('hex'); };
   const commitTo = (files: Record<string, string | null>, message: string) => {
@@ -556,10 +558,18 @@ function fakeGitHub(start: Record<string, string>) {
       const text = c && trees.get(c.tree)!.get(path.slice(10));
       return text == null ? json({}, 404) : json({ sha: sha1(text), encoding: 'base64', content: toBase64(text) });
     }
+    if (method === 'POST' && path === '/git/blobs') {
+      assert.equal(body.encoding, 'base64');
+      const id = 'b' + (sent.size + 1);
+      sent.set(id, body.content);
+      return json({ sha: id }, 201);
+    }
     if (method === 'POST' && path === '/git/trees') {
       const tree = new Map(trees.get(body.base_tree)!);
       for (const e of body.tree) {
-        if (e.sha === null) { if (!tree.has(e.path)) return json({}, 422); tree.delete(e.path); } else tree.set(e.path, e.content);
+        if (e.sha === null) { if (!tree.has(e.path)) return json({}, 422); tree.delete(e.path); }
+        else if (e.sha) { if (!sent.has(e.sha)) return json({}, 422); tree.set(e.path, 'bytes ' + sent.get(e.sha)); }
+        else tree.set(e.path, e.content);
       }
       const id = 't' + (trees.size + 100);
       trees.set(id, tree);
@@ -606,6 +616,23 @@ test('GitHub: several files written and removed as one commit, read first at the
   assert.equal(await src.commit(async () => null), null);
   assert.equal(await src.commit(async () => ({ message: 'x', writes: [] })), null);
   assert.equal(gh.state.calls.length, before, 'the app remembers where its own save left the branch');
+});
+
+test('GitHub: a picture goes up in the same save as the notes, and only once when the save has to be made again', async () => {
+  const gh = fakeGitHub({ 'vault/a.md': 'A\n', 'vault/Cover.jpg': 'the old picture' });
+  const src = new GitHubSource(settings, gh.fetch);
+  gh.state.beforePatch = () => gh.commitTo({ 'vault/t.md': 'theirs\n' }, 'agents: a change');
+  let builds = 0;
+  const res = await src.commit(async () => { builds++; return { message: 'books: cover', writes: [{ path: 'a.md', text: 'A2\n' }], blobs: [{ path: 'Cover.jpg', base64: 'c21hbGw=' }, { path: 'Cover/Original.png', base64: 'ZnVsbA==' }] }; });
+  assert.equal(builds, 2, 'the team saved in between, so the save was planned again');
+  assert.deepEqual(gh.files(), { 'vault/a.md': 'A2\n', 'vault/Cover.jpg': 'bytes c21hbGw=', 'vault/Cover/Original.png': 'bytes ZnVsbA==', 'vault/t.md': 'theirs\n' });
+  assert.equal(gh.state.calls.filter((c) => c === 'POST /git/blobs').length, 2, 'each picture was sent once, not once a try');
+  assert.equal(gh.commits.get(gh.state.head)!.message, 'books: cover');
+  assert.deepEqual(res!.shas, { 'Cover.jpg': 'b1', 'Cover/Original.png': 'b2', 'a.md': await blobSha('A2\n') });
+  // A save of pictures alone is still a save.
+  const only = await src.commit(async () => ({ message: 'backups: x', writes: [], blobs: [{ path: 'Backups/x.docx', base64: 'UEsDBA==' }] }));
+  assert.equal(gh.files()['vault/Backups/x.docx'], 'bytes UEsDBA==');
+  assert.equal(only!.shas['Backups/x.docx'], 'b3');
 });
 
 test('GitHub: the next save starts from the app\'s own last save without asking where the branch is', async () => {

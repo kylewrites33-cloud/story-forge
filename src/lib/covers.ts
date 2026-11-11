@@ -2,7 +2,7 @@
 // device by blob sha so it shows offline and is downloaded once. The picture as Kyle chose it is kept too, untouched, in
 // the book's Cover/ folder (the vault's rule 11: cover images live there), for publishing.
 import { readPicture, writePicture } from './cache.ts';
-import type { BookEntry, VaultSource } from './types.ts';
+import type { BookEntry, DeviceFile, VaultSource } from './types.ts';
 
 /** Book covers show at most about 330 px tall (Book details), so 720 px is sharp on the iPad's screen and small to fetch
  * (Kyle, 2026-10-29: "it'll be a small thumbnail"). Crow's character pictures keep the older 900. */
@@ -111,6 +111,15 @@ export async function addCover(source: VaultSource, book: BookEntry, file: File,
     throw e;
   }
   await saveCover(source, book, small);
+}
+
+/** A new cover as the one saving system saves it: the full-size picture and the small copy, together. */
+export async function coverFiles(book: BookEntry, file: File, now = new Date()): Promise<DeviceFile[]> {
+  const small = await shrinkToJpeg(file, COVER_HEIGHT, 0.82, COVER_SHAPE);
+  return [
+    { path: book.folder + '/Cover.jpg', taken: 'replace', base64: small, message: 'books: cover for ' + book.title },
+    { path: originalPath(book.folder, file.name, now), taken: 'next', base64: await toBase64(file), message: 'books: full-size cover for ' + book.title }
+  ];
 }
 
 /** Save a picture as the book's Cover.jpg, replacing the one there. One commit, made with Kyle's key. */

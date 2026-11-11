@@ -6,6 +6,7 @@ import { applyToText, editChange } from '../lib/ideas.ts';
 import { freePath } from '../lib/notes.ts';
 import { recipeName, RECIPES_FOLDER } from '../lib/recipes.ts';
 import { safeTitle } from '../lib/scenes.ts';
+import { teamFiles } from '../lib/team.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import { saveChoice } from '../lib/write-queue.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
@@ -64,6 +65,21 @@ async function planRetitle(t: Tree, path: string, title: string, what: 'scene' |
   return { to, message: 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why };
 }
 
+const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
+
+/** Where a file from the device goes on the save's tree. When the name is taken: the next free one ("name (2).csv"),
+ * the same one (it is replaced), or a plain sentence that stops the save. */
+async function planFile(t: Tree, path: string, taken: 'next' | 'replace' | 'refuse'): Promise<string> {
+  if (taken === 'replace') return path;
+  const have = new Set((await t.files()).map((f) => f.path.toLowerCase()));
+  if (!have.has(path.toLowerCase())) return path;
+  if (taken === 'refuse') throw new Error('A file called ' + baseName(path) + ' reached the vault a moment ago. Add yours again and it takes the next free name.');
+  const dot = path.lastIndexOf('.');
+  const stem = dot > path.lastIndexOf('/') ? path.slice(0, dot) : path;
+  const ext = dot > path.lastIndexOf('/') ? path.slice(dot) : '';
+  for (let n = 2; ; n++) { const to = stem + ' (' + n + ')' + ext; if (!have.has(to.toLowerCase())) return to; }
+}
+
 export interface Pushed {
   /** Notes as the vault now has them. */
   saved: NoteRecord[];
@@ -71,6 +87,9 @@ export interface Pushed {
   renames: Record<string, string>;
   /** Files the save took out of the vault (a note that got a new file name leaves its old one). */
   removed: string[];
+  /** Files the app holds as text and not as notes (the workflow, the team's files) that the save read or wrote, as the
+   * vault now has them. */
+  texts?: Record<string, { sha: string; text: string }>;
 }
 
 export interface PushOptions {
@@ -117,6 +136,13 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
         lines.push(made.message);
         continue;
       }
+      if (op.kind === 'file') {
+        const to = await planFile(t, op.path, op.taken);
+        if (op.base64 != null) t.writeBytes(to, op.base64); else t.write(to, op.text || '');
+        if (to !== op.path) renames[op.path] = to;
+        lines.push(to === op.path ? op.message : op.message.split(baseName(op.path)).join(baseName(to)));
+        continue;
+      }
       if (op.kind === 'retitle') {
         const from = renames[op.path] || op.path;
         const line = await planRetitle(t, from, op.title, op.what);
@@ -131,11 +157,13 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
       if (next !== text) lines.push(editMessage(text, op.edit, path));
       t.write(path, next);
     }
-    const { writes, removes } = t.changes();
-    return writes.length || (removes && removes.length) ? { message: messageFor(lines), writes, removes } : null;
+    const { writes, removes, blobs } = t.changes();
+    return writes.length || (removes && removes.length) || (blobs && blobs.length) ? { message: messageFor(lines), writes, removes, blobs } : null;
   });
   const t = tree as Tree | null;
-  return { saved: t ? t.saved((res && res.shas) || {}) : [], renames, removed: t && res ? t.removed() : [] };
+  const shas = (res && res.shas) || {};
+  const texts = t ? t.texts(shas, (p) => teamFiles([{ path: p, sha: '' }]).length > 0) : {};
+  return { saved: t ? t.saved(shas).filter((n) => !texts[n.path]) : [], renames, removed: t && res ? t.removed() : [], texts };
 }
 
 /** Save one action as one step. */
@@ -161,7 +189,7 @@ async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<
 async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
   const out: Pushed = { saved: [], renames: {}, removed: [] };
   for (const op of action.ops) {
-    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle') {
+    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file') {
       // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
       const p = await pushActions(source, [{ ...action, ops: [op] }]);
       out.saved.push(...p.saved);
@@ -207,6 +235,8 @@ export interface PushResult {
   renames: Record<string, string>;
   /** Files the saves took out of the vault. */
   removed: string[];
+  /** Files the app holds as text (the workflow, the team's files) as the vault now has them. */
+  texts: Record<string, { sha: string; text: string }>;
   /** Ids of the actions that are finished: saved, or nothing left to save them to. */
   done: string[];
   /** Ids of the actions that failed for a reason other than the connection, each with a plain sentence. */
@@ -224,10 +254,10 @@ const wait = (e: unknown): boolean => { const st = (e as { status?: number }).st
  * together, up to forty a save; if a group will not save, its actions go one at a time so only the one at fault waits.
  * Stops at the first connection failure and keeps the rest for next time. */
 export async function pushAll(source: VaultSource, list: Action[], opts: PushOptions & { legacy?: boolean } = {}): Promise<PushResult> {
-  const out: PushResult = { saved: [], renames: {}, removed: [], done: [], failed: {}, error: null };
+  const out: PushResult = { saved: [], renames: {}, removed: [], texts: {}, done: [], failed: {}, error: null };
   // An action later in the list may be about a note an earlier save in this same push gave another path.
   const follow = (a: Action): Action => (a.ops.some((op) => out.renames[op.path]) ? settle([a], [], {}, out.renames)[0] : a);
-  const take = (p: Pushed, ids: string[]) => { out.saved.push(...p.saved); Object.assign(out.renames, p.renames); out.removed.push(...p.removed); out.done.push(...ids); };
+  const take = (p: Pushed, ids: string[]) => { out.saved.push(...p.saved); Object.assign(out.renames, p.renames); out.removed.push(...p.removed); Object.assign(out.texts, p.texts || {}); out.done.push(...ids); };
   const one = async (a: Action): Promise<boolean> => {
     try {
       take(await (opts.legacy ? pushLegacy(source, follow(a)) : pushAction(source, follow(a), opts)), [a.id]);

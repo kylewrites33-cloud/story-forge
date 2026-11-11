@@ -72,9 +72,11 @@ export class DemoSource implements VaultSource {
       files: async () => (await this.tree()).files
     });
     const removes = (plan && plan.removes) || [];
-    if (!plan || (!plan.writes.length && !removes.length)) return null;
+    const blobs = (plan && plan.blobs) || [];
+    if (!plan || (!plan.writes.length && !removes.length && !blobs.length)) return null;
     const shas: Record<string, string> = {};
     for (const f of plan.writes) shas[f.path] = await this.write(f.path, f.text, has(f.path) ? hash(this.text(f.path)) : '', plan.message);
+    blobs.forEach((b) => { this.pictures.set(b.path, b.base64); shas[b.path] = hash(b.base64); });
     removes.forEach((path) => { this.removed.add(path); this.changed.delete(path); });
     this.saves++;
     return { commit: 'demo-save-' + this.saves, shas };

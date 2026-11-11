@@ -4,7 +4,7 @@
 // connection allows (push.ts).
 import type { ChangeStatus } from '../lib/changes.ts';
 import type { Choice } from '../lib/write-queue.ts';
-import type { FileEntry } from '../lib/types.ts';
+import type { DeviceFile, FileEntry } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';
 import type { TextChange } from './text.ts';
 
@@ -44,6 +44,11 @@ export type Op =
    * the note as it is named now. It shows at once under the old file name; the save moves the file, and what waits for
    * the note, the words kept on the device and the open page follow it to the new name. */
   | { kind: 'retitle'; path: string; title: string; what: 'scene' | 'recipe' }
+  /** A file from the device, saved as it is: a cover picture, a Rocket export, a manuscript, a Word backup. `text` for
+   * a text file, `base64` for any other. When a file of that name is already there: `next` takes the next free name
+   * ("name (2).csv"), `replace` puts this one in its place, `refuse` stops the save with a plain sentence. Like
+   * `chapters` it never waits in the outbox: a picture is too big for the small store the outbox lives in. */
+  | ({ kind: 'file' } & DeviceFile)
   /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
    * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
    * if another note took it meanwhile. */
@@ -74,6 +79,12 @@ export function chaptersAction(book: string, change: ChapterChange, why: string,
 /** Scenes deleted from a book, as one action. */
 export function deleteAction(book: string, scenes: string[], now: Date = new Date()): Action {
   return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'delete', path: book + '/Book.md', book, scenes, at: now.toISOString() }] };
+}
+
+/** Files from the device, with new notes that go in with them (the ask to the team that goes with a manuscript), as
+ * one action: one save. */
+export function filesAction(files: DeviceFile[], also: Op[] = [], now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: files.map((f): Op => ({ kind: 'file', ...f })).concat(also) };
 }
 
 /** Small changes to notes' text (text.ts), saved together as one action. */

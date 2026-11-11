@@ -100,7 +100,8 @@ export class MemSource implements VaultSource {
         files: async () => [...seen].map(([p, t]) => ({ path: p, sha: this.sha(t) }))
       });
       const removes = (plan && plan.removes) || [];
-      if (!plan || (!plan.writes.length && !removes.length)) return null;
+      const blobs = (plan && plan.blobs) || [];
+      if (!plan || (!plan.writes.length && !removes.length && !blobs.length)) return null;
       if (this.race) { const r = this.race; this.race = null; r(); this.head++; }
       if (this.head !== at) {
         if (attempt < 4) continue;
@@ -108,9 +109,11 @@ export class MemSource implements VaultSource {
       }
       const shas: Record<string, string> = {};
       plan.writes.forEach((f) => { this.files.set(f.path, f.text); shas[f.path] = this.sha(f.text); this.writes.push({ path: f.path, message: plan.message }); });
+      // A file that is not text is kept as its base64, as the tests' writeBytes stand-in does.
+      blobs.forEach((b) => { this.files.set(b.path, b.base64); shas[b.path] = this.sha(b.base64); this.writes.push({ path: b.path, message: plan.message }); });
       removes.forEach((p) => { this.files.delete(p); this.writes.push({ path: p, message: 'REMOVE ' + plan.message }); });
       this.head++;
-      this.commits.push({ message: plan.message, paths: plan.writes.map((f) => f.path).concat(removes) });
+      this.commits.push({ message: plan.message, paths: plan.writes.map((f) => f.path).concat(blobs.map((b) => b.path), removes) });
       return { commit: 'c' + this.head, shas };
     }
   }

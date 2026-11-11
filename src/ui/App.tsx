@@ -7,7 +7,7 @@ import { parseSchema } from '../lib/schema.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import { sync } from '../lib/sync.ts';
 import type { Decision } from '../lib/ideas.ts';
-import { addRocketFile, rocketProblem } from '../lib/market.ts';
+import { addRocketFile, rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { bookTodos, type NewTodo } from '../lib/todos.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
@@ -16,7 +16,7 @@ import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, 
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
 import { loadDrafts, moveDrafts, putDraft, typedWords } from '../lib/drafts.ts';
-import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { BookEntry, DeviceFile, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { ChapterTitlesPage } from './ChapterTitles.tsx';
@@ -24,7 +24,7 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { chaptersAction, deleteAction, choiceAction, createAction, marksAction, newId, textAction, type Action } from '../vault/ops.ts';
+import { chaptersAction, deleteAction, choiceAction, createAction, filesAction, marksAction, newId, textAction, type Action } from '../vault/ops.ts';
 import { changeRecord, type TextChange } from '../vault/text.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
@@ -44,7 +44,7 @@ import { href, parseHash, useRoute } from './route.ts';
 import { ChapterGrid, NoteView } from './screens.tsx';
 import { BookDetails, downloadWord, Home, SeriesPage } from './Home.tsx';
 import { makeBackupFolder } from '../lib/docx.ts';
-import { addCover, coverProblem } from '../lib/covers.ts';
+import { addCover, coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { SettingsScreen } from './SettingsScreen.tsx';
 import { Editor } from './Editor.tsx';
@@ -173,10 +173,10 @@ export function App() {
 
   /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. `soon` is for
    * the outbox: the copy on the device is written once things go quiet. Anything else (writing) is written at once. */
-  const foldNotes = useCallback(async (saved: NoteRecord[], soon = false, removed: string[] = []) => {
+  const foldNotes = useCallback(async (saved: NoteRecord[], soon = false, removed: string[] = [], texts: Record<string, { sha: string; text: string }> = {}) => {
     const cur = snapRef.current;
-    if ((!saved.length && !removed.length) || !cur || cur.key !== source.key) return;
-    const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current, removed) };
+    if ((!saved.length && !removed.length && !Object.keys(texts).length) || !cur || cur.key !== source.key) return;
+    const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current, removed, texts) };
     snapRef.current = next;
     setSnap(next);
     clearTimeout(snapTimer.current);
@@ -225,7 +225,7 @@ export function App() {
       const at = parseHash(location.hash);
       if ('path' in at && res.renames[at.path]) location.replace(location.hash.replace(encodeURIComponent(at.path), encodeURIComponent(res.renames[at.path])));
     }
-    await foldNotes(res.saved, true, res.removed);
+    await foldNotes(res.saved, true, res.removed, res.texts);
     if (left.some((a) => !sent.some((x) => x.id === a.id))) setTimeout(() => runFlushRef.current(), 0);
     return res.error;
   }, [source, setOutbox, foldNotes]);
@@ -237,7 +237,7 @@ export function App() {
   const sendNow = useCallback((action: Action): Promise<Pushed> => inLane('now ' + action.id, async () => {
     const cur = snapRef.current;
     const res = await pushAction(source, action, { known: cur && cur.key === source.key ? cur.index.notes : undefined });
-    await foldNotes(res.saved, false, res.removed);
+    await foldNotes(res.saved, false, res.removed, res.texts);
     return res;
   }), [source, inLane, foldNotes]);
   /** Before a chapter is added in the middle, moved or deleted: what waits for this book goes up first. Answers on the
@@ -406,6 +406,18 @@ export function App() {
     const problem = rocketProblem(file.name, file.size);
     if (problem) return { error: true, text: problem };
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to add a Rocket file.' };
+    if (!oldSaving() && source.commit) {
+      // One save through the one saving system; a name that is taken gets the next free one at the save.
+      try {
+        const f = rocketFile(book.seriesFolder, file.name, await file.text());
+        const res = await sendNow(filesAction([f]));
+        const path = res.renames[f.path] || f.path;
+        await runSync();
+        return { error: false, text: 'Saved ' + path.slice(path.lastIndexOf('/') + 1) + ' in the vault. Ask the team in the project chat to read it.' };
+      } catch (e) {
+        return { error: true, text: (e as Error).message };
+      }
+    }
     const series = snapRef.current && snapRef.current.index.series.find((s) => s.folder === book.seriesFolder);
     try {
       const path = await addRocketFile(source, book.seriesFolder, (series && series.rocket) || [], file.name, await file.text());
@@ -414,7 +426,7 @@ export function App() {
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }
-  }, [source, runSync]);
+  }, [source, runSync, sendNow]);
 
   /** Add a to-do to the vault's Tasks folder. It shows at once and is saved when the connection allows (2026-11-11). */
   const onAddTask = useCallback(async (t: NewTask): Promise<string | null> => {
@@ -484,13 +496,18 @@ export function App() {
     if (problem) return problem;
     if (!navigator.onLine) return 'Connect to the internet to add a cover.';
     try {
-      await addCover(source, book, file);
+      // The full-size picture and the small copy go up as one save (2026-11-11; before, two).
+      if (!oldSaving() && source.commit) await sendNow(filesAction(await coverFiles(book, file)));
+      else await addCover(source, book, file);
       await runSync();
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, sendNow]);
+
+  /** Files from the device saved as they are, as one save (the Word backup of Export to Word). */
+  const onFiles = useCallback(async (files: DeviceFile[]): Promise<void> => { await sendNow(filesAction(files)); }, [sendNow]);
 
   /** Scenes from a pasted outline, added as planned scenes at the end of the book: one save for all of them, and they
    * show at once (2026-11-11; before, one save each, with the connection). */
@@ -571,6 +588,16 @@ export function App() {
       const { files } = await source.tree();
       const path = manuscriptPath(book.folder, file.name, files.map((f) => f.path));
       const why = 'manuscripts: add ' + path.slice(path.lastIndexOf('/') + 1) + '\n\nAdded in the Sparrow app to bring in as scenes.';
+      if (!oldSaving() && source.commit) {
+        // The file and the ask to the team go up as one save, so there is never a manuscript in the vault that nobody
+        // was asked to bring in (2026-11-11; before, two saves).
+        const rel = path.slice(book.folder.length + 1);
+        const ask = planned('job', { j: { title: 'Bring in ' + file.name.replace(/\.[^.]+$/, ''), kind: 'import', target: rel, book: book.folder, ask: jobAsk('import', rel, '') }, at: new Date().toISOString() });
+        // Every manuscript goes up byte for byte, a text file too: it is saved unchanged, and a long one is too big to
+        // travel inside the save's own list of files.
+        await sendNow(filesAction([{ path, taken: 'refuse', message: why, base64: await fileBase64(file) }], ask.ops));
+        return { error: false, text: 'Saved ' + rel + '. The team is bringing it in as scenes; see Jobs.' };
+      }
       if (/\.docx$/i.test(path)) {
         if (!source.writeBytes) return { error: true, text: 'This vault cannot take Word files from the app.' };
         await source.writeBytes(path, await fileBase64(file), '', why);
@@ -581,7 +608,7 @@ export function App() {
     } catch (e) {
       return { error: true, text: (e as Error).message };
     }
-  }, [source]);
+  }, [source, planned, sendNow]);
 
   const onCreateSeries = useCallback(async (name: string, genre: string): Promise<string | null> => {
     if (!oldSaving()) {
@@ -632,6 +659,14 @@ export function App() {
   }, [source, runSync, setOutbox, runFlush]);
 
   const onWorkflowNote = useCallback(async (note: string): Promise<string | null> => {
+    if (!oldSaving() && source.commit) {
+      // The note shows at once under "Kyle's notes" and waits with everything else (2026-11-11; before, it needed the connection).
+      const d = new Date();
+      const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      setOutbox(add(outboxRef.current, textAction([{ path: WORKFLOW_PATH, change: { what: 'workflow-note', note, day } }])));
+      runFlush();
+      return null;
+    }
     if (!navigator.onLine) return 'Connect to the internet to add a note to the workflow.';
     if (!source.readFresh || !source.write) return 'This vault cannot be written from here.';
     try {
@@ -642,7 +677,7 @@ export function App() {
       await runSync();
       return null;
     } catch (e) { return (e as Error).message; }
-  }, [source, runSync]);
+  }, [source, runSync, setOutbox, runFlush]);
 
   /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
    * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
@@ -1042,7 +1077,7 @@ export function App() {
     else {
       let screen;
       if (CODEX_PAGES[boardKey]) screen = <CodexBoard schema={schema} index={view} book={book} board={boardKey} />;
-      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
+      else if (boardKey === 'details') screen = <BookDetails source={source} schema={schema} index={view} book={book} onFiles={source.commit && !oldSaving() ? onFiles : undefined} onCover={source.writeBytes ? onCover : undefined} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'decide') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} />;
       else if (boardKey === 'chapter-titles') screen = <ChapterTitlesPage source={source} index={view} book={book} onChange={source.commit && !oldSaving() ? onTitles : undefined} groups={chapterGroups(schema, book.scenes.map((p) => view.notes[p]).filter(Boolean))} onRename={source.write ? onRenameChapter : undefined} />;
       else if (boardKey === 'story-calls') screen = <DecideQueue index={view} book={book} onDecide={source.write ? onDecide : undefined} calls />;

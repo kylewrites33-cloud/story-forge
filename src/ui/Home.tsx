@@ -12,8 +12,8 @@ import { timeAgo } from '../lib/format.ts';
 import {
   bookWords, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
-import type { BookEntry, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
-import { buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
+import type { BookEntry, DeviceFile, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
+import { backupFile, buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
 import { kindleFile, loadMatter, matterPath, saveMatterBody, splitNote, starterMatter } from '../lib/epub.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from './route.ts';
@@ -114,8 +114,10 @@ export function Cover({ source, book, small }: { source: VaultSource; book: Book
 
 /** Book details, like Novelcrafter's novel settings (the cog by the novel's name): the cover, added or changed from the
  * device, with the book's name, series and stage. */
-export function BookDetails({ source, book, onCover, schema, index, onDecide }: {
+export function BookDetails({ source, book, onCover, schema, index, onDecide, onFiles }: {
   source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null>; schema: Schema; index: VaultIndex;
+  /** Saves a file from the device through the one saving system (the Word backup). */
+  onFiles?: (files: DeviceFile[]) => Promise<void>;
   /** Changes the book's stage (the stage pills moved here from Home and the Chapter Grid, design review 2026-10-22). */
   onDecide?: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 }) {
@@ -157,7 +159,7 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide }: 
           <dt>Stage</dt><dd>{book.stage}</dd>
         </dl>
       </div>
-      <ExportWord source={source} schema={schema} index={index} book={book} />
+      <ExportWord source={source} schema={schema} index={index} book={book} onFiles={onFiles} />
     </section>
   );
 }
@@ -183,7 +185,11 @@ export function downloadFile(bytes: Uint8Array<ArrayBuffer>, name: string, type:
 /** Export to Word (Kyle, 2026-10-18): the whole book as a .docx named series_book_date, made on this device and
  * downloaded; italics and bold come through. Shown on Book details and, as a card, on Publish's first page, the Market
  * board (Kyle, 2026-10-23: he could not find it behind the page menu). */
-export function ExportWord({ source, schema, index, book, card }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; card?: boolean }) {
+export function ExportWord({ source, schema, index, book, card, onFiles }: {
+  source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; card?: boolean;
+  /** The one saving system's way to save a file from the device; without it the backup is saved the old way. */
+  onFiles?: (files: DeviceFile[]) => Promise<void>;
+}) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [backup, setBackup] = useState<{ error: boolean; text: string } | null>(null);
   const run = () => {
@@ -198,7 +204,8 @@ export function ExportWord({ source, schema, index, book, card }: { source: Vaul
       // A copy goes into the vault's Book Backups folder too (Kyle, 2026-10-18).
       if (source.writeBytes) {
         setBackup({ error: false, text: 'Saving a backup copy in the vault…' });
-        saveBackup(source, book, bytes, name)
+        const kept = backupFile(book, bytes, name);
+        (onFiles ? onFiles([kept]).then(() => kept.path) : saveBackup(source, book, bytes, name))
           .then((path) => setBackup({ error: false, text: 'Backup saved in the vault: ' + path.split('/').slice(0, -1).join(' › ') + '.' }))
           .catch((e) => setBackup({ error: true, text: 'The download worked, but the backup copy did not save: ' + (e instanceof Error ? e.message : String(e)) + ' Press Export to Word again when you are back online.' }));
       }
