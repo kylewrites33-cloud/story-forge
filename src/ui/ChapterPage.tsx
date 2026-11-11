@@ -13,7 +13,7 @@ import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { loadLook, lookStyle } from '../lib/page.ts';
 import { matcher, type CodexEntry } from '../lib/codex.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 import type { CheckOptions } from '../lib/lintcheck.ts';

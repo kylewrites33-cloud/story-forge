@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { findIn } from '../lib/find.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 export function FindButton({ index, book }: { index: VaultIndex; book: BookEntry }) {
   const [open, setOpen] = useState(false);

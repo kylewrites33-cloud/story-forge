@@ -7,7 +7,7 @@ import { REASONS } from '../lib/ideas.ts';
 import { render } from '../lib/markdown.ts';
 import { percent, TASTE_FILES, tasteIdeas, tasteStats, withoutProperties, type TasteRow } from '../lib/taste.ts';
 import type { BookEntry, VaultIndex, VaultSource } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { EmptyBox } from './screens.tsx';
 

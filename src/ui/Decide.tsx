@@ -9,7 +9,7 @@ import type { Decision } from '../lib/ideas.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { Stars } from './IdeasBoard.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 const KIND: Record<string, string> = { idea: 'Idea', beat: 'Beat', conflict: 'Conflict' };

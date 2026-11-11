@@ -34,7 +34,10 @@ Every source file and what it holds is in `docs/Layout.md`; read it before addin
 shape:
 
 ```
-src/lib/            logic, tested with Node (no DOM): parsing, indexing, sync, the write queue, one module per feature
+src/app/            the frame: pages.ts is the one list of pages (a new page is one entry there and one in screens.tsx,
+                    which holds what each page draws); route.ts is the addresses
+src/vault/          the one saving system: the only code that changes the vault. A feature that saves makes an action here
+src/lib/            logic, tested with Node (no DOM): parsing, indexing, sync, one module per feature
 src/lib/frontmatter.js, prose.js, lint.js   copies of the vault tool's sections (do not edit; see below)
 src/ui/             screens (Preact); src/ui/Shell.tsx is the sidebar and top bar
 public/sw.js        service worker for the app shell only; never caches GitHub

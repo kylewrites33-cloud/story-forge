@@ -5,13 +5,14 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { codexFor } from '../lib/codex.ts';
 import { ideasAbout } from '../lib/boards.ts';
 import { pileOf } from '../lib/ideas.ts';
-import { CODEX_PAGES } from '../lib/rooms.ts';
 import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { page } from '../app/pages.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox, NoteView } from './screens.tsx';
 
-const TITLES: Record<string, string> = { characters: 'Characters', places: 'Places', items: 'Items', lore: 'Lore' };
+/** The Codex's own pages for each kind of entry, and the note type each lists. */
+export const CODEX_PAGES: Record<string, string> = { characters: 'character', places: 'place', items: 'item', lore: 'lore' };
 const FOLDERS: Record<string, string> = { characters: 'Characters', places: 'Places', items: 'Items', lore: 'Lore' };
 
 export function CodexBoard({ schema, index, book, board }: { schema: Schema; index: VaultIndex; book: BookEntry; board: string }) {
@@ -28,7 +29,7 @@ export function CodexBoard({ schema, index, book, board }: { schema: Schema; ind
     if (picked && window.innerWidth < 900) window.scrollTo(0, 0);
   }, [open, picked]);
   const shown = q.trim() ? all.filter((e) => (e.name + ' ' + String(e.note.data.kind || e.note.data.role || '')).toLowerCase().indexOf(q.trim().toLowerCase()) >= 0) : all;
-  const title = TITLES[board] || 'Codex';
+  const title = (page(board) || { title: 'Codex' }).title;
   if (!all.length) {
     return (
       <section>

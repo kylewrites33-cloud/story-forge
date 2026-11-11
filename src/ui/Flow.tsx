@@ -17,7 +17,7 @@ import type { Choice } from '../vault/choice.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { useTeam } from './Team.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 export type OnResults = (book: BookEntry, list: NewResult[]) => Promise<string | null>;

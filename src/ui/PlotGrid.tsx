@@ -6,7 +6,7 @@ import { useState } from 'preact/hooks';
 import type { Decision } from '../lib/ideas.ts';
 import { gapScenes, plotGrid, threadToggle, type GridMode, type GridRow } from '../lib/plotgrid.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneHeads, SeeingHead, WarningList } from './SeeingParts.tsx';
 

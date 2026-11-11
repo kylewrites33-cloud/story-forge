@@ -12,7 +12,7 @@ import { archivedWhy } from '../lib/scenes.ts';
 import { formatValue, isEmptyValue, label as fieldLabel, sceneHeader } from '../lib/format.ts';
 import { cardFields, propDef, propertyOrder } from '../lib/schema.ts';
 import type { FileEntry, NoteRecord, SaveEntry, Schema, VaultSource } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { RecipePicker } from './Recipes.tsx';
 import { withRecipe } from '../lib/recipes.ts';

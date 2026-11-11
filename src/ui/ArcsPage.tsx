@@ -7,7 +7,7 @@ import { arcEdit, arcIssue, bookArcs, removePoint, setPoint, type Arc, type ArcP
 import { scenePositions, storyScenes } from '../lib/tension.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';
 

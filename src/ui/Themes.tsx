@@ -6,7 +6,7 @@ import { useState } from 'preact/hooks';
 import { sceneHeader } from '../lib/format.ts';
 import { heatLevel, keywordPattern, themeGrid, type ThemeRow } from '../lib/themes.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
 

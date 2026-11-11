@@ -9,7 +9,7 @@ import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schem
 import { EditFields } from './EditFields.tsx';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { EmptyBox } from './screens.tsx';
 import { defaultJobTitle, jobAsk, type OnJob } from '../lib/jobs.ts';

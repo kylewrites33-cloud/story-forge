@@ -6,7 +6,7 @@ import type { VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { takeChatPrefill } from './Team.tsx';
 
 /** Send Kyle's words in a conversation. Answers the thread the message went into (a new conversation gets its name here), or a plain-sentence error. */

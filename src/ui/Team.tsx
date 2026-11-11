@@ -12,7 +12,7 @@ import type { SaveEntry, Schema, VaultIndex, VaultSource } from '../lib/types.ts
 import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
 import { parseWorkflow, stepsFor } from '../lib/workflow.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 const PREFILL = 'sf-chat-prefill';
 

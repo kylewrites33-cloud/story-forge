@@ -16,7 +16,7 @@ import { useBookStatuses } from './Home.tsx';
 import type { BookStatus } from '../lib/bookstatus.ts';
 import { publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { afterDraft, datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type EditPass, type Estimate } from '../lib/stagetimes.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;

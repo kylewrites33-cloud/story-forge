@@ -6,7 +6,7 @@ import { render } from '../lib/markdown.ts';
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 

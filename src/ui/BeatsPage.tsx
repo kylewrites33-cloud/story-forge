@@ -21,7 +21,7 @@ import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { DeviceFile, NoteRecord, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;

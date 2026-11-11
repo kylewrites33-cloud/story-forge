@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact';
 import { sceneHeader } from '../lib/format.ts';
 import { toNumber } from '../lib/links.ts';
 import type { BookEntry, NoteRecord } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 
 export function SeeingHead({ book, title, heading, children }: { book: BookEntry; title: string; heading: string; children?: ComponentChildren }) {
   return (

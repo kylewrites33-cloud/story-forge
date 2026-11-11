@@ -12,10 +12,10 @@ import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { formatValue, isEmptyValue, sceneHeader } from '../lib/format.ts';
 import { propDef } from '../lib/schema.ts';
 import type { DeviceFile, FileEntry, NoteRecord, Schema, VaultSource } from '../lib/types.ts';
-import { href } from './route.ts';
+import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { DONE_STATUSES } from '../lib/overview.ts';
-import { boardLinks } from './StoryBoards.tsx';
+import { toolLinks } from '../app/pages.ts';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
 import { StyledEditor, holdPlace, type EditorCommands } from './StyledEditor.tsx';
 import { loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
@@ -1570,7 +1570,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 <>
                   {book.archive && book.archive.length > 0 && onRestore && <ArchiveList source={source} files={book.archive} canSave={canSave} onChanged={onChanged} onRestore={onRestore} />}
                   <nav class="side-boards" aria-label="Boards">
-                    {boardLinks(schema, book.folder).map((l) => (
+                    {toolLinks(schema, book.folder).map((l) => (
                       <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
                     ))}
                   </nav>
