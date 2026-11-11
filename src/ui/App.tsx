@@ -21,7 +21,12 @@ import { activeBook, makeNote, resortScenes } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
 import { ChapterTitlesPage } from './ChapterTitles.tsx';
 import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts.ts';
-import { enqueue, flush, loadQueue, overlay, sameSlot, saveQueue, type Choice } from '../lib/write-queue.ts';
+import type { Choice } from '../lib/write-queue.ts';
+import { overlayActions } from '../vault/apply.ts';
+import { choiceAction, type Action } from '../vault/ops.ts';
+import { add, choicesOf, loadOutbox, saveOutbox, settle } from '../vault/outbox.ts';
+import { pushAll } from '../vault/push.ts';
+import { oldSaving } from '../vault/switch.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
@@ -99,18 +104,25 @@ export function App() {
   const [, tick] = useState(0);
   const snapRef = useRef<Snapshot | null>(null);
   snapRef.current = snap;
-  const [queue, setQueueState] = useState<Choice[]>(() => loadQueue(source.key));
-  const queueRef = useRef<Choice[]>(queue);
-  const flushing = useRef(false);
+  // The outbox: what Kyle has done that the vault does not have yet (src/vault). `queue` is the same as plain choices, for the screens.
+  const [outbox, setOutboxState] = useState<Action[]>(() => loadOutbox(source.key));
+  const outboxRef = useRef<Action[]>(outbox);
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
+  const queue = useMemo<Choice[]>(() => choicesOf(outbox), [outbox]);
   const lastOpened = useRef('');
 
-  const setQueue = useCallback((list: Choice[]) => {
-    queueRef.current = list;
-    setQueueState(list);
-    saveQueue(source.key, list);
+  const setOutbox = useCallback((list: Action[]) => {
+    outboxRef.current = list;
+    setOutboxState(list);
+    saveOutbox(source.key, list);
   }, [source]);
+  /** Put choices that belong together in the outbox as one action: they go up as one save. */
+  const act = useCallback((choices: Choice[]) => {
+    if (choices.length) setOutbox(add(outboxRef.current, choiceAction(choices)));
+  }, [setOutbox]);
 
-  useEffect(() => { setQueue(loadQueue(source.key)); }, [source, setQueue]);
+  useEffect(() => { setOutbox(loadOutbox(source.key)); }, [source, setOutbox]);
 
   /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. */
   const foldNotes = useCallback(async (saved: NoteRecord[]) => {
@@ -124,40 +136,57 @@ export function App() {
     await writeSnapshot(next);
   }, [source]);
 
-  /** Send waiting choices to GitHub, then fold the saved notes into the saved copy. */
-  const runFlush = useCallback(async (): Promise<string | null> => {
-    if (flushing.current || !queueRef.current.length || !navigator.onLine) return null;
-    flushing.current = true;
-    try {
-      const sent = queueRef.current;
-      const res = await flush(source, sent);
-      // Choices made while saving stay in the queue; a newer choice on the same idea replaces what was sent.
-      const later = queueRef.current.filter((c) => sent.indexOf(c) < 0);
-      let left = res.left.filter((c) => !later.some((x) => sameSlot(x, c)));
-      left = later.reduce(enqueue, left);
-      setQueue(left);
-      if (res.error) setError(res.error);
-      await foldNotes(res.saved);
-      if (left.some((c) => later.indexOf(c) >= 0)) setTimeout(() => runFlushRef.current(), 0);
+  // One lane for sending the outbox up and for reading the vault down, so the two never cross: a sync that started
+  // before a save landed could otherwise finish after it and put the older note back on the screen until the next sync.
+  // A call while one of its kind waits to start joins it; nothing waits more than 25 seconds on a call that hangs.
+  const lane = useRef<Promise<unknown>>(Promise.resolve());
+  const waitingRuns = useRef<{ [kind: string]: Promise<unknown> | undefined }>({});
+  const inLane = useCallback(<T,>(kind: string, job: () => Promise<T>): Promise<T> => {
+    const joined = waitingRuns.current[kind] as Promise<T> | undefined;
+    if (joined) return joined;
+    let timer = 0;
+    const before = Promise.race([lane.current, new Promise((r) => { timer = window.setTimeout(r, 25000); })]);
+    const run = before.then(() => { clearTimeout(timer); waitingRuns.current[kind] = undefined; return job(); });
+    waitingRuns.current[kind] = run;
+    lane.current = run.catch(() => undefined);
+    return run;
+  }, []);
+  useEffect(() => { waitingRuns.current = {}; lane.current = Promise.resolve(); }, [source]);
+
+  /** Send the outbox to GitHub, one save for each action, then fold the saved notes into the saved copy. */
+  const pushNow = useCallback(async (): Promise<string | null> => {
+    if (!outboxRef.current.length || !navigator.onLine) return null;
+    const sent = outboxRef.current;
+    const res = await pushAll(source, sent, { legacy: oldSaving() });
+    if (sourceRef.current !== source) {
+      // Kyle pointed the app at another vault while this was saving: settle this vault's own list where it is kept.
+      saveOutbox(source.key, settle(loadOutbox(source.key), res.done, res.failed));
       return res.error;
-    } finally {
-      flushing.current = false;
     }
-  }, [source, setQueue, foldNotes]);
+    // Only the actions this push handled leave or take a failure; ones Kyle added while it ran wait for the next push.
+    const left = settle(outboxRef.current, res.done, res.failed);
+    setOutbox(left);
+    if (res.error) setError(res.error);
+    await foldNotes(res.saved);
+    if (left.some((a) => !sent.some((x) => x.id === a.id))) setTimeout(() => runFlushRef.current(), 0);
+    return res.error;
+  }, [source, setOutbox, foldNotes]);
+  const runFlush = useCallback((): Promise<string | null> => inLane('push', pushNow).catch((e: Error) => { setError(e.message); return e.message; }), [inLane, pushNow]);
   const runFlushRef = useRef(runFlush);
   runFlushRef.current = runFlush;
 
-  const runSync = useCallback(async () => {
+  const runSync = useCallback((): Promise<void> => inLane('sync', async () => {
     if (!navigator.onLine) return;
     setSyncing(true);
     try {
       const written = await flushDrafts(source, source.key, new Date());
       await foldNotes(written.saved);
       if (written.notice) setNotice(written.notice);
-      const saveError = (await runFlush()) || written.error;
+      const saveError = (await pushNow()) || written.error;
       // Keep or No on the team's changes, chosen while offline.
       await flushChoices(source).catch(() => 0);
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
+      snapRef.current = next;
       setSnap(next);
       setError(saveError);
       await writeSnapshot(next);
@@ -166,7 +195,7 @@ export function App() {
     } finally {
       setSyncing(false);
     }
-  }, [source, runFlush, foldNotes, setNotice]);
+  }), [source, inLane, pushNow, foldNotes, setNotice]);
 
   /** Add a scene to a book, sync so every screen has it, and open it for writing. */
   const onAddScene = useCallback(async (book: BookEntry, chapter: number | null, chapterTitle: string, title: string): Promise<string | null> => {
@@ -225,7 +254,7 @@ export function App() {
   const onMove = useCallback((book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => {
     const cur = snapRef.current;
     if (!cur) return;
-    const shown = overlay(cur.index, queueRef.current);
+    const shown = overlayActions(cur.index, outboxRef.current);
     const b = shown.books.find((x) => x.folder === book.folder);
     if (!b) return;
     const rest = b.scenes.filter((p) => p !== path).map((p) => shown.notes[p]).filter(Boolean);
@@ -241,7 +270,7 @@ export function App() {
       next = prev ? rest[rest.indexOf(prev) + 1] || null : null;
     }
     const at = new Date().toISOString();
-    let list = enqueue(queueRef.current, { path, decision: 'move', reason: '', at, move: { order: orderBetween(prev, next), chapter, chapterTitle } });
+    const moves: Choice[] = [{ path, decision: 'move', reason: '', at, move: { order: orderBetween(prev, next), chapter, chapterTitle } }];
     // A chapter's title lives on its scenes. If the card that carried it leaves, the next scene in that chapter takes it on.
     const moved = shown.notes[path];
     const oldTitle = moved && typeof moved.data.chapter_title === 'string' ? moved.data.chapter_title : '';
@@ -251,12 +280,13 @@ export function App() {
       if (left.length && !left.some((n) => n.data.chapter_title)) {
         const heir = left[0];
         const order = typeof heir.data.order === 'number' ? heir.data.order : orderBetween(rest[rest.indexOf(heir) - 1] || null, rest[rest.indexOf(heir) + 1] || null);
-        list = enqueue(list, { path: heir.path, decision: 'move', reason: '', at, move: { order, chapter: oldCh, chapterTitle: oldTitle } });
+        moves.push({ path: heir.path, decision: 'move', reason: '', at, move: { order, chapter: oldCh, chapterTitle: oldTitle } });
       }
     }
-    setQueue(list);
+    // The move and the name handed on are one action: they save together or not at all.
+    act(moves);
     runFlush();
-  }, [setQueue, runFlush]);
+  }, [act, runFlush]);
 
   /** Save a Publisher Rocket export into the series' Market folder, then sync so the board lists it. */
   const onAddRocket = useCallback(async (book: BookEntry, file: File): Promise<{ error: boolean; text: string }> => {
@@ -311,7 +341,7 @@ export function App() {
     if (!navigator.onLine) return { error: true, text: 'Connect to the internet to ask the team.' };
     const cur = snapRef.current;
     // Fill braces may run again while one is waiting: the page only sends asks the team does not have yet.
-    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlay(cur.index, queueRef.current)), j.kind, j.target) : null;
+    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlayActions(cur.index, outboxRef.current)), j.kind, j.target) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
       return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for the team') + '. See Jobs.' };
@@ -331,7 +361,7 @@ export function App() {
     if (!navigator.onLine) return { error: 'Connect to the internet to send a message.' };
     const cur = snapRef.current;
     if (!cur) return { error: 'Press Sync first.' };
-    const shown = overlay(cur.index, queueRef.current);
+    const shown = overlayActions(cur.index, outboxRef.current);
     const t = thread === 'new' ? nextChatThread(shown) : thread;
     if (!isThread(t)) return { error: 'That conversation has no name the team knows. Start a new conversation instead.' };
     const folder = book || (activeBook(shown) || shown.books[0] || { folder: '' }).folder;
@@ -506,9 +536,9 @@ export function App() {
   }, [source, runSync]);
 
   const onDecide = useCallback((path: string, decision: Decision, reason: string, fields?: Record<string, string>) => {
-    setQueue(enqueue(queueRef.current, { path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }));
+    act([{ path, decision, reason, at: new Date().toISOString(), ...(fields ? { fields } : {}) }]);
     runFlush();
-  }, [setQueue, runFlush]);
+  }, [act, runFlush]);
 
   /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
   const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {
@@ -576,11 +606,10 @@ export function App() {
   const onRenameChapter = useCallback((scenes: NoteRecord[], title: string) => {
     const clean = title.replace(/\s+/g, ' ').trim();
     const at = new Date().toISOString();
-    let list = queueRef.current;
-    chapterTitleEdits(scenes, clean).forEach((path) => { list = enqueue(list, { path, decision: 'edit', reason: '', at, fields: { chapter_title: clean } }); });
-    setQueue(list);
+    // One action for the whole chapter: every scene's line changes in one save.
+    act(chapterTitleEdits(scenes, clean).map((path): Choice => ({ path, decision: 'edit', reason: '', at, fields: { chapter_title: clean } })));
     runFlush();
-  }, [setQueue, runFlush]);
+  }, [act, runFlush]);
 
   // Show the saved copy at once, then refresh it.
   useEffect(() => {
@@ -648,7 +677,7 @@ export function App() {
     try { return parseSchema(snap.schemaText); } catch { return null; }
   }, [snap]);
 
-  const view = useMemo<VaultIndex | null>(() => (snap ? overlay(snap.index, queue) : null), [snap, queue]);
+  const view = useMemo<VaultIndex | null>(() => (snap ? overlayActions(snap.index, outbox) : null), [snap, outbox]);
   const waiting = useMemo(() => {
     const out: Record<string, Choice> = {};
     queue.forEach((c) => { out[c.path] = c; });

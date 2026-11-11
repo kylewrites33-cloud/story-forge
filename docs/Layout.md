@@ -9,8 +9,8 @@ src/lib/vault-index.ts   which files to read, parse them, build series/books/sce
 src/lib/board.ts         Chapter Grid grouping
 src/lib/ideas.ts         piles, and the line edits keep, later, drop, accept, needs work and move make; reasons, stars, idea filters
 src/lib/boards.ts        Story Juice and Market boards: which notes, grouped and ordered by the schema; the cast with book deltas
-src/lib/write-queue.ts   choices waiting to save (localStorage), sending them, showing them before they land
-src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors
+src/lib/write-queue.ts   a board choice (Choice) and what it changes; the old queue and the old one-note-at-a-time save, kept until Settings' The old way goes
+src/lib/github.ts        GitHub source: tree, blobs, connection test, plain-sentence errors; commit (one save of many files through git's own objects), blob shas
 src/lib/demo-source.ts   the bundled demo vault as a source
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
@@ -140,3 +140,10 @@ src/ui/StoryBoards.tsx   the boards for every other proposal type
 src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates, sounds
 src/ui/Editor.tsx        the full-screen writing screen
 src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
+src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
+src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (one change to one file), Edit (a change kept as what he meant)
+src/vault/apply.ts       what an edit does to a note on screen and to its saved text (the two must agree); the vault with waiting actions applied
+src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push
+src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; the old way behind the switch
+src/vault/switch.ts      the per-device switch back to the old way of saving (Settings, Saving)
+

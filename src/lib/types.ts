@@ -74,6 +74,27 @@ export interface VaultSource {
   readAt?(path: string, commit: string): Promise<string>;
   /** Remove a file whose current blob sha is `sha`, as one commit. Only after its text is safe somewhere else (Archive). */
   remove?(path: string, sha: string, message: string): Promise<void>;
+  /** One save of any number of files, all or nothing (the one saving system, 2026-11-11). `build` is given a way to read
+   * files as the vault has them at this moment and answers with what to change, or null for nothing. If the vault moved
+   * on while the save was being made, `build` runs again on the newer files, so a save never lands on a stale copy.
+   * Answers null when there was nothing to change, else the commit and each written file's new blob sha. */
+  commit?(build: (read: ReadAtHead) => Promise<CommitPlan | null>): Promise<CommitResult | null>;
+}
+
+/** Read one file as the vault has it at the moment a save starts; null when it is not there. */
+export type ReadAtHead = (path: string) => Promise<{ text: string; sha: string } | null>;
+
+/** What one save changes: whole files to write, files to remove, and the line for the vault's history. */
+export interface CommitPlan {
+  message: string;
+  writes: { path: string; text: string }[];
+  removes?: string[];
+}
+
+export interface CommitResult {
+  commit: string;
+  /** The new blob sha of every file written, by path. */
+  shas: Record<string, string>;
 }
 
 /** One save of a file, from the vault's history. */

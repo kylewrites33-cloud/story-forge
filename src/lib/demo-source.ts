@@ -1,6 +1,6 @@
 // The demo vault bundled into the app, so the Pages preview shows a board before any token is entered.
 // Choices made on the demo vault live in memory until the page reloads; nothing is sent anywhere.
-import type { FileEntry, SaveEntry, VaultSource } from './types.ts';
+import type { CommitPlan, CommitResult, FileEntry, ReadAtHead, SaveEntry, VaultSource } from './types.ts';
 
 // The team's files sit in a hidden folder, which a ** pattern skips, so they get their own pattern.
 const files = {
@@ -63,6 +63,20 @@ export class DemoSource implements VaultSource {
   async writeMany(list: { path: string; text: string }[], message = ''): Promise<void> {
     for (const f of list) await this.write(f.path, f.text, '', message);
   }
+
+  /** One save of several files. Nothing else changes the demo vault, so it never has to start again. */
+  async commit(build: (read: ReadAtHead) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
+    const has = (path: string) => !this.removed.has(path) && (this.changed.has(path) || files['/demo-vault/' + path] !== undefined);
+    const plan = await build(async (path) => (has(path) ? { text: this.text(path), sha: hash(this.text(path)) } : null));
+    const removes = (plan && plan.removes) || [];
+    if (!plan || (!plan.writes.length && !removes.length)) return null;
+    const shas: Record<string, string> = {};
+    for (const f of plan.writes) shas[f.path] = await this.write(f.path, f.text, has(f.path) ? hash(this.text(f.path)) : '', plan.message);
+    removes.forEach((path) => { this.removed.add(path); this.changed.delete(path); });
+    this.saves++;
+    return { commit: 'demo-save-' + this.saves, shas };
+  }
+  private saves = 0;
 
   async writeBytes(path: string, base64: string, sha: string): Promise<string> {
     const had = this.pictures.get(path);

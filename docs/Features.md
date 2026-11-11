@@ -1136,3 +1136,37 @@ box works out its words only when its own paragraph changes; and the column no l
 (it still follows a tap, a Bring over and a move to another paragraph). Measured in WebKitGTK on a 6,300-word chapter:
 354 ms a key before, 48 ms after (29 ms with the Rewrite tab closed).
 
+## The one saving system, step 1: board choices (2026-11-11)
+
+Kyle, 2026-11-11: "i want sparrow to have a clean code structure, and for all the various additions ive given it to be
+built according to a sensible whole." The proposal is the vault's `Docs/Sparrow/20 Code Structure Redesign.md`; he said
+yes to its step 1, one saving system, built beside the old code with features moved over one at a time. This is the
+first piece. The code is `src/vault/`.
+
+- **What moved.** Every choice on a board: keep, later, drop, back to To decide, Rewrite, a card's Edit, reasons, stars,
+  Accept card and Needs work, a card dragged on the Chapter Grid, and a chapter renamed. Nothing on any screen changed.
+  Everything else (the writing page, to-dos, jobs, chat, adding and moving chapters, the Edit room's Keep and No) still
+  saves the old way and moves over in later pieces, the writing page last.
+- **One action, one save.** What Kyle does is an action: a list of small changes that go up together or not at all. A
+  card dragged out of a chapter it named, and the next card taking the name on, is one save where it was two. A chapter
+  renamed is one save where it was one for each scene. A save can no longer stop half-way.
+- **The outbox.** Actions wait on the device (`story-forge.outbox.<vault>` in localStorage) until the vault has them,
+  and show on every screen at once, as before. A newer choice still replaces a waiting one in the same place on the
+  same note, and a second edit joins the first. Choices left in the old queue move into the outbox the first time the
+  app opens, once.
+- **Saved on top of the newest version.** A save reads each note as the vault has it at that moment, makes Kyle's change
+  to those lines only, and writes. If the team or another device saved in between, GitHub refuses, and the change is
+  made again on the newer notes (up to four more times). So Kyle's choice lands on top and nothing of theirs is lost.
+- **After time offline** the waiting actions go up together, up to forty a save, where each was its own save before; if
+  a group will not save, its actions go one at a time so only the one at fault waits, with its plain sentence. The
+  vault's history names the first change and lists the rest under "Saved together with:" (the vault's Timeline tool
+  reads that list). When GitHub says to slow down, or its hourly limit is used up, everything waits and nothing is
+  marked as failed.
+- **Saving and syncing take turns** (one lane in `App.tsx`). Before, a sync that began just before a save landed could
+  finish after it and put the older note back on the screen until the next sync.
+- **The way back.** Settings, Saving: The new way or The old way, per device. The old way sends the outbox one note at
+  a time as before. It goes when the old saving code goes, once the new way has run on the real book.
+- Checked in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and in WebKitGTK at the two iPad sizes, against the
+  demo vault and a pretend GitHub: keep, three quick choices, a save the team beat to the branch, GitHub out of reach
+  with the app closed and opened, the old queue moving over, and the switch.
+

@@ -1,5 +1,8 @@
-// Kyle's choices on the Ideas board wait here until GitHub has them, so a choice made offline is not lost.
-// The queue lives in this browser's localStorage, one list per source; a newer choice on the same idea replaces the older one.
+// A choice on a board (Choice) and what it changes on a note.
+// Since 2026-11-11 choices wait in the outbox and go up through src/vault (the one saving system). The queue below
+// (loadQueue, saveQueue, enqueue, overlay) and the one-note-at-a-time save (saveChoice, flush) are the old way: the
+// outbox reads the old queue once to move it over, and Settings' "The old way" still sends through saveChoice. They go
+// when that switch goes.
 import { applyToData, applyToText, changeFor, commitMessage, editChange, moveChange, type Change, type Decision, type Move } from './ideas.ts';
 import { Frontmatter } from './frontmatter.js';
 import { makeNote, resortScenes } from './vault-index.ts';
