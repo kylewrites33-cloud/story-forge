@@ -236,15 +236,26 @@ export function MarksPanel({ text, onGo }: { text: string; onGo: (start: number,
 }
 
 /** The book's Braindump beside the page: loose notes, research and reminders, saved to Braindump.md in the book's folder. */
-export function NotesPanel({ source, bookFolder, note, canSave, onChanged }: {
+export function NotesPanel({ source, bookFolder, note, canSave, onChanged, onWords }: {
   source: VaultSource; bookFolder: string | null; note: NoteRecord | null; canSave: boolean; onChanged: () => Promise<void>;
+  /** The one saving system: the words as Kyle opened them and as they are now. They show at once and wait with
+   * everything else, so saving needs no connection. Without it, the old way: straight to the vault. */
+  onWords?: (was: string, body: string) => void;
 }) {
   const [text, setText] = useState(note ? note.body.replace(/^\n/, '') : '');
+  // The words as Kyle opened them (or last saved them here): what changed elsewhere since is merged in when they save.
+  const opened = useRef(note ? note.body : '');
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
-  const changedText = text !== (note ? note.body.replace(/^\n/, '') : '');
+  const changedText = text.trim() !== (note ? note.body.trim() : '');
   if (!bookFolder) return <div class="writer-panel"><p class="hint">Notes belong to a book; this scene is not in one.</p></div>;
   const save = async () => {
+    if (onWords) {
+      onWords(opened.current, text);
+      opened.current = text;
+      setSaid({ error: false, text: navigator.onLine ? 'Saved in the book\'s Braindump note.' : 'Kept on this device. It goes to the book\'s Braindump note when you are connected.' });
+      return;
+    }
     if (!source.write || !source.readFresh) return;
     if (!navigator.onLine) { setSaid({ error: true, text: 'Connect to the internet to save your notes.' }); return; }
     setBusy(true);
@@ -329,8 +340,10 @@ function HistoryList({ source, note, body, canSave, keep, onUse }: {
 }
 
 /** Joined or removed scenes in the book's Archive folder, with Restore. */
-export function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
+export function ArchiveList({ source, files, bookFolder, canSave, onChanged, onRestore }: {
   source: VaultSource; files: FileEntry[]; bookFolder: string; canSave: boolean; onChanged: () => Promise<void>;
+  /** The one saving system: the scene is in Scenes again and out of the Archive in one save. Without it, the old way. */
+  onRestore?: (path: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [sure, setSure] = useState<{ file: FileEntry; why: string } | null>(null);
@@ -345,7 +358,7 @@ export function ArchiveList({ source, files, bookFolder, canSave, onChanged }: {
     if (!sure) return;
     if (!navigator.onLine) { setError('Connect to the internet to restore a scene.'); return; }
     setBusy(true);
-    try { await restoreArchived(source, sure.file, bookFolder); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { if (onRestore) await onRestore(sure.file.path); else await restoreArchived(source, sure.file, bookFolder); setSure(null); await onChanged(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   return (
     <div class="side-archive">

@@ -10,7 +10,7 @@ import { archiveForJoin, joinedBody, noteJoinForTeam, removeJoined, splitAt, spl
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { formatValue, isEmptyValue, sceneHeader } from '../lib/format.ts';
 import { propDef } from '../lib/schema.ts';
-import type { FileEntry, NoteRecord, Schema, VaultSource } from '../lib/types.ts';
+import type { DeviceFile, FileEntry, NoteRecord, Schema, VaultSource } from '../lib/types.ts';
 import { href } from './route.ts';
 import { Icon } from './Icon.tsx';
 import { DONE_STATUSES } from '../lib/overview.ts';
@@ -106,7 +106,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onRestore, onNotes, onFiles, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -129,6 +129,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onMoveChapter?: (from: number, to: number) => Promise<string | null>;
   /** Delete scenes (to the book's Archive); a chapter left empty closes up. */
   onDeleteScenes?: (paths: string[]) => Promise<string | null>;
+  /** Bring an archived scene back: in Scenes again and out of the Archive, one save (the one saving system). */
+  onRestore?: (path: string) => Promise<void>;
+  /** The Notes tab's words for the book's Braindump, as Kyle opened them and as they are now: they show at once and wait
+   * with everything else. */
+  onNotes?: (was: string, body: string) => void;
+  /** Files saved as they are, one save (a deleted beat's words on their way to the Archive). */
+  onFiles?: (files: DeviceFile[]) => Promise<void>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
@@ -1524,7 +1531,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               </button>
               {toolsOpen && (
                 <>
-                  {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} />}
+                  {book.archive && book.archive.length > 0 && <ArchiveList source={source} files={book.archive} bookFolder={book.folder} canSave={canSave} onChanged={onChanged} onRestore={onRestore} />}
                   <nav class="side-boards" aria-label="Boards">
                     {boardLinks(schema, book.folder).map((l) => (
                       <a key={l.key} {...link(l.to)}><Icon name={l.icon} size={18} />{l.title}</a>
@@ -1637,7 +1644,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               options={beatOpts} onLook={setTyping} api={beatsApi}
               onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
               onActive={(t) => { beatText.current = t; if (findOpen) setBeatRev((r) => r + 1); }}
-              head={headParts} onWords={setBeatWords} />
+              head={headParts} onWords={setBeatWords} onFiles={onFiles} />
           ) : <>
           {pageHead}
           {shownDraft != null && (
@@ -1787,7 +1794,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {tab === 'card' && (picked
               ? <CodexCard schema={schema} entry={picked} link={link} onBack={() => setPicked(null)} now={codexNow ? codexNow(picked.note) : null} />
               : <CardPanel schema={schema} note={note} status={sceneStatus} onDrafted={() => setDraft({ ...draftRef.current, status: 'drafted' })} link={link} named={namedIn(text, allNames)} onPick={setPicked} notes={sceneNotes || null} />)}
-            {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} />}
+            {tab === 'notes' && <NotesPanel source={source} bookFolder={bookFolder} note={braindump || null} canSave={canSave} onChanged={onChanged} onWords={onNotes} />}
             {tab === 'marks' && <MarksPanel text={text} onGo={(a, b) => { const c = cmd(); if (c) c.select(a, b); closeOver(); }} />}
             {tab === 'target' && <TargetPanel value={target || null} onSet={(n) => { setDraft({ ...draftRef.current, target: n }); }} />}
             {tab === 'copies' && (

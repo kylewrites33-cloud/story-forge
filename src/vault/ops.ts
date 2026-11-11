@@ -49,6 +49,15 @@ export type Op =
    * ("name (2).csv"), `replace` puts this one in its place, `refuse` stops the save with a plain sentence. Like
    * `chapters` it never waits in the outbox: a picture is too big for the small store the outbox lives in. */
   | ({ kind: 'file' } & DeviceFile)
+  /** The book's draft saved (planDraft in src/vault/book.ts): every scene as the vault has it at that moment is copied
+   * to `Drafts/Draft N/` with a `Draft N.md` note beside it, N being the next number free then. `path` is the book
+   * note's, `note` a line Kyle may add, `at` when he did it. It never waits in the outbox: the copies are the book as
+   * it stands when the save is made. */
+  | { kind: 'draft'; path: string; book: string; note: string; at: string }
+  /** A scene brought back from the book's Archive (planRestore in src/vault/book.ts): it is in Scenes again and its
+   * archived copy leaves, in the same save. `path` is the archived file's. It never waits in the outbox either: the
+   * Archive is a list of files the device only knows from its last look at the vault. */
+  | { kind: 'restore'; path: string; book: string }
   /** A new note. `make` names its maker (makers.ts) and `payload` is what Kyle typed. `id`, `path` and `text` are the
    * note as it shows until it is saved; the save works it out again on the vault's files then, and the ID changes only
    * if another note took it meanwhile. */
@@ -79,6 +88,16 @@ export function chaptersAction(book: string, change: ChapterChange, why: string,
 /** Scenes deleted from a book, as one action. */
 export function deleteAction(book: string, scenes: string[], now: Date = new Date()): Action {
   return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'delete', path: book + '/Book.md', book, scenes, at: now.toISOString() }] };
+}
+
+/** The book's draft saved, as one action. */
+export function draftAction(book: string, note = '', now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'draft', path: book + '/Book.md', book, note, at: now.toISOString() }] };
+}
+
+/** A scene brought back from the book's Archive, as one action. */
+export function restoreAction(book: string, path: string, now: Date = new Date()): Action {
+  return { id: newId(now), at: now.toISOString(), ops: [{ kind: 'restore', path, book }] };
 }
 
 /** Files from the device, with new notes that go in with them (the ask to the team that goes with a manuscript), as

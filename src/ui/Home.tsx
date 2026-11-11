@@ -1,6 +1,6 @@
 // The home page, like Novelcrafter's "Your Novels": Books or Series at the top, the scenes Kyle wrote in last,
 // then every book as a cover card (or a list), with search and sort. A series page shows its books and its notes.
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { bookStatus, continueBooks, type BookStatus, type PlanningStage } from '../lib/bookstatus.ts';
 import { bookSigns, currentStage, flowStages, stageProgress, taskStatuses, flowResults } from '../lib/flow.ts';
 import { jobNotes } from '../lib/jobs.ts';
@@ -13,6 +13,7 @@ import {
   bookWords, coverPattern, lastWorked, loadRecent, readingLine, loadRates, sortBooks, type BookSort
 } from '../lib/home.ts';
 import type { BookEntry, DeviceFile, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { TextChange } from '../vault/text.ts';
 import { backupFile, buildDocx, exportName, manuscript, saveBackup } from '../lib/docx.ts';
 import { kindleFile, loadMatter, matterPath, saveMatterBody, splitNote, starterMatter } from '../lib/epub.ts';
 import { activeBook } from '../lib/vault-index.ts';
@@ -114,10 +115,12 @@ export function Cover({ source, book, small }: { source: VaultSource; book: Book
 
 /** Book details, like Novelcrafter's novel settings (the cog by the novel's name): the cover, added or changed from the
  * device, with the book's name, series and stage. */
-export function BookDetails({ source, book, onCover, schema, index, onDecide, onFiles }: {
+export function BookDetails({ source, book, onCover, schema, index, onDecide, onFiles, onMatter }: {
   source: VaultSource; book: BookEntry; onCover?: (book: BookEntry, file: File) => Promise<string | null>; schema: Schema; index: VaultIndex;
   /** Saves a file from the device through the one saving system (the Word backup). */
   onFiles?: (files: DeviceFile[]) => Promise<void>;
+  /** Saves the front and back matter through the one saving system: it shows at once and waits with everything else. */
+  onMatter?: OnMatter;
   /** Changes the book's stage (the stage pills moved here from Home and the Chapter Grid, design review 2026-10-22). */
   onDecide?: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 }) {
@@ -159,7 +162,7 @@ export function BookDetails({ source, book, onCover, schema, index, onDecide, on
           <dt>Stage</dt><dd>{book.stage}</dd>
         </dl>
       </div>
-      <ExportWord source={source} schema={schema} index={index} book={book} onFiles={onFiles} />
+      <ExportWord source={source} schema={schema} index={index} book={book} onFiles={onFiles} onMatter={onMatter} />
     </section>
   );
 }
@@ -185,10 +188,12 @@ export function downloadFile(bytes: Uint8Array<ArrayBuffer>, name: string, type:
 /** Export to Word (Kyle, 2026-10-18): the whole book as a .docx named series_book_date, made on this device and
  * downloaded; italics and bold come through. Shown on Book details and, as a card, on Publish's first page, the Market
  * board (Kyle, 2026-10-23: he could not find it behind the page menu). */
-export function ExportWord({ source, schema, index, book, card, onFiles }: {
+export function ExportWord({ source, schema, index, book, card, onFiles, onMatter }: {
   source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; card?: boolean;
   /** The one saving system's way to save a file from the device; without it the backup is saved the old way. */
   onFiles?: (files: DeviceFile[]) => Promise<void>;
+  /** The one saving system's way to save the front and back matter; without it, the old way. */
+  onMatter?: OnMatter;
 }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [backup, setBackup] = useState<{ error: boolean; text: string } | null>(null);
@@ -220,14 +225,16 @@ export function ExportWord({ source, schema, index, book, card, onFiles }: {
       <button type="button" onClick={run}><Icon name="download" size={18} />Export to Word</button>
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
       {backup && <p class={backup.error ? 'error' : 'hint'} role="status">{backup.text}</p>}
-      <KindleFile source={source} schema={schema} index={index} book={book} />
+      <KindleFile source={source} schema={schema} index={index} book={book} onMatter={onMatter} />
     </div>
   );
 }
 
 /** The Kindle file (Kyle, 2026-11-04, replacing Vellum for the ebook): an EPUB ready for KDP, made on this device and
  * downloaded, with System screens boxed, the Book Matter note's pages and the cover. Said plainly what is missing. */
-function KindleFile({ source, schema, index, book }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry }) {
+type OnMatter = (path: string, change: Extract<TextChange, { what: 'words' }>) => void;
+
+function KindleFile({ source, schema, index, book, onMatter }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; onMatter?: OnMatter }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const run = async () => {
@@ -253,7 +260,7 @@ function KindleFile({ source, schema, index, book }: { source: VaultSource; sche
       <p class="hint">The ebook to upload to KDP, with System screens in boxes, the copyright page and back matter from the book matter page, and the cover.</p>
       <button type="button" onClick={run} disabled={busy}><Icon name="download" size={18} />Make the Kindle file</button>
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
-      <MatterEditor source={source} index={index} book={book} />
+      <MatterEditor source={source} index={index} book={book} onMatter={onMatter} />
     </>
   );
 }
@@ -261,15 +268,27 @@ function KindleFile({ source, schema, index, book }: { source: VaultSource; sche
 /** Front and back matter (Kyle, 2026-11-04): the book's Book Matter note, edited here as plain words. A
  * `## Front: Copyright` heading starts a page before chapter 1, `## Back: About the Author` one after the last chapter.
  * Opens with the newest words from the vault and saves them as one commit with Kyle's key. */
-function MatterEditor({ source, index, book }: { source: VaultSource; index: VaultIndex; book: BookEntry }) {
+function MatterEditor({ source, index, book, onMatter }: { source: VaultSource; index: VaultIndex; book: BookEntry; onMatter?: OnMatter }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  // The words as Kyle opened them (or last saved them here): what changed elsewhere since is merged in when they save.
+  const opened = useRef('');
+  const author = () => { const data = index.notes[book.path] ? index.notes[book.path].data : {}; return typeof data.author === 'string' ? data.author : ''; };
   const [sha, setSha] = useState<string | null>(null);
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const show = async () => {
-    setBusy(true);
     setSaid(null);
+    if (onMatter) {
+      // The one saving system: the note as the app shows it, with words that are still waiting to save.
+      const n = index.notes[matterPath(book)];
+      const words = n ? n.body.replace(/^\n+/, '') : splitNote(starterMatter(author())).body;
+      opened.current = n ? words : '';
+      setText(words);
+      setOpen(true);
+      return;
+    }
+    setBusy(true);
     try {
       const m = await loadMatter(source, index, book);
       if (m) { setText(splitNote(m.text).body.replace(/^\n+/, '')); setSha(m.sha); }
@@ -285,6 +304,12 @@ function MatterEditor({ source, index, book }: { source: VaultSource; index: Vau
     setBusy(false);
   };
   const save = async () => {
+    if (onMatter) {
+      onMatter(matterPath(book), { what: 'words', of: 'matter', was: opened.current, body: text, start: splitNote(starterMatter(author())).head, name: book.title });
+      opened.current = text;
+      setSaid({ error: false, text: navigator.onLine ? 'Saved. The next Kindle file has these pages.' : 'Kept on this device. It saves when you are connected, and the next Kindle file has these pages.' });
+      return;
+    }
     if (sha == null) return;
     setBusy(true);
     try {

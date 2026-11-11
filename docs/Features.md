@@ -1471,3 +1471,40 @@ The ninth piece. What Kyle sees is as before: the timer, its panel and the Writi
   the workflow would have landed twice. Now a change is never in two sends at once (`sending` and `pushing` beside
   `pushNow` in `src/ui/App.tsx`), whatever asks for the send, and the line the sends wait in is no longer cleared when
   the app starts. The browser check opens the app with a Pomodoro waiting and reads the day's note: one Pomodoro.
+
+## The one saving system, step 1: the book's notes, front and back matter, saved drafts, Restore (2026-11-11)
+
+The tenth piece. Five more things stop talking to GitHub themselves.
+
+- **The book's notes (the writing page's Notes tab, the Braindump) save with no connection.** Save notes shows them at
+  once and they wait with everything else; the line "Connect to the internet to save your notes" is gone. The first
+  notes of a book start its Braindump note in the same save.
+- **Front and back matter (Book details) saves with no connection** too. The box opens with the note as the app shows
+  it, so words still waiting to save are in it, and the Kindle file made offline has them.
+- **Notes changed somewhere else meanwhile are merged, not written over.** Each save carries the words as Kyle opened
+  them. If the team or another device changed the note since, their lines come in beside his, line by line; where both
+  changed the same line, his is kept. Before, the Braindump was written over whole, and the front and back matter
+  refused to save ("changed somewhere else since you opened it").
+- **Saving the book's draft** (Save Draft N, and the draft that saves itself when the last chapter is through in the
+  Rewrite tab) is one save through the saving system, made on the vault as it is at that moment, so a scene another
+  device saved a minute ago is in the copy. It still needs the connection: the copies are the book as it stands then.
+- **Restore from the Archive is one save** where it was two (the scene written to Scenes, then its archived copy
+  removed), so a scene can no longer end up in both places. The chapter list and the Archive list follow from the
+  save's answer.
+- **A deleted beat's words** go to the Archive through the saving system (a file saved as it is, under a name of its
+  own). Deleting a beat with words still needs the connection, so the words are safe first.
+- **How it is built.** One text change, `words` (`src/vault/text.ts`): the note's body replaced, its properties kept
+  byte for byte, merged from the words as opened (`merge3`, the same line merge the writing page uses), starting the
+  note when the vault does not have it. Two ops that are sent at once and never wait, `draft` and `restore`
+  (`src/vault/book.ts`: `planDraft`, `planRestore`). In the app: `saveDraft`, `onRestore`, `onWords` in
+  `src/ui/App.tsx`; `NotesPanel` and `ArchiveList` in `src/ui/EditorPanels.tsx`; `MatterEditor` in `src/ui/Home.tsx`.
+- The old way (Settings, Saving) keeps all five as they were.
+- Checked with tests (`tests/vault-book.test.ts`: the words change on screen equal to its saved text; the first notes
+  starting the Braindump, waiting across closing the app; another device's lines merged in and Kyle's kept on a clash;
+  two saves with no connection landing in order as one; the matter started and then only its words changing; a draft
+  leaving the vault exactly as the old way did, in one save, from the vault as it is then; Restore leaving the vault
+  as the old way did, in one save where that took two, and refusing when the name is taken), and in Chromium at
+  1180 x 820, 1366 x 1024 and 1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: notes saved,
+  then saved with GitHub out of reach, still in the box after the app is opened again, and merged with another
+  device's line; a scene restored in one save; Draft 2 saved in one save of every scene; the matter saved with GitHub
+  out of reach and in the box after opening the app again; a beat deleted with its words in the Archive; the old way.

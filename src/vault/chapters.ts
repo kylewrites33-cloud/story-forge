@@ -34,7 +34,7 @@ const name = (path: string) => path.slice(path.lastIndexOf('/') + 1).replace(/\.
 
 /** The book's notes that carry a chapter number, as the save sees them now. `known` is the vault as the device has it:
  * a note whose file has not changed since is not read again. */
-async function bookNotes(tree: Tree, book: string, known: Record<string, NoteRecord>): Promise<{ files: FileEntry[]; notes: Record<string, NoteRecord>; scenes: NoteRecord[] }> {
+export async function bookNotes(tree: Tree, book: string, known: Record<string, NoteRecord>): Promise<{ files: FileEntry[]; notes: Record<string, NoteRecord>; scenes: NoteRecord[] }> {
   const files = await tree.files();
   // The folders to look in: the usual ones, and any other where the device has seen such a note.
   const folders = new Set(FOLDERS.map((f) => book + '/' + f + '/'));

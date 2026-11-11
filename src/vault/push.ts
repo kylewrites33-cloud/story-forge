@@ -14,6 +14,7 @@ import { editMessage, editText } from './apply.ts';
 import { make } from './makers.ts';
 import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
+import { planDraft, planRestore } from './book.ts';
 import { planChapters, planDelete } from './chapters.ts';
 import { startsNote } from './text.ts';
 import { Tree } from './tree.ts';
@@ -108,7 +109,7 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
   const ops = actions.flatMap((a) => a.ops);
   const creates = new Set(ops.filter((op) => op.kind === 'create').map((op) => op.path));
   // Notes that are in the vault already and take an edit. A note this save itself adds is not read.
-  const paths = [...new Set(ops.filter((op) => op.kind === 'edit' && !creates.has(op.path)).map((op) => op.path))];
+  const paths = [...new Set(ops.filter((op) => (op.kind === 'edit' || op.kind === 'restore') && !creates.has(op.path)).map((op) => op.path))];
   // What the last plan read and made, kept for the answer: the plan may run more than once.
   let tree: Tree | null = null;
   let renames: Record<string, string> = {};
@@ -125,6 +126,14 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
       }
       if (op.kind === 'delete') {
         lines.push((await planDelete(t, op.book, op.scenes, new Date(op.at), opts.known)).message);
+        continue;
+      }
+      if (op.kind === 'draft') {
+        lines.push((await planDraft(t, op.book, new Date(op.at), op.note, opts.known)).message);
+        continue;
+      }
+      if (op.kind === 'restore') {
+        lines.push((await planRestore(t, op.path, op.book)).message);
         continue;
       }
       if (op.kind === 'create') {
@@ -196,7 +205,7 @@ async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<
 async function pushLegacy(source: VaultSource, action: Action): Promise<Pushed> {
   const out: Pushed = { saved: [], renames: {}, removed: [] };
   for (const op of action.ops) {
-    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file') {
+    if (op.kind === 'chapters' || op.kind === 'delete' || op.kind === 'retitle' || op.kind === 'file' || op.kind === 'draft' || op.kind === 'restore') {
       // Chapter numbers have no old way through here: the old code is called from the page itself while the switch is on.
       const p = await pushActions(source, [{ ...action, ops: [op] }]);
       out.saved.push(...p.saved);
