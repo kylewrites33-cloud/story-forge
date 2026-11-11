@@ -1431,3 +1431,43 @@ The eighth piece. What Kyle sees is as before; how each is saved changed.
   no connection and the app closed and opened, a Rocket file twice, a real picture shrunk in that engine and shown as
   the cover, a manuscript with its ask showing in Jobs, and every earlier piece's check. Export to Word's backup was
   checked in Chromium only (the WebKit test browser cannot take a download).
+
+## The one saving system, step 1: the timer's log and the typing counts (2026-11-11)
+
+The ninth piece. What Kyle sees is as before: the timer, its panel and the Writing Log notes are unchanged.
+
+- **The timer no longer sends anything itself.** A finished (or stopped) Pomodoro, the words typed and the minutes
+  typing are handed to the saving system, which keeps them on the device until they are in the vault and shows them at
+  once. Before, the timer had three waiting lists of its own and three copies of the send-and-try-again code.
+- **Words and minutes go up as one save**, where they were two each time (after a two-minute pause, every ten minutes
+  while typing, and when the page is put away). A Pomodoro that finishes at the same moment goes in the same save.
+- **The first Pomodoro or the first words of a day start that day's note** in the same save. A count lands on the
+  day's note as the vault has it then, so the iPad and the desktop can both log to the same day and both are kept.
+- **With no connection** a Pomodoro waits with everything else ("1 change is saved on this device"); the words and
+  minutes stay in their two meters on the device, which add up, and are handed over when the connection is back, so
+  a long stretch offline is one change and not dozens.
+- **Nothing is counted twice:** what is handed over leaves the meter in the same moment. The part of a tenth of a
+  minute not handed over stays for the next time, as before.
+- A Pomodoro still in the timer's old list (`sf-pomodoro-log:<vault>`) moves over the first time the timer shows.
+- **How it is built.** Three more small text changes (`log-pomodoro`, `log-typed`, `log-typing` in
+  `src/vault/text.ts`), made by the same functions the timer used (`addToDay`, `addTypedToDay`, `addTypingToDay`).
+  These are the one kind of edit that starts its note when the vault does not have it (`startsNote`): on screen
+  (`overlayActions`) and at the save (`push.ts`). `takeTypingCounts` in `src/lib/pomodoro.ts` takes what is due out of
+  the meters; `onLog` in `src/ui/App.tsx` puts it in the outbox.
+- The old way (Settings, Saving) keeps the timer sending for itself.
+- One thing is as it was: if a save lands and its answer is lost on the way back, the same counts go up again on the
+  next try. The old sending had the same gap; closing it needs each count to carry a mark of its own.
+- Checked with tests (each change on screen equal to its saved text; the first Pomodoro of a day starting the note,
+  waiting across closing the app and matching a fresh read; Pomodoros, words and minutes leaving the day's note
+  exactly as the timer's own sending left it, in one save where that took four; counts landing on top of what another
+  device logged; the tenth-of-a-minute remainder), and in Chromium at 1180 x 820, 1366 x 1024 and 1440 x 900 and
+  WebKitGTK at the two iPad sizes against a pretend GitHub: a Pomodoro from the old list going up, eleven words typed
+  over seven seconds handed over with GitHub out of reach, asked for again without being counted twice, then one save
+  with the day reading 423 words typed; the old way with its two saves; and every earlier piece's check.
+- **Found while checking this piece, and fixed: a waiting change could go up twice when the app opened.** The timer
+  hands over a waiting Pomodoro the moment it shows, which is before the app's own start-up sync; the two were not
+  kept in line at that one moment, so both sent the same change, and the second was made again on top of the first.
+  For a choice or a tick that changes nothing (the second finds it already made), but a Pomodoro, a count or a note on
+  the workflow would have landed twice. Now a change is never in two sends at once (`sending` and `pushing` beside
+  `pushNow` in `src/ui/App.tsx`), whatever asks for the send, and the line the sends wait in is no longer cleared when
+  the app starts. The browser check opens the app with a Pomodoro waiting and reads the day's note: one Pomodoro.

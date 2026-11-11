@@ -9,7 +9,7 @@ import { archiveFiles, assemble, makeNote, resortScenes, selectFiles } from '../
 import { changeOf } from '../lib/write-queue.ts';
 import type { NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Action, Edit } from './ops.ts';
-import { changeMessage, changeRecord, changeText } from './text.ts';
+import { changeMessage, changeRecord, changeText, startsNote } from './text.ts';
 
 /** The note as the screens should show it once this edit is in. */
 export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
@@ -84,7 +84,11 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
     const held = (team || index.team || {})[op.path];
     if (held) { team = { ...(team || index.team), [op.path]: { sha: held.sha, text: editText(held.text, op.edit) } }; return; }
     const n = notes[op.path];
-    if (!n) return;
+    if (!n) {
+      // A day of the Writing Log that is not there yet starts with its first Pomodoro or its first words.
+      if (op.edit.type === 'text' && startsNote(op.edit.change)) { notes[op.path] = makeNote(op.path, '', editText('', op.edit)); added = true; }
+      return;
+    }
     notes[op.path] = editRecord(n, op.edit);
     if (reorders(op.edit)) sort = true;
   }));

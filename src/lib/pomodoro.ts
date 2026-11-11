@@ -366,6 +366,34 @@ export async function flushTyping(source: VaultSource, now: Date): Promise<NoteR
   return saved;
 }
 
+/** A piece of the Writing Log on its way to the vault: a Pomodoro, words typed on a day, or minutes of typing on a day. */
+export type LogItem = { kind: 'pomodoro'; record: PomodoroRecord } | { kind: 'typed'; date: string; words: number } | { kind: 'typing'; date: string; minutes: number };
+
+/** Take what is due out of the two meters (words typed, minutes typing), for the one saving system to carry to the
+ *  vault: after a two-minute pause, every ten minutes while Kyle keeps typing, or all of it when `force` (the page is
+ *  put away). What is taken leaves the meters at once, so nothing is counted twice; the part of a tenth of a minute
+ *  not taken stays for the next time, and seconds left over from an earlier day are dropped, as before. */
+export function takeTypingCounts(force: boolean, now = Date.now()): LogItem[] {
+  const t = loadTyped();
+  const a = loadTyping();
+  const out: LogItem[] = [];
+  if (Object.keys(t.days).length > 0 && (force || typedDue(t, now))) {
+    Object.keys(t.days).sort().forEach((date) => { if (t.days[date] > 0) out.push({ kind: 'typed', date, words: t.days[date] }); });
+    saveTyped({ days: {}, firstAt: 0, typedAt: t.typedAt });
+  }
+  if (force ? Object.keys(a.days).length > 0 : typingDue(a, now)) {
+    const days = { ...a.days };
+    Object.keys(a.days).sort().forEach((date) => {
+      const minutes = toMinutes(a.days[date] || 0);
+      if (minutes > 0) out.push({ kind: 'typing', date, minutes });
+      const left = (a.days[date] || 0) - minutes * 60000;
+      if (left > 0 && date === ymd(new Date(now))) days[date] = left; else delete days[date];
+    });
+    saveTyping({ ...a, days, firstAt: now });
+  }
+  return out;
+}
+
 /** Words an hour of typing, or null when there is too little typing time to say (under a minute). */
 export function wordsAnHour(words: number, minutes: number): number | null {
   if (!(minutes >= 1)) return null;

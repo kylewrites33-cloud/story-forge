@@ -15,6 +15,7 @@ import { make } from './makers.ts';
 import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
 import { planChapters, planDelete } from './chapters.ts';
+import { startsNote } from './text.ts';
 import { Tree } from './tree.ts';
 
 /** The line for the vault's history: the first change's own line, with the others named under it. */
@@ -64,6 +65,9 @@ async function planRetitle(t: Tree, path: string, title: string, what: 'scene' |
   t.remove(path);
   return { to, message: 'scenes: rename ' + id + ' to ' + clean + '\n\n' + why };
 }
+
+/** Does this edit start its note when the vault does not have it (text.ts, startsNote)? */
+const starts = (edit: Edit): boolean => edit.type === 'text' && startsNote(edit.change);
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 
@@ -151,8 +155,9 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
         continue;
       }
       const path = renames[op.path] || op.path;
-      const text = await t.read(path);
-      if (text == null) continue;
+      let text = await t.read(path);
+      // A note that is gone cannot take a change. A day of the Writing Log that is not there yet starts with its first.
+      if (text == null) { if (!starts(op.edit)) continue; text = ''; }
       const next = editText(text, op.edit);
       if (next !== text) lines.push(editMessage(text, op.edit, path));
       t.write(path, next);
@@ -173,7 +178,9 @@ export const pushAction = (source: VaultSource, action: Action, opts: PushOption
 async function saveEdit(source: VaultSource, path: string, edit: Edit): Promise<NoteRecord> {
   if (!source.readFresh || !source.write) throw new Error('This vault cannot be changed from the app.');
   for (let attempt = 0; ; attempt++) {
-    const { text, sha } = await source.readFresh(path);
+    let cur = { text: '', sha: '' };
+    try { cur = await source.readFresh(path); } catch (e) { if (!((e as { status?: number }).status === 404 && starts(edit))) throw e; }
+    const { text, sha } = cur;
     const next = editText(text, edit);
     if (next === text) return makeNote(path, sha, text);
     try {
