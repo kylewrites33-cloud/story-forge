@@ -1652,3 +1652,35 @@ Step 2 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Red
   four sizes (iPad 1180x820 and 1366x1024, desktop 1440x900, phone 390x844) from the app before the change, and the app
   after it matches all 260.
 
+
+## Trial: a new writing box (2026-11-11)
+
+Step 3 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Redesign.md`), the trial only. Kyle,
+2026-11-11, on the card "Start step 3 with a trial of a new writing box on your iPad?": "Yes, build the trial page" ("I
+put a new writing box on a spare page with one of your chapters. Your real writing page stays untouched. You type in it
+for a few minutes and tell me how it feels."). Whether the real writing page changes waits for what he says.
+
+- **Where.** Settings, at the top: "Trial: a new writing box", "Open the trial page" (`#/trial`, or `#/trial/<scene>`).
+  It opens the chapter he last wrote in; a Chapter list picks another.
+- **What it is.** The whole chapter (its scenes one after another) in a new writing box, `src/write/prose.ts`:
+  CodeMirror 6, the first dependency beyond Preact and idb (reason in the vault's Decision Ledger, 2026-11-11). The page
+  is the chapter's text itself. Stars of italics and bold and the equals signs of marks are hidden, System screen lines
+  ("> ") are indented with their titles in small capitals, {asks} are marked, all by the same rules as today's box
+  (`runs` and `marks` in `src/lib/styled.ts`). A key changes only its own line; only the lines near the screen are drawn.
+- **The bar.** Leave, Bold, Italic, Undo, Redo, and "Add a line from outside", which puts one line under the paragraph
+  the cursor is in, the way the team's words or a Bring over arrive, so he can see that the page and the cursor stay put.
+- **Under the bar.** What the page is, the Chapter list, Start again (the chapter as it was), and one line: the word count
+  and how quickly each key shows (the usual and the slowest, in thousandths of a second).
+- **NOTHING IS SAVED.** The page is handed no save action (`WRITE_SCREENS.trial` in `src/app/screens.tsx`) and writes
+  nothing to the device. Leaving the page or Start again throws the typing away. His real writing page, `Editor.tsx` and
+  `StyledEditor.tsx`, is not touched.
+- **The download.** The new box is a file of its own (about 85 KB zipped), fetched when the trial page opens, so the app's
+  first load is as before. It needs the internet the first time; offline the page says so.
+- **Not in the trial:** find, names from the codex, the side column, Listen, Check, copies, the dot on new lines, saving.
+- **Checked** in Chromium at four sizes and in WebKitGTK at both iPad sizes (`trial.mjs`, `webkit-trial.mjs` in the
+  project files' `app/saving-checks/`): a 3,600-word made-up chapter shows with every style and no stars; real keys and
+  inserted words (how autocorrect and dictation arrive) go in; Bold, Italic and Undo work from the bar with the cursor
+  kept; an outside line arrives without the page or cursor moving; nothing is sent or kept. What only Kyle's iPad can
+  say: the on-screen keyboard, autocorrect, dictation, the selection handles, and how typing feels.
+- **After his verdict:** either the real writing page takes this box (the rest of step 3), or the trial page, `src/write/`,
+  the Settings door, the `trial` page entry and the three `@codemirror` packages are removed.
