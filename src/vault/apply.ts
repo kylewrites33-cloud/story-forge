@@ -67,6 +67,8 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
       if (!notes[op.path]) { notes[op.path] = makeNote(op.path, '', op.text); added = true; }
       return;
     }
+    // A change to chapter numbers never waits (ops.ts), so there is none to show here.
+    if (op.kind !== 'edit') return;
     const n = notes[op.path];
     if (!n) return;
     notes[op.path] = editRecord(n, op.edit);
@@ -77,11 +79,13 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
   return sort ? resortScenes(out) : out;
 }
 
-/** The saved copy with notes the app just saved put in. A note that is new to it is put where its kind goes. */
-export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schema | null): VaultIndex {
-  if (!saved.length) return index;
+/** The saved copy with notes the app just saved put in, and files a save took out (a note that got a new file name
+ * leaves its old one) taken out. A note that is new to it is put where its kind goes. */
+export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schema | null, removed: string[] = []): VaultIndex {
+  if (!saved.length && !removed.length) return index;
   const notes = { ...index.notes };
-  let added = false;
-  saved.forEach((n) => { if (!notes[n.path]) added = true; notes[n.path] = n; });
-  return added && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes });
+  let reshaped = false;
+  removed.forEach((p) => { if (notes[p]) { delete notes[p]; reshaped = true; } });
+  saved.forEach((n) => { if (!notes[n.path]) reshaped = true; notes[n.path] = n; });
+  return reshaped && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes });
 }

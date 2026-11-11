@@ -51,10 +51,42 @@ export function loadDrafts(sourceKey: string, storage: Store = defaultStore()): 
   }
 }
 
+// File names that new notes were shown with before they were saved under another (their ID was taken meanwhile). A
+// page still open on the old name may try to keep its words under it as it closes; the page at the new name has them.
+const retired = new Set<string>();
+
+/** New notes that were saved under another file name than they were shown with (old path to new): what Kyle wrote in
+ * them while they waited follows them, so it is saved into the note the vault has. */
+export function moveDrafts(sourceKey: string, renames: Record<string, string>, storage: Store = defaultStore()): void {
+  const from = Object.keys(renames);
+  if (!from.length) return;
+  from.forEach((p) => retired.add(sourceKey + '\n' + p));
+  try {
+    if (!storage) return;
+    const all = loadDrafts(sourceKey, storage);
+    let changed = false;
+    from.forEach((p) => {
+      const d = all[p];
+      if (!d) return;
+      const to = renames[p];
+      // What is already kept under the new name wins only if it is newer.
+      if (!all[to] || all[to].updatedAt <= d.updatedAt) all[to] = { ...d, path: to };
+      delete all[p];
+      changed = true;
+    });
+    if (!changed) return;
+    if (Object.keys(all).length) storage.setItem(KEY + sourceKey, JSON.stringify(all));
+    else storage.removeItem(KEY + sourceKey);
+  } catch {
+    /* storage turned off: nothing was kept, so nothing to move */
+  }
+}
+
 /** Keep one draft (or forget it, with null). Returns false when the device would not store it. */
 export function putDraft(sourceKey: string, path: string, d: Draft | null, storage: Store = defaultStore()): boolean {
   try {
     if (!storage) return false;
+    if (d && retired.has(sourceKey + '\n' + path)) return true;
     const all = loadDrafts(sourceKey, storage);
     if (d) all[path] = d;
     else delete all[path];

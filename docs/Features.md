@@ -90,6 +90,8 @@ add a dated line here when you add or change one.
   finger on a chapter, or right-clicking it, opens a small menu under it: Add a chapter below and Add another scene. A
   chapter added in the middle moves every later chapter up one first (`src/lib/chapters.ts`): their scenes, to-dos,
   scene notes, and the beats, plan and scrap notes, renamed to their new number; one save each, Kyle's (no Agent line).
+  Since 2026-11-11 a new scene or a new last chapter shows at once and works with no connection, and a chapter in the
+  middle is one save with the renumbering (see "The one saving system, step 1: chapters").
   Delete (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it", about a team test-drive scene
   under No chapter yet): the chapter's hold menu has Delete chapter, and holding a scene listed under its chapter (Show
   scenes) or under No chapter yet gives Delete this scene. It asks once, with the word count. Nothing is destroyed: each
@@ -106,7 +108,8 @@ add a dated line here when you add or change one.
   one, Down one, or a chapter number to jump to; the panel stays under the chapter so Up can be pressed again. The
   chapters in between close up by one; every note with a chapter number changes, the moving chapter's scenes take new
   reading-order numbers, and its beats, plan and scrap pass through a "(moving)" name so no two files clash. Needs a
-  connection. Since 2026-11-11 the Edit room follows a chapter that is added, moved or deleted (found in the code
+  connection. Since 2026-11-11 a move is one save and no file passes through another name (see "The one saving system,
+  step 1: chapters"). Since 2026-11-11 the Edit room follows a chapter that is added, moved or deleted (found in the code
   structure review; before this they stayed on the old number): its change list (`Changes/Chapter N changes.md`) is
   renumbered and renamed like the beats, the chapters marked through in the Rewrite tab (`rewrite_done` on the book
   note) take their new numbers, and the sections of `Chapter Titles.md` are renumbered and put back in order. A deleted
@@ -1263,3 +1266,44 @@ Team, a new recipe, and results written or pasted into a workflow step. Nothing 
   opened (the team taking its number meanwhile), Ask the team asked twice while the first waits, a Note to the Team,
   a recipe, the old way, and every earlier piece's check again (boards, to-dos, the Edit room), with the app closed
   right after a save and GitHub out of reach.
+
+## The one saving system, step 1: chapters, first half (2026-11-11)
+
+The fifth piece: adding a scene, adding a chapter and moving a chapter. Deleting is the second half.
+
+- **A new scene or a new last chapter works offline.** Add a chapter at the end of the list, Add another scene, and
+  scenes from a pasted outline are new notes in the outbox (maker `scene`). The page for the new chapter opens at once,
+  with no wait for GitHub, and takes Kyle's words; the scene goes up when the connection allows and his words are saved
+  into it after. Scenes from an outline are one save for all of them. Before, each needed the connection ("Connect to
+  the internet to add a scene.").
+- **If its number was taken while it waited** (another device added a scene to the book), the scene takes the next
+  S-number at the save. The page moves to the new name by itself, and what Kyle typed under the old name follows
+  (`moveDrafts` in `src/lib/drafts.ts`), so nothing is left behind and nothing is saved twice.
+- **Moving a chapter is one save.** Every note that carries a chapter number follows (scenes, to-dos, scene notes,
+  beats, plan, scrap, the Edit room's change list), the ones named after their chapter get their new file names, and
+  the Rewrite tab's ticks and the Chapter Titles note follow, all in one save: all of it, or nothing. Before, it was one
+  save a note (about 120 for a far move in Quest Declined 2), and a failure part-way left the book half moved. No file
+  passes through a "(moving)" name any more. The vault's history has one line: "chapters: chapter 30 is now chapter 12".
+- **A chapter added in the middle is one save too**: the later chapters move up and the new chapter's scene is added
+  together.
+- **These two still need the connection**, and say so: "Connect to the internet to add a chapter in the middle of the
+  book: the chapters after it get new numbers." Everything else that waits on the device is addressed by file names and
+  numbers that a renumbering changes, so a renumbering is sent at once, after what waits for the book has gone up, or
+  not at all. If something for the book still waits, the app says "Your answers on the team's changes have not saved
+  yet. Press Sync, then try again." or "Something you added or moved in this book has not saved yet. ..." and changes
+  nothing. This limit goes when chapters get IDs of their own (step 5 of the redesign).
+- **Only what is needed is read.** The save works the new numbers out on the vault as it is at that moment, so a note
+  the team added meanwhile follows too. A note whose file has not changed since the device last read the vault is not
+  read again unless it moves: moving a chapter one place in Quest Declined 2 reads 17 notes, a far move about 100.
+- **The list shows it at once.** The save's answer is put into the saved copy on the device (new names in, old names
+  out), so the chapter list is right without a sync.
+- **How it is built.** `src/vault/tree.ts` is the vault as one save sees it: every op reads and writes there in order,
+  so a later op meets what an earlier one did (a note added, a file renamed). `src/vault/chapters.ts` is the chapters op
+  (room for a new chapter, a move, and closing up after a deleted one, used by the second half). The saving order on a
+  sync is now the outbox first, then Kyle's writing, so a new scene is in the vault before its words are saved to it.
+- The old way (Settings, Saving) keeps the old code for all of this: one save a note, with the connection.
+- Checked with tests that run the old way and the new way on the same book and compare every file (the demo book, and
+  a copy of Quest Declined 2 when the vault is beside the repository), and in Chromium at 1180 x 820, 1366 x 1024 and
+  1440 x 900 and WebKitGTK at the two iPad sizes against a pretend GitHub: a new last chapter online and with no
+  connection, typing in it before it is saved, its number taken meanwhile, a move, a chapter in the middle, the plain
+  sentence with no connection, the old way and the new way leaving the same files, and every earlier piece's check.

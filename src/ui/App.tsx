@@ -15,7 +15,7 @@ import { archiveNote, archiveScene, createScene, mentionsOf, orderBetween, renam
 import { applyShifts, chapterCloseUp, chapterMove, chapterNotes, chapterShifts, chapterTitleEdits, closeMap, makeRoom, moveMap, renumberLists, roomMap } from '../lib/chapters.ts';
 import { createBook, createSeries, fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
 import { jobAsk } from '../lib/jobs.ts';
-import { loadDrafts, putDraft, typedWords } from '../lib/drafts.ts';
+import { loadDrafts, moveDrafts, putDraft, typedWords } from '../lib/drafts.ts';
 import type { BookEntry, NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
 import { activeBook, makeNote } from '../lib/vault-index.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
@@ -24,9 +24,9 @@ import { flushDrafts, loadNotice, pendingCount, saveNotice } from '../lib/drafts
 import type { Choice } from '../lib/write-queue.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
+import { chaptersAction, choiceAction, createAction, marksAction, type Action } from '../vault/ops.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
-import { pushAll } from '../vault/push.ts';
+import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
 import { oldSaving } from '../vault/switch.ts';
 import { IdeasBoard } from './IdeasBoard.tsx';
 import { TastePage } from './Taste.tsx';
@@ -125,18 +125,27 @@ export function App() {
 
   useEffect(() => { setOutbox(loadOutbox(source.key)); }, [source, setOutbox]);
 
-  /** Put a new note in the outbox: it shows at once with the ID it will most likely get, and is saved when the
-   * connection allows. Throws a plain sentence when what Kyle typed cannot make a note. */
-  const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
+  /** A new note (or several of one kind) as an action, with the ID it will most likely get. Throws a plain sentence
+   * when what Kyle typed cannot make a note. */
+  const planned = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
     const cur = snapRef.current;
     if (!cur) throw new Error('Press Sync first.');
-    // The files the app knows of: the saved copy's notes and the new notes still waiting.
+    // The files the app knows of: the saved copy's notes, each book's archived scenes and saved drafts (their numbers
+    // count when the next free one is worked out), and the new notes still waiting.
     const paths = Object.keys(cur.index.notes);
+    cur.index.books.forEach((b) => {
+      (b.archive || []).forEach((f) => paths.push(f.path));
+      (b.drafts || []).forEach((d) => (d.files || []).forEach((f) => paths.push(f.path)));
+    });
     outboxRef.current.forEach((a) => a.ops.forEach((op) => { if (op.kind === 'create') paths.push(op.path); }));
-    const action = createAction(name, payload, paths.map((path) => ({ path, sha: '' })));
+    return createAction(name, payload, paths.map((path) => ({ path, sha: '' })));
+  }, []);
+  /** Put a new note in the outbox: it shows at once and is saved when the connection allows. */
+  const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
+    const action = planned(name, payload);
     setOutbox(add(outboxRef.current, action));
     return action;
-  }, [setOutbox]);
+  }, [planned, setOutbox]);
 
   /** Write the saved copy to the device. What went up before this is in it now, so it leaves the list kept for the
    * moment between a save and this write (outbox.ts, loadLanded). */
@@ -163,10 +172,10 @@ export function App() {
 
   /** Put notes the app just saved into the saved copy, so every screen shows them before the next sync. `soon` is for
    * the outbox: the copy on the device is written once things go quiet. Anything else (writing) is written at once. */
-  const foldNotes = useCallback(async (saved: NoteRecord[], soon = false) => {
+  const foldNotes = useCallback(async (saved: NoteRecord[], soon = false, removed: string[] = []) => {
     const cur = snapRef.current;
-    if (!saved.length || !cur || cur.key !== source.key) return;
-    const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current) };
+    if ((!saved.length && !removed.length) || !cur || cur.key !== source.key) return;
+    const next = { ...cur, index: foldSaved(cur.index, saved, schemaRef.current, removed) };
     snapRef.current = next;
     setSnap(next);
     clearTimeout(snapTimer.current);
@@ -209,30 +218,51 @@ export function App() {
     if (landed.length) saveLanded(source.key, loadLanded(source.key).concat(landed));
     setOutbox(left);
     if (res.error) setError(res.error);
-    await foldNotes(res.saved, true);
+    // A new note saved under another ID than it was shown with: what Kyle wrote in it follows, and so does the page.
+    if (Object.keys(res.renames).length) {
+      moveDrafts(source.key, res.renames);
+      const at = parseHash(location.hash);
+      if ('path' in at && res.renames[at.path]) location.replace(location.hash.replace(encodeURIComponent(at.path), encodeURIComponent(res.renames[at.path])));
+    }
+    await foldNotes(res.saved, true, res.removed);
     if (left.some((a) => !sent.some((x) => x.id === a.id))) setTimeout(() => runFlushRef.current(), 0);
     return res.error;
   }, [source, setOutbox, foldNotes]);
   const runFlush = useCallback((): Promise<string | null> => inLane('push', pushNow).catch((e: Error) => { setError(e.message); return e.message; }), [inLane, pushNow]);
   const runFlushRef = useRef(runFlush);
   runFlushRef.current = runFlush;
-  /** Before a chapter is added, moved or deleted: what waits for this book goes up first. Answers on the team's changes
-   * wait by their note's file name, and those names are about to change, so they must be in the vault before that. */
+  /** Send one action now, without it waiting in the outbox: all of it lands or nothing does, and the answer is known
+   * before the page moves on. For a change to chapter numbers (ops.ts says why that never waits). Throws a plain sentence. */
+  const sendNow = useCallback((action: Action): Promise<Pushed> => inLane('now ' + action.id, async () => {
+    const cur = snapRef.current;
+    const res = await pushAction(source, action, { known: cur && cur.key === source.key ? cur.index.notes : undefined });
+    await foldNotes(res.saved, false, res.removed);
+    return res;
+  }), [source, inLane, foldNotes]);
+  /** Before a chapter is added in the middle, moved or deleted: what waits for this book goes up first. Answers on the
+   * team's changes wait by their note's file name, and a new scene or a moved card by its chapter number; those are
+   * about to change, so they must be in the vault before that. */
   const beforeRenames = useCallback(async (bookFolder: string) => {
-    const waits = (dir: string) => outboxRef.current.some((a) => a.ops.some((op) => op.path.startsWith(bookFolder + dir)));
-    if (!waits('/')) return;
+    const inBook = (op: Action['ops'][number]) => op.path.startsWith(bookFolder + '/');
+    if (!outboxRef.current.some((a) => a.ops.some(inBook))) return;
     await runFlush();
-    if (waits('/Changes/')) throw new Error('Your answers on the team\'s changes have not saved yet. Press Sync, then try again.');
+    const left = outboxRef.current.flatMap((a) => a.ops).filter(inBook);
+    if (left.some((op) => op.path.startsWith(bookFolder + '/Changes/'))) throw new Error('Your answers on the team\'s changes have not saved yet. Press Sync, then try again.');
+    if (left.some((op) => op.kind === 'create' || (op.kind === 'edit' && op.edit.type === 'choice' && op.edit.choice.decision === 'move'))) {
+      throw new Error('Something you added or moved in this book has not saved yet. Press Sync, then try again.');
+    }
   }, [runFlush]);
 
   const runSync = useCallback((): Promise<void> => inLane('sync', async () => {
     if (!navigator.onLine) return;
     setSyncing(true);
     try {
+      // The outbox first: a new scene must be in the vault before the words Kyle wrote in it can be saved to it.
+      const pushError = await pushNow();
       const written = await flushDrafts(source, source.key, new Date());
       await foldNotes(written.saved);
       if (written.notice) setNotice(written.notice);
-      const saveError = (await pushNow()) || written.error;
+      const saveError = pushError || written.error;
       const next = await sync(source, snapRef.current && snapRef.current.key === source.key ? snapRef.current : null);
       snapRef.current = next;
       setSnap(next);
@@ -247,58 +277,90 @@ export function App() {
     }
   }), [source, inLane, pushNow, foldNotes, setNotice]);
 
-  /** Add a scene to a book, sync so every screen has it, and open it for writing. */
+  /** The book's scenes in reading order as Kyle sees them, new ones that still wait included. */
+  const scenesShown = useCallback((book: BookEntry): NoteRecord[] => {
+    const cur = snapRef.current;
+    if (!cur) return [];
+    const shown = overlayActions(cur.index, outboxRef.current, schemaRef.current);
+    const b = shown.books.find((x) => x.folder === book.folder) || book;
+    return b.scenes.map((p) => shown.notes[p]).filter(Boolean);
+  }, []);
+
+  /** Add a scene to a book and open it for writing. It shows at once and is saved when the connection allows
+   * (2026-11-11; before, it needed the connection). */
   const onAddScene = useCallback(async (book: BookEntry, chapter: number | null, chapterTitle: string, title: string): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a scene.';
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
-    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    if (oldSaving() && !navigator.onLine) return 'Connect to the internet to add a scene.';
+    const scenes = oldSaving() ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : scenesShown(book);
     // After the chapter's last scene, or after the book's last scene for a new chapter.
     const inCh = scenes.filter((n) => chapter != null && n.data.chapter === chapter);
     const prev = inCh.length ? inCh[inCh.length - 1] : chapter == null || !scenes.some((n) => typeof n.data.chapter === 'number' && n.data.chapter > chapter) ? scenes[scenes.length - 1] || null : null;
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
+    const s = { bookFolder: book.folder, title, chapter, chapterTitle, order: orderBetween(prev, next), status: 'drafted', body: '' };
     try {
-      const made = await createScene(source, { bookFolder: book.folder, title, chapter, chapterTitle, order: orderBetween(prev, next), status: 'drafted', body: '' },
-        new Date(), 'Added in the Sparrow app.');
-      await runSync();
-      location.hash = href.write(made.path);
+      if (oldSaving()) {
+        const made = await createScene(source, s, new Date(), 'Added in the Sparrow app.');
+        await runSync();
+        location.hash = href.write(made.path);
+        return null;
+      }
+      const made = create('scene', { s, at: new Date().toISOString() });
+      runFlush();
+      location.hash = href.write(made.ops[0].path);
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, runFlush, create, scenesShown]);
 
   /** Add a chapter of one scene after chapter `after` (null: after the book's last chapter) and open it for writing.
-   * In the middle of the book, the later chapters move up one first (Kyle, 2026-10-22). */
+   * In the middle of the book, the later chapters move up one (Kyle, 2026-10-22). A new last chapter shows at once and
+   * works offline; one in the middle needs the connection and is one save with the renumbering (2026-11-11). */
   const onAddChapter = useCallback(async (book: BookEntry, after: number | null, chapterTitle: string): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add a chapter.';
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
-    const scenes = book.scenes.map((p) => cur.index.notes[p]).filter(Boolean);
+    const old = oldSaving();
+    const scenes = old ? book.scenes.map((p) => cur.index.notes[p]).filter(Boolean) : scenesShown(book);
     const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
     const last = nums.length ? Math.max(...nums) : 0;
     const at = after == null || after >= last ? last + 1 : after + 1;
+    if (!navigator.onLine && (old || at <= last)) return at <= last && !old ? 'Connect to the internet to add a chapter in the middle of the book: the chapters after it get new numbers.' : 'Connect to the internet to add a chapter.';
     const inCh = scenes.filter((n) => toNumber(n.data.chapter) === at - 1);
     const prev = inCh.length ? inCh[inCh.length - 1] : scenes[scenes.length - 1] || null;
     const next = prev ? scenes[scenes.indexOf(prev) + 1] || null : scenes[0] || null;
     const title = chapterTitle.trim();
+    const s = { bookFolder: book.folder, title: title || 'Chapter ' + at, chapter: at, chapterTitle: title, order: orderBetween(prev, next), status: 'drafted', body: '' };
     try {
-      if (at <= last) {
-        // Keep or No choices still waiting on this device are saved by file name, so they go up before the names change.
-        await beforeRenames(book.folder);
-        await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
-        await renumberLists(source, cur.index.notes, book.folder, roomMap(at - 1), 'A new chapter ' + at + ' was added in the Sparrow app.');
+      if (old) {
+        if (at <= last) {
+          // Keep or No choices still waiting on this device are saved by file name, so they go up before the names change.
+          await beforeRenames(book.folder);
+          await makeRoom(source, chapterShifts(cur.index.notes, book.folder, at - 1), at);
+          await renumberLists(source, cur.index.notes, book.folder, roomMap(at - 1), 'A new chapter ' + at + ' was added in the Sparrow app.');
+        }
+        const made = await createScene(source, s, new Date(), 'Added in the Sparrow app.');
+        await runSync();
+        location.hash = href.write(made.path);
+        return null;
       }
-      const made = await createScene(source, { bookFolder: book.folder, title: title || 'Chapter ' + at, chapter: at, chapterTitle: title, order: orderBetween(prev, next), status: 'drafted', body: '' },
-        new Date(), 'Added in the Sparrow app.');
-      await runSync();
-      location.hash = href.write(made.path);
+      if (at > last) {
+        const made = create('scene', { s, at: new Date().toISOString() });
+        runFlush();
+        location.hash = href.write(made.ops[0].path);
+        return null;
+      }
+      // What waits for this book is addressed by file names that are about to change, so it goes up first.
+      await beforeRenames(book.folder);
+      const scene = planned('scene', { s, at: new Date().toISOString() }).ops[0];
+      const res = await sendNow(chaptersAction(book.folder, { type: 'room', after: at - 1 }, 'A new chapter ' + at + ' was added in the Sparrow app.', [scene]));
+      location.hash = href.write(res.renames[scene.path] || scene.path);
       return null;
     } catch (e) {
-      await runSync().catch(() => undefined);
+      if (old) await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, beforeRenames]);
+  }, [source, runSync, runFlush, beforeRenames, create, planned, sendNow, scenesShown]);
 
   /** A card dragged to a new place on the Chapter Grid: give it an order between its new neighbours (and the chapter it went into). */
   const onMove = useCallback((book: BookEntry, path: string, chapter: number | null, chapterTitle: string, before: string | null) => {
@@ -429,11 +491,28 @@ export function App() {
     }
   }, [source, runSync]);
 
-  /** Scenes from a pasted outline, added one after another as planned scenes at the end of the book. */
+  /** Scenes from a pasted outline, added as planned scenes at the end of the book: one save for all of them, and they
+   * show at once (2026-11-11; before, one save each, with the connection). */
   const onAddMany = useCallback(async (book: BookEntry, list: { chapter: number; chapterTitle: string; title: string }[]): Promise<string | null> => {
-    if (!navigator.onLine) return 'Connect to the internet to add scenes.';
     const cur = snapRef.current;
     if (!cur) return 'Press Sync first.';
+    if (!oldSaving()) {
+      try {
+        const scenes = scenesShown(book);
+        let prev: NoteRecord | null = scenes[scenes.length - 1] || null;
+        const at = new Date().toISOString();
+        create('scene', list.map((x) => {
+          const s = { bookFolder: book.folder, title: x.title, chapter: x.chapter, chapterTitle: x.chapterTitle, order: orderBetween(prev, null), status: 'planned', body: '' };
+          prev = { path: '', sha: '', type: 'scene', data: { order: s.order }, body: '', error: null };
+          return { s, at, why: 'Added from an outline in the Sparrow app.' };
+        }));
+        runFlush();
+        return null;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    }
+    if (!navigator.onLine) return 'Connect to the internet to add scenes.';
     let prev: NoteRecord | null = book.scenes.length ? cur.index.notes[book.scenes[book.scenes.length - 1]] || null : null;
     const made: NoteRecord[] = [];
     try {
@@ -449,7 +528,7 @@ export function App() {
       await runSync();
       return (made.length ? made.length + ' of ' + list.length + ' scenes were added. ' : '') + (e as Error).message;
     }
-  }, [source, runSync]);
+  }, [source, runSync, runFlush, create, scenesShown]);
 
   const onJobRef = useRef(onJob);
   onJobRef.current = onJob;
@@ -588,17 +667,24 @@ export function App() {
     const nums = scenes.map((n) => toNumber(n.data.chapter)).filter((n): n is number => n != null);
     const last = nums.length ? Math.max(...nums) : 0;
     if (!Number.isInteger(to) || to < 1 || to > last) return 'Choose a chapter number from 1 to ' + last + '.';
+    const why = 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.';
     try {
+      // What waits for this book is addressed by file names that are about to change, so it goes up first.
       await beforeRenames(book.folder);
-      await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
-      await renumberLists(source, cur.index.notes, book.folder, moveMap(from, to), 'Chapter ' + from + ' moved to chapter ' + to + ' in the Sparrow app.');
+      if (!oldSaving()) {
+        // One save: every note of the chapters between follows, or nothing changes (2026-11-11; before, one save a note).
+        await sendNow(chaptersAction(book.folder, { type: 'move', from, to }, why));
+        return null;
+      }
+      await applyShifts(source, chapterMove(cur.index.notes, book.folder, scenes, from, to), why);
+      await renumberLists(source, cur.index.notes, book.folder, moveMap(from, to), why);
       await runSync();
       return null;
     } catch (e) {
-      await runSync().catch(() => undefined);
+      if (oldSaving()) await runSync().catch(() => undefined);
       return (e as Error).message;
     }
-  }, [source, runSync, beforeRenames]);
+  }, [source, runSync, beforeRenames, sendNow]);
 
   /** Delete scenes from the chapter list (Kyle, 2026-10-27: "I definitely need an option to hard press it and delete it").
    * Each scene goes to the book's Archive (Restore brings it back). A chapter left with no scenes takes its beats, plan,

@@ -6,6 +6,7 @@ import { planResult, type NewResult } from '../lib/flow.ts';
 import { planJob, type NewJob } from '../lib/jobs.ts';
 import { planNote, type NewNote } from '../lib/notes.ts';
 import { planRecipe, type RecipeFields } from '../lib/recipes.ts';
+import { planScene, type NewScene } from '../lib/scenes.ts';
 import { planTask, type NewTask } from '../lib/tasks.ts';
 import { planTodo, type NewTodo } from '../lib/todos.ts';
 import type { FileEntry, Made } from '../lib/types.ts';
@@ -24,6 +25,8 @@ export interface Payloads {
   recipe: { r: RecipeFields; at: string };
   /** A workflow result Kyle wrote or brought in: an idea note in the book's Ideas folder. */
   result: { book: string; r: NewResult; at: string };
+  /** A new scene in a book's Scenes folder: one added to a chapter, or the one scene of a new chapter. */
+  scene: { s: NewScene; at: string; why?: string };
 }
 export type MakerName = keyof Payloads;
 
@@ -35,7 +38,8 @@ const MAKERS: { [K in MakerName]: Maker<K> } = {
   job: (files, p, keep) => planJob(files, p.j, new Date(p.at), keep),
   note: (files, p, keep) => planNote(files, p.book, p.n, new Date(p.at), keep),
   recipe: (files, p, keep) => planRecipe(files, p.r, new Date(p.at), keep),
-  result: (files, p, keep) => planResult(files, p.book, p.r, new Date(p.at), keep)
+  result: (files, p, keep) => planResult(files, p.book, p.r, new Date(p.at), keep),
+  scene: (files, p, keep) => planScene(files, p.s, new Date(p.at), keep, p.why)
 };
 
 export function isMaker(name: unknown): name is MakerName {
