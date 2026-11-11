@@ -5,7 +5,7 @@
 import { chapterGroups, chapterHeading } from './board.ts';
 import { Prose, wordCount } from './prose.js';
 import { marks, runs } from './styled.ts';
-import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from './types.ts';
+import type { BookEntry, DeviceFile, NoteRecord, Schema, VaultIndex, VaultSource } from './types.ts';
 
 const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -182,6 +182,11 @@ function base64(bytes: Uint8Array): string {
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(bin);
+}
+
+/** The Word backup as the one saving system saves it: in the book's backup folder, replacing that day's file. */
+export function backupFile(book: BookEntry, bytes: Uint8Array, name: string): DeviceFile {
+  return { path: backupFolder(book.seriesName, book.title) + '/' + name, taken: 'replace', base64: base64(bytes), message: 'backups: ' + name };
 }
 
 /** Save the Word file in the book's backup folder. A second export on the same day replaces that day's file (the

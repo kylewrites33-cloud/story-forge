@@ -99,11 +99,24 @@ export interface Made {
   also?: { path: string; text: string }[];
 }
 
+/** A file from the device to save as it is (a cover picture, a Rocket export, a manuscript, a Word backup): `text` for
+ * a text file, `base64` for any other. When a file of that name is already in the vault, `taken` says what happens:
+ * the next free name, this one in its place, or the save stops with a plain sentence. */
+export interface DeviceFile {
+  path: string;
+  taken: 'next' | 'replace' | 'refuse';
+  text?: string;
+  base64?: string;
+  message: string;
+}
+
 /** What one save changes: whole files to write, files to remove, and the line for the vault's history. */
 export interface CommitPlan {
   message: string;
   writes: { path: string; text: string }[];
   removes?: string[];
+  /** Files that are not text (a picture, a Word file), as base64, written whole in the same save. */
+  blobs?: { path: string; base64: string }[];
 }
 
 export interface CommitResult {

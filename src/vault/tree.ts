@@ -14,6 +14,8 @@ export class Tree {
   private was = new Map<string, { text: string; sha: string }>();
   /** Paths the vault does not have. */
   private absent = new Set<string>();
+  /** Files that are not text (a picture, a Word file), as base64. They are written whole and never read back. */
+  private bytes = new Map<string, string>();
   private list: FileEntry[] | null = null;
   private head: Head;
 
@@ -38,7 +40,10 @@ export class Tree {
     for (let i = 0; i < todo.length; i += READS) await Promise.all(todo.slice(i, i + READS).map((p) => this.read(p)));
   }
 
-  write(path: string, text: string): void { this.now.set(path, text); }
+  write(path: string, text: string): void { this.bytes.delete(path); this.now.set(path, text); }
+
+  /** A file that is not text, added or replaced whole. */
+  writeBytes(path: string, base64: string): void { this.now.delete(path); this.bytes.set(path, base64); }
 
   /** Take a file out. Only a file this save has read can go: its words must have been seen first. */
   remove(path: string): void { if (this.now.has(path)) this.now.set(path, null); }
@@ -59,21 +64,36 @@ export class Tree {
     this.list.forEach((f) => {
       seen.add(f.path);
       if (this.now.has(f.path) && this.now.get(f.path) === null) return;
-      out.push(this.touched(f.path) ? { path: f.path, sha: '' } : f);
+      out.push(this.touched(f.path) || this.bytes.has(f.path) ? { path: f.path, sha: '' } : f);
     });
     this.now.forEach((text, path) => { if (text !== null && !seen.has(path)) out.push({ path, sha: '' }); });
+    this.bytes.forEach((_b, path) => { if (!seen.has(path)) out.push({ path, sha: '' }); });
     return out;
   }
 
   /** What the save writes and removes: only files that differ from the vault's. */
-  changes(): Pick<CommitPlan, 'writes' | 'removes'> {
+  changes(): Pick<CommitPlan, 'writes' | 'removes' | 'blobs'> {
     const writes: { path: string; text: string }[] = [];
     const removes: string[] = [];
     this.now.forEach((text, path) => {
       if (text === null) { if (this.was.has(path)) removes.push(path); }
       else if (this.touched(path)) writes.push({ path, text });
     });
-    return { writes, removes };
+    const blobs: { path: string; base64: string }[] = [];
+    this.bytes.forEach((base64, path) => blobs.push({ path, base64 }));
+    return { writes, removes, blobs };
+  }
+
+  /** The text files this save read or wrote that pass `keep`, as the vault has them once it lands: for the files
+   * the app holds as text and not as notes (the team's). */
+  texts(shas: Record<string, string>, keep: (path: string) => boolean): Record<string, { sha: string; text: string }> {
+    const out: Record<string, { sha: string; text: string }> = {};
+    this.now.forEach((text, path) => {
+      if (text === null || !keep(path)) return;
+      const w = this.was.get(path);
+      out[path] = { sha: shas[path] || (w ? w.sha : ''), text };
+    });
+    return out;
   }
 
   /** The notes this save read or wrote, as the vault has them once it lands (`shas`: the new sha of each file written). */

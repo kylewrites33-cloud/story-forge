@@ -180,6 +180,8 @@ export class GitHubSource implements VaultSource {
     const prefix = this.s.root ? this.s.root + '/' : '';
     const branch = this.s.branch.split('/').map(encodeURIComponent).join('/');
     const what = 'the branch "' + this.s.branch + '"';
+    // A picture or a Word file is sent once, even when the save has to be planned again.
+    const sent = new Map<string, string>();
     for (let attempt = 0; ; attempt++) {
       const hint = this.last && Date.now() - this.last.at < 120000 ? this.last : null;
       this.last = null;
@@ -209,12 +211,23 @@ export class GitHubSource implements VaultSource {
       };
       const plan = await build({ read, files: async () => (await this.treeAt(await baseTree(), false)).files });
       const removes = (plan && plan.removes) || [];
-      if (!plan || (!plan.writes.length && !removes.length)) {
+      const blobs = (plan && plan.blobs) || [];
+      if (!plan || (!plan.writes.length && !removes.length && !blobs.length)) {
         if (hint) this.last = hint;
         return null;
       }
       await baseTree();
+      const shas: Record<string, string> = {};
+      for (const b of blobs) {
+        let sha = sent.get(b.base64);
+        if (!sha) {
+          sha = ((await this.send('POST', this.repoUrl('/git/blobs'), { content: b.base64, encoding: 'base64' }, b.path)) as { sha: string }).sha;
+          sent.set(b.base64, sha);
+        }
+        shas[b.path] = sha;
+      }
       const entries = plan.writes.map((f) => ({ path: prefix + f.path, mode: '100644', type: 'blob', content: f.text } as Record<string, unknown>))
+        .concat(blobs.map((b) => ({ path: prefix + b.path, mode: '100644', type: 'blob', sha: shas[b.path] })))
         .concat(removes.map((p) => ({ path: prefix + p, mode: '100644', type: 'blob', sha: null })));
       const tree = (await this.send('POST', this.repoUrl('/git/trees'), { base_tree: base, tree: entries }, 'the save')) as { sha: string };
       const made = (await this.send('POST', this.repoUrl('/git/commits'), { message: plan.message, tree: tree.sha, parents: [parent] }, 'the save')) as { sha: string };
@@ -226,7 +239,6 @@ export class GitHubSource implements VaultSource {
         throw e;
       }
       this.last = { commit: made.sha, tree: tree.sha, at: Date.now() };
-      const shas: Record<string, string> = {};
       for (const f of plan.writes) {
         // Worked out here; asked for only where the browser cannot (no crypto on a page that is not https).
         try { shas[f.path] = await blobSha(f.text); } catch { shas[f.path] = (await this.readFresh(f.path)).sha; }

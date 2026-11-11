@@ -9,7 +9,7 @@ import { archiveFiles, assemble, makeNote, resortScenes, selectFiles } from '../
 import { changeOf } from '../lib/write-queue.ts';
 import type { NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import type { Action, Edit } from './ops.ts';
-import { changeMessage, changeRecord, changeText } from './text.ts';
+import { changeMessage, changeRecord, changeText, startsNote } from './text.ts';
 
 /** The note as the screens should show it once this edit is in. */
 export function editRecord(note: NoteRecord, edit: Edit): NoteRecord {
@@ -66,6 +66,7 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
   if (!actions.length) return index;
   const notes = { ...index.notes };
   let sort = false, added = false;
+  let team: VaultIndex['team'] | null = null;
   actions.forEach((a) => a.ops.forEach((op) => {
     if (op.kind === 'create') {
       if (!notes[op.path]) { notes[op.path] = makeNote(op.path, '', op.text); added = true; }
@@ -77,15 +78,23 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
       if (n) notes[op.path] = { ...n, data: { ...n.data, title: op.title } };
       return;
     }
-    // A change to chapter numbers never waits (ops.ts), so there is none to show here.
+    // A change to chapter numbers and a file from the device never wait (ops.ts), so there is none to show here.
     if (op.kind !== 'edit') return;
+    // A file the app holds as text and not as a note (the workflow): the text itself takes the change.
+    const held = (team || index.team || {})[op.path];
+    if (held) { team = { ...(team || index.team), [op.path]: { sha: held.sha, text: editText(held.text, op.edit) } }; return; }
     const n = notes[op.path];
-    if (!n) return;
+    if (!n) {
+      // A day of the Writing Log that is not there yet starts with its first Pomodoro or its first words.
+      if (op.edit.type === 'text' && startsNote(op.edit.change)) { notes[op.path] = makeNote(op.path, '', editText('', op.edit)); added = true; }
+      return;
+    }
     notes[op.path] = editRecord(n, op.edit);
     if (reorders(op.edit)) sort = true;
   }));
-  if (added && schema) return withNotes(index, schema, notes);
-  const out = { ...index, notes };
+  const base = team ? { ...index, team } : index;
+  if (added && schema) return withNotes(base, schema, notes);
+  const out = { ...base, notes };
   return sort ? resortScenes(out) : out;
 }
 
@@ -93,7 +102,13 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
  * leaves its old one) taken out. A note that is new to it is put where its kind goes. A save can also touch files the
  * saved copy holds no note for (a deleted scene's copy in the Archive, the Chapter Titles note): those stay out of the
  * notes, and a scene that went to a book's Archive joins that book's archive list, where Restore finds it. */
-export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schema | null, removed: string[] = []): VaultIndex {
+export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schema | null, removed: string[] = [], texts: Record<string, { sha: string; text: string }> = {}): VaultIndex {
+  // The files the app holds as text (the team's, the workflow) take the save's text; they are never among the notes.
+  const held = Object.keys(texts);
+  if (held.length) {
+    index = { ...index, team: { ...(index.team || {}), ...texts } };
+    saved = saved.filter((n) => !texts[n.path]);
+  }
   if (!saved.length && !removed.length) return index;
   const notes = { ...index.notes };
   let reshaped = false;

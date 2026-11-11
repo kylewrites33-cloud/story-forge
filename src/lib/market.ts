@@ -1,6 +1,6 @@
 // Publisher Rocket exports Kyle adds from the app. They are saved as they are, beside the market notes, for the Market
 // Analyst to read; the app never reads or changes them after that.
-import type { FileEntry, VaultSource } from './types.ts';
+import type { DeviceFile, FileEntry, VaultSource } from './types.ts';
 
 export const ROCKET_FOLDER = 'Market/Rocket Exports';
 
@@ -32,6 +32,12 @@ export function rocketProblem(name: string, bytes: number): string | null {
   if (bytes === 0) return name + ' is empty. Export it from Publisher Rocket again.';
   if (bytes > MAX_BYTES) return name + ' is too big for the app to send (' + Math.round(bytes / 1024) + ' KB; the limit is ' + Math.round(MAX_BYTES / 1024) + ' KB). Drop it in the project chat instead.';
   return null;
+}
+
+/** A Rocket file as the one saving system saves it: under a safe name, the next free one if that name is taken. */
+export function rocketFile(seriesFolder: string, name: string, text: string): DeviceFile {
+  const file = rocketName(name, []);
+  return { path: rocketFolder(seriesFolder) + '/' + file, taken: 'next', text: text.replace(/^\uFEFF/, ''), message: 'market: add Rocket file ' + file + '\n\nAdded on the Market board in the Sparrow app.' };
 }
 
 /** Save the file into the series' Rocket Exports folder as Kyle's commit (no Agent trailer). Returns the path it was saved at. */

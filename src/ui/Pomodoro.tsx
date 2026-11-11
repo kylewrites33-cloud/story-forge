@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   advance, clock, flushLog, flushTyped, flushTyping, loadLog, loadTimer, loadTyped, loadTyping, msLeft, pause, resume, saveLog, saveTimer, typedDue,
-  pomodoroCount, startWork, stop, stoppedRecord, today, typingDue, wordsAnHour, wordsSoFar, type TimerState
+  pomodoroCount, startWork, stop, stoppedRecord, takeTypingCounts, today, typingDue, wordsAnHour, wordsSoFar, type LogItem, type TimerState
 } from '../lib/pomodoro.ts';
 import type { NoteRecord, VaultIndex, VaultSource } from '../lib/types.ts';
 import { chirp, keepAwake } from './chirp.ts';
@@ -25,12 +25,15 @@ const typingTime = (minutes: number) => {
   return h ? h + (h === 1 ? ' hour' : ' hours') + (rest ? ' ' + mins : '') : mins;
 };
 
-export function PomodoroTimer({ source, index, variant, onLogged }: {
+export function PomodoroTimer({ source, index, variant, onLogged, onLog }: {
   source: VaultSource;
   index: VaultIndex | null;
   /** float: bottom right of the page; bar: in the writing screen's top bar; focus: beside Leave focus. */
   variant: 'float' | 'bar' | 'focus' | 'rail';
   onLogged?: (notes: NoteRecord[]) => void;
+  /** The one saving system: Pomodoros and typing counts are handed over and it carries them to the vault. Without it
+   * the timer sends them itself (the old way). */
+  onLog?: (items: LogItem[]) => void;
 }) {
   const [s, setS] = useState<TimerState>(loadTimer);
   const [now, setNow] = useState(Date.now());
@@ -42,8 +45,19 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
   const held = useRef(false);
   const onLoggedRef = useRef(onLogged);
   onLoggedRef.current = onLogged;
+  const onLogRef = useRef(onLog);
+  onLogRef.current = onLog;
 
   const flush = async () => {
+    if (onLogRef.current) {
+      // Finished Pomodoros go to the saving system, which keeps them on the device until they are in the vault.
+      const list = loadLog(source.key);
+      if (!list.length) return;
+      onLogRef.current(list.map((record): LogItem => ({ kind: 'pomodoro', record })));
+      saveLog(source.key, []);
+      setWaiting([]);
+      return;
+    }
     if (flushing || !source.write || !navigator.onLine || !loadLog(source.key).length) return;
     flushing = true;
     try {
@@ -60,6 +74,13 @@ export function PomodoroTimer({ source, index, variant, onLogged }: {
 
   /** Send the words typed to the day's note when they are due (or now, when the page is put away). */
   const sendTyped = async (force = false) => {
+    if (onLogRef.current) {
+      // With no connection the counts stay in their meters, which add up; they are handed over when it is back.
+      if (!navigator.onLine) return;
+      const items = takeTypingCounts(force);
+      if (items.length) onLogRef.current(items);
+      return;
+    }
     if (sendingTyped || !source.write || !navigator.onLine) return;
     const t = loadTyped();
     const a = loadTyping();
