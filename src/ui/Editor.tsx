@@ -927,6 +927,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [chView, setChViewState] = useState<ChangesView>(loadView);
   const setChView = (v: ChangesView) => { setChViewState(v); saveView(v); };
   const [chCur, setChCur] = useState<string | null>(null);
+  /** Counts presses on cards, so a press on the card already picked still brings its words into sight (Kyle,
+   * 2026-11-12: "why does tapping on the card ... not bring the relevant writing paragraph up to it?"). */
+  const [cardPress, setCardPress] = useState(0);
   const curRef = useRef<string | null>(null);
   curRef.current = chCur;
   const chNote = changes ? changes.note : null;
@@ -1142,8 +1145,19 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const k = PREF.rewriteOpened + bookFolder;
     let seen = false;
     try { seen = readPref(k, 'visit') === '1'; writePref(k, '1', 'visit'); } catch { /* opens once per load */ }
-    if (!seen && tab !== 'rewrite') openTab('rewrite');
+    if (!seen && tab !== 'rewrite' && working <= 2) openTab('rewrite');
   }, [hasRewrite, bookFolder]);
+  // Which column the page opens on follows the draft (Kyle, 2026-11-12: "can it default to changes when I'm in draft 3
+  // and rewrite only when I'm in draft 2? changes would be the default for draft 4 as well, and subsequent drafts"):
+  // once each time a chapter opens, so moving to another tab while in it stays his choice.
+  const draftTabFor = useRef('');
+  useEffect(() => {
+    const want: Tab | null = working >= 3 && chNote ? 'changes' : working === 2 && hasRewrite ? 'rewrite' : null;
+    const key = note.path + '#' + working + '#' + (want || '');
+    if (!want || draftTabFor.current === key) return;
+    draftTabFor.current = key;
+    if (tab !== want) setTab(want);
+  }, [note.path, working, Boolean(chNote), hasRewrite]);
   const nextOpen = (after: string | null) => {
     const list = chList;
     const i = list.findIndex((p) => p.change.id === after);
@@ -1345,7 +1359,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     }
     const el = document.querySelector('.changes-page [data-chg="' + chCur.replace(/"/g, '') + '"]');
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [chCur, showMarks, typeMarks]);
+  }, [chCur, showMarks, typeMarks, cardPress]);
   // Word's margin: as Kyle scrolls the page, the Changes column follows to the first change in view.
   useEffect(() => {
     if (!showMarks || tab !== 'changes') return;
@@ -1829,7 +1843,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               chNote
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
-                  onPick={(id) => { const c = chCards.find((x) => x.id === id); if ((chView === 'original' || chView === 'all') && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
+                  onPick={(id) => { const c = chCards.find((x) => x.id === id); if ((chView === 'original' || chView === 'all') && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); setCardPress((n) => n + 1); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum}
                   onReply={changes && changes.onReply ? (c, words) => changes.onReply!(chNote.path, c.id, words) : null} replying={Boolean(changes && changes.replying)} replyProblem={changes ? changes.replyProblem : ''} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
