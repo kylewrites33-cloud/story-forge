@@ -45,6 +45,11 @@ export interface Change {
   asked?: string;
   does?: string;
   check?: string;
+  /** Kyle's replies to the Writer on this card, explaining a choice (Kyle, 2026-11-12: "i need to be able to reply
+   * within the changes, to explain to the writer why i made a choice"). `Reply:` lines, oldest first. */
+  replies?: string[];
+  /** The card this one answers: the Writer made it from Kyle's reply on that card (`Re: C-07`). */
+  re?: string;
 }
 
 export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Fix', line: 'Sentence', story: 'Story', new: 'New passage' };
@@ -88,6 +93,7 @@ export function wordDiff(was: string, now: string): DiffPart[] {
 
 /** A few words for the margin beside a change, saying what it is: "Name: Grey → Basil", "Typo", "Story call I-089". */
 export function shortLabel(c: Change): string {
+  if (c.re) return 'Your reply on ' + c.re;
   let why = c.why.trim();
   const check = /^Proofread \(one reader/i.test(why);
   why = why.replace(/^Proofread \([^)]*\):\s*/i, '');
@@ -174,7 +180,7 @@ export function changesNoteFor(notes: Record<string, NoteRecord>, bookFolder: st
 }
 
 const HEAD = /^##\s+(C-\d+)\s*(?:·\s*(\w+))?\s*$/i;
-const FIELD = /^(Scene|Why|Kyle|Asked|Change|Check):\s*(.*)$/i;
+const FIELD = /^(Scene|Why|Kyle|Asked|Change|Check|Reply|Re):\s*(.*)$/i;
 const QUOTE = /^(Was|Now|Or):\s*$/i;
 
 /** The lines before the first change (the Writer's report) and the changes, in order. */
@@ -214,6 +220,8 @@ export function parseChanges(body: string): { intro: string; changes: Change[] }
       else if (key === 'asked') cur.asked = f[2].trim();
       else if (key === 'change') cur.does = f[2].trim();
       else if (key === 'check') cur.check = f[2].trim();
+      else if (key === 'reply') { if (f[2].trim()) cur.replies = (cur.replies || []).concat(f[2].trim()); }
+      else if (key === 're') { const r = /C-\d+/i.exec(f[2]); if (r) cur.re = r[0].toUpperCase(); }
       else { const s = f[2].trim().toLowerCase() as ChangeStatus; cur.status = STATUSES.indexOf(s) >= 0 ? s : 'open'; }
     }
   });
@@ -240,6 +248,35 @@ export function setStatus(body: string, id: string, status: ChangeStatus): strin
   }
   if (!done && fieldsEnd >= 0 && inIt) lines.splice(fieldsEnd + 1, 0, 'Kyle: ' + status);
   return lines.join('\n');
+}
+
+/** The body with one more `Reply:` line under one change's fields (after its `Kyle:` line and any earlier replies),
+ * every other line as it was. Kyle's words go on one line. A change that is not there leaves the text as it was. */
+export function addReply(body: string, id: string, words: string): string {
+  const said = words.replace(/\s+/g, ' ').trim();
+  if (!said) return body;
+  const lines = body.split('\n');
+  let inIt = false, fieldsEnd = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const h = HEAD.exec(lines[i].trim());
+    if (h && /^##\s/.test(lines[i])) {
+      if (inIt) break;
+      inIt = h[1].toUpperCase() === id.toUpperCase();
+      if (inIt) fieldsEnd = i;
+      continue;
+    }
+    if (!inIt) continue;
+    if (QUOTE.test(lines[i].trim())) break;
+    if (FIELD.test(lines[i].trim())) fieldsEnd = i;
+  }
+  if (fieldsEnd < 0) return body;
+  lines.splice(fieldsEnd + 1, 0, 'Reply: ' + said);
+  return lines.join('\n');
+}
+
+/** The cards the Writer made from Kyle's replies on this one. */
+export function answersTo(changes: Change[], id: string): Change[] {
+  return changes.filter((c) => c.re === id);
 }
 
 // ---- Finding the words on the page ----

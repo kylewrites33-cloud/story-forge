@@ -772,6 +772,16 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   (2026-10-27, Kyle: "When I say yes, my choice, it just goes on to the next one"). The card says "A:" not "Fix A:"
   ("fix can be a verb too"), bolds each answer's letter and short version, spaces its paragraphs, and the buttons
   are just A, B, C ("why not A?"); the note keeps its "Fix A:" lines (2026-10-27).
+- **Reply to the Writer** (2026-11-12, Kyle: "i need to be able to reply within the changes, to explain to the writer
+  why i made a choice, and for the writer to create a new card based on my reply"). Every card, waiting or decided, has
+  Reply to the Writer: a box opens on the card, and Send to the Writer puts his words on the card as a `Reply:` line in
+  the changes note (shown as "You told the Writer") and asks the Writer for a new card (job kind `reply`, target
+  "Chapter N"), as one save that waits on the device when offline. A reply sent while the chapter's ask still waits
+  for the team adds no second ask: the Writer answers every reply in the chapter that no card answers yet. The Writer's
+  new card goes at the end of the same note in the usual card format with `Re: C-NN` (headed "Your reply on C-NN") and
+  his reply as its `Asked:` line ("You asked"); the card he replied on says "The Writer is making a new card" until it
+  comes, then "New card C-NN: see it". The Writer also journals the lesson. Checks `reply.mjs` and `webkit-reply.mjs`
+  in the project files' `app/saving-checks/`.
 - **Edit > Changes** lists the story calls waiting, each chapter with changes, and the saved drafts.
 - **{ } asks in the margin.** Page look has "Asks for the team in { }": Left margin, Right margin (the default
   before 2026-11-06) or In the text. A margin floats them beside the text when the page is wide enough. The note stays
@@ -958,6 +968,10 @@ line all in bold, one line per fact, a lone `>` for a blank line between the par
 fine print and the Note in italics. Two screens with no story between them share one block.
 - **Writing screen and Edit room**: a `> ` line is indented (the `>` shows faint, so Kyle can type one), a bold title
   line shows in small caps.
+- **The page with changes in spaced blocks** (2026-11-12, Kyle: "can we keep the view on the writing panel as the
+  blocks with spaces between, like in draft 2 mode? its way easier to read and work on"): All changes, Simple and Final
+  show paragraphs as blocks with a blank line's space between them and no first-line indent, as the page reads while
+  typing; System screens stay indented with no `>` marks. The cards' quotes keep the Kindle look below.
 - **The Edit room reads like a Kindle page** (Kyle, 2026-10-28: "when we're in editing mode, the document automatically
   converts to the form that it's going to show up as in Kindle... without these weird arrows"): in All changes, Simple
   and Final, and in the cards' quotes, paragraphs are indented with no blank lines between them, System screens are

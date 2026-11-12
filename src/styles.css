@@ -477,6 +477,11 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .changes-page.book .chg-line { min-height: 0; }
 .changes-page.book .chg-line.bk-blank { display: none; }
 .changes-page.book .chg-line.bk-blank-tag { min-height: 0; height: 0; }
+/* The page with the team's changes in blocks with a line's space between them, as the page reads while typing (Kyle,
+   2026-11-12: "can we keep the view on the writing panel as the blocks with spaces between, like in draft 2 mode? its
+   way easier to read and work on"). System screens stay indented with no > marks; the cards keep the Kindle look. */
+.changes-page.blocks .bk-q { padding-left: 1.6em; }
+.changes-page.blocks .bk-qt .md-b, .changes-page.blocks .bk-qt strong { font-variant: small-caps; letter-spacing: 0.04em; }
 .book .bk-p { text-indent: 1.5em; }
 .book .bk-p.bk-first { text-indent: 0; }
 .book .bk-q { padding-left: 1.6em; }
@@ -2620,6 +2625,13 @@ button, .button { border-radius: 12px; }
 .chg-quote.now .chg-new, .chg-tweak-back .chg-new { color: var(--text); }
 .chg-parts { display: flex; flex-direction: column; gap: 8px; }
 .chg-label { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+/* Kyle's replies to the Writer on a card (2026-11-12). */
+.chg-replies { display: grid; gap: 8px; }
+.chg-reply { margin: 0; padding: 6px 10px; border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; background: var(--accent-soft); font-size: 0.94rem; }
+.chg-reply-box { width: 100%; box-sizing: border-box; margin: 0; font: inherit; font-size: max(16px, 0.98rem); line-height: 1.5; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
+.chg-reply-button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.chg-made { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font-size: 0.94rem; color: var(--muted); }
+.chg-made .link { min-height: 44px; }
 .chg-check summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--muted); font-size: 0.9rem; }
 
 /* Chapter titles (Edit room, 2026-10-29) */

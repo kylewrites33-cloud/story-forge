@@ -2,6 +2,7 @@
 // newer version of the note: a tick on the Chapter titles page, a chapter marked through in the Rewrite tab, a
 // recipe's words. Like every edit there are two forms that must agree (a test holds them to it): to the note as the
 // screens hold it, and to the note's text as the vault has it, changing only the lines the change touches.
+import { addReply } from '../lib/changes.ts';
 import { withBody } from '../lib/drafts.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { merge3 } from '../lib/live.ts';
@@ -38,7 +39,10 @@ export type TextChange =
    * details) and the book's Braindump (the writing page's Notes). `was` is the words as he opened them: what changed
    * somewhere else since comes in line by line, and where both changed the same lines his are kept. `start` is the
    * properties the note starts with when the vault does not have it yet; `name` is the book's title, for the history. */
-  | { what: 'words'; of: 'matter' | 'braindump'; was: string; body: string; start: string; name: string };
+  | { what: 'words'; of: 'matter' | 'braindump'; was: string; body: string; start: string; name: string }
+  /** The Edit room: Kyle's reply to the Writer on one change card of a chapter's changes note, a `Reply:` line under
+   * the card (2026-11-12). The ask that has the Writer make a new card from it goes in the same save. */
+  | { what: 'change-reply'; id: string; words: string };
 
 /** Does this change start its note when the vault does not have it yet? The Writing Log's do (the first Pomodoro or
  * the first words of a day make that day's note), and so do the first words of a book's front and back matter or its
@@ -76,6 +80,7 @@ export function validChange(c: unknown): c is TextChange {
   }
   if (x.what === 'log-typed') return typeof x.date === 'string' && typeof x.words === 'number' && x.words > 0 && typeof x.at === 'string';
   if (x.what === 'log-typing') return typeof x.date === 'string' && typeof x.minutes === 'number' && x.minutes > 0 && typeof x.at === 'string';
+  if (x.what === 'change-reply') return typeof x.id === 'string' && /^C-\d+$/i.test(x.id) && typeof x.words === 'string' && x.words.trim().length > 0;
   if (x.what === 'words') return (x.of === 'matter' || x.of === 'braindump') && typeof x.was === 'string' && typeof x.body === 'string' && typeof x.start === 'string' && typeof x.name === 'string';
   return x.what === 'recipe' && typeof x.use_for === 'string' && typeof x.body === 'string';
 }
@@ -91,6 +96,7 @@ export function changeText(text: string, c: TextChange): string {
   if (c.what === 'log-typed') return addTypedToDay(text, c.date, c.words, new Date(c.at));
   if (c.what === 'log-typing') return addTypingToDay(text, c.date, c.minutes, new Date(c.at));
   if (c.what === 'words') return withWords(text, c);
+  if (c.what === 'change-reply') return addReply(text, c.id, c.words);
   return editRecipeText(text, c.use_for, c.body);
 }
 
@@ -98,6 +104,7 @@ export function changeText(text: string, c: TextChange): string {
 export function changeRecord(note: NoteRecord, c: TextChange): NoteRecord {
   if (c.what === 'title-pick') return { ...note, body: setPick(note.body, c.chapter, c.title, c.on) };
   if (c.what === 'title-own') return { ...note, body: addOwn(note.body, c.chapter, c.title) };
+  if (c.what === 'change-reply') return { ...note, body: addReply(note.body, c.id, c.words) };
   // The workflow is held as text, not as a note (apply.ts changes that text); this form is here for completeness.
   if (c.what === 'workflow-note') return { ...note, body: addWorkflowNote(note.body, c.note, c.day) };
   // A day of the Writing Log, and a note whose words Kyle wrote in a box, are made again from their properties and
@@ -127,6 +134,7 @@ export function changeMessage(text: string, c: TextChange, path: string): string
   if (c.what === 'log-pomodoro') return 'log: ' + (c.record.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + c.record.time + ' on ' + c.record.date + ', ' + c.record.words + ' words\n\nKept by the Sparrow app\'s timer.';
   if (c.what === 'log-typed') return 'log: ' + c.words + (c.words === 1 ? ' word' : ' words') + ' typed on ' + c.date + '\n\nKept by the Sparrow app.';
   if (c.what === 'log-typing') return 'log: ' + c.minutes + (c.minutes === 1 ? ' minute' : ' minutes') + ' typing on ' + c.date + '\n\nKept by the Sparrow app.';
+  if (c.what === 'change-reply') return 'changes: Kyle replied on ' + c.id.toUpperCase() + ' in ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '') + '\n\nWritten in the Sparrow app.';
   if (c.what === 'words') {
     if (c.of === 'braindump') return 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.';
     return 'book matter: ' + (text ? '' : 'start for ') + c.name;
