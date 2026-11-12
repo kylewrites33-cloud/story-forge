@@ -7,8 +7,9 @@
 // `src/lib/prosedit.ts`; how a line is styled follows `src/lib/styled.ts` (the read-only pages still draw from it).
 import { history, historyKeymap, insertNewline, isolateHistory, redo, standardKeymap, undo } from '@codemirror/commands';
 import { Annotation, EditorState, StateEffect, StateField, Transaction, type Range, type TransactionSpec } from '@codemirror/state';
-import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { ASK_RE } from '../lib/brackets.ts';
+import { placeChanges, shortLabel, wordDiff, type Change } from '../lib/changes.ts';
 import { mentions } from '../lib/codex.ts';
 import { clip, edit, restAt, type Look } from '../lib/prosedit.ts';
 import { allRuns, findAll, insertText, marks, runs, stylesAt, toggleStyle, unstyle, type StyleKind, type StyleOptions } from '../lib/styled.ts';
@@ -140,6 +141,92 @@ const lightField = StateField.define<DecorationSet>({
     return v;
   },
   provide: (f) => EditorView.decorations.from(f)
+});
+
+// ---- the team's changes on the page while Kyle types (Kyle, 2026-11-12: "i would love to be able to just type in the
+// all changes section") ----
+// Word's track changes on the page itself: the old words stay in the text, struck through; the new words sit beside
+// them as marks that are not text; a few words in the margin say what each change is. Nothing here is in the scene's
+// words. Where the changes sit is worked out again from the words after every key, so a change Kyle types over is no
+// longer shown (its card then offers I wrote my own).
+
+/** The open changes of this scene to show, and the one picked in the column. */
+export interface PageChanges { changes: Change[]; scene: string; current: string | null }
+
+const htmlEsc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+/** New words as they will read: italics and bold shown, the stars and marks hidden, a new line a line break. */
+function newWordsHtml(t: string): string {
+  return htmlEsc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/==(.+?)==/g, '$1')
+    .replace(/^\s*&gt; ?/gm, '').replace(/\n/g, '<br>');
+}
+
+class NewWords extends WidgetType {
+  words: string; id: string; kind: string; on: boolean;
+  constructor(words: string, id: string, kind: string, on: boolean) { super(); this.words = words; this.id = id; this.kind = kind; this.on = on; }
+  eq(o: NewWords) { return o.words === this.words && o.id === this.id && o.kind === this.kind && o.on === this.on; }
+  toDOM() {
+    const el = document.createElement('ins');
+    el.className = 'chg chg-' + this.kind + (this.on ? ' on' : '');
+    el.dataset.chg = this.id;
+    el.innerHTML = newWordsHtml(this.words);
+    return el;
+  }
+  ignoreEvent() { return true; }
+}
+
+class Tag extends WidgetType {
+  label: string; id: string; on: boolean;
+  constructor(label: string, id: string, on: boolean) { super(); this.label = label; this.id = id; this.on = on; }
+  eq(o: Tag) { return o.label === this.label && o.id === this.id && o.on === this.on; }
+  toDOM() {
+    const el = document.createElement('span');
+    el.className = 'chg-tag' + (this.on ? ' on' : '');
+    el.dataset.chg = this.id;
+    el.textContent = this.label;
+    return el;
+  }
+  ignoreEvent() { return true; }
+}
+
+/** Where each open change sits in these words, in characters, in page order. */
+export function changeSpots(doc: string, pc: PageChanges | null): { id: string; at: number; end: number }[] {
+  return pc ? placeChanges(doc, pc.changes, pc.scene).placed.map((p) => ({ id: p.change.id, at: p.at, end: p.end })) : [];
+}
+
+function changeDecos(state: EditorState, pc: PageChanges | null): DecorationSet {
+  if (!pc || !pc.changes.length) return Decoration.none;
+  const doc = state.doc.toString();
+  const out: Out = [];
+  placeChanges(doc, pc.changes, pc.scene).placed.forEach((p) => {
+    const id = p.change.id, on = id === pc.current, kind = p.change.kind;
+    out.push(Decoration.widget({ widget: new Tag(shortLabel(p.change), id, on), side: -1 }).range(p.at));
+    let pos = p.at;
+    wordDiff(doc.slice(p.at, p.end), p.change.now).forEach((d) => {
+      if (d.kind === 'same') { pos += d.text.length; return; }
+      if (d.kind === 'del') {
+        if (d.text.trim()) out.push(Decoration.mark({ tagName: 'del', class: 'chg chg-' + kind + (on ? ' on' : ''), attributes: { 'data-chg': id } }).range(pos, pos + d.text.length));
+        pos += d.text.length;
+        return;
+      }
+      out.push(Decoration.widget({ widget: new NewWords(d.text, id, kind, on), side: 1 }).range(pos));
+    });
+    for (let l = state.doc.lineAt(p.at); ; l = state.doc.line(l.number + 1)) {
+      out.push(Decoration.line({ class: 'has-chg' + (on ? ' on' : '') }).range(l.from));
+      if (l.to >= p.end || l.number >= state.doc.lines) break;
+    }
+  });
+  return Decoration.set(out, true);
+}
+
+const setChanges = StateEffect.define<PageChanges | null>();
+const changesField = StateField.define<{ pc: PageChanges | null; deco: DecorationSet }>({
+  create: () => ({ pc: null, deco: Decoration.none }),
+  update: (v, tr) => {
+    let pc = v.pc, again = tr.docChanged && Boolean(pc);
+    for (const e of tr.effects) if (e.is(setChanges)) { pc = e.value; again = true; }
+    return again ? { pc, deco: changeDecos(tr.state, pc) } : v;
+  },
+  provide: (f) => EditorView.decorations.from(f, (v) => v.deco)
 });
 
 // ---- Kyle's hand: keys beside hidden marks ----
@@ -283,6 +370,8 @@ export interface EditorCommands {
   reveal: (start: number, end: number) => void;
   /** The page's words as the editor holds them this moment. */
   text: () => string;
+  /** Show the team's open changes on the page while Kyle types (All changes); null takes them off. */
+  changes: (pc: PageChanges | null) => void;
   /** Where on screen character `at` sits (a zero-width box), or null when the page is not drawn. */
   rectAt: (at: number) => DOMRect | null;
   /** Replace these characters, as one step to undo. */
@@ -309,6 +398,8 @@ export interface ProseEvents {
   onHand?: () => void;
   /** Undo or Redo changed the words: what they were and what they are, so words brought back are not counted as typed. */
   onStep?: (was: string, now: string) => void;
+  /** One of the team's changes on the page was pressed (its old words, new words or margin words): its ID. */
+  onChangePick?: (id: string) => void;
 }
 
 export interface ProseBox {
@@ -394,7 +485,7 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
         ]),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on', autocapitalize: 'sentences', role: 'textbox', 'aria-multiline': 'true', 'aria-label': label }),
-        optsField.init(() => options), lightField, pendField, hand, styling, look, handlers,
+        optsField.init(() => options), lightField, changesField, pendField, hand, styling, look, handlers,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
             for (const tr of u.transactions) {
@@ -435,6 +526,14 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
     view.dispatch({ selection: { anchor: view.state.doc.length }, userEvent: 'select.pointer' });
   };
   parent.addEventListener('mousedown', onBlank);
+  // A press on one of the team's changes picks its card. The new words and margin words are not text, so the box
+  // itself does not see presses on them.
+  const onChg = (e: MouseEvent) => {
+    const t = e.target as HTMLElement | null;
+    const hit = t && t.closest ? t.closest('[data-chg]') as HTMLElement | null : null;
+    if (hit && hit.dataset.chg && events.onChangePick) events.onChangePick(hit.dataset.chg);
+  };
+  view.dom.addEventListener('click', onChg);
 
   /** Where a place sits on the screen: measured when its line is drawn, worked out from the page's heights when not. */
   const rect = (at: number): DOMRect => {
@@ -558,6 +657,7 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
     light: (name, spans) => view.dispatch({ effects: setLight.of({ name, spans }) }),
     reveal: (a, b) => sight(a, b),
     text: () => view.state.doc.toString(),
+    changes: (pc) => view.dispatch({ effects: setChanges.of(pc) }),
     rectAt: (at) => (view.dom.isConnected ? rect(at) : null),
     replaceRange: (a, b, t) => {
       view.dispatch({ changes: { from: a, to: b, insert: t }, selection: { anchor: a + t.length }, annotations: [own.of(true), Transaction.userEvent.of('input.replace'), isolateHistory.of('full')] });
@@ -592,6 +692,6 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
   return {
     view, commands,
     setOptions: (o) => view.dispatch({ effects: setOpts.of(o) }),
-    destroy: () => { parent.removeEventListener('mousedown', onBlank); view.destroy(); }
+    destroy: () => { parent.removeEventListener('mousedown', onBlank); view.dom.removeEventListener('click', onChg); view.destroy(); }
   };
 }

@@ -2534,20 +2534,26 @@ button, .button { border-radius: 12px; }
 
 /* The marked page. Old words struck in the danger colour, new words underlined in the accent, as Word does. */
 .changes-page { cursor: default; }
-.changes-page .chg-line { min-height: calc(var(--page-line, 1.7) * 1em); position: relative; }
-.changes-page .chg-line.has-chg::before { content: ''; position: absolute; left: calc(-1 * clamp(10px, 2.4vw, 30px)); top: 0.2em; bottom: 0.2em; width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.55; }
-.changes-page .chg-line.has-chg.on::before { opacity: 1; }
-.changes-page .chg { cursor: pointer; border-radius: 3px; text-decoration-thickness: 2px; }
-.changes-page del.chg { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); }
-.changes-page ins.chg { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
-.changes-page ins.chg.chg-new { text-decoration-style: dashed; }
-.changes-page ins.chg.simple { color: inherit; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-.changes-page .chg.on { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); }
+/* All changes is typed in (2026-11-12): the writing box's lines carry the bar beside a change, and the new words and
+   margin words are not text, so the cursor steps over them. */
+.writer-text.prose .cm-line.has-chg { position: relative; }
+.writer-text.prose .cm-line.has-chg::before { content: ''; position: absolute; left: calc(-1 * clamp(10px, 2.4vw, 30px)); top: 0.2em; bottom: 0.2em; width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.55; }
+.writer-text.prose .cm-line.has-chg.on::before { opacity: 1; }
+.writer-text.prose ins.chg, .writer-text.prose .chg-tag { user-select: none; -webkit-user-select: none; }
+:is(.changes-page, .writer-text.prose) .chg-line { min-height: calc(var(--page-line, 1.7) * 1em); position: relative; }
+:is(.changes-page, .writer-text.prose) .chg-line.has-chg::before { content: ''; position: absolute; left: calc(-1 * clamp(10px, 2.4vw, 30px)); top: 0.2em; bottom: 0.2em; width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.55; }
+:is(.changes-page, .writer-text.prose) .chg-line.has-chg.on::before { opacity: 1; }
+:is(.changes-page, .writer-text.prose) .chg { cursor: pointer; border-radius: 3px; text-decoration-thickness: 2px; }
+:is(.changes-page, .writer-text.prose) del.chg { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); }
+:is(.changes-page, .writer-text.prose) ins.chg { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+:is(.changes-page, .writer-text.prose) ins.chg.chg-new { text-decoration-style: dashed; }
+:is(.changes-page, .writer-text.prose) ins.chg.simple { color: inherit; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+:is(.changes-page, .writer-text.prose) .chg.on { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); }
 .changes-page.view-final .chg-line.has-chg::before { display: none; }
 /* A few words beside each change say what it is (Kyle, 2026-10-28). In the margin when the page is wide, else small
    and inline before the change. */
-.changes-page .chg-tag { display: inline-block; margin: 0 6px 0 0; padding: 0 6px; border-radius: 6px; background: var(--hover); color: var(--muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.7em; line-height: 1.6; vertical-align: 0.15em; cursor: pointer; text-decoration: none; }
-.changes-page .chg-tag.on { background: var(--accent-soft); color: var(--accent); }
+:is(.changes-page, .writer-text.prose) .chg-tag { display: inline-block; margin: 0 6px 0 0; padding: 0 6px; border-radius: 6px; background: var(--hover); color: var(--muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.7em; line-height: 1.6; vertical-align: 0.15em; cursor: pointer; text-decoration: none; }
+:is(.changes-page, .writer-text.prose) .chg-tag.on { background: var(--accent-soft); color: var(--accent); }
 
 /* The side column's cards. */
 .changes-panel { display: grid; gap: 10px; }
@@ -2609,6 +2615,9 @@ button, .button { border-radius: 12px; }
   .changes-page:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
   .changes-page .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
   .changes-page .chg-tag.on { border-left-color: var(--accent); }
+  .writer :is(.main-section, .chapter-section) .writer-text.prose:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
+  .writer-text.prose .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
+  .writer-text.prose .chg-tag.on { border-left-color: var(--accent); }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }

@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { bodyWords } from '../lib/drafts.ts';
 import { markTyping, wordsNotTyped } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
-import { proseBox, type EditorCommands, type ProseBox } from './prose.ts';
+import { proseBox, type EditorCommands, type PageChanges, type ProseBox } from './prose.ts';
 
 interface Props {
   /** The text to start with. Later changes to it are ignored; give the editor a new key to load other text. */
@@ -23,6 +23,10 @@ interface Props {
   onName?: (entry: number) => void;
   /** Whether what is typed at the cursor will be italic, bold or highlighted, for the tool row's buttons. */
   onLook?: (look: { i: boolean; b: boolean; h: boolean }) => void;
+  /** The team's open changes shown on the page while Kyle types (the Edit room's All changes, 2026-11-12), or null. */
+  changes?: PageChanges | null;
+  /** One of those changes was pressed on the page. */
+  onChangePick?: (id: string) => void;
 }
 
 export function ProseEditor(props: Props) {
@@ -37,6 +41,7 @@ export function ProseEditor(props: Props) {
       onCaret: (n) => now.current.onCaret(n),
       onLook: (l) => { if (now.current.onLook) now.current.onLook(l); },
       onName: (i) => { if (now.current.onName) now.current.onName(i); },
+      onChangePick: (id) => { if (now.current.onChangePick) now.current.onChangePick(id); },
       // Any change Kyle makes here, keys or dictation, keeps the clock of minutes typing running.
       onHand: () => markTyping(),
       // Words brought back by undo or redo were counted when they first went on the page, so they are not typed again.
@@ -44,6 +49,7 @@ export function ProseEditor(props: Props) {
     });
     box.current = b;
     if (props.commands) props.commands.current = b.commands;
+    if (props.changes) b.commands.changes(props.changes);
     return () => {
       if (now.current.commands && now.current.commands.current === b.commands) now.current.commands.current = null;
       box.current = null;
@@ -56,5 +62,12 @@ export function ProseEditor(props: Props) {
     if (first.current) { first.current = false; return; }
     if (box.current) box.current.setOptions(o || {});
   }, [o && o.names, o && o.find, o && o.asks, o && o.added, o && o.asking]);
+  const ch = props.changes || null;
+  const chKey = ch ? ch.scene + '|' + (ch.current || '') + '|' + ch.changes.map((c) => c.id + ':' + c.status + ':' + c.was.length + ':' + c.now.length).join(',') : '';
+  const chFirst = useRef(true);
+  useEffect(() => {
+    if (chFirst.current) { chFirst.current = false; return; }
+    if (box.current) box.current.commands.changes(ch);
+  }, [chKey]);
   return <div ref={host} class="writer-text styled prose" />;
 }

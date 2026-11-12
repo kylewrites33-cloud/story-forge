@@ -712,7 +712,7 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   changed paragraph), Final (no marks) and Self-Edit (Kyle's page as it stands, with every change he accepted, where he types; called Original until 2026-10-28, Kyle: "original sounds like im editing draft 1", "make the button called Self-Edit"). Up and down arrows step through
   the changes and on into the next chapter that has any.
   A change that only adds italics shows the words in italics, not raw stars (2026-10-28).
-  The marked views are for reading; to type, press Self-Edit or Edit it myself. All changes marks only the words that
+  Simple and Final are for reading; All changes and Self-Edit are typed in (All changes since 2026-11-12, below). All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is
   wide, small before the change when not (2026-10-28, Kyle: "some short text on the side that summarizes what the
@@ -772,6 +772,16 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   (2026-10-27, Kyle: "When I say yes, my choice, it just goes on to the next one"). The card says "A:" not "Fix A:"
   ("fix can be a verb too"), bolds each answer's letter and short version, spaces its paragraphs, and the buttons
   are just A, B, C ("why not A?"); the note keeps its "Fix A:" lines (2026-10-27).
+- **Typing in All changes** (2026-11-12, Kyle: "i would love to be able to just type in the all changes section, in
+  the event i have a little text to add ... i find it annoying to cycle to self-edit (and then the whole screen runs to
+  the top)"). All changes is the writing box itself with the team's changes drawn on it: the old words struck through
+  (they are still Kyle's text), the new words and the few margin words beside them as marks that are not text, so the
+  cursor steps over them and they never reach the scene. Kyle types anywhere; typing over a change's old words takes it
+  off the page and its card offers I wrote my own. A press on a change picks its card; picking a card brings its change
+  into sight. Accept, Reject, Undo and Accept all put words in as one step to undo without drawing the box again, so the
+  page no longer runs to the top (also in Self-Edit). Every scene of the chapter works the same way. Simple and Final
+  stay read-only pictures. In `src/write/prose.ts` (`PageChanges`, `changesField`). Checks `type.mjs` and
+  `webkit-type.mjs` in the project files' `app/saving-checks/`.
 - **Reply to the Writer** (2026-11-12, Kyle: "i need to be able to reply within the changes, to explain to the writer
   why i made a choice, and for the writer to create a new card based on my reply"). Every card, waiting or decided, has
   Reply to the Writer: a box opens on the card, and Send to the Writer puts his words on the card as a `Reply:` line in
