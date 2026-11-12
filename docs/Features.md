@@ -1131,8 +1131,8 @@ The book's Overview (Home) now holds, top to bottom:
   Market research = the workflow's market steps kept (or the Market board's thesis, comps, keywords and title, whichever
   is further); Planning = the premise, test drive and cast steps kept; Outlining = half the outline (outline steps, or the
   beat sheet's beats kept) and half the chapters with beats or a chapter plan; Writing = 100% once a draft is saved or
-  editing has begun, else the Books page's count; Editing = three passes (draft 1 to 2, 2 to 3, 3 to 4), the one under
-  way counted as far as it has got; Publishing = the workflow's publishing steps, 100% once published. Each stage opens
+  editing has begun, else the Books page's count; Editing = three passes (drafts 2, 3 and 4; draft 3 is pass 2 of 3, Kyle
+  2026-11-12), the one under way counted as far as it has got; Publishing = the workflow's publishing steps, 100% once published. Each stage opens
   its room. The stage the book is in is lit, with its detail beside the heading. Stages before it that were not finished
   in the app count as done outside the app: a full bar in a lighter colour marked Done (Kyle, 2026-11-06: "can we assume that if im in
   a further stage, that the previous stages are implicity complete (even if we mark the filled in bar with a different
@@ -1185,6 +1185,14 @@ up how long it takes for me to finish these steps."
   began (`editing_pass_start`, which the app sets when a pass begins, counting that day), and the rest of editing takes
   what it took in his other books after the same draft was done (`draft2_end`, `draft3_end` to `editing_end`, less
   waiting days). With no book to go by, each pass still to come is a first guess of a week.
+- **Pass count and early guesses** (2026-11-12, Kyle: "draft 3 is pass 2 of 3, am i wrong? ... i think it should
+  reflect the length of time estimated with respect to the period we're in, right? like, editing didnt take me 50
+  days, did it?"). After stages were renamed by the draft being made ("Draft 3: changes"), the Overview no longer
+  recognised the pass: it showed pass 1 of 3 and timed all of editing from Oct 29 again (Done by Dec 29). Now the draft
+  number is read from either name (`draftMade`), a changes pass counts only its own changes (the book note keeps
+  `editing_pass_base`, the changes already decided when the pass began, so the 1,500 decided in draft 2 do not make draft
+  3 look nearly done), and in a pass's first three days, or before a tenth is done, the pass gets the week's first guess
+  instead of one morning's pace.
 
 ## Tidy-up after the audit (2026-11-10)
 

@@ -63,3 +63,22 @@ test('Continue where you left off: one card per active book, newest first, publi
   const list = continueBooks(index.books.map((book) => ({ book, status: bookStatus(index, book, recent) })));
   assert.deepEqual(list.map((x) => x.book.folder), ['C', 'A']);
 });
+
+test('a changes pass counts only its own changes, not the ones decided in earlier drafts (Kyle, 2026-11-12)', () => {
+  const card = (n: number, kyle: string) => '## C-0' + n + ' · small\nScene: S-001\nWhy: Typo.\nKyle: ' + kyle + '\n\nWas:\n> teh\n\nNow:\n> the\n';
+  const body = [card(1, 'kept'), card(2, 'kept'), card(3, 'kept'), card(4, 'open'), card(5, 'open'), card(6, 'open')].join('\n');
+  const make = (data: Record<string, unknown>) => {
+    const { book, notes } = setup('B5', 'draft', 1, {}, data);
+    book.drafts = [1, 2].map((number) => ({ number, note: null, files: [{ path: 'B5/Drafts/Draft ' + number + '/x.md', sha: 'a' } as FileEntry] }));
+    notes['B5/Changes/Chapter 1 changes.md'] = { path: 'B5/Changes/Chapter 1 changes.md', sha: 'c', type: 'chapter-changes', data: { type: 'chapter-changes', chapter: 1 }, body, error: null };
+    return bookStatus({ books: [book], notes } as unknown as VaultIndex, book, []);
+  };
+  const all = make({});
+  assert.equal(all.stage, 'Draft 3: changes');
+  assert.equal(all.percent, 50);
+  assert.equal(all.decided, 3);
+  // Two were decided before draft 3 began: one of this pass's four is done.
+  assert.equal(make({ editing_pass: 'Draft 3: changes', editing_pass_base: 2 }).percent, 25);
+  // A count kept for another pass is not used.
+  assert.equal(make({ editing_pass: 'Draft 2: the rewrite', editing_pass_base: 2 }).percent, 50);
+});

@@ -156,7 +156,11 @@ export const PASS_GUESS = 7;
 function leftInPass(pass: EditPass, today: string): { left: number; guessed: boolean } {
   const days = pass.start ? Math.max(1, daysBetween(pass.start, today) + 1) : 1;
   const p = Math.max(0, Math.min(100, pass.percent));
-  const here = p >= 100 ? 0 : p > 0 ? Math.max(1, Math.round((days * (100 - p)) / p)) : PASS_GUESS;
+  // Early in a pass (under three days or a tenth done) one morning's pace says little, so the pass gets the first guess,
+  // less the days already spent on it (Kyle, 2026-11-12: "it should reflect the length of time estimated with respect to
+  // the period we're in").
+  const early = days < 3 || p < 10;
+  const here = p >= 100 ? 0 : early ? Math.max(1, PASS_GUESS - days + 1) : Math.max(1, Math.round((days * (100 - p)) / p));
   const later = pass.after != null ? pass.after : Math.max(0, 4 - pass.to) * PASS_GUESS;
   return { left: here + later, guessed: pass.after == null && pass.to < 4 };
 }

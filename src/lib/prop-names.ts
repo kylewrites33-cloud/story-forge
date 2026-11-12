@@ -73,6 +73,7 @@ export type Prop =
   | 'due'
   | 'editing_end'
   | 'editing_pass'
+  | 'editing_pass_base'
   | 'editing_pass_start'
   | 'editing_paused'
   | 'editing_start'

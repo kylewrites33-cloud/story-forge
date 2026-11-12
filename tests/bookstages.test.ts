@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bookStatus } from '../src/lib/bookstatus.ts';
-import { publishDate, publishLine, sixOf, sixStages } from '../src/lib/bookstages.ts';
+import { bookStatus, type BookStatus } from '../src/lib/bookstatus.ts';
+import { draftMade, publishDate, publishLine, sixOf, sixStages } from '../src/lib/bookstages.ts';
 import type { BookEntry, FileEntry, NoteRecord, VaultIndex } from '../src/lib/types.ts';
 
 const scene = (path: string, chapter: number, body = 'Words.'): NoteRecord =>
@@ -54,4 +54,17 @@ test('the publish date reads YYYY-MM-DD and counts the days', () => {
   assert.equal(publishDate({ data: { publish_date: 'soon' } }), null);
   assert.match(publishLine('2026-11-21', new Date(2026, 10, 6, 15)), /Nov 21, 2026 · 15 days away$/);
   assert.match(publishLine('2026-11-06', new Date(2026, 10, 6, 15)), /today$/);
+});
+
+test('the stage names the draft being made: draft 3 is pass 2 of 3 (Kyle, 2026-11-12)', () => {
+  assert.equal(draftMade('Draft 3: changes'), 3);
+  assert.equal(draftMade('Draft 2: the rewrite'), 2);
+  assert.equal(draftMade('Draft 2 to 3: changes'), 3);
+  assert.equal(draftMade('Planning'), null);
+  const { book, index } = setup('draft', {});
+  const status = { phase: 'changes', stage: 'Draft 3: changes', percent: 50, detail: '5 changes waiting in 1 chapter', active: true, go: null, goLabel: '', at: null } as BookStatus;
+  const six = sixStages({ index, book, stages: [], statuses: {}, status });
+  const editing = six.find((s) => s.key === 'editing')!;
+  assert.equal(editing.percent, 50); // pass 1 done, half of pass 2
+  assert.match(editing.detail, /pass 2 of 3/);
 });
