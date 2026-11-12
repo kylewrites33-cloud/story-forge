@@ -13,7 +13,9 @@ import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
 import type { NoteRecord } from '../src/lib/types.ts';
-import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT, demoKinds } from './helpers.ts';
+
+demoKinds();
 
 const job = (id: string, status: string, created: string, extra: Record<string, unknown> = {}): NoteRecord =>
   ({ path: 'Jobs/' + id + '.md', sha: id, type: 'job', data: { type: 'job', id, status, created, kind: 'check', target: 'S-001', ...extra }, body: '', error: null });

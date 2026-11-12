@@ -7,7 +7,9 @@ import { saveEntry } from '../src/lib/github.ts';
 import { jobAsk } from '../src/lib/jobs.ts';
 import { restoreAction } from '../src/vault/ops.ts';
 import { pushAction } from '../src/vault/push.ts';
-import { MemSource } from './helpers.ts';
+import { MemSource, demoKinds } from './helpers.ts';
+
+demoKinds();
 
 test('books and manuscripts', () => {
   assert.equal(nextBookNumber([1, 2, null]), 3);

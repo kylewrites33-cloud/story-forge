@@ -37,7 +37,8 @@ shape:
 src/app/            the frame: pages.ts is the one list of pages (a new page is one entry there and one in screens.tsx,
                     which holds what each page draws); route.ts is the addresses
 src/vault/          the one saving system: the only code that changes the vault. A feature that saves makes an action here
-src/team/           the one way to ask the team: where an ask stands and which answers are used (being built, step 4)
+src/team/           the one way to ask the team: where an ask stands, which answers are used, and the kinds of job (read
+                    from the vault schema's `types.job.kinds`; a new kind is an entry there, not an app change)
 src/lib/            logic, tested with Node (no DOM): parsing, indexing, sync, one module per feature
 src/lib/frontmatter.js, prose.js, lint.js   copies of the vault tool's sections (do not edit; see below)
 src/ui/             screens (Preact); src/ui/Shell.tsx is the sidebar and top bar
