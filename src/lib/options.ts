@@ -162,7 +162,3 @@ const DONE = 'story-forge.options-done.';
 export function loadOptionsDone(sourceKey: string): Set<string> {
   try { const v = JSON.parse(localStorage.getItem(DONE + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
 }
-
-export function saveOptionsDone(sourceKey: string, done: Set<string>) {
-  try { localStorage.setItem(DONE + sourceKey, JSON.stringify(Array.from(done).slice(-300))); } catch { /* lasts until reload */ }
-}

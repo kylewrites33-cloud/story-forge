@@ -10,6 +10,7 @@ import { editRecipeText } from '../lib/recipes.ts';
 import { rewriteDone, withRewriteDone } from '../lib/rewrite.ts';
 import { addOwn, NONE, setPick } from '../lib/titles.ts';
 import { addWorkflowNote } from '../lib/workflow.ts';
+import { takenRecord, withTaken } from '../team/asks.ts';
 import type { NoteRecord } from '../lib/types.ts';
 import { makeNote } from '../lib/vault-index.ts';
 
@@ -20,6 +21,9 @@ export type TextChange =
   | { what: 'title-own'; chapter: number; title: string }
   /** The Rewrite tab: Kyle is through with a chapter, or opened it again (the book note's `rewrite_done`). */
   | { what: 'through'; chapter: number; done: boolean }
+  /** An ask to the team (a job note): these answers are used (a brace answer put into the page, options picked or put
+   * away), so no device uses them again. Names add to the ones the note has. */
+  | { what: 'taken'; names: string[] }
   /** A recipe's "use for" line and its instruction. */
   | { what: 'recipe'; use_for: string; body: string }
   /** One more dated line under "Kyle's notes" at the end of the workflow (`day` is the day he wrote it, his time). */
@@ -64,6 +68,7 @@ export function validChange(c: unknown): c is TextChange {
   if (x.what === 'title-pick') return Number.isInteger(x.chapter) && typeof x.title === 'string' && typeof x.on === 'boolean';
   if (x.what === 'title-own') return Number.isInteger(x.chapter) && typeof x.title === 'string';
   if (x.what === 'through') return Number.isInteger(x.chapter) && typeof x.done === 'boolean';
+  if (x.what === 'taken') return Array.isArray(x.names) && x.names.length > 0 && x.names.every((n) => typeof n === 'string');
   if (x.what === 'workflow-note') return typeof x.note === 'string' && typeof x.day === 'string';
   if (x.what === 'log-pomodoro') {
     const r = x.record;
@@ -80,6 +85,7 @@ export function changeText(text: string, c: TextChange): string {
   if (c.what === 'title-pick') return setPick(text, c.chapter, c.title, c.on);
   if (c.what === 'title-own') return addOwn(text, c.chapter, c.title);
   if (c.what === 'through') return withRewriteDone(text, c.chapter, c.done);
+  if (c.what === 'taken') return withTaken(text, c.names);
   if (c.what === 'workflow-note') return addWorkflowNote(text, c.note, c.day);
   if (c.what === 'log-pomodoro') return addToDay(text, c.record, new Date(c.at));
   if (c.what === 'log-typed') return addTypedToDay(text, c.date, c.words, new Date(c.at));
@@ -97,6 +103,7 @@ export function changeRecord(note: NoteRecord, c: TextChange): NoteRecord {
   // A day of the Writing Log, and a note whose words Kyle wrote in a box, are made again from their properties and
   // words, exactly as their text is.
   if (startsNote(c)) return makeNote(note.path, note.sha, changeText(Frontmatter.join(note.data, note.body), c));
+  if (c.what === 'taken') return takenRecord(note, c.names);
   if (c.what === 'through') {
     const now = rewriteDone(note);
     const next = (c.done ? now.concat(now.indexOf(c.chapter) < 0 ? [c.chapter] : []) : now.filter((n) => n !== c.chapter)).sort((a, b) => a - b);
@@ -115,6 +122,7 @@ export function changeMessage(text: string, c: TextChange, path: string): string
   if (c.what === 'title-pick') return 'titles: Kyle ' + (c.on ? 'picked ' : 'unticked ') + (c.title === NONE ? 'None of these' : '"' + c.title + '"') + ' for chapter ' + c.chapter + '\n\nChosen in the Sparrow app.';
   if (c.what === 'title-own') return 'titles: Kyle wrote "' + c.title + '" for chapter ' + c.chapter + '\n\nChosen in the Sparrow app.';
   if (c.what === 'through') return 'rewrite: chapter ' + c.chapter + (c.done ? ' through' : ' opened again') + ' in the Rewrite tab';
+  if (c.what === 'taken') return 'jobs: ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '').split(' ')[0] + ' answer used\n\nKept by the Sparrow app, so no device uses it twice.';
   if (c.what === 'workflow-note') return 'workflow: Kyle\'s note';
   if (c.what === 'log-pomodoro') return 'log: ' + (c.record.stopped ? 'stopped Pomodoro' : 'Pomodoro') + ' at ' + c.record.time + ' on ' + c.record.date + ', ' + c.record.words + ' words\n\nKept by the Sparrow app\'s timer.';
   if (c.what === 'log-typed') return 'log: ' + c.words + (c.words === 1 ? ' word' : ' words') + ' typed on ' + c.date + '\n\nKept by the Sparrow app.';
