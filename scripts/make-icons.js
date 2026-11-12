@@ -1,15 +1,20 @@
-// Draws the app icons (Sparrow: a cream sparrow over a dark line, on terracotta; Kyle's pick, 2026-10-22) as PNG files and
-// an SVG, with no image library.
-// Run with `npm run icons`; the output in public/icons is committed.
+// Makes the app icons from Kyle's own picture, scripts/icon-source.png (Kyle, 2026-11-12: "Make this the new sparrow app
+// icon": a white round bird with a red eye and a red wing on a flat red square), with no image library.
+// Run with `npm run icons`; the output in public/icons is committed. To change the icon, replace icon-source.png (a
+// square PNG, 8-bit RGB or RGBA) and, for the sharp SVG, BIRD below; the vault skill `app-icon` has the steps.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
-const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
-const ACCENT = [0xb5, 0x53, 0x2f];
-const CREAM = [0xfb, 0xf3, 0xe6];
-const INK = [0x2b, 0x25, 0x22];
+const here = path.dirname(fileURLToPath(import.meta.url));
+const out = path.join(here, '..', 'public', 'icons');
+
+// The bird as one shape (eye and wing are holes), traced from icon-source.png with potrace in a 512 square.
+// src/ui/Shell.tsx draws the same shape in the sidebar.
+export const BACKGROUND = '#d64236';
+export const BIRD_TRANSFORM = 'translate(0 512) scale(0.1 -0.1)';
+export const BIRD = 'M2913 4056 c-341 -65 -620 -281 -972 -754 -46 -61 -86 -112 -89 -112 -3 0 -28 15 -56 34 -138 91 -259 131 -401 131 -234 0 -334 -142 -225 -318 17 -27 30 -50 30 -51 0 -2 -30 -5 -68 -8 -223 -16 -338 -199 -245 -389 20 -40 58 -92 98 -133 56 -58 65 -72 65 -104 2 -414 311 -901 740 -1169 758 -473 1791 -167 2203 652 232 463 197 978 -96 1410 l-54 79 135 151 c163 182 167 187 153 214 -21 38 -205 67 -353 55 l-78 -7 -61 67 c-187 203 -468 301 -726 252z m414 -352 c121 -60 146 -224 49 -320 -90 -91 -234 -77 -304 28 -113 171 72 382 255 292z m-476 -684 c299 -57 447 -370 332 -702 -231 -665 -1100 -751 -1684 -169 -92 92 -156 168 -148 175 20 17 297 207 379 261 543 353 874 482 1121 435z';
 
 const CRC = new Int32Array(256).map((_, n) => {
   let c = n;
@@ -39,122 +44,76 @@ function png(size, rgba) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-// The sparrow in a 512 square, drawn in this order. Paths use absolute M, L, C and Z only, so the same list gives the
-// SVG and the PNGs; the eye and the wing line are cut back to the background colour. src/ui/Shell.tsx draws the same
-// bird in the sidebar.
-const BIRD_PATH = 'M378 156 L432 170 L380 184 C384 250 346 310 276 326 C242 336 208 328 190 310 L82 358 L68 340 L166 272 C176 210 216 146 266 124 C316 102 366 116 378 156 Z';
-const WING_PATH = 'M200 286 C256 290 312 260 328 212';
-const BIRD = [
-  { line: [[120, 384], [392, 384]], width: 10, colour: INK },
-  { path: BIRD_PATH, colour: CREAM },
-  { curve: WING_PATH, width: 12, colour: ACCENT },
-  { circle: [342, 160, 11], colour: ACCENT },
-];
-
-// Each shape as one or more closed polygons in the 512 square.
-function bezier(p0, p1, p2, p3, steps = 24) {
-  const out = [];
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps, u = 1 - t;
-    out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
-      u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+// Reads an 8-bit, non-interlaced RGB or RGBA PNG into RGBA pixels.
+function readPng(file) {
+  const buf = fs.readFileSync(file);
+  let i = 8, w = 0, h = 0, type = 0;
+  const idat = [];
+  while (i < buf.length) {
+    const len = buf.readUInt32BE(i), t = buf.toString('latin1', i + 4, i + 8), data = buf.subarray(i + 8, i + 8 + len);
+    if (t === 'IHDR') {
+      w = data.readUInt32BE(0); h = data.readUInt32BE(4); type = data[9];
+      if (data[8] !== 8 || (type !== 2 && type !== 6) || data[12] !== 0) throw new Error('The icon picture must be an 8-bit RGB or RGBA PNG, not interlaced.');
+    } else if (t === 'IDAT') idat.push(data);
+    i += 12 + len;
   }
-  return out;
-}
-function pathPolys(d) {
-  const nums = d.match(/[MLCZ]|-?[\d.]+/g);
-  const polys = [];
-  let cur = null, i = 0;
-  const pt = () => [Number(nums[i++]), Number(nums[i++])];
-  while (i < nums.length) {
-    const cmd = nums[i++];
-    if (cmd === 'M') { cur = [pt()]; polys.push(cur); }
-    else if (cmd === 'L') cur.push(pt());
-    else if (cmd === 'C') { const a = pt(), b = pt(), c = pt(); cur.push(...bezier(cur[cur.length - 1], a, b, c)); }
-  }
-  return polys;
-}
-function arc(cx, cy, r, from, to, steps) {
-  const out = [];
-  for (let i = 0; i <= steps; i++) { const a = from + (to - from) * i / steps; out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
-  return out;
-}
-function polygons(s) {
-  if (s.path) return pathPolys(s.path);
-  if (s.circle) return [arc(s.circle[0], s.circle[1], s.circle[2], 0, 2 * Math.PI, 48)];
-  if (s.curve) {
-    const pts = pathPolys(s.curve)[0], out = [];
-    for (let k = 0; k < pts.length - 1; k++) out.push(...polygons({ line: [pts[k], pts[k + 1]], width: s.width }));
-    return out;
-  }
-  const [[x0, y0], [x1, y1]] = s.line, r = s.width / 2, a = Math.atan2(y1 - y0, x1 - x0);
-  return [[...arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2, 16), ...arc(x0, y0, r, a + Math.PI / 2, a + Math.PI * 1.5, 16)]];
-}
-function roundedSquare(r) {
-  return [[...arc(512 - r, r, r, -Math.PI / 2, 0, 16), ...arc(512 - r, 512 - r, r, 0, Math.PI / 2, 16),
-    ...arc(r, 512 - r, r, Math.PI / 2, Math.PI, 16), ...arc(r, r, r, Math.PI, Math.PI * 1.5, 16)]];
-}
-
-// Fill polygons (nonzero winding) into a supersampled colour buffer, one sample row at a time.
-function fill(buf, n, polys, colour, scale, shift) {
-  const edges = [];
-  for (const poly of polys) {
-    for (let k = 0; k < poly.length; k++) {
-      const p = poly[k], q = poly[(k + 1) % poly.length];
-      const a = [p[0] * scale + shift, p[1] * scale + shift], b = [q[0] * scale + shift, q[1] * scale + shift];
-      if (a[1] !== b[1]) edges.push(a[1] < b[1] ? [a, b, 1] : [b, a, -1]);
+  const bpp = type === 6 ? 4 : 3, stride = w * bpp, raw = zlib.inflateSync(Buffer.concat(idat));
+  const px = Buffer.alloc(stride * h), rgba = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)], line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? px[y * stride + x - bpp] : 0, b = y ? px[(y - 1) * stride + x] : 0, c = x >= bpp && y ? px[(y - 1) * stride + x - bpp] : 0;
+      let v = line[x];
+      if (f === 1) v += a;
+      else if (f === 2) v += b;
+      else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      px[y * stride + x] = v & 0xff;
     }
   }
-  for (let y = 0; y < n; y++) {
-    const sy = y + 0.5, hits = [];
-    for (const [a, b, w] of edges) if (sy >= a[1] && sy < b[1]) hits.push([a[0] + (sy - a[1]) * (b[0] - a[0]) / (b[1] - a[1]), w]);
-    hits.sort((p, q) => p[0] - q[0]);
-    let wind = 0;
-    for (let k = 0; k < hits.length - 1; k++) {
-      wind += hits[k][1];
-      if (!wind) continue;
-      const from = Math.max(0, Math.ceil(hits[k][0] - 0.5)), to = Math.min(n - 1, Math.floor(hits[k + 1][0] - 0.5));
-      for (let x = from; x <= to; x++) { const i = (y * n + x) * 4; buf[i] = colour[0]; buf[i + 1] = colour[1]; buf[i + 2] = colour[2]; buf[i + 3] = 255; }
-    }
+  for (let k = 0; k < w * h; k++) {
+    rgba[k * 4] = px[k * bpp]; rgba[k * 4 + 1] = px[k * bpp + 1]; rgba[k * 4 + 2] = px[k * bpp + 2]; rgba[k * 4 + 3] = bpp === 4 ? px[k * bpp + 3] : 255;
   }
+  return { w, h, rgba };
 }
 
-// corner: rounded background (0 = square). inset: share of each side kept clear, for maskable icons.
-function draw(size, { inset = 0, corner = 0 } = {}) {
-  const SS = 4, n = size * SS, big = Buffer.alloc(n * n * 4);
-  fill(big, n, corner ? roundedSquare(corner * 512) : [[[0, 0], [512, 0], [512, 512], [0, 512]]], ACCENT, n / 512, 0);
-  const scale = n / 512 * (1 - 2 * inset);
-  for (const s of BIRD) fill(big, n, polygons(s), s.colour, scale, inset * n);
-  const buf = Buffer.alloc(size * size * 4);
+// Shrinks the picture to size by averaging every source pixel each new pixel covers; corner (share of the side) rounds
+// the corners, smoothed at the edge.
+function icon(src, size, corner = 0) {
+  const { w, h, rgba } = src, buf = Buffer.alloc(size * size * 4), sx = w / size, sy = h / size, r = corner * size;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      let r = 0, g = 0, b = 0, a = 0;
-      for (let sy = 0; sy < SS; sy++) {
-        for (let sx = 0; sx < SS; sx++) {
-          const i = ((y * SS + sy) * n + x * SS + sx) * 4, w = big[i + 3];
-          r += big[i] * w; g += big[i + 1] * w; b += big[i + 2] * w; a += w;
+      let R = 0, G = 0, B = 0, A = 0, n = 0;
+      for (let yy = Math.floor(y * sy); yy < Math.min(h, Math.ceil((y + 1) * sy)); yy++) {
+        for (let xx = Math.floor(x * sx); xx < Math.min(w, Math.ceil((x + 1) * sx)); xx++) {
+          const i = (yy * w + xx) * 4; R += rgba[i]; G += rgba[i + 1]; B += rgba[i + 2]; A += rgba[i + 3]; n++;
         }
       }
+      let cover = 1;
+      if (r) {
+        const cx = Math.min(Math.max(x + 0.5, r), size - r), cy = Math.min(Math.max(y + 0.5, r), size - r);
+        cover = Math.min(1, Math.max(0, r - Math.hypot(x + 0.5 - cx, y + 0.5 - cy) + 0.5));
+      }
       const i = (y * size + x) * 4;
-      buf[i] = a ? r / a : 0; buf[i + 1] = a ? g / a : 0; buf[i + 2] = a ? b / a : 0; buf[i + 3] = a / (SS * SS);
+      buf[i] = R / n; buf[i + 1] = G / n; buf[i + 2] = B / n; buf[i + 3] = (A / n) * cover;
     }
   }
   return png(size, buf);
 }
 
 function svg() {
-  const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
-  const parts = BIRD.map((s) => s.path ? `<path d="${s.path}" fill="${hex(s.colour)}"/>`
-    : s.curve ? `<path d="${s.curve}" stroke="${hex(s.colour)}" stroke-width="${s.width}" fill="none" stroke-linecap="round"/>`
-    : s.circle ? `<circle cx="${s.circle[0]}" cy="${s.circle[1]}" r="${s.circle[2]}" fill="${hex(s.colour)}"/>`
-    : `<path d="M${s.line[0].join(' ')} L${s.line[1].join(' ')}" stroke="${hex(s.colour)}" stroke-width="${s.width}" stroke-linecap="round"/>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${hex(ACCENT)}"/>${parts}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${BACKGROUND}"/><path transform="${BIRD_TRANSFORM}" fill="#fff" d="${BIRD}"/></svg>\n`;
 }
 
-fs.mkdirSync(out, { recursive: true });
-fs.writeFileSync(path.join(out, 'icon-192.png'), draw(192, { corner: 0.22 }));
-fs.writeFileSync(path.join(out, 'icon-512.png'), draw(512, { corner: 0.22 }));
-fs.writeFileSync(path.join(out, 'icon-512-maskable.png'), draw(512, { inset: 0.1 }));
-fs.writeFileSync(path.join(out, 'apple-touch-icon.png'), draw(180));
-fs.writeFileSync(path.join(out, 'icon.svg'), svg());
-console.log('Wrote icons to ' + out);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const src = readPng(path.join(here, 'icon-source.png'));
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, 'icon-192.png'), icon(src, 192, 0.22));
+  fs.writeFileSync(path.join(out, 'icon-512.png'), icon(src, 512, 0.22));
+  // The bird already sits inside the middle 80 percent, so the whole square works as the maskable icon.
+  fs.writeFileSync(path.join(out, 'icon-512-maskable.png'), icon(src, 512));
+  // iPad and iPhone round the corners themselves.
+  fs.writeFileSync(path.join(out, 'apple-touch-icon.png'), icon(src, 180));
+  fs.writeFileSync(path.join(out, 'icon.svg'), svg());
+  console.log('Wrote icons to ' + out);
+}

@@ -122,6 +122,8 @@ src/ui/BeatRuler.tsx     the folding beat ruler on the Chapter Grid
 src/ui/CodexNow.tsx      "Now" and secrets on a codex card
 src/ui/                  screens (Preact)
 public/sw.js             service worker for the app shell only; never caches GitHub
+public/icons/            the app icons (home screen, tab, manifest), made by `npm run icons`
+scripts/make-icons.js    makes every icon size from scripts/icon-source.png (Kyle's picture) and holds the traced bird for the SVG
 demo-vault/              a tiny vault that follows the schema, for tests and the Pages preview
 tests/                   Node test runner tests
 tests/golden/            what a save must leave in the vault, file for file, one .json a case (`leaves` in tests/helpers.ts); first written from the older note-by-note saving code just before it was removed (2026-11-11). `GOLDEN=write npm test` writes them again for a change that is meant
