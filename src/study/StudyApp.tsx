@@ -16,6 +16,7 @@ import {
   ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
   type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
+import { parseBank, parseBuilds, setPicked, type Build, type Premise } from '../lib/build.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
 
@@ -59,7 +60,7 @@ async function faceUrl(source: VaultSource, f: FileEntry): Promise<string | null
   return url;
 }
 
-// ------------------------------------------------------------------ routes: #/, #/lenses, #/s/<study>[/plot[/drivers|/lenses]|/engine|/kishotenketsu],
+// ------------------------------------------------------------------ routes: #/ (the premises), #/studies, #/lenses, #/s/<study>[/plot[/drivers|/lenses]|/engine|/kishotenketsu],
 // #/s/<study>/c/<name>, #/s/<study>/scene/<id>[/beats|/lenses]
 
 /** A study's tabs: Character, Plot, and Engine (Kyle, 2026-10-27: the distilled method, what actually matters). */
@@ -70,10 +71,13 @@ type PlotViewName = 'board' | 'drivers' | 'lenses';
 /** A scene's tabs: our retelling with a link to the original, the beats, and every lens's reading. */
 type SceneTab = 'read' | 'beats' | 'lenses';
 
-interface Route { page: 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
+interface Route { page: 'premises' | 'saved' | 'home' | 'lenses' | 'settings' | 'study' | 'character' | 'scene' | 'kishotenketsu'; study?: string; tab?: Tab; name?: string; view?: PlotViewName; sceneTab?: SceneTab; traits?: boolean; lens?: string; }
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map((p) => decodeURIComponent(p));
+  if (!parts.length) return { page: 'premises' };
+  if (parts[0] === 'studies') return { page: 'home' };
+  if (parts[0] === 'saved') return { page: 'saved' };
   if (parts[0] === 'lenses') return { page: 'lenses' };
   if (parts[0] === 'settings') return { page: 'settings' };
   if (parts[0] !== 's' || !parts[1]) return { page: 'home' };
@@ -132,6 +136,10 @@ export function StudyApp() {
   }, []);
 
   const lib = useMemo(() => (cached ? libraryFrom(cached) : null), [cached]);
+  const bank = useMemo(() => (cached ? parseBank(new Map(Object.entries(cached.texts).map(([p, [, t]]) => [p, t]))) : []), [cached]);
+  const builds = useMemo(() => (cached ? parseBuilds(new Map(Object.entries(cached.texts).map(([p, [, t]]) => [p, t]))) : []), [cached]);
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [route]);
   const setLens = (side: Side, name: string) => {
     const next = { ...lens, [side]: name };
     setLensState(next);
@@ -142,6 +150,8 @@ export function StudyApp() {
   let body: ComponentChildren;
   if (route.page === 'settings') body = <SettingsPage settings={settings} onSave={(s) => { setSettings(saveSettings(s)); location.hash = '#/'; }} />;
   else if (!lib) body = state === 'error' ? <p class="cs-note">{error}</p> : <p class="cs-note">Reading the studies…</p>;
+  else if (route.page === 'saved') body = <SavedPage bank={bank} />;
+  else if (route.page === 'premises') body = <PremisesPage builds={builds} source={source} afterSave={sync} />;
   else if (route.page === 'lenses') body = <LensesPage lib={lib} />;
   else if (route.page === 'home' || !study) body = <HomePage lib={lib} missing={route.page !== 'home' ? route.study || '' : ''} />;
   else if (route.page === 'character') body = <CharacterPage lib={lib} study={study} name={route.name || ''} lens={lens.character} setLens={setLens} source={source} afterSave={sync} />;
@@ -153,12 +163,11 @@ export function StudyApp() {
     <div class="cs">
       <header class="cs-top">
         <a class="cs-brand" href="#/"><img src="./icons/icon.svg" alt="" width="28" height="28" />Crow</a>
-        <nav class="cs-topnav">
-          <a href="#/lenses">Lenses</a>
-          <button type="button" class="cs-sync" onClick={sync}>Refresh</button>
-          <a href="#/settings">Settings</a>
-        </nav>
+        <button type="button" class="cs-menu-btn" aria-expanded={menu} aria-controls="cs-menu" onClick={() => setMenu(!menu)}>
+          <span class="cs-burger" aria-hidden="true"><i /><i /><i /></span>Menu
+        </button>
       </header>
+      {menu && <Menu lib={lib} onRefresh={() => { setMenu(false); sync(); }} onClose={() => setMenu(false)} />}
       {demo && route.page !== 'settings' && <p class="cs-banner">This is a made-up sample. To see your own studies, <a href="#/settings">paste your key in Settings</a>.</p>}
       {error && lib && <p class="cs-banner">{error}</p>}
       <main class="cs-main">{body}</main>
@@ -298,11 +307,172 @@ function Tallies({ study, name }: { study: Study; name: string }) {
   );
 }
 
+// ------------------------------------------------------------------ the menu and the premises
+
+/** Everything built before 2026-11-05, behind one button (Kyle, 2026-11-05: "take everything we've built so far and just
+ *  put it inside a button menu in the app, so that the main area in the app is fresh"). */
+function Menu({ lib, onRefresh, onClose }: { lib: StudyLibrary | null; onRefresh: () => void; onClose: () => void }) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, []);
+  const lab = lib ? lib.studies.find((s) => /konosuba/i.test(s.folder)) || lib.studies.find((s) => s.scenes.length) : undefined;
+  const first = lab && lab.scenes[0];
+  return (
+    <Fragment>
+      <div class="cs-menu-shade" onClick={onClose} />
+      <nav class="cs-menu" id="cs-menu" aria-label="Menu">
+        <a class="cs-menu-main" href="#/">Premises</a>
+        <a class="cs-menu-main" href="#/saved">Saved premises</a>
+        <p class="cs-menu-label">Everything we built so far</p>
+        <a href="#/studies">Studies</a>
+        {lib && lib.studies.map((s) => (
+          <div class="cs-menu-study" key={s.folder}>
+            <a href={studyHref(s)}><strong>{s.title}</strong></a>
+            <div class="cs-menu-sub">
+              <a href={studyHref(s)}>Character</a>
+              <a href={studyHref(s, 'plot')}>Plot</a>
+              <a href={studyHref(s, 'engine')}>Engine</a>
+              <a href={kishoHref(s)}>Kishōtenketsu</a>
+              <a href={traitsHref(s)}>Trait table</a>
+            </div>
+          </div>
+        ))}
+        {lab && first && <a href={sceneHref(lab, first.id, 'beats')}>Testing zone: {first.id} every beat</a>}
+        <a href="#/lenses">Lenses</a>
+        <button type="button" onClick={onRefresh}>Refresh</button>
+        <a href="#/settings">Settings</a>
+      </nav>
+    </Fragment>
+  );
+}
+
+const PREMISE_ORDER = ['Hook', 'Readers expect', 'Our turn', 'The engine'];
+const rank = (k: string): number => (PREMISE_ORDER.indexOf(k) < 0 ? 99 : PREMISE_ORDER.indexOf(k));
+
+/** The fresh front page (Kyle, 2026-11-05): the premises of the story we build step by step, each with a box to tick.
+ *  Ticking one writes its title to the note's `picked` line, so the next step can read it; ticking it again clears it. */
+function PremisesPage({ builds, source, afterSave }: { builds: Build[]; source: VaultSource; afterSave: () => Promise<void> }) {
+  const [saving, setSaving] = useState('');
+  const [note, setNote] = useState('');
+  const [mine, setMine] = useState<Record<string, string>>({});
+  const canSave = !!source.write && !!source.readFresh;
+  if (!builds.length) return (
+    <section class="cs-premises">
+      <h1>Premises</h1>
+      <p class="cs-note">No premises yet. Ask in the Crow project's chat and they appear here.</p>
+    </section>
+  );
+  const pick = async (b: Build, title: string) => {
+    const was = b.folder in mine ? mine[b.folder] : b.picked;
+    const next = was === title ? '' : title;
+    setMine({ ...mine, [b.folder]: next });
+    setSaving(b.folder);
+    setNote('Saving your pick…');
+    try {
+      const fresh = await source.readFresh!(b.path);
+      await source.write!(b.path, setPicked(fresh.text, next), fresh.sha, next ? 'build: pick the premise "' + next + '"' : 'build: clear the picked premise');
+      await afterSave();
+      setNote(next ? 'Saved. We build ' + next + ' next.' : 'Cleared. Tick the one you want.');
+    } catch (e) {
+      setMine({ ...mine, [b.folder]: was });
+      setNote(((e as Error).message || 'The pick could not be saved.') + ' Try again in a minute.');
+    } finally {
+      setSaving('');
+    }
+  };
+  return (
+    <section class="cs-premises">
+      <h1>Premises</h1>
+      {note && <p class="cs-note" role="status">{note}</p>}
+      {builds.map((b) => {
+        const picked = b.folder in mine ? mine[b.folder] : b.picked;
+        return (
+          <div key={b.folder}>
+            {b.lane && <p class="cs-lane"><span class="cs-quiet">Lane</span> <strong>{b.lane}</strong></p>}
+            <p class="cs-quiet">{b.name}: tick the one we build out, step by step.</p>
+            <ol class="cs-premise-list">
+              {b.premises.map((pr) => {
+                const on = picked === pr.title;
+                const kind = pr.lines.find(([k]) => k === 'Kind');
+                return (
+                  <li key={pr.title} class={'cs-premise' + (on ? ' on' : '')}>
+                    <label class="cs-premise-head">
+                      <input type="checkbox" checked={on} disabled={!canSave || saving === b.folder} onChange={() => pick(b, pr.title)} />
+                      <span>
+                        <strong>{pr.title}</strong>
+                        {kind && <span class="cs-quiet">{kind[1]}</span>}
+                      </span>
+                      {on && <span class="cs-premise-badge">Picked</span>}
+                    </label>
+                    <PremiseLines p={pr} />
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+/** A premise's lines other than Kind, Hook first and The engine last. */
+function PremiseLines({ p, skip = [] }: { p: Premise; skip?: string[] }) {
+  const rest = p.lines.filter(([k]) => k !== 'Kind' && !skip.includes(k)).sort((x, y) => rank(x[0]) - rank(y[0]));
+  return <dl class="cs-reading">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>;
+}
+
+/** Saved premises (Kyle, 2026-11-05): every premise in the Premise Bank, kept for good, newest last. */
+function SavedPage({ bank }: { bank: Premise[] }) {
+  return (
+    <section class="cs-premises">
+      <h1>Saved premises</h1>
+      <p class="cs-quiet">Premises you liked, kept for good. To save one, say so in the Crow chat.</p>
+      {!bank.length && <p class="cs-note">None saved yet.</p>}
+      <ol class="cs-premise-list">
+        {bank.map((pr) => {
+          const get = (k: string) => (pr.lines.find(([x]) => x === k) || ['', ''])[1];
+          return (
+            <li key={pr.title} class="cs-premise">
+              <div class="cs-premise-head cs-premise-saved">
+                <span>
+                  <strong>{pr.title}</strong>
+                  {get('Kind') && <span class="cs-quiet">{get('Kind')}</span>}
+                </span>
+              </div>
+              <p class="cs-quiet cs-saved-meta">{[get('Lane'), get('Saved')].filter(Boolean).join(' · ')}</p>
+              <PremiseLines p={pr} skip={['Lane', 'Saved']} />
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------ pages
+
+/** The testing zone (Kyle, 2026-10-28: "bring this view one button click away from the front page"): the first scene's
+ *  beats, broken into every McKee beat, one tap from the front page. Konosuba when it is there, else the first study. */
+function BeatLab({ lib }: { lib: StudyLibrary }) {
+  const study = lib.studies.find((s) => /konosuba/i.test(s.folder)) || lib.studies.find((s) => s.scenes.length);
+  const s = study && study.scenes[0];
+  if (!study || !s) return null;
+  return (
+    <a class="cs-lab" href={sceneHref(study, s.id, 'beats')}>
+      <span class="cs-quiet">Testing zone · {study.title}</span>
+      <strong>{s.id} {s.title}: every beat</strong>
+      <span>{s.plot.beats.length} beats, each an action and the reaction to it (McKee)</span>
+    </a>
+  );
+}
 
 function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
   return (
     <section>
+      <BeatLab lib={lib} />
       <h1>Studies</h1>
       {missing && <p class="cs-note">There is no study called {missing}. Pick one below.</p>}
       {!lib.studies.length && <p class="cs-note">No studies yet. Paste a chapter in the Crow project's chat and the first one appears here.</p>}
@@ -323,7 +493,7 @@ function HomePage({ lib, missing }: { lib: StudyLibrary; missing: string }) {
 function StudyHead({ study, tab }: { study: Study; tab: Tab }) {
   return (
     <div class="cs-head">
-      <a class="cs-back" href="#/">Studies</a>
+      <a class="cs-back" href="#/studies">Studies</a>
       <h1>{study.title}</h1>
       <p class="cs-quiet">{[study.author, study.medium].filter(Boolean).join(', ')}</p>
       <Tabs study={study} tab={tab} />
@@ -439,6 +609,16 @@ function PartKey() {
   );
 }
 const partClass = (p: Part): string => (p === 'shō' ? 'sho' : p || 'none');
+
+/** The key to the beats' left strips (Kyle, 2026-10-28: "color the left side strip of each bubble one of 4 colors to mark
+ *  it as ki, sho, ten, or ketsu"). */
+function StripKey() {
+  return (
+    <p class="cs-quiet cs-part-key">
+      {PARTS.map((p) => <span key={p}><span class={'cs-strip-swatch strip-' + partClass(p)} />{PART_LABEL[p]}: {PART_WORDS[p]}</span>)}
+    </p>
+  );
+}
 
 /** One beat as a block coloured by its part. */
 function PartBeat({ b }: { b: Beat }) {
@@ -921,6 +1101,42 @@ function SceneRead({ s }: { s: StudyScene }) {
   );
 }
 
+/** The Writer's Kit above the beats (Kyle, 2026-10-28: "what character elements might the author have used to help these
+ *  characters act characteristically? maybe put this in a little section above the beats"). Lines "- Name · Field: text"
+ *  are grouped under that character's icon; any other line is shown after them. */
+function WritersKit({ study, s, source }: { study: Study; s: StudyScene; source: VaultSource }) {
+  const r = s.plot.readings["Writer's Kit"];
+  if (!r || !r.length) return null;
+  const ps = players(s);
+  const groups: { name: string; rows: [string, string][] }[] = [];
+  const rest: [string, string][] = [];
+  for (const [k, v] of r) {
+    const m = /^(.+?)\s+·\s+(.+)$/.exec(k);
+    if (!m) { rest.push([k, v]); continue; }
+    let g = groups.find((x) => x.name === m[1]);
+    if (!g) { g = { name: m[1], rows: [] }; groups.push(g); }
+    g.rows.push([m[2], v]);
+  }
+  return (
+    <section class="cs-kit">
+      <h2>Writer's kit</h2>
+      <p class="cs-quiet">What the author seems to give each character so they act true to type. Inferred from the page.</p>
+      <div class="cs-kit-cast">
+        {groups.map((g) => {
+          const p = ps.find((x) => x.name === g.name);
+          return (
+            <div class="cs-kit-one" key={g.name}>
+              <div class="cs-kit-who"><Token study={study} source={source} name={g.name} role={p ? p.role : ''} /><b>{g.name}</b></div>
+              <dl class="cs-reading">{g.rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>
+            </div>
+          );
+        })}
+      </div>
+      {rest.length > 0 && <dl class="cs-reading cs-kit-rest">{rest.map(([k, v], i) => <div key={i}>{k && <dt>{k}</dt>}<dd dangerouslySetInnerHTML={{ __html: inline(v) }} /></div>)}</dl>}
+    </section>
+  );
+}
+
 /** Beat by beat, each with the icon of who caused it and its kind; the turning beat stands out. */
 function SceneBeats({ study, s, source }: { study: Study; s: StudyScene; source: VaultSource }) {
   const v = valueShift(s);
@@ -932,18 +1148,20 @@ function SceneBeats({ study, s, source }: { study: Study; s: StudyScene; source:
         {(v.from || v.to) && <Shift v={v} />}
         {at > 0 && s.plot.link && <p>Link from {study.scenes[at - 1].id}: <span class={'cs-joint ' + linkClass(s.plot.link)}>{linkWord(s.plot.link)}</span></p>}
       </div>
+      <WritersKit study={study} s={s} source={source} />
       {!s.plot.beats.length && <p class="cs-note">No beats yet. The team adds them when it reads the scene.</p>}
+      {s.plot.beats.some((b) => b.part) && <StripKey />}
       <ol class="cs-beatlist">
         {s.plot.beats.map((b, i) => {
           const who = beatOwner(s, b);
           const p = ps.find((x) => x.name === who);
           return (
-            <li key={i} class={b.turning ? 'turning' : ''}>
+            <li key={i} class={'strip-' + partClass(b.part) + (b.turning ? ' turning' : '')}>
               <span class="cs-beat-n">{i + 1}</span>
               <Token study={study} source={source} name={who || '?'} role={p ? p.role : ''} size="l" />
               <span class="cs-beat-body">
                 <span class="cs-beat-text" dangerouslySetInnerHTML={{ __html: inline(b.text) }} />
-                <span class="cs-beat-meta"><span class="cs-quiet">{[who, b.kind].filter(Boolean).join(' · ')}</span>{b.turning && <span class="cs-turn-badge">Turning beat</span>}</span>
+                <span class="cs-beat-meta"><span class="cs-quiet">{[who, b.kind].filter(Boolean).join(' · ')}</span>{b.part && <span class={'cs-strip-tag strip-' + partClass(b.part)}>{PART_LABEL[b.part]}</span>}{b.turning && <span class="cs-turn-badge">Turning beat</span>}</span>
               </span>
             </li>
           );

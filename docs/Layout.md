@@ -122,6 +122,7 @@ demo-vault/              a tiny vault that follows the schema, for tests and the
 tests/                   Node test runner tests
 tests/golden/            what a save must leave in the vault, file for file, one .json a case (`leaves` in tests/helpers.ts); first written from the older note-by-note saving code just before it was removed (2026-11-11). `GOLDEN=write npm test` writes them again for a change that is meant
 src/lib/study.ts         Crow, the character and plot study app: Studies/ notes (studies, character cards, scenes read for character and plot, lenses), tallies of the best lens
+src/lib/build.ts         Crow's story builds (2026-11-05): the premises note under Studies/Builds/, writing the picked premise, and the Premise Bank
 src/study/               Crow's page (crow/index.html): main.tsx, StudyApp.tsx (its screens and Settings), study.css
 public/crow/             Crow's manifest and icons (its own home-screen app); public/character-study/ sends the old address to crow/
 ```

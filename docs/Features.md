@@ -992,6 +992,24 @@ app like Crow, so it uses the same key, sync and offline copy (Claude's choice; 
 
 ## Crow, the character and plot study app (2026-10-26; first called Character Study)
 
+- **A fresh front page and the Menu** (Kyle, 2026-11-05: "take everything we've built so far and just put it inside a
+  button menu in the app, so that the main area in the app is fresh when we go into it ... we're going to experiment
+  with a brand new interface now"). Crow opens on **Premises**. Everything below this list, unchanged, is behind the
+  **Menu** button at the top right: Studies (the old front page, now `#/studies`), each study with its Character, Plot,
+  Engine, Kishōtenketsu and Trait table, the testing zone (SC-001 every beat), Lenses, Refresh and Settings. Tapping
+  outside or Escape closes it.
+- **Premises** (Kyle, 2026-11-05: "a list that says "Premises" in the app that has the four, and then there will be a
+  checkbox that I can put on one of them to say that's the premise I want us to work with. I want us to slowly build out
+  a story step by step"). The vault's `Studies/Builds/<Build>/Premises.md` (type `build-premises`): one `##` section per
+  premise with Kind, Hook, Readers expect, Our turn and The engine lines. Each premise is a card with a box to tick.
+  Ticking one writes its title to the note's `picked` line (a commit with Kyle's key; only that line changes) and
+  unticks the others; ticking it again clears it. The team's next step reads `picked`.
+  The build's `lane` (Kyle, 2026-11-05: "let's cement down 4 as our target") shows above the list.
+- **Saved premises** (Kyle, 2026-11-05: "create some kind of place where you can store these permanently so that we can
+  always go back to them"). In the Menu. Shows the vault's `Studies/Builds/Premise Bank.md` (type `premise-bank`): every
+  premise Kyle wanted kept, with its lane and when it was saved, whatever a build picks later. The team adds to it when
+  Kyle asks; the app only reads it.
+
 Kyle: "an app that assists me in studying the characters of good, already written stories ... we're going to analyze
 these stories scene by scene and build out the characters", with "various views that we can cycle through", and the
 plot studied beside it: "tabs so that I am focusing on just character or just plot". Its own page at
@@ -1053,6 +1071,16 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
   every beat as a block coloured by its part with who caused it, and the lens's "What the turn re-reads" line. Between
   scenes, the handoff: the last scene's ketsu beats beside this scene's ki beats, the link word and why the scene comes
   next. The part is the last tag of a beat (`- Aqua (reveal, turning, ten): ...`).
+- **The testing zone** (Kyle, 2026-10-28: "bring this view one button click away from the front page ... This is a
+  really important testing zone for us"). A large button at the top of Crow's front page opens SC-001's Beats tab
+  straight away (Konosuba's first scene, or the first study's). SC-001 is broken into every beat by McKee's definition,
+  an action and the reaction to it, with the kind written `action / reaction`.
+  Above the beats, the **Writer's kit** (Kyle, 2026-10-28: "what character elements might the author have used to help
+  these characters act characteristically? maybe put this in a little section above the beats"): the scene's
+  `### Writer's Kit` lines (`- Kazuma · Label: ...`) grouped under each character's icon, then lines about the pair.
+  Each beat's **left strip** is coloured by its kishōtenketsu part (Kyle, 2026-10-28: "color the left side strip of
+  each bubble one of 4 colors to mark it as ki, sho, ten, or ketsu"): ki blue, shō green, ten red, ketsu amber, from
+  the theme's colours, with a key above the list and the part's name on each beat.
 - Lenses page: every lens with its framework and source. A new lens is a new note, no app change. The Two Essentials
   lens waits for the tweet Kyle shared (not found in the vault).
 - Without Sparrow's key it shows a made-up sample study from the demo vault.
