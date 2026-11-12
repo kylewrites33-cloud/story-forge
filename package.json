@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/*.test.ts\"",
+    "test:webkit": "bash tests/webkit/run.sh",
     "icons": "node scripts/make-icons.js",
     "sync-parser": "node scripts/sync-parser.js"
   },

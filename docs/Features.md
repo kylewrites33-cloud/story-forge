@@ -1801,4 +1801,14 @@ sees or anything in the vault changes. This section grows as each piece goes liv
   are the ones Kyle's devices already hold, so nothing was moved and nothing is forgotten.** A new setting is one line
   in `PREF` and one in that test's list. What must follow Kyle between devices does not belong here: it goes in the
   vault (as "used" did in step 4).
-
+- **Page checks in the iPad's engine on every change (2026-11-12, second piece).** Kyle's iPad runs WebKit, and bugs
+  there (cursor, scroll, typing) often do not show in Chrome. Six checks that were kept outside the repository now
+  live in `tests/webkit/` and run on every pull request in a real WebKit (WebKitGTK, driven over plain WebDriver, at
+  1180x820 and 1366x1024): typing and styling in a long chapter (`box`), saving offline, reconnecting and merging with
+  the team's lines (`live`), adding, moving and deleting chapters (`chapters`), Accept, Reject and Undo in the Edit room
+  (`edit`), the Rewrite tab's light staying inside the page (`light`), and the team watcher and failure sentence
+  (`watch`). They drive the built app against a pretend GitHub that starts from `demo-vault/` (`fake.mjs`). The
+  `webkit` job in `.github/workflows/pages.yml` runs them (about ten minutes); a merge to main still deploys after
+  the unit tests and build alone. Locally: `npm run build`, `npx vite preview --port 4173`, `npm run test:webkit`
+  (needs `webkit2gtk-driver` and `xvfb`). The Chromium copies and the rest of the saving checks stay in the project
+  files' `app/saving-checks/`.

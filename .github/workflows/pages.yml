@@ -30,6 +30,27 @@ jobs:
         with:
           path: dist
 
+  # The page checks in a real WebKit, the engine Kyle's iPad runs (tests/webkit/): typing in a long chapter, saving
+  # offline, moving a chapter, keeping a change, the Rewrite light, the team watcher. On every pull request; a red one
+  # means the iPad would break.
+  webkit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends webkit2gtk-driver xvfb
+      - run: |
+          npx vite preview --port 4173 --strictPort &
+          sleep 3
+          bash tests/webkit/run.sh
+
   deploy:
     if: github.event_name != 'pull_request'
     needs: build
