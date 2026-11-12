@@ -404,7 +404,7 @@ export function ChangesOverview({ book, chapters, calls, firstScene, rewrite }: 
     <section class="changes-overview">
       <p class="crumb"><a href={href.board('overview', book.folder)}>{book.title}</a> · Changes</p>
       <h1>Changes</h1>
-      <p class="hint">Turning draft 1 into the final draft (workflow steps 35 to 42). From draft 1 to draft 2, the Writer rewrites the whole book, one chapter at a time, and its rewrite sits beside your page for you to pull from, paragraph by paragraph. The editor's story calls come first. From draft 2 on, the team's changes wait on your page for Accept or Reject, as track changes do in Word.</p>
+      <p class="hint">Turning draft 1 into the final draft (workflow steps 35 to 42). For draft 2, the Writer rewrites the whole book, one chapter at a time, and its rewrite sits beside your page for you to pull from, paragraph by paragraph. The editor's story calls come first. For draft 3 on, the team's changes wait on your page for Accept or Reject, as track changes do in Word.</p>
       <div class="changes-steps">
         {rewrite && (
           <a class="changes-step" href={rewrite.next ? href.write(rewrite.next) : rewrite.first ? href.write(rewrite.first) : firstScene ? href.write(firstScene) : href.board('overview', book.folder)}>

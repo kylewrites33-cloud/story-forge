@@ -14,7 +14,7 @@ export type BookPhase = 'planning' | 'writing' | 'rewrite' | 'changes' | 'publis
 
 export interface BookStatus {
   phase: BookPhase;
-  /** The stage in plain words: "Draft 1 to 2: the rewrite". */
+  /** The stage in plain words: "Draft 2: the rewrite", named by the draft being made (Kyle, 2026-11-12). */
   stage: string;
   /** How much of that stage is done, 0 to 100; null when there is nothing to count. */
   percent: number | null;
@@ -51,7 +51,7 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
 
   const working = workingNumber(book.drafts || []);
 
-  // Draft 1 to 2: Kyle's pass through the Writer's rewrite, chapter by chapter ("Done with this chapter").
+  // Draft 2: Kyle's pass through the Writer's rewrite, chapter by chapter ("Done with this chapter").
   const through = rewriteDone(note ? { data: note.data as Record<string, unknown> } : null);
   const rw = rewriteProgress(book.rewrite || [], scenes, through);
   if (rw.done > 0 && rw.through < rw.total) {
@@ -59,7 +59,7 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
     // The last chapter he opened, unless he already called it through and has moved on: then the next one.
     const here = lastNote && lastCh != null && through.indexOf(lastCh) < 0 && rewriteFor(book.rewrite || [], lastNote) ? lastNote.path : null;
     return {
-      phase: 'rewrite', stage: 'Draft ' + Math.max(1, working - 1) + ' to ' + Math.max(2, working) + ': the rewrite',
+      phase: 'rewrite', stage: 'Draft ' + Math.max(2, working) + ': the rewrite',
       percent: pct(rw.through, rw.total), detail: rw.through + ' of ' + rw.total + ' chapters through',
       active: true, go: here || rw.next || rw.first, goLabel: 'Keep editing', at
     };
@@ -79,7 +79,7 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
     const lastCh = chapterOf(lastNote);
     const here = lastNote && waiting.some((c) => c.chapter === lastCh) ? lastNote.path : null;
     return {
-      phase: 'changes', stage: 'Draft ' + working + ' to ' + (working + 1) + ': changes',
+      phase: 'changes', stage: 'Draft ' + working + ': changes',
       percent: pct(all - open, all), detail: open + (open === 1 ? ' change' : ' changes') + ' waiting in ' + waiting.length + (waiting.length === 1 ? ' chapter' : ' chapters'),
       active: true, go: here || waiting[0].path, goLabel: 'Keep editing', at
     };
