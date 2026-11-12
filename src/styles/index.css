@@ -1,0 +1,19 @@
+/* Sparrow's styles, in the order they apply. Each file is brought in whole, one after the other.
+   app.css               everything up to the themes: the frame, boards, the writing page
+   themes/colours.css    the eleven colour themes, each one line of values, and how loud their buttons are
+   themes/<name>.css     a theme with its own shapes and fonts (a "skin"), one file each; square-skins.css is what the
+                         three square light ones share and comes before them
+   app-after-themes.css  pages added since; some of its rules count on coming after the themes
+   A new colour theme: one line in themes/colours.css and one entry in src/lib/theme.ts (tests/theme.test.ts checks
+   they match). A new skin: also a file here, listed below. */
+@import './app.css';
+@import './themes/colours.css';
+@import './themes/square-skins.css';
+@import './themes/marigold.css';
+@import './themes/lofi.css';
+@import './themes/retro.css';
+@import './themes/typewriter.css';
+@import './themes/library.css';
+@import './themes/pebble.css';
+@import './themes/prism.css';
+@import './app-after-themes.css';

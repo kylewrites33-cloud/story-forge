@@ -1,6 +1,6 @@
 import { PREF, readPref, writePref } from './prefs.ts';
 // The app's colours: eight light themes and ten dark ones, or Match this device (Violet by day, Violet Night by night).
-// The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
+// The colours themselves live in src/styles/themes/ (one line of values a colour theme, one file a skin); this file names them and remembers the choice per device.
 // Some dark ids are older than their names (midnight is Graphite, ember Warm Clay, forest Claude) so a saved choice still works.
 
 export interface Theme {

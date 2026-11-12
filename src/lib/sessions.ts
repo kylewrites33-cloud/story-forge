@@ -94,7 +94,7 @@ const ROSTER = ['Story Specialist', 'Plot Specialist', 'Character Specialist', '
   'Line Editor', 'Beta Reader', 'Continuity Keeper', 'Market Analyst', 'Contrarian', 'Coordinator'];
 export const VOICE_COLOURS = 12;
 
-/** The CSS colour for a speaker: Kyle in the accent colour, each agent in one of the --voice-N colours (styles.css). */
+/** The CSS colour for a speaker: Kyle in the accent colour, each agent in one of the --voice-N colours (src/styles/app.css). */
 export function voiceColour(name: string): string {
   const n = name.trim().toLowerCase();
   if (n === 'kyle' || n === 'showrunner' || n === 'kyle (showrunner)') return 'var(--accent)';

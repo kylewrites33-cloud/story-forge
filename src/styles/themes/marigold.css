@@ -1,0 +1,64 @@
+/* Marigold (Kyle, 2026-10-23, from a book-app design he sent: "different buttons and ui element changes that match a color
+   theme, including different font choices"): cream pages, black outlines, square corners, a yellow top bar, flat orange
+   buttons with black words, a typewriter font (Space Mono) and Space Grotesk headings. The fonts ship with the app (SIL OFL,
+   src/fonts), so they work offline, and load only when this theme is on. */
+@font-face { font-family: "Space Mono"; font-weight: 400; font-style: normal; font-display: swap; src: url("../../fonts/space-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Mono"; font-weight: 400; font-style: italic; font-display: swap; src: url("../../fonts/space-mono-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Space Mono"; font-weight: 700; font-style: normal; font-display: swap; src: url("../../fonts/space-mono-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Mono"; font-weight: 700; font-style: italic; font-display: swap; src: url("../../fonts/space-mono-latin-700-italic.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 500; font-style: normal; font-display: swap; src: url("../../fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 700; font-style: normal; font-display: swap; src: url("../../fonts/space-grotesk-latin-700-normal.woff2") format("woff2"); }
+:root[data-theme="marigold"], .theme-card[data-theme="marigold"] {
+  --bg: #fdebd3; --surface: #fef3e4; --rail: #fdebd3; --hover: #f9dfbd; --text: #141414; --muted: #5b4a39; --line: #141414;
+  --accent: #a63c0a; --accent-soft: #fbd9b4; --on-accent: #141414;
+  --orange: #f47333; --yellow: #f8dc3d;
+  --fill: var(--orange); --fill-line: #141414; --on-fill: #141414;
+  --hero-bg: var(--orange); --on-hero: #141414; --hero-line: #141414; --hero-kicker: #141414; --hero-go: var(--surface); --on-hero-go: #141414;
+  --next-bg: var(--yellow); --kicker: #141414; --next-go: var(--orange); --next-go-line: #141414; --on-next-go: #141414;
+  --badge: var(--orange); --on-badge: #141414;
+  --shadow: none; --shadow-lift: 4px 4px 0 #141414; --radius: 0px;
+  --mono: "Space Mono", ui-monospace, Menlo, monospace;
+  --serif: "Space Grotesk", -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="marigold"] body { font-family: var(--mono); font-size: 17px; letter-spacing: -0.01em; }
+:root[data-theme="marigold"] :is(h1, h2, h3, .home-title, .card-title, .book-title, .top-title-text, .writer-title, .hero-text b, .brand) { font-family: var(--serif); letter-spacing: 0; }
+:root[data-theme="marigold"] :is(button, select, input, textarea, .card, .book-link, .hero-card, .bar-button, a.button) { border-width: 1.5px; }
+:root[data-theme="marigold"] :is(button, a.button, .bar-button) { font-family: var(--mono); letter-spacing: -0.01em; }
+:root[data-theme="marigold"] button.primary { font-weight: 700; }
+:root[data-theme="marigold"] button:not(:disabled):active { transform: translate(1px, 1px); }
+:root[data-theme="marigold"] button.soft, :root[data-theme="marigold"] .top-team { background: var(--yellow); border: 1.5px solid #141414; color: #141414; }
+:root[data-theme="marigold"] .top-team.on, :root[data-theme="marigold"] .bar-team.on { background: var(--orange); }
+:root[data-theme="marigold"] .bar-team { background: var(--surface); border: 1.5px solid #141414; color: #141414; }
+/* Switches (Page, Beats, Whole chapter; Chat, Scene, Chapter) as a row of boxes, the chosen one orange. */
+:root[data-theme="marigold"] :is(.view-seg) { background: none; padding: 0; gap: 6px; }
+:root[data-theme="marigold"] :is(.view-seg button) { border: 1.5px solid #141414; background: var(--surface); color: #141414; }
+:root[data-theme="marigold"] :is(.view-seg button[aria-pressed="true"]) { background: var(--orange); box-shadow: none; }
+:root[data-theme="marigold"] .writer-right { border-left: 1.5px solid #141414; }
+:root[data-theme="marigold"] :is(.tabs button, .tabs a.button) { min-height: 40px; padding: 4px 12px; font-size: 0.88rem; }
+:root[data-theme="marigold"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"], button.chip.on) { background: var(--orange); border-color: #141414; color: #141414; font-weight: 400; }
+/* The yellow bar across the top, and the writing screen's bar. */
+:root[data-theme="marigold"] :is(.top-bar, .writer-bar) { background: var(--yellow); border-bottom: 1.5px solid #141414; }
+:root[data-theme="marigold"] .top-find { background: var(--surface); border: 1.5px solid #141414; color: var(--text); }
+:root[data-theme="marigold"] .rail { border-right: 1.5px solid #141414; }
+:root[data-theme="marigold"] .rail-item[aria-current="page"] { background: none; color: var(--accent); font-weight: 700; }
+:root[data-theme="marigold"] .hero-card:hover { filter: none; }
+:root[data-theme="marigold"] .hero-go { border: 1.5px solid #141414; }
+:root[data-theme="marigold"] .theme-card[aria-pressed="true"] { box-shadow: 4px 4px 0 #141414; }
+.theme-card[data-theme="marigold"] { font-family: "Space Mono", ui-monospace, Menlo, monospace; border-radius: 0; border-color: #141414; }
+.theme-card[data-theme="marigold"] :is(.theme-preview, .tp-rail i, .tp-page b, .tp-page i) { border-radius: 0; border-color: #141414; }
+.theme-card[data-theme="marigold"] .tp-rail { border-color: #141414; }
+.theme-card[data-theme="marigold"] .tp-page em { border-radius: 0; background: #f47333; border: 1px solid #141414; }
+:root[data-theme="marigold"] input[type="checkbox"] { background-color: var(--surface); border: 2px solid #141414; }
+:root[data-theme="marigold"] input[type="checkbox"]:checked {
+  background-color: var(--orange);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='%23141414' stroke-width='3.6' stroke-linecap='square'/%3E%3C/svg%3E");
+}
+/* Marigold titles (Kyle, 2026-10-23: "our marigold title case could be a bit better"): big, tight Space Grotesk with a
+   yellow marker stroke behind the lower half, like the yellow bar in his example. */
+:root[data-theme="marigold"] :is(h1, .home-title) {
+  font-family: var(--serif); font-weight: 700; font-size: 2.5rem; line-height: 1.08; letter-spacing: -0.035em;
+  width: fit-content; max-width: 100%; padding: 0 0.12em; margin-left: -0.12em;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%, var(--yellow) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+:root[data-theme="marigold"] :is(h2, h3, .card-title) { font-weight: 700; letter-spacing: -0.02em; }

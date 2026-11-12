@@ -1,7 +1,7 @@
 // Crow (2026-10-26; first called Character Study): the character and plot study app, its own page and home-screen icon
 // beside Sparrow at crow/. Same colours as Sparrow; its own key when it runs from its own icon.
 import { render } from 'preact';
-import '../styles.css';
+import '../styles/index.css';
 import './study.css';
 import { startTheme } from '../lib/theme.ts';
 import { StudyApp } from './StudyApp.tsx';

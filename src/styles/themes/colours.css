@@ -1,0 +1,31 @@
+/* Colour themes (Settings, theme.ts). Each card in Settings carries data-theme too, so it previews its own colours.
+   The other dark themes are near-black and quiet; the button style below sets how much colour they use. */
+:root[data-theme="violet"], .theme-card[data-theme="violet"] { --bg: #f6f6f8; --surface: #ffffff; --rail: #fbfbfc; --hover: #f0eff4; --text: #1c1a22; --muted: #646171; --line: #e5e3ea; --accent: #6344d4; --accent-soft: #eeeafd; --on-accent: #ffffff; }
+:root[data-theme="parchment"], .theme-card[data-theme="parchment"] { --bg: #f5f0e6; --surface: #fffdf8; --rail: #f9f5ec; --hover: #efe7d8; --text: #2b241b; --muted: #6b5e4e; --line: #e3d9c6; --accent: #9a4a1c; --accent-soft: #f5e4d4; --on-accent: #ffffff; }
+:root[data-theme="sage"], .theme-card[data-theme="sage"] { --bg: #f2f5f1; --surface: #ffffff; --rail: #f7f9f6; --hover: #e7eee5; --text: #1b231d; --muted: #596a5d; --line: #dae3d8; --accent: #2f7046; --accent-soft: #e0efe3; --on-accent: #ffffff; }
+:root[data-theme="sky"], .theme-card[data-theme="sky"] { --bg: #f2f6fa; --surface: #ffffff; --rail: #f8fafc; --hover: #e7eef6; --text: #17202b; --muted: #56657a; --line: #d9e2ec; --accent: #1f5fa8; --accent-soft: #e1ecf9; --on-accent: #ffffff; }
+:root[data-theme="rose"], .theme-card[data-theme="rose"] { --bg: #faf4f5; --surface: #ffffff; --rail: #fcf8f9; --hover: #f3e7ea; --text: #2a1d21; --muted: #725c64; --line: #ebdde2; --accent: #a8325c; --accent-soft: #f8e2ea; --on-accent: #ffffff; }
+:root[data-theme="violet-night"], .theme-card[data-theme="violet-night"] { --bg: #16151b; --surface: #201f27; --rail: #1b1a21; --hover: #2a2933; --text: #efeef3; --muted: #aaa7b6; --line: #34323d; --accent: #a891ff; --accent-soft: #2f2852; --on-accent: #16151b; }
+:root[data-theme="midnight"], .theme-card[data-theme="midnight"] { --bg: #0f1011; --surface: #17181a; --rail: #0c0d0e; --hover: #1f2023; --text: #f2f2f3; --muted: #9a9ca2; --line: #26282b; --accent: #8ab4f8; --accent-soft: #1b2230; --on-accent: #0f1011; }
+:root[data-theme="ember"], .theme-card[data-theme="ember"] { --bg: #0f1011; --surface: #17181a; --rail: #0c0d0e; --hover: #1f2023; --text: #f2f2f3; --muted: #9a9ca2; --line: #26282b; --accent: #e38a69; --accent-soft: #2a1d18; --on-accent: #0f1011; }
+:root[data-theme="ink"], .theme-card[data-theme="ink"] { --bg: #0f1011; --surface: #17181a; --rail: #0c0d0e; --hover: #1f2023; --text: #f2f2f3; --muted: #9a9ca2; --line: #26282b; --accent: #8b93ff; --accent-soft: #1c1e2e; --on-accent: #0f1011; }
+:root[data-theme="forest"], .theme-card[data-theme="forest"] { --bg: #151515; --surface: #1c1c1b; --rail: #111111; --hover: #2a2a29; --text: #f9f9f7; --muted: #a8a79f; --line: #2e2e2c; --accent: #2fb383; --accent-soft: #15221e; --on-accent: #151515; }
+:root[data-theme="black"], .theme-card[data-theme="black"] { --bg: #000000; --surface: #121212; --rail: #000000; --hover: #1f1f1f; --text: #ffffff; --muted: #a7a7a7; --line: #2a2a2a; --accent: #0a84ff; --accent-soft: #0b1a2c; --on-accent: #000000; }
+/* How loud the buttons are. Filled (Violet Night and the light themes): big cards and buttons in the accent. Quiet: grey
+   buttons with the accent in their words. Ink: white buttons. Both keep colour to words and small marks (Kyle, 2026-10-22). */
+:root[data-theme="midnight"], .theme-card[data-theme="midnight"], :root[data-theme="ember"], .theme-card[data-theme="ember"] {
+  --fill: var(--hover); --fill-line: var(--line); --on-fill: var(--accent); --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line);
+  --hero-kicker: var(--accent); --hero-go: var(--hover); --on-hero-go: var(--text); --next-bg: var(--surface);
+}
+:root[data-theme="ink"], .theme-card[data-theme="ink"], :root[data-theme="forest"], .theme-card[data-theme="forest"], :root[data-theme="black"], .theme-card[data-theme="black"] {
+  --fill: var(--text); --fill-line: var(--text); --on-fill: var(--bg); --hero-bg: var(--surface); --on-hero: var(--text); --hero-line: var(--line);
+  --hero-kicker: var(--muted); --hero-go: var(--text); --on-hero-go: var(--bg); --next-bg: var(--surface);
+}
+/* Claude (Kyle, 2026-10-22: "these dark green and blue button shapes ... green, blue, and orange, with the ocassional white
+   pop"): Keep writing is a dark green shape, Next step and the team's chat replies dark blue ones, orange for kickers and
+   counts, white for the main buttons. Colours taken from Kyle's screenshots of the Claude app. */
+:root[data-theme="forest"], .theme-card[data-theme="forest"] {
+  --hero-bg: #15221e; --hero-line: #1f3a2f; --hero-kicker: #2fb383;
+  --next-bg: #171f28; --next-go: #2e353d; --next-go-line: #2e353d; --on-next-go: #f9f9f7; --kicker: #e0896a;
+  --team-msg: #171f28; --team-msg-line: #171f28; --badge: #e0896a; --on-badge: #151515;
+}

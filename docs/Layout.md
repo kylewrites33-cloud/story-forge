@@ -36,7 +36,7 @@ src/lib/covers.ts        book covers: shrink on the device, the two files to sav
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name, its backup copy ready to save (backupFile)
 src/lib/epub.ts          the Kindle file: the book as an EPUB 3 for KDP (screens boxed, Book Matter pages, cover), the matter page's editing
-src/lib/theme.ts         colour themes per device: Match this device, eight light, six dark (colours in styles.css)
+src/lib/theme.ts         colour themes per device: Match this device, eight light, six dark (colours in src/styles/themes/)
 src/fonts/               Space Mono and Space Grotesk (Marigold theme, Typewriter page font), Pixelify Sans and DotGothic16 (Lo-Fi theme), VT323 (Retro OS theme), Literata (Library), Nunito (Pebble), Archivo (Prism); woff2, SIL OFL licences beside them
 src/lib/topbar.ts        room at the top for the iPad clock bar and window button (ios-app, ios-window), Settings override
 src/ui/Home.tsx          the home page (Books, Series) and a series' page
@@ -162,3 +162,4 @@ src/vault/words.ts       the writing page's own saves through the saving system,
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it
 src/vault/choice.ts      a choice on a board (Choice: keep, later, drop, Rewrite, an edit to a card, a card dragged) and what it changes on a note
 tests/webkit/            page checks in a real WebKit, run on every pull request (the `webkit` job): run.sh; fake.mjs (a pretend GitHub that starts from demo-vault/); box, live, chapters, edit, light, watch; trial-text.mjs and light-measure.mjs are their helpers
+src/styles/index.css     THE STYLESHEET, as its parts in the order they apply: app.css (the frame, boards, the writing page), themes/colours.css (the eleven colour themes, one line of values each, and how loud their buttons are), themes/square-skins.css then one file per skin (marigold, lofi, retro, typewriter, library, pebble, prism: a theme with its own shapes and fonts), app-after-themes.css (pages added since; some rules count on coming after the themes). tests/theme.test.ts holds the order and that a skin's file styles only its own theme
