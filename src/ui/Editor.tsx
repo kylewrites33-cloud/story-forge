@@ -1771,7 +1771,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange, changes: chAll.filter((c) => c.scene === sceneOf(n)), scene: sceneOf(n) } : null} />
             </div>
           ))}
-          {hasRewrite && onRewriteThrough && (
+          {/* Only while the Writer's rewrite is the work, in draft 2: from draft 3 on, the chapters he was through in that
+              pass are not this draft's (Kyle, 2026-11-12: "Why does it say I'm through chapter 3 in draft 3 when I'm
+              not finished?"). */}
+          {hasRewrite && onRewriteThrough && working <= 2 && (
             <div class="page-through">
               {rewriteThrough
                 ? <p class="hint rewrite-through"><Icon name="check" size={16} /> You are through chapter {chapterNum}. <button type="button" class="link" disabled={throughBusy} onClick={() => markThrough(false)}>Open it again</button></p>
