@@ -544,13 +544,21 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
     return new DOMRect(view.contentDOM.getBoundingClientRect().left, view.documentTop + blk.top, 0, blk.height);
   };
   const frame = (box: HTMLElement) => (box === document.scrollingElement ? { top: 0, height: window.innerHeight } : box.getBoundingClientRect());
-  /** Move the page so `at` sits at `want` on the screen; again once its lines are drawn, when the first go was worked
-   * out from heights the page had only guessed. */
+  /** Move the page so `at` sits at `want` on the screen; again over the next frames while its lines are drawn, when
+   * the first go was worked out from heights the page had only guessed. Far down a long scene one more go was not
+   * enough: the lines drawn after it were taller than guessed, and the words stayed below the screen (Kyle,
+   * 2026-11-12: "Tapping this card did not bring the paragraph up to the right spot"). */
   const bring = (at: number, want: number) => {
     const box = scroller(view.dom);
-    const go = () => { const d = rect(at).top - want; if (Math.abs(d) > 1) box.scrollTop += d; };
+    const go = () => { const d = rect(at).top - want; if (Math.abs(d) > 1) box.scrollTop += d; return Math.abs(d) > 1; };
     go();
-    requestAnimationFrame(() => { if (view.dom.isConnected) go(); });
+    let still = 0, n = 0;
+    const again = () => {
+      if (!view.dom.isConnected) return;
+      still = go() ? 0 : still + 1;
+      if (still < 2 && ++n < 12) requestAnimationFrame(again);
+    };
+    requestAnimationFrame(again);
   };
   /** Bring a stretch into sight, a third of the way down, when it is not already. */
   const sight = (a: number, b: number) => {

@@ -800,6 +800,13 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   or above his { } notes, never on the right. A page with any marks keeps its room on the left only, so the text runs out
   to the right as far as it does beside a { } note. This replaces the "both margins" room in the entry above. A cleaner
   look for the marks themselves (pictures A and B in the project files' `app/change-marks/`) waits on Kyle's pick.
+- **A card far down a long scene, and the draft 2 line in draft 3** (2026-11-12). Kyle: "Tapping this card did not
+  bring the paragraph up to the right spot in the writing area" (C-75, chapter 3, far down the chapter's second scene):
+  the page guessed the height of lines it had not drawn yet, and one correction was not enough, so the words stayed below
+  the screen and looked missing. The page now keeps correcting over the next frames until the words hold still. Kyle:
+  "Why does it say I'm through chapter 3 in draft 3 when I'm not finished?": "You are through chapter N" and Done with
+  this chapter at the foot of the page belong to the Writer's rewrite in draft 2 (the book note's `rewrite_done`), and now
+  show only in draft 2. The move to draft 3 itself had happened.
 - **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
   the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
   page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
