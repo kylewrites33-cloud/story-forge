@@ -16,7 +16,7 @@ import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
 import { RecipePicker } from './Recipes.tsx';
 import { withRecipe } from '../lib/recipes.ts';
-import type { EditorCommands } from './StyledEditor.tsx';
+import type { EditorCommands } from '../write/prose.ts';
 import { LOOK_CHOICES, type PageLook } from '../lib/page.ts';
 import { defaultJobTitle, jobAsk, type JobKind, type OnJob } from '../lib/jobs.ts';
 import { addToScrap, planHead, planPath, scrapHead, scrapPath } from '../lib/plans.ts';

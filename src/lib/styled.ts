@@ -1,7 +1,7 @@
 // The writing screen's styled view of a scene's Markdown: *italics* and **bold** shown slanted and heavy and ==marks==
 // highlighted, the way a word processor shows them. The stars and equals signs are not on the page: each styled span
 // carries its mark in `data-m`, so the page can always be read back to exactly the Markdown it came from (see
-// StyledEditor's readText). Nothing here changes the text.
+// the older box's readText). Nothing here changes the text.
 
 import { ASK_RE } from './brackets.ts';
 import { mentions, type Matcher } from './codex.ts';
@@ -127,7 +127,7 @@ function starHtml(line: string, o: StyleOptions): string {
 }
 
 /** Every emphasis run and highlighter mark on a line, nested ones too, as absolute positions with their mark lengths. */
-function allRuns(line: string, base = 0): { from: number; to: number; mark: number; m: string }[] {
+export function allRuns(line: string, base = 0): { from: number; to: number; mark: number; m: string }[] {
   const out: { from: number; to: number; mark: number; m: string }[] = [];
   marks(line).forEach((h) => {
     out.push({ from: base + h.from, to: base + h.to, mark: 2, m: '==' });

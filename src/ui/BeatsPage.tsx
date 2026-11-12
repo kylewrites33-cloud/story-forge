@@ -22,7 +22,8 @@ import type { StyleOptions } from '../lib/styled.ts';
 import type { DeviceFile, NoteRecord, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
-import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { ProseEditor } from '../write/ProseEditor.tsx';
+import type { EditorCommands } from '../write/prose.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
@@ -82,7 +83,6 @@ function Summary({ value, onInput, label }: { value: string; onInput: (v: string
 /** What the writing screen's tool row needs from the beat Kyle is in. */
 export interface BeatsApi {
   cmd: () => EditorCommands | null;
-  root: () => HTMLElement | null;
 }
 
 /** A beat being dragged up or down by its Move handle (finger or mouse). `before` is where it would land:
@@ -129,7 +129,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   options?: StyleOptions;
   /** A name pressed in the prose. */
   onName?: (i: number) => void;
-  onLook?: Parameters<typeof StyledEditor>[0]['onLook'];
+  onLook?: Parameters<typeof ProseEditor>[0]['onLook'];
   /** Filled in so the writing screen's tool row works on the beat Kyle is in. */
   api?: { current: BeatsApi | null };
   /** The words of the beat Kyle is in, whenever they change or he moves to another beat. */
@@ -328,7 +328,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   }, []);
   const cmd = () => { const c = commands.current[focused]; return c ? c.current : null; };
   const focusedProse = (beats.find((b) => b.key === focused) || { prose: '' }).prose;
-  if (api) api.current = { cmd, root: () => document.querySelector<HTMLElement>('.beat-body[data-active] .writer-text.styled') };
+  if (api) api.current = { cmd };
   useEffect(() => { if (onActive) onActive(focusedProse); }, [focused, focusedProse]);
   useEffect(() => {
     if (!onWords) return;
@@ -501,7 +501,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                     )}
                     {isOpen && (
                       <div class="beat-body" data-active={focused === b.key ? '' : undefined} onFocusCapture={() => setFocused(b.key)}>
-                        <StyledEditor key={b.key + ':' + rev} value={b.prose} onChange={(t) => edit(b.key, { prose: t, lost: false })} onCaret={() => {}}
+                        <ProseEditor key={b.key + ':' + rev} value={b.prose} onChange={(t) => edit(b.key, { prose: t, lost: false })} onCaret={() => {}}
                           label={'Prose of ' + label} commands={c} options={opts} onName={onName} onLook={onLook} />
                       </div>
                     )}

@@ -14,7 +14,7 @@ src/lib/demo-source.ts   the bundled demo vault as a source; its saves (commit) 
 src/lib/sync.ts          one sync: tree, schema, index, reusing unchanged files
 src/lib/cache.ts         IndexedDB snapshot per source, for offline
 src/lib/prose.js         the vault tool's prose helpers and word count, copied as is (do not edit; see CLAUDE.md)
-src/lib/styled.ts        the writing screen's styled view: emphasis runs, HTML that keeps every character
+src/lib/styled.ts        how styled prose reads: emphasis runs, marks, HTML that keeps every character; the writing box draws by these rules
 src/lib/drafts.ts        the writing screen's drafts: kept on the device as Kyle types, word counts, the copies a note has; how a draft lands on the note the vault has (draftOnto) and a copy's name and text (planSnapshot), for the saving system; drafts finished offline handed to it when the connection is back (flushDrafts); words that follow a new note saved under another name (moveDrafts)
 src/lib/market.ts        Publisher Rocket files: the ones a series has, safe names, a file from the device ready to save (rocketFile)
 src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a new to-do is (planTask: next free ID, path, text)
@@ -98,7 +98,6 @@ src/lib/listen.ts        Listen: sentences to say with their place on the page, 
 src/ui/CheckPanel.tsx    the Check tab beside the page (and Whole chapter's Check column)
 src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options tab
 src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
-src/ui/highlight.ts      CSS Custom Highlight API helpers: draw over words without touching the page
 src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device
 src/lib/notes.ts         Notes to the Team: the book's notes, open first, who for, where answered, a new one (planNote, for the `note` maker)
 src/lib/sessions.ts      session notes: newest first, read speaker by speaker, voice colours, the ideas each filed
@@ -136,14 +135,15 @@ src/ui/IdeasBoard.tsx    the Ideas board: piles, cards, keep, later, drop, reaso
 src/ui/StoryBoards.tsx   the boards for every other proposal type
 src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates, sounds
 src/ui/Editor.tsx        the full-screen writing screen
-src/ui/StyledEditor.tsx  the writing box with styles: italics, bold and marks shown as a word processor does
 src/app/                 the frame around the pages (2026-11-11, step 2 of the code structure redesign)
 src/app/pages.ts         THE ONE LIST OF PAGES: each page's id, name, address, room, place under Book tools, what it tells the team chat, how often it wants the vault read again; the rooms; `pageOf(route)`. A new page is one entry here and one in screens.tsx
 src/app/screens.tsx      what each page of the list draws, one entry a page (the compiler fails if one is missing); `Actions`, everything a page can ask the app to do; `AppCtx`, the app as a page sees it
 src/app/route.ts         the app's addresses (#/...) and the hook that reads them
-src/write/               the TRIAL of the new writing box (2026-11-11, step 3 of the code structure redesign; Kyle's yes covers the trial only). Goes, or becomes the writing page, on his verdict
-src/write/prose.ts       the new writing box: CodeMirror 6 set up for prose (stars and == hidden, System screen lines indented, {asks} marked, Bold, Italic, Undo, a line put in from outside as one small edit). Loaded only when the trial page opens, so it is a file of its own in the build
-src/write/Trial.tsx      the trial page (#/trial/<scene>): one chapter in the new box, a key-speed line, "Add a line from outside", Start again. It is handed no save action and keeps nothing on the device
+src/write/               the writing box (2026-11-12, step 3 of the code structure redesign): the one box Kyle types prose in, on every page that has one
+src/write/prose.ts       the writing box: CodeMirror 6 set up for prose. The page is the scene's Markdown with its marks hidden; `EditorCommands`, everything a page can ask the box to do (styles, undo, find, lights, lines arriving from outside); `holdPlace`, `inSight`, `scroller`
+src/write/ProseEditor.tsx  the box as a Preact part: mounts prose.ts once and hands it the codex names, find, asks and added lines as they change
+src/write/clipboard.ts   copy and paste with styles: HTML from the clipboard to the page's Markdown
+src/lib/prosedit.ts      what a key does beside a style, as pure rules (letters and their looks, back to Markdown, where the cursor rests, what a copy holds); tested with Node
 tests/golden/pages.json  what the older page map (rooms.ts, Rooms.tsx, StoryBoards.tsx, Seeing.tsx) gave for the demo schema on the day it was removed; tests/pages.test.ts holds the list to it
 src/vault/               the one saving system (2026-11-11, step 1 of the code structure redesign); features move onto it one at a time
 src/vault/ops.ts         what a save is made of: Action (one thing Kyle did), its Ops (an edit to a note, a new note by its maker, a book's chapters renumbered, scenes deleted, a scene or recipe given a new title and file name, a file from the device saved as it is, the book's draft saved, a scene back from the Archive, or the next scene joined onto this one), Edit (a change kept as what he meant: a board choice, answers on a chapter's changes, a small change to a note's text, or a scene's words with the words they started from)

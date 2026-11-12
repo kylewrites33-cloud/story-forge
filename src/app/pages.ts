@@ -165,9 +165,7 @@ export const PAGES = [
       return fillJobsFor(jobNotes(index), id, book.folder).some(isOpenJob) || optionJobsFor(jobNotes(index), id, book.folder).some(isOpenJob) || conversation(index, id, book.folder).pending;
     } },
   { id: 'beats', of: 'write', title: 'Beats', icon: 'beats', to: (path: string) => href.beats(path) },
-  { id: 'chapter', of: 'write', title: 'Whole chapter', icon: 'pen', to: (path: string) => href.chapter(path) },
-  // Step 3's trial of a new writing box (Kyle's yes to the trial, 2026-11-11). Opened from Settings; nothing in it is saved.
-  { id: 'trial', of: 'write', title: 'Trial: the new writing box', icon: 'pen', to: (path: string) => href.trial(path) }
+  { id: 'chapter', of: 'write', title: 'Whole chapter', icon: 'pen', to: (path: string) => href.chapter(path) }
 ] as const satisfies readonly Page[];
 
 export type PageId = (typeof PAGES)[number]['id'];

@@ -17,7 +17,8 @@ import { Icon } from './Icon.tsx';
 import { DONE_STATUSES } from '../lib/overview.ts';
 import { toolLinks } from '../app/pages.ts';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
-import { StyledEditor, holdPlace, type EditorCommands } from './StyledEditor.tsx';
+import { ProseEditor } from '../write/ProseEditor.tsx';
+import { holdPlace, type EditorCommands } from '../write/prose.ts';
 import { loadLook, lookStyle, saveLook, type PageLook } from '../lib/page.ts';
 import { askBody, defaultJobTitle, jobAsk, resultBody, type OnJob } from '../lib/jobs.ts';
 import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
@@ -724,9 +725,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
 
   // Check, Listen and Options for a passage (Writers Room, Kyle 2026-10-18).
-  const pageRoot = () => (beatsMode ? (beatsApi.current ? beatsApi.current.root() : null) : document.querySelector<HTMLElement>('.writer-page .writer-text.styled'));
   const checkOptions = useMemo<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 }, [JSON.stringify(checkOpts || null)]);
-  const listen = useListen(() => [{ text: pageText(), root: pageRoot }], () => {
+  const listen = useListen(() => [{ text: pageText(), box: cmd }], () => {
     const c = cmd();
     const s = c ? c.selection() : null;
     return s && s.end > s.start ? { part: 0, at: s.start } : null;
@@ -1709,7 +1709,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               : <p class={'writer-text ' + (oldText && oldText.error ? 'error' : 'hint')}>{!oldText || oldText.key !== oldKey || oldText.text === '' ? 'Opening Draft ' + shownDraft + '…' : oldText.error || 'This scene was not in Draft ' + shownDraft + '.'}</p>
           ) : showMarks
             ? <ChangesPage text={text} placed={chPlace.placed} view={chView} current={chCur} onPick={pickChange} options={styleOpts} label={'Text of ' + title + ' with the team\'s changes'} />
-            : <StyledEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
+            : <ProseEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />}
           </div>
           {below.map((n) => (
@@ -1844,7 +1844,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
             {tab === 'check' && (
-              <CheckPanel sections={[{ key: note.path, label: title, text, root: pageRoot, select: (a, b) => { const c = cmd(); if (c) c.select(a, b); } }]}
+              <CheckPanel sections={[{ key: note.path, label: title, text, box: cmd, select: (a, b) => { const c = cmd(); if (c) c.select(a, b); } }]}
                 opts={checkOptions} onJump={closeOver}
                 deeper={<p class="hint">For a closer read by the Line Editor (a paid team job), use the Team tab's deeper check.</p>} />
             )}
