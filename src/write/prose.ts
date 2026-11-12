@@ -211,7 +211,9 @@ const hand = EditorState.transactionFilter.of((tr): TransactionSpec | readonly T
 const look = EditorView.theme({
   '&': { backgroundColor: 'transparent', color: 'inherit', fontSize: 'inherit' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit' },
+  // The page scrolls, not the box: nothing of a line is cut at the box's edge, so a { } note can float out into the
+  // page's margin (the box's own scroller would clip it, or slide the text sideways to show it).
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit', overflow: 'visible' },
   '.cm-content': { padding: '0', caretColor: 'var(--accent)' },
   '.cm-line': { padding: '0' },
   '.cm-quote': { paddingLeft: '1.4em' },

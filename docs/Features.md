@@ -780,6 +780,10 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   the right, so that the main text gets shoved to the right. That way it's closer to the writer's text"): the text moves
   right, next to the Rewrite column. Every device switched to it once; Right margin puts them back. Every scene of a
   chapter shows its notes this way (before, only the open scene did).
+  Fixed 2026-11-12 (Kyle, the morning after the writing page moved to the new writing box: "the curly bracket comments
+  arent showing up anymore"): the new box cut off anything outside its own edge, so a note in the margin showed only as
+  a thin bar. The box no longer clips (`.cm-scroller` in `src/write/prose.ts`; the page scrolls, not the box). Checks
+  `asks.mjs` and `webkit-asks.mjs` in the project files' `app/saving-checks/`.
 
 ## The Writer's rewrite beside the page (2026-11-04)
 
