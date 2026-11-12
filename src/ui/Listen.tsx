@@ -1,14 +1,12 @@
 // Listen: the writing screen's read-aloud button and the slim bar under the tool row while it reads (Pause or Resume,
-// Back a sentence, Stop, speed, voice). The sentence being read is highlighted in the page where the browser can, and
-// always scrolled into view. Speed and voice stay on this device.
+// Back a sentence, Stop, speed, voice). The sentence being read is lit in the page and scrolled into view. Speed and voice stay on this device.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { browserSpeaker, itemAt, loadListenPrefs, makeReader, RATES, saveListenPrefs, speechItems, voiceChoices, type Reader, type ReaderState, type SpeechItem } from '../lib/listen.ts';
-import { rangesIn } from './StyledEditor.tsx';
-import { bringIntoView, paintHighlight } from './highlight.ts';
+import type { EditorCommands } from '../write/prose.ts';
 import { Icon } from './Icon.tsx';
 
 /** One scene on the page: its words and the writing box it is in. */
-export interface ListenPart { text: string; root: () => HTMLElement | null }
+export interface ListenPart { text: string; box: () => EditorCommands | null }
 
 export interface Listening {
   supported: boolean;
@@ -34,7 +32,8 @@ export function useListen(parts: () => ListenPart[], from: () => { part: number;
   const [error, setError] = useState('');
   const [voices, setVoices] = useState<{ id: string; label: string }[]>([]);
   const items = useRef<SpeechItem[]>([]);
-  const roots = useRef<(() => HTMLElement | null)[]>([]);
+  const boxes = useRef<(() => EditorCommands | null)[]>([]);
+  const lit = useRef<EditorCommands | null>(null);
   const reader = useRef<Reader | null>(null);
   const speaker = useRef(browserSpeaker());
 
@@ -52,16 +51,18 @@ export function useListen(parts: () => ListenPart[], from: () => { part: number;
     return () => { synth.removeEventListener('voiceschanged', load); if (reader.current) reader.current.stop(); };
   }, []);
 
-  // The sentence being read: highlighted and in view.
+  // The sentence being read: lit and in view.
+  const dark = () => { if (lit.current) { lit.current.light('listen', []); lit.current = null; } };
   useEffect(() => {
     const it = state === 'idle' ? null : items.current[index];
-    const root = it ? roots.current[it.part] && roots.current[it.part]() : null;
-    if (!it || !root) { paintHighlight('sf-listen', []); return; }
-    const [r] = rangesIn(root, [{ start: it.start, end: it.end }]);
-    paintHighlight('sf-listen', r ? [r] : []);
-    if (r && state === 'playing') bringIntoView(r);
+    const box = it ? boxes.current[it.part] && boxes.current[it.part]() : null;
+    if (lit.current && lit.current !== box) dark();
+    if (!it || !box) return;
+    box.light('listen', [{ start: it.start, end: it.end }]);
+    lit.current = box;
+    if (state === 'playing') box.reveal(it.start, it.end);
   }, [state, index]);
-  useEffect(() => () => paintHighlight('sf-listen', []), []);
+  useEffect(() => dark, []);
 
   const save = (p: { rate: number; voice: string }) => { prefs.current = p; saveListenPrefs(p); };
   return {
@@ -72,7 +73,7 @@ export function useListen(parts: () => ListenPart[], from: () => { part: number;
       if (!r) return;
       setError('');
       const ps = parts();
-      roots.current = ps.map((p) => p.root);
+      boxes.current = ps.map((p) => p.box);
       items.current = ps.flatMap((p, i) => speechItems(p.text, i));
       if (!items.current.length) { setError('There are no words to read yet.'); return; }
       const f = from();

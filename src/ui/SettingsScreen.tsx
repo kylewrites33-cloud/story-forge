@@ -1,6 +1,5 @@
 import { useState } from 'preact/hooks';
 import { GitHubSource } from '../lib/github.ts';
-import { href } from '../app/route.ts';
 import { normalise, type Settings } from '../lib/settings.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
 import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
@@ -39,12 +38,6 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
   return (
     <section>
       <h1>Settings</h1>
-      {/* Step 3's trial (Kyle's yes, 2026-11-11). Remove with the trial page once he has said how it feels. */}
-      <section class="trial-door">
-        <h2>Trial: a new writing box</h2>
-        <p class="meta">A spare page with one of your chapters in a new writing box. Nothing you type there is saved, and your real writing page is untouched. Type in it for a few minutes on the iPad and tell Claude how it feels.</p>
-        <p class="buttons"><a class="button primary" href={href.trial()}>Open the trial page</a></p>
-      </section>
       <p class="settings-tool"><a href="./crow/">Open Crow</a>, the separate app for studying the characters and plot of finished stories. In this browser it uses this key; from its own home-screen icon it keeps its own.</p>
       <Colours />
       <TopOfScreen />

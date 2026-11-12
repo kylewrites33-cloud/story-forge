@@ -415,8 +415,8 @@ add a dated line here when you add or change one.
   tab) runs the vault tool's own linter on the device, free and offline (`src/lib/lint.js` is sf.js's lint section,
   copied by `npm run sync-parser`; `src/lib/lintcheck.ts` maps each flag back onto the page and takes the book's Style
   Guide and the vault Config as sf lint does). It shows the score with sf lint's grade (under 2 Clean, under 5 Light,
-  under 10 Noticeable, else Heavy), rhythm numbers and the flags by paragraph; the flagged words are drawn over the page
-  with the CSS Custom Highlight API (never in the text or the file), and a flag pressed is shown in the page. Whole
+  under 10 Noticeable, else Heavy), rhythm numbers and the flags by paragraph; the flagged words are marked in the page
+  by the writing box (never in the text or the file; since 2026-11-12, see the last section), and a flag pressed is shown in the page. Whole
   chapter has the same Check for every scene, scored by words. The team's paid job stays as "the deeper check". Options
   (the Ask the team row) asks for Expand, Describe, Tighten (20 to 40% shorter) or More like my voice on the words picked
   or the paragraph at the cursor: an `options` job carrying the exact passage, answered as `### Option 1/2/3` in its
@@ -833,8 +833,8 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   the right side box to edit, the highlight on the left disappears ... difficult for me to track which location im
   working in"). The boxes are cut to the part of the page in sight (2026-11-11, Kyle: "the highlights run past the word
   processor section when you scroll"): scrolled above the page they were drawn over the top bar and the changes bar,
-  because they sit over the whole screen; `inSight` in `src/ui/StyledEditor.tsx` gives the page's box less the bars that
-  stay at its top or foot, and a line half under an edge is drawn half. A chapter of several scenes keeps one left edge when a scene has a { } note in the margin ("the next
+  because they sat over the whole screen. Since 2026-11-12 the light is a mark the writing box draws with the page's own
+  words (`light` in `src/write/prose.ts`), so it cannot leave the page. A chapter of several scenes keeps one left edge when a scene has a { } note in the margin ("the next
   scene on the screen seems staggered differently when i close the left side chapters pane"). Done with this chapter is
   also at the end of the page, under the last scene, with the same "You are through chapter N" and Open it again
   (Kyle: "is there an option for me to mark the draft 2 chapter as done at the bottom of the page").
@@ -892,8 +892,8 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   text jumped so far down, i cant even see the new text ... fix it for real." The earlier fix remembered the page's
   place after the new words went in, but Safari (every browser on the iPad) had already thrown the page back at the
   moment its words were replaced, as far as the top of the chapter, so the fix held the page at the wrong place. Seen
-  and fixed in WebKit, not only in Chrome. Now every redraw of the page's words keeps the page's place (`setHtml` in
-  `src/ui/StyledEditor.tsx`), which also covers Bold, Italic, undo and the team's words arriving. After a Bring over
+  and fixed in WebKit, not only in Chrome. Now every redraw of the page's words keeps the page's place (since 2026-11-12 `apply` in
+  `src/write/prose.ts`), which also covers Bold, Italic, undo and the team's words arriving. After a Bring over
   (`land`): the cursor goes after the new words, the page does not move, and the row comes level with the paragraph.
   Only when no line of the new words is in sight (Kyle scrolled the column away from the page) does the page move, to
   bring them level with the box they came from. The page is held for half a second against the iPad's own late
@@ -1653,34 +1653,42 @@ Step 2 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Red
   after it matches all 260.
 
 
-## Trial: a new writing box (2026-11-11)
+## The writing page on the new writing box (2026-11-12)
 
-Step 3 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Redesign.md`), the trial only. Kyle,
-2026-11-11, on the card "Start step 3 with a trial of a new writing box on your iPad?": "Yes, build the trial page" ("I
-put a new writing box on a spare page with one of your chapters. Your real writing page stays untouched. You type in it
-for a few minutes and tell me how it feels."). Whether the real writing page changes waits for what he says.
+Step 3 of the code structure redesign (vault `Docs/Sparrow/20 Code Structure Redesign.md`). A trial of the new box sat
+on a spare page from 2026-11-11 (Kyle: "Yes, build the trial page"). His verdict, 2026-11-12: "yeah, it seemed fine to
+me." Then, on the card "Move your real writing page onto the new writing box?": "Yes, move the writing page over" ("I
+rebuild your writing page on the new box, with every tool it has today, test it on both devices, then put it live and
+tell you.").
 
-- **Where.** Settings, at the top: "Trial: a new writing box", "Open the trial page" (`#/trial`, or `#/trial/<scene>`).
-  It opens the chapter he last wrote in; a Chapter list picks another.
-- **What it is.** The whole chapter (its scenes one after another) in a new writing box, `src/write/prose.ts`:
-  CodeMirror 6, the first dependency beyond Preact and idb (reason in the vault's Decision Ledger, 2026-11-11). The page
-  is the chapter's text itself. Stars of italics and bold and the equals signs of marks are hidden, System screen lines
-  ("> ") are indented with their titles in small capitals, {asks} are marked, all by the same rules as today's box
-  (`runs` and `marks` in `src/lib/styled.ts`). A key changes only its own line; only the lines near the screen are drawn.
-- **The bar.** Leave, Bold, Italic, Undo, Redo, and "Add a line from outside", which puts one line under the paragraph
-  the cursor is in, the way the team's words or a Bring over arrive, so he can see that the page and the cursor stay put.
-- **Under the bar.** What the page is, the Chapter list, Start again (the chapter as it was), and one line: the word count
-  and how quickly each key shows (the usual and the slowest, in thousandths of a second).
-- **NOTHING IS SAVED.** The page is handed no save action (`WRITE_SCREENS.trial` in `src/app/screens.tsx`) and writes
-  nothing to the device. Leaving the page or Start again throws the typing away. His real writing page, `Editor.tsx` and
-  `StyledEditor.tsx`, is not touched.
-- **The download.** The new box is a file of its own (about 85 KB zipped), fetched when the trial page opens, so the app's
-  first load is as before. It needs the internet the first time; offline the page says so.
-- **Not in the trial:** find, names from the codex, the side column, Listen, Check, copies, the dot on new lines, saving.
-- **Checked** in Chromium at four sizes and in WebKitGTK at both iPad sizes (`trial.mjs`, `webkit-trial.mjs` in the
-  project files' `app/saving-checks/`): a 3,600-word made-up chapter shows with every style and no stars; real keys and
-  inserted words (how autocorrect and dictation arrive) go in; Bold, Italic and Undo work from the bar with the cursor
-  kept; an outside line arrives without the page or cursor moving; nothing is sent or kept. What only Kyle's iPad can
-  say: the on-screen keyboard, autocorrect, dictation, the selection handles, and how typing feels.
-- **After his verdict:** either the real writing page takes this box (the rest of step 3), or the trial page, `src/write/`,
-  the Settings door, the `trial` page entry and the three `@codemirror` packages are removed.
+- **What Kyle sees.** The same writing page with the same tools. Nothing was added or taken away. The trial page and
+  its door at the top of Settings are gone.
+- **What changed underneath.** The box Kyle types in is `src/write/prose.ts` (CodeMirror 6; reason in the vault's
+  Decision Ledger), drawn by `src/write/ProseEditor.tsx`. The page IS the scene's Markdown: the stars of italics and
+  bold, the equals signs of marks and the "> " of System screen lines are in the page and hidden, so there is no
+  second copy of the words to keep in step, no redrawing of the whole page on a key, and no putting the cursor back
+  after one. A key changes only its own line, and only the lines near the screen are drawn. The older box
+  (`src/ui/StyledEditor.tsx`), which rebuilt the page's HTML and restored the cursor after every change, is removed
+  with its helpers (`src/ui/highlight.ts`).
+- **Typing beside a style** follows written rules in `src/lib/prosedit.ts`, tested without a browser: words typed inside
+  italics are italic, words typed after them are plain, a space at the end of styled words sits outside the stars,
+  Backspace never leaves a lone star, Bold between words waits for the next letter. A line whose marks are nested in a
+  way those rules do not write (italics inside bold) falls back to the older insert rules, so nothing is lost.
+- **Every tool is behind one contract,** `EditorCommands` in `src/write/prose.ts`: Bold, Italic, Highlight, Normal,
+  undo and redo, Find and replace, the picked-words menu, codex names (pressed to open their card), {asks} and the
+  one being worked on, the dot on lines the team added, Bring over and its undo, lines arriving from elsewhere
+  (`apply` keeps the cursor and the first line in sight where they were), copy and paste with styles
+  (`src/write/clipboard.ts`), the cursor's place for the side column.
+- **Lights are part of the page now.** The Rewrite tab's light on Kyle's paragraph, Check's flagged words and the word
+  Listen is reading are marks the box draws with its own words (`light(name, spans)`, classes `lit-shown`, `lit-check`,
+  `lit-check-now`, `lit-listen`), so they cannot run past the page or sit a few words off, and they move with the
+  words as Kyle types. The boxes drawn over the screen and the CSS Custom Highlight API are no longer used.
+- **The download.** The box is part of the app's main file now (about 280 KB zipped, up from about 200 KB), not fetched
+  when first needed, so writing works offline from the first open.
+- **Checked** on the final build: the unit tests; the 28 saving checks in Chromium and WebKitGTK; the 260 page
+  pictures against the released app; and new checks on the real writing page in both engines at both iPad sizes and at
+  desktop size (`box.mjs`, `box2.mjs`, `webkit-box.mjs` in the project files' `app/saving-checks/`): real keys beside
+  italics, bold and marks, Enter and Backspace across lines, every button of the tool row, copy and paste, Find and
+  replace, codex names, Check's marks, the picked-words menu, Bring over and Undo, the chapter page, and the Markdown
+  that reaches the vault. What only Kyle's iPad can say: the on-screen keyboard, autocorrect, dictation and the
+  selection handles on his real page. Not covered by a check: Listen's light (no speech in a test browser).

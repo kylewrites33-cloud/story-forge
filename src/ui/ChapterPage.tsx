@@ -15,7 +15,8 @@ import { loadLook, lookStyle } from '../lib/page.ts';
 import { matcher, type CodexEntry } from '../lib/codex.ts';
 import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
-import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { ProseEditor } from '../write/ProseEditor.tsx';
+import type { EditorCommands } from '../write/prose.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
 import { ListenBar, ListenButton, useListen } from './Listen.tsx';
@@ -155,8 +156,8 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault() };
   // Check and Listen over every scene of the chapter.
   const [checking, setChecking] = useState(false);
-  const rootOf = (path: string) => () => document.querySelector<HTMLElement>('[data-section="' + CSS.escape(path) + '"] .writer-text.styled');
-  const listen = useListen(() => ref.current.map((s) => ({ text: splitLead(s.draft.body).text, root: rootOf(s.note.path) })), () => {
+  const boxOf = (path: string) => () => { const c = commands.current[path]; return c ? c.current : null; };
+  const listen = useListen(() => ref.current.map((s) => ({ text: splitLead(s.draft.body).text, box: boxOf(s.note.path) })), () => {
     const i = ref.current.findIndex((s) => s.note.path === focused);
     const c = cmd();
     const sel = c ? c.selection() : null;
@@ -205,7 +206,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
                   <span class="meta"> · {num(bodyWords(s.draft.body))} words{String(s.note.data.status || '') === 'planned' ? ' · planned' : ''}</span>
                 </p>
                 <div onFocusCapture={() => setFocused(s.note.path)}>
-                  <StyledEditor value={splitLead(s.draft.body).text} onChange={(t) => changed(s.note.path, t)} onCaret={() => {}} label={'Text of ' + String(s.note.data.title || s.note.data.id || '')}
+                  <ProseEditor value={splitLead(s.draft.body).text} onChange={(t) => changed(s.note.path, t)} onCaret={() => {}} label={'Text of ' + String(s.note.data.title || s.note.data.id || '')}
                     commands={c} options={opts} />
                 </div>
               </section>
@@ -221,7 +222,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
             <CheckPanel opts={checkOptions} onJump={() => { if (!matchMedia('(min-width: 900px)').matches) setChecking(false); }}
               sections={sections.map((s) => ({
                 key: s.note.path, label: [s.note.data.id, sceneHeader(s.note.data)].filter(Boolean).join(' '), text: splitLead(s.draft.body).text,
-                root: rootOf(s.note.path), select: (a, b) => { const c = commands.current[s.note.path]; if (c && c.current) c.current.select(a, b); }
+                box: boxOf(s.note.path), select: (a, b) => { const c = commands.current[s.note.path]; if (c && c.current) c.current.select(a, b); }
               }))} />
           </aside>
         )}

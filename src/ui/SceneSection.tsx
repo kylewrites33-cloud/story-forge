@@ -8,7 +8,8 @@ import { saveDraft } from '../vault/words.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
-import { StyledEditor, type EditorCommands } from './StyledEditor.tsx';
+import { ProseEditor } from '../write/ProseEditor.tsx';
+import type { EditorCommands } from '../write/prose.ts';
 import { ChangesPage, type ChangesView } from './Changes.tsx';
 import type { Placed } from '../lib/changes.ts';
 
@@ -134,7 +135,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     <section class="chapter-section" data-section={note.path} onFocusCapture={onFocus}>
       {marks ? <ChangesPage text={splitLead(draft.body).text} placed={marks.placed} view={marks.view} current={marks.current} onPick={marks.onPick} options={options}
         label={'Text of ' + String(note.data.title || note.data.id || '') + ' with the team\'s changes'} />
-      : <StyledEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
+      : <ProseEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
         label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options} />}
       {error && <p class="note-line section-error">{error}</p>}
     </section>
