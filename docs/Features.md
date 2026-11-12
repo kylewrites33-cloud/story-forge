@@ -807,6 +807,11 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   "Why does it say I'm through chapter 3 in draft 3 when I'm not finished?": "You are through chapter N" and Done with
   this chapter at the foot of the page belong to the Writer's rewrite in draft 2 (the book note's `rewrite_done`), and now
   show only in draft 2. The move to draft 3 itself had happened.
+- **The picked change's paragraph is lit** (2026-11-12, Kyle: "in the draft 2 version, it was easy to tell where I was
+  because the paragraph in the writing section got highlighted ... Can we do that in draft 3 mode as well? When you tap a
+  card"). Pressing a card (or moving to a change with the arrows) lights the whole paragraph its change sits in, in the
+  same colour the Rewrite column uses; the light moves with the next card and goes when marks are hidden. It is never in
+  the text (`lit-card` in `src/write/prose.ts`'s lights).
 - **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
   the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
   page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
