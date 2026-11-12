@@ -8,6 +8,12 @@ const files = {
   ...import.meta.glob('/demo-vault/.claude/**/*.md', { query: '?raw', import: 'default', eager: true })
 } as Record<string, string>;
 
+/** The schema the app was built with (the demo vault's copy of the vault's `System/schema.json`): what the app falls
+ * back on for the kinds of job when the schema kept on the device is from before that list. */
+export function builtInSchemaText(): string {
+  return files['/demo-vault/System/schema.json'] || '';
+}
+
 // A short content hash stands in for git's blob sha, so the cache treats demo files like real ones.
 function hash(text: string): string {
   let h = 2166136261;

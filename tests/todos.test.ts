@@ -11,7 +11,9 @@ import { bookTodos, chapterTodos, isBookTodo, isOpen, nextBookTaskId, todoPlace,
 import { createAction } from '../src/vault/ops.ts';
 import { pushAction } from '../src/vault/push.ts';
 import { buildIndex } from '../src/lib/vault-index.ts';
-import { DEMO, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
+import { DEMO, demoKinds, demoSchemaText, FsSource, hasVault, MemSource, VAULT } from './helpers.ts';
+
+demoKinds();
 
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';
 

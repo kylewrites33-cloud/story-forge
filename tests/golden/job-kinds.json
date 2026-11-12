@@ -1,0 +1,245 @@
+{
+ "draft": {
+  "label": "Draft this scene",
+  "title": "Draft Chapter 2",
+  "titleNamed": "Draft S-045 Grey at the barn",
+  "titleBare": "Draft ",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "notes": {
+  "label": "Notes on this chapter",
+  "title": "Notes on Chapter 2",
+  "titleNamed": "Notes on S-045 Grey at the barn",
+  "titleBare": "Notes on ",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "check": {
+  "label": "Deeper check for AI-sounding phrases (the team)",
+  "title": "Check Chapter 2 for AI-sounding phrases",
+  "titleNamed": "Check S-045 Grey at the barn for AI-sounding phrases",
+  "titleBare": "Check  for AI-sounding phrases",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "learn": {
+  "label": "Learn from my edits",
+  "title": "Learn from Kyle's edits",
+  "titleNamed": "Learn from Kyle's edits",
+  "titleBare": "Learn from Kyle's edits",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "chat": {
+  "label": "A question for the team",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "rewrite": {
+  "label": "Rewrite this card",
+  "title": "Rewrite Chapter 2",
+  "titleNamed": "Rewrite S-045 Grey at the barn",
+  "titleBare": "Rewrite ",
+  "ask": "Kyle pressed Rewrite on Chapter 2 in the app. Rewrite that note now, as the agent that owns its type would, following the schema's `regenerate` convention: read what to change in its `decision_note`, rewrite the note's words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.",
+  "askWords": "Kyle pressed Rewrite on Chapter 2 in the app. Rewrite that note now, as the agent that owns its type would, following the schema's `regenerate` convention: read what to change in its `decision_note`, rewrite the note's words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.\n\nKyle's words: make it funnier",
+  "askSame": "Kyle pressed Rewrite on a falconer in the app. Rewrite that note now, as the agent that owns its type would, following the schema's `regenerate` convention: read what to change in its `decision_note`, rewrite the note's words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.\n\nKyle's words: a falconer"
+ },
+ "table-read": {
+  "label": "Table read",
+  "title": "Table read of Chapter 2",
+  "titleNamed": "Table read of S-045 Grey at the barn",
+  "titleBare": "Table read of ",
+  "ask": "Run a blind table read of Chapter 2 following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.",
+  "askWords": "Run a blind table read of Chapter 2 following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.\n\nKyle's words: make it funnier",
+  "askSame": "Run a blind table read of a falconer following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.\n\nKyle's words: a falconer"
+ },
+ "ideas": {
+  "label": "More ideas",
+  "title": "More ideas for Chapter 2",
+  "titleNamed": "More ideas for S-045 Grey at the barn",
+  "titleBare": "More ideas",
+  "ask": "Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book's Ideas folder. Pick what the book needs most now, from its stage and its open questions.",
+  "askWords": "Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book's Ideas folder. What they should be about, in his words: make it funnier",
+  "askSame": "Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book's Ideas folder. What they should be about, in his words: a falconer"
+ },
+ "import": {
+  "label": "Bring in a manuscript",
+  "title": "Bring in Chapter 2",
+  "titleNamed": "Bring in S-045 Grey at the barn",
+  "titleBare": "Bring in ",
+  "ask": "Kyle added a manuscript from the app: `Chapter 2` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book's last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.",
+  "askWords": "Kyle added a manuscript from the app: `Chapter 2` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book's last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.\n\nKyle's words: make it funnier",
+  "askSame": "Kyle added a manuscript from the app: `a falconer` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book's last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.\n\nKyle's words: a falconer"
+ },
+ "custom": {
+  "label": "Ask the team",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "chapter-check": {
+  "label": "Check this chapter for to-dos",
+  "title": "Check Chapter 2 for to-dos",
+  "titleNamed": "Check S-045 Grey at the barn for to-dos",
+  "titleBare": "Check  for to-dos",
+  "ask": "Check Chapter 2 of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter's to-dos (a task note in the book's Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.",
+  "askWords": "Check Chapter 2 of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter's to-dos (a task note in the book's Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.\n\nKyle's words: make it funnier",
+  "askSame": "Check a falconer of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter's to-dos (a task note in the book's Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.\n\nKyle's words: a falconer"
+ },
+ "todo-review": {
+  "label": "Tick off fixed to-dos",
+  "title": "Tick off fixed to-dos in Chapter 2",
+  "titleNamed": "Tick off fixed to-dos in S-045 Grey at the barn",
+  "titleBare": "Tick off fixed to-dos in ",
+  "ask": "Review the open to-dos of Chapter 2 of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.",
+  "askWords": "Review the open to-dos of Chapter 2 of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.\n\nKyle's words: make it funnier",
+  "askSame": "Review the open to-dos of a falconer of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.\n\nKyle's words: a falconer"
+ },
+ "summaries": {
+  "label": "Scene summaries",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "beats": {
+  "label": "Beats for this chapter",
+  "title": "Beats for Chapter 2",
+  "titleNamed": "Beats for S-045 Grey at the barn",
+  "titleBare": "Beats for ",
+  "ask": "Write the beats of Chapter 2 of this book, following `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist. A beat is one move of the chapter: a short title and a one-line summary. They go in the book's `Chapter Beats/` folder as one `chapter-beats` note for the chapter, never in the scenes. If the chapter has prose, find the beats in it as it stands: each beat starts at a paragraph, and its Starts line names the scene and copies the first words of that paragraph exactly. Never change the prose. If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. If the chapter already has a beats note, move it to the book's Archive folder first with a line saying why (never delete it), then write the new one.",
+  "askWords": "Write the beats of Chapter 2 of this book, following `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist. A beat is one move of the chapter: a short title and a one-line summary. They go in the book's `Chapter Beats/` folder as one `chapter-beats` note for the chapter, never in the scenes. If the chapter has prose, find the beats in it as it stands: each beat starts at a paragraph, and its Starts line names the scene and copies the first words of that paragraph exactly. Never change the prose. If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. If the chapter already has a beats note, move it to the book's Archive folder first with a line saying why (never delete it), then write the new one.\n\nWhat the chapter should do, in Kyle's words: make it funnier",
+  "askSame": "Write the beats of a falconer of this book, following `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist. A beat is one move of the chapter: a short title and a one-line summary. They go in the book's `Chapter Beats/` folder as one `chapter-beats` note for the chapter, never in the scenes. If the chapter has prose, find the beats in it as it stands: each beat starts at a paragraph, and its Starts line names the scene and copies the first words of that paragraph exactly. Never change the prose. If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. If the chapter already has a beats note, move it to the book's Archive folder first with a line saying why (never delete it), then write the new one.\n\nWhat the chapter should do, in Kyle's words: a falconer"
+ },
+ "fill": {
+  "label": "Fill braces",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "combine": {
+  "label": "Combine these ideas",
+  "title": "Combine Chapter 2",
+  "titleNamed": "Combine S-045 Grey at the barn",
+  "titleBare": "Combine ",
+  "ask": "Kyle ticked Chapter 2 on the Ideas board and asked the team to combine them. Read each of those idea notes in this book's Ideas folder. Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.",
+  "askWords": "Kyle ticked Chapter 2 on the Ideas board and asked the team to combine them. Read each of those idea notes in this book's Ideas folder. Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.\n\nKyle's words: make it funnier",
+  "askSame": "Kyle ticked a falconer on the Ideas board and asked the team to combine them. Read each of those idea notes in this book's Ideas folder. Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.\n\nKyle's words: a falconer"
+ },
+ "variations": {
+  "label": "Variations on this idea",
+  "title": "Variations on Chapter 2",
+  "titleNamed": "Variations on S-045 Grey at the barn",
+  "titleBare": "Variations on ",
+  "ask": "Kyle ticked Chapter 2 on the Ideas board and asked for variations. Read that idea note in this book's Ideas folder and write three takes on it, each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.",
+  "askWords": "Kyle ticked Chapter 2 on the Ideas board and asked for variations. Read that idea note in this book's Ideas folder and write three takes on it, each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.\n\nKyle's words: make it funnier",
+  "askSame": "Kyle ticked a falconer on the Ideas board and asked for variations. Read that idea note in this book's Ideas folder and write three takes on it, each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.\n\nKyle's words: a falconer"
+ },
+ "options": {
+  "label": "Options for a passage",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "forge": {
+  "label": "Forge a new specialist",
+  "title": "Forge a new specialist: Chapter 2",
+  "titleNamed": "Forge a new specialist: S-045 Grey at the barn",
+  "titleBare": "Forge a new specialist: ",
+  "ask": "Kyle wants a new specialist on the team: Chapter 2. Forge it the way Writers Room's /forge did. First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.",
+  "askWords": "Kyle wants a new specialist on the team: make it funnier. Forge it the way Writers Room's /forge did. First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.",
+  "askSame": "Kyle wants a new specialist on the team: a falconer. Forge it the way Writers Room's /forge did. First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes."
+ },
+ "next-step": {
+  "label": "Ask the team",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "voice-check": {
+  "label": "Voice check",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "compare-read": {
+  "label": "Compare two versions",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "learn-taste": {
+  "label": "Update my taste",
+  "title": "Update my taste",
+  "titleNamed": "Update my taste",
+  "titleBare": "Update my taste",
+  "ask": "Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.",
+  "askWords": "Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.\n\nKyle's words: make it funnier",
+  "askSame": "Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.\n\nKyle's words: a falconer"
+ },
+ "fill-cards": {
+  "label": "Fill in the scene cards",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "workflow-step": {
+  "label": "A workflow step",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ },
+ "revise": {
+  "label": "Changes for this chapter",
+  "title": "Changes for Chapter 2",
+  "titleNamed": "Changes for S-045 Grey at the barn",
+  "titleBare": "Changes for ",
+  "ask": "Revise Chapter 2 of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.",
+  "askWords": "Revise Chapter 2 of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.\n\nKyle's words: make it funnier",
+  "askSame": "Revise a falconer of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.\n\nKyle's words: a falconer"
+ },
+ "a-kind-nobody-defined": {
+  "label": "Ask the team",
+  "title": "Ask the team",
+  "titleNamed": "Ask the team",
+  "titleBare": "Ask the team",
+  "ask": "",
+  "askWords": "make it funnier",
+  "askSame": "a falconer"
+ }
+}

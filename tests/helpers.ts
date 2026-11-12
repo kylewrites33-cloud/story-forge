@@ -1,3 +1,5 @@
+import { parseSchema } from '../src/lib/schema.ts';
+import { kindsFrom } from '../src/team/kinds.ts';
 // A vault source that reads a folder on disk, so the tests run the same code the app runs against GitHub.
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -131,4 +133,9 @@ export function leaves(name: string, before: Map<string, string>, after: Map<str
   if (!fs.existsSync(file)) throw new Error('No expected result is written down for "' + name + '" (tests/golden). Run GOLDEN=write npm test once and read what it wrote.');
   const want = JSON.parse(fs.readFileSync(file, 'utf8'));
   assert.deepEqual(got, want, name);
+}
+
+/** The kinds of job as the app has them once a vault is open: from the demo vault's schema (src/team/kinds.ts). */
+export function demoKinds(): void {
+  kindsFrom(parseSchema(demoSchemaText()));
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { readSnapshot, writeSnapshot, clearSnapshots } from '../lib/cache.ts';
-import { DemoSource } from '../lib/demo-source.ts';
+import { builtInSchemaText, DemoSource } from '../lib/demo-source.ts';
 import { timeAgo } from '../lib/format.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { parseSchema } from '../lib/schema.ts';
@@ -10,6 +10,7 @@ import type { Decision } from '../lib/ideas.ts';
 import { rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { type NewTodo } from '../lib/todos.ts';
+import { kindsFrom } from '../team/kinds.ts';
 import type { Take } from '../team/asks.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { orderBetween, safeTitle } from '../lib/scenes.ts';
@@ -771,6 +772,10 @@ export function App() {
     if (!snap) return null;
     try { return parseSchema(snap.schemaText); } catch { return null; }
   }, [snap]);
+  // The kinds of job come from the schema (src/team/kinds.ts): the vault's when it has the list, else the one the app
+  // was built with.
+  useMemo(() => { try { kindsFrom(parseSchema(builtInSchemaText())); } catch { /* the vault's own, below */ } }, []);
+  useMemo(() => kindsFrom(schema), [schema]);
 
   schemaRef.current = schema;
   const view = useMemo<VaultIndex | null>(() => (snap ? overlayActions(snap.index, outbox, schema) : null), [snap, outbox, schema]);

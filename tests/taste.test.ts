@@ -10,7 +10,9 @@ import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
 import { overlayActions } from '../src/vault/apply.ts';
 import { choiceAction } from '../src/vault/ops.ts';
 import { add, choicesOf } from '../src/vault/outbox.ts';
-import { DEMO, demoSchemaText, FsSource } from './helpers.ts';
+import { DEMO, demoSchemaText, FsSource, demoKinds } from './helpers.ts';
+
+demoKinds();
 
 const schema = parseSchema(demoSchemaText());
 const BOOK = 'Series/Ember Road/Books/1 Ash Bell';

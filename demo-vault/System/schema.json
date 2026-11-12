@@ -2993,7 +2993,254 @@
           "result"
         ]
       },
-      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order. For kind fill, the ask lists the {braces} asks Kyle left in a scene (### B1, B2 ...) and the ## Result answers each under the same heading; the app puts the answers into the page and the agent never edits the scene."
+      "body": "## Ask holds Kyle's words. The runner appends ## Result. For kind chat, thread names the conversation (a scene ID or chat-NNN) and the app shows every job in that thread in order. For kind fill, the ask lists the {braces} asks Kyle left in a scene (### B1, B2 ...) and the ## Result answers each under the same heading; the app puts the answers into the page and the agent never edits the scene.",
+      "kinds_about": "THE ONE LIST OF JOB KINDS (2026-11-12, step 4 of the code structure redesign). The app and the runner (System/Tools/jobs.mjs) both read `kinds`; nothing else defines a kind. For each kind: `label` is what the app calls it in Kyle's words; `title` the job's title when he gives none (<<what>> is the target and its name; `title_without` when there is none); `agent` who runs it (the commit trailer); `ask` the ## Ask the app writes when the kind has fixed instructions (<<target>>; <<words|target>> is his words, or the target when he typed none; then `ask_with_words` when Kyle typed something, <<words>>, or `ask_without_words` when he did not); `steps` the lines the runner tells the agent, between Kyle's ask and the rules every run gets (<<target>>, <<target|what to say when there is none>>, <<job>> the job's ID; a line that reads differently with and without a target is written both ways). A kind with no `steps` gets `custom`'s. `chat` is put together by the runner itself, because it carries the conversation so far. A NEW KIND is one entry here and its name in the `kind` list below; the tests (System/Tools/tests/jobs.test.js) fail if the two lists differ, and hold every kind's steps to a kept copy.",
+      "kinds": {
+        "draft": {
+          "label": "Draft this scene",
+          "title": "Draft <<what>>",
+          "agent": "Writer",
+          "steps": [
+            "Do this: follow `.claude/skills/draft/SKILL.md` for the one scene <<target>> as the Writer (`.claude/agents/writer.md`). Build the packet with `System/Tools/sf packet <<target>>`, draft the prose into the scene body, lint with `System/Tools/sf lint`, snapshot with `System/Tools/sf snapshot <<target>>`. Then bring in the Continuity Keeper as a helper (subagent_type `continuity-keeper`, effort `medium`) to record the scene's progressions, brief, not exhaustive: give it only the scene path; it reads the scene and the progressions it needs, never the packet (CLAUDE.md, \"Workers per job\"). If the scene already has prose (status is not planned), stop and say so in the Result instead of drafting; never overwrite Kyle's words."
+          ]
+        },
+        "notes": {
+          "label": "Notes on this chapter",
+          "title": "Notes on <<what>>",
+          "agent": "Developmental Editor",
+          "steps": [
+            "Do this: follow `.claude/skills/notes/SKILL.md` as the Developmental Editor for <<target>> of this book. Read cold: the pages and the outline only. Write the letter and rubric into a session note and file each actionable note as an inbox idea (kind note). Change no existing note."
+          ]
+        },
+        "check": {
+          "label": "Deeper check for AI-sounding phrases (the team)",
+          "title": "Check <<what>> for AI-sounding phrases",
+          "agent": "Line Editor",
+          "steps": [
+            "Do this: follow `.claude/skills/lint/SKILL.md` for <<target>> as the Line Editor, in list mode (do not edit the scene). Run `System/Tools/sf lint \"<scene path>\" --min 1`, then write a change list (original, revised, reason) for the strong and likely flags, in plain words, into a session note. Kyle does not know the word \"lint\"; in the Result call it \"AI-sounding phrases\"."
+          ]
+        },
+        "learn": {
+          "label": "Learn from my edits",
+          "title": "Learn from Kyle's edits",
+          "agent": "Learn From Edits",
+          "steps": [
+            "Do this: follow `.claude/skills/learn-from-edits/SKILL.md` for <<target|every scene whose text differs from its latest agent snapshot>>. Rules learned go to Taste/Style Fingerprint.md and the Writer's journal as the skill says."
+          ]
+        },
+        "chat": {
+          "label": "A question for the team",
+          "agent": "Coordinator"
+        },
+        "rewrite": {
+          "label": "Rewrite this card",
+          "title": "Rewrite <<what>>",
+          "agent": "Coordinator",
+          "ask": "Kyle pressed Rewrite on <<target>> in the app. Rewrite that note now, as the agent that owns its type would, following the schema's `regenerate` convention: read what to change in its `decision_note`, rewrite the note's words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: rewrite <<target|the note named in the ask>>, whose status Kyle set to regenerate. Read its `decision_note` for what to change. Work as the agent that owns that kind of note (character notes, beats, scene cards, conflicts, Story Juice, premise and theme: Story Specialist, through the matching lens skill; market notes: Market Analyst; ideas: whoever wrote them), using that agent's skill. Rewrite only that note, keep its ID, title and type, and set its status back to inbox for Kyle to decide. Never touch a note whose status is keep."
+          ]
+        },
+        "table-read": {
+          "label": "Table read",
+          "title": "Table read of <<what>>",
+          "agent": "Beta Reader",
+          "ask": "Run a blind table read of <<target>> following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/table-read/SKILL.md` for <<target|the chapters named in the ask>>. Each Beta Reader (`.claude/agents/beta-reader.md`) reads only the compiled pages and one persona from `.claude/skills/reader-personas/`, never the outline, cards or session notes. Synthesise the reports into a session note and file the findings as inbox notes. Change no scene."
+          ]
+        },
+        "ideas": {
+          "label": "More ideas",
+          "title": "More ideas for <<what>>",
+          "title_without": "More ideas",
+          "agent": "Story Specialist",
+          "ask": "Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book's Ideas folder. ",
+          "ask_with_words": "What they should be about, in his words: <<words>>",
+          "ask_without_words": "Pick what the book needs most now, from its stage and its open questions.",
+          "steps": [
+            "Do this: follow `.claude/skills/room/SKILL.md` for the question in the ask, led by the Story Specialist (`.claude/agents/story-specialist.md`) with the Contrarian (`.claude/agents/contrarian.md`) naming the predictable version first. Read Taste/Taste Profile.md. File the best five to nine options as inbox idea notes in one step with `node System/Tools/jobs.mjs ideas .scratch/<<job>>-ideas.json`; change no existing note."
+          ]
+        },
+        "import": {
+          "label": "Bring in a manuscript",
+          "title": "Bring in <<what>>",
+          "agent": "Story Specialist",
+          "ask": "Kyle added a manuscript from the app: `<<target>>` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book's last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/import/SKILL.md` as the Story Specialist, plot lens (`.claude/agents/story-specialist.md`), for the file named in the ask: `System/Tools/sf import <file> --dry-run` first, then the real import into the book named above. Snapshot Kyle's own words as the skill says; never change his prose."
+          ]
+        },
+        "custom": {
+          "label": "Ask the team",
+          "agent": "Coordinator",
+          "steps": [
+            "Do this: act as the Sparrow coordinator. Read the ask, pick the right agent file in `.claude/agents/`, and do the work the way its skill in `.claude/skills/` says. Proposals are inbox notes; never change a kept note or Kyle's prose."
+          ]
+        },
+        "chapter-check": {
+          "label": "Check this chapter for to-dos",
+          "title": "Check <<what>> for to-dos",
+          "agent": "Continuity Keeper",
+          "ask": "Check <<target>> of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter's to-dos (a task note in the book's Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/chapter-todos/SKILL.md` in check mode as the Continuity Keeper (`.claude/agents/continuity-keeper.md`), with the plot and character lens checks the skill names for <<target|the chapter named in the ask>>. Book to-dos go in the book's `Tasks/` folder, never the studio's. Change no scene and no kept note."
+          ]
+        },
+        "todo-review": {
+          "label": "Tick off fixed to-dos",
+          "title": "Tick off fixed to-dos in <<what>>",
+          "agent": "Coordinator",
+          "ask": "Review the open to-dos of <<target>> of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/chapter-todos/SKILL.md` in review mode for <<target|the chapter named in the ask>>. Book to-dos go in the book's `Tasks/` folder, never the studio's. Change no scene and no kept note."
+          ]
+        },
+        "summaries": {
+          "label": "Scene summaries",
+          "agent": "Continuity Keeper",
+          "steps": [
+            "Do this: write a headline for each scene listed in the ask. A headline is one sentence of 10 to 20 words, present tense, plain words, saying who does what and what changes by the end, with characters named as the prose names them. Base it on the prose only: skip `> [!plan]` callouts, Team notes and \"~\" lines. No commentary or judgement, no \"In this scene\", no em dashes, no \"not X but Y\", no colon or double quote, and nothing that is not on the page. Read each scene note, then set the line with `node System/Tools/jobs.mjs headline \"<scene path>\" \"<sentence>\"`. Never edit a scene file any other way: the scene's prose and every other property stay exactly as they are. The command refuses a scene whose headline is already filled in; leave that one alone. Commit all the headlines in one commit (`scenes: headlines for N scenes`). In the Result, list each scene ID with its headline."
+          ]
+        },
+        "beats": {
+          "label": "Beats for this chapter",
+          "title": "Beats for <<what>>",
+          "agent": "Story Specialist",
+          "ask": "Write the beats of <<target>> of this book, following `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist. A beat is one move of the chapter: a short title and a one-line summary. They go in the book's `Chapter Beats/` folder as one `chapter-beats` note for the chapter, never in the scenes. If the chapter has prose, find the beats in it as it stands: each beat starts at a paragraph, and its Starts line names the scene and copies the first words of that paragraph exactly. Never change the prose. If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. If the chapter already has a beats note, move it to the book's Archive folder first with a line saying why (never delete it), then write the new one.",
+          "ask_with_words": "\n\nWhat the chapter should do, in Kyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist (`.claude/agents/story-specialist.md`) for <<target|the chapter named in the ask>>: find the beats in its prose, or plan them from Kyle's words when it has none. The beats go in the book's `Chapter Beats/` note for that chapter. Never change a scene's prose; an old beats note goes to the book's Archive first, never deleted."
+          ]
+        },
+        "fill": {
+          "label": "Fill braces",
+          "agent": "Writer",
+          "steps": [
+            "Do this: Kyle is writing <<target>> in the app right now and left asks in {braces} in it for the team. Answer each one listed in the ask (### B1, ### B2 ...) as the Writer (`.claude/agents/writer.md`), in his voice. Square brackets in his text are his own (System screens, tags like [Deserter]): never treat them as an ask, never change them (Kyle, 2026-10-23). Read `Taste/Style Fingerprint.md`, the book's `Style Guide.md`, the scene note for <<target>> (it may be a little behind his page; the Paragraph lines in the ask are what he has now), the scene's notes in `Scene Notes/` and the chapter's plan in `Chapter Plans/` if there is one.",
+            "- A **gap** (Kind: gap) is a hole in a sentence, like \"she was wearing {...}\". Write only the words that replace the marker so the sentence reads on, in the prose's tense and point of view. No quotes, no explanation.",
+            "- An **ask** (Kind: ask) is a question or an instruction, like \"{how was she dressed}\" or \"{research: make this farmerly}\". Answer it as prose that can sit in the scene as a new paragraph right below Kyle's (his braces stay above it until he deletes them): one paragraph unless the ask wants more. When the ask needs real-world knowledge (how a trampled squash plant looks, how a video like that is made), first think it through as a researcher: what would actually be there, and how the point-of-view character would name it (a farmer's words for a farmer). Use web search when you are not sure. Never invent a fact; a detail you are not sure of stays out.",
+            "- Write plain text in the page's own style, set out the way Kyle's prose around the ask is: no `>` quote arrows, no headings, no lists, no code blocks (Kyle, 2026-10-19: \"I don't like the arrows\"). *Italics* and **bold** only where his pages use them.",
+            "- When the ask wants text from an earlier book or scene and there is more than one version, read the lines just before the ask and pick the version they point to (Kyle, 2026-10-19). Copy it word for word in that book's own layout, and say in `result` which scene you took it from and what other versions exist. J-010: \"Poppy said 'Inspect this dirt.' Grey inspected the dirt\" points to the plain \"Dirt\" box (B1 S-003), not \"Bucket of Dirt\" (B1 S-011); the bucket only comes after the bracket.",
+            "- Follow the prose rules in CLAUDE.md and `.claude/skills/anti-slop/SKILL.md`. Run `System/Tools/sf lint` on your answers if they are longer than a few lines.",
+            "- Never edit the scene file or any other note: the app puts your words into Kyle's page itself. Your answers go only in the job note.",
+            "- The `## Result` section is exactly one `### B<n>` heading per ask, the same names as in the ask, each followed by your words and nothing else (no \"Kind:\", no commentary). Set `result` to one sentence such as \"Filled 2 asks in <<target>>.\" If you cannot answer one, leave its heading out and say why in `result`."
+          ]
+        },
+        "combine": {
+          "label": "Combine these ideas",
+          "title": "Combine <<what>>",
+          "agent": "Story Specialist",
+          "ask": "Kyle ticked <<target>> on the Ideas board and asked the team to combine them. Read each of those idea notes in this book's Ideas folder. Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: as the Story Specialist (`.claude/agents/story-specialist.md`), with `.claude/skills/taste-profile/SKILL.md` and `Taste/Taste Profile.md`, fuse the ideas named in the target (<<target|the I-NNN list in the ask>>) into one or two new ideas that keep what is strongest in each and drop what fights. A fusion that only staples two pitches together is not worth filing; say so instead.",
+            "- Read each original idea note and the canon it touches first. File every result in one step with `node System/Tools/jobs.mjs ideas .scratch/<<job>>-ideas.json` (write that JSON first; the command's header says its shape), each a new idea note in the book's `Ideas/`: status `inbox`, the same `kind` as the original(s) unless the result is plainly another kind, `source: Story Specialist`, `pitch`, `reasoning` (what it takes from which original), `risk`, and `related` linking every original as \"[[I-NNN Title]]\".",
+            "- Never change the original ideas, whatever their status. In the Result, list the new idea IDs with one line each."
+          ]
+        },
+        "variations": {
+          "label": "Variations on this idea",
+          "title": "Variations on <<what>>",
+          "agent": "Story Specialist",
+          "ask": "Kyle ticked <<target>> on the Ideas board and asked for variations. Read that idea note in this book's Ideas folder and write three takes on it, each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. File each as a new inbox idea in the book's Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: as the Story Specialist (`.claude/agents/story-specialist.md`), with `.claude/skills/taste-profile/SKILL.md` and `Taste/Taste Profile.md`, write three distinct takes on the one idea in the target (<<target|named in the ask>>): one close to it, one that moves its strongest part somewhere new, and one the Contrarian would back (`.claude/skills/contrarian-toolkit/SKILL.md`). Three takes that differ only in wording are one take.",
+            "- Read each original idea note and the canon it touches first. File every result in one step with `node System/Tools/jobs.mjs ideas .scratch/<<job>>-ideas.json` (write that JSON first; the command's header says its shape), each a new idea note in the book's `Ideas/`: status `inbox`, the same `kind` as the original(s) unless the result is plainly another kind, `source: Story Specialist`, `pitch`, `reasoning` (what it takes from which original), `risk`, and `related` linking every original as \"[[I-NNN Title]]\".",
+            "- Never change the original ideas, whatever their status. In the Result, list the new idea IDs with one line each."
+          ]
+        },
+        "options": {
+          "label": "Options for a passage",
+          "agent": "Line Editor",
+          "steps": [
+            {
+              "with_target": "Do this: write two or three replacements for the exact passage quoted in the ask, in the mode the ask names. Tighten, rewrite and fix modes are the Line Editor's (`.claude/agents/line-editor.md`); Expand, Describe and \"More like my voice\" are the Writer's (`.claude/agents/writer.md`). Read `Taste/Style Fingerprint.md` (`.claude/skills/style-fingerprint/SKILL.md`), the book's `Style Guide.md`, and the scene note for <<target>> around the passage so each option fits the sentences before and after it. Tighten cuts 20 to 40% of the words; Expand and Describe add only what the point-of-view character would notice; \"More like my voice\" follows the Style Fingerprint first.",
+              "without_target": "Do this: write two or three replacements for the exact passage quoted in the ask, in the mode the ask names. Tighten, rewrite and fix modes are the Line Editor's (`.claude/agents/line-editor.md`); Expand, Describe and \"More like my voice\" are the Writer's (`.claude/agents/writer.md`). Read `Taste/Style Fingerprint.md` (`.claude/skills/style-fingerprint/SKILL.md`), the book's `Style Guide.md`, and the scene note around the passage so each option fits the sentences before and after it. Tighten cuts 20 to 40% of the words; Expand and Describe add only what the point-of-view character would notice; \"More like my voice\" follows the Style Fingerprint first."
+            },
+            "- Follow the prose rules in CLAUDE.md and `.claude/skills/anti-slop/SKILL.md`. Save each option to a scratch file and run `System/Tools/sf lint <file> --min 1` on it; fix what it finds before you write it down. Keep the passage's tense, point of view and names.",
+            "- Never edit the scene or any other note: the app swaps the option Kyle picks into his page after saving a copy. Your options go only in the job note.",
+            "- The `## Result` section is exactly `### Option 1`, `### Option 2` and (when you have a third worth reading) `### Option 3`, each followed by the replacement text and nothing else. Set `result` to one sentence naming how the options differ, such as \"Three options: one cut by a third, one kept close, one sharper ending.\""
+          ]
+        },
+        "forge": {
+          "label": "Forge a new specialist",
+          "title": "Forge a new specialist: <<what>>",
+          "agent": "Coordinator",
+          "ask": "Kyle wants a new specialist on the team: <<words|target>>. Forge it the way Writers Room's /forge did. First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.",
+          "steps": [
+            "Do this: forge the new specialist named in the ask, as the coordinator, in three steps.",
+            "- Research: follow `.claude/skills/study/SKILL.md` to build a knowledge folder `Library/<Topic>/` (type `knowledge`, one note per subject, with an `_Index.md`). Use web search. Every real-world fact names its source (title and link); a claim you could not source is marked \"(unverified)\". Never invent a source, quote or figure. Five to ten notes is enough; cover what the book will actually put on the page.",
+            "- Agent: write `.claude/agents/<kebab-name>.md` in the same format as the existing agent files (front matter `name`, `description`, `team:` line, `tools`, `model: inherit`, `memory: project`, `skills:` list of existing skills it should load; then \"What you are for\", \"How you work\" naming its `Library/<Topic>/` folder, \"Never\", \"Reporting and files\"). It advises and checks; it never writes prose or changes canon. Start its description with \"Awaiting Kyle's approval.\" and create `.claude/agent-memory/<kebab-name>/MEMORY.md` empty.",
+            "- Approval: file a studio to-do in the vault's `Tasks/` (ID from `System/Tools/sf next-id task`; `status: open`, `owner: Kyle`) titled \"Approve the new <Name> specialist\", whose body says in three lines what it knows, when the team would call it, and that deleting nothing is needed to refuse it (the agent file moves to `Archive/` with a note). Add one line to the Roster in CLAUDE.md only after Kyle approves, never in this job."
+          ]
+        },
+        "next-step": {
+          "agent": "Coordinator"
+        },
+        "voice-check": {
+          "label": "Voice check",
+          "agent": "Story Specialist",
+          "steps": [
+            "Do this: as the Story Specialist, character lens (`.claude/agents/story-specialist.md`), follow `.claude/skills/voice-check/SKILL.md` for <<target|the chapter or book named in the ask>>. Compare each speaking character's dialogue against their voice notes (the character note, the book's delta in `Characters/`, and the Style Guide) and file each line that is off-voice as a book to-do in the book's `Tasks/` (`generated: true`, `found_by: character`, `owner: Kyle`, `chapter`, `scene`), quoting the line and saying what in their voice it breaks. Never change the scenes or the character notes."
+          ]
+        },
+        "compare-read": {
+          "label": "Compare two versions",
+          "agent": "Beta Reader",
+          "steps": [
+            "Do this: follow `.claude/skills/table-read/SKILL.md` in comparative mode for <<target|the chapter named in the ask>>: version A is the current text, version B the snapshot or alternate named in the ask. Each Beta Reader (`.claude/agents/beta-reader.md`) reads both, in a different order per reader, with one persona from `.claude/skills/reader-personas/`, and never sees the outline, cards or session notes.",
+            "- In the `## Result`, give the count (for example \"3 of 4 readers preferred B\"), then one short paragraph per reader: which they preferred, the moment that decided it, quoted. End with the one difference that mattered most. Simulated readers are not real readers; say so if the panel split. Change no scene."
+          ]
+        },
+        "learn-taste": {
+          "label": "Update my taste",
+          "title": "Update my taste",
+          "agent": "Learn Taste",
+          "ask": "Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/learn-taste/SKILL.md`, including the count of one-press `reasons` on the ideas Kyle decided since the profile's `updated` date. In the Result, show what changed in the Taste Profile in five lines or fewer and list the open questions for Kyle."
+          ]
+        },
+        "fill-cards": {
+          "label": "Fill in the scene cards",
+          "agent": "Continuity Keeper",
+          "steps": [
+            "Do this: as the Continuity Keeper (`.claude/agents/continuity-keeper.md`), with the plot lens's judgement on tension and outcome, follow `.claude/skills/fill-cards/SKILL.md` for <<target|the book named above>>. For each scene (skip `Archive/`), read the prose and the card and fill only the empty `tension`, `outcome`, `day`, `mood` and `threads`, adding each field you fill to the scene's `card_draft` list. Then fill `arc_points` on the main characters' book delta notes (or series notes that are not kept) with `arc_draft: true`.",
+            "- Never overwrite a value Kyle set, never touch a note whose status is keep, and never change prose: edit only the property lines you add. Threads link existing thread notes by exact name. Commit with `Agent: Continuity Keeper`; in the Result, give the counts filled per field and any scene you left blank and why."
+          ]
+        },
+        "workflow-step": {
+          "label": "A workflow step",
+          "agent": "Coordinator",
+          "steps": [
+            "Do this: run <<target|the workflow step named in the ask>> of `System/Workflow.md` for this book, as the coordinator, exactly as that step's row says: the agents in its Who column, as many minds as its Minds column (separate, blind contexts where it says so), the inputs in its Needs column, and the skills it names. A judging step follows `.claude/skills/judge-panel/SKILL.md`. Read CLAUDE.md \"How the team runs\" first; never more than four agents on the job.",
+            "- What earlier steps decided is in the book's `Ideas/` folder: idea notes with a `step` property are workflow results, and the ones with `status: keep` are what Kyle kept at that step. Use the kept results of earlier steps as the step's inputs, and its own kept results too when the ask is to change or add to them.",
+            "- Workers: each mind in the Minds column is its own helper (Agent tool), briefed with the step's question, the paths in its Needs column, Kyle's words and the output you want, under 300 words back; you read only the step row and what you must pass on, never the helpers' inputs. Helpers that turn kept material into a list (traits, dramatic elements, minor characters, chapter beats from kept summaries) run on effort `medium`; brainstorms, test drives, outlines, prose and judges keep full effort. Never more helpers than the row asks for.",
+            "- File every new result as one inbox idea note in the book's `Ideas/` folder, all of them in one step with `node System/Tools/jobs.mjs ideas .scratch/<<job>>-ideas.json` (`status: inbox`, `step` set to the step number as a string, `origin: team`, `source` the agent or lens that made it, a fitting `kind`, `target` a wiki link to the character or note it is about, or \"Chapter N\", when there is one). Title: the result itself in a few words; `pitch`: one or two sentences. A list step (twenty traits) is one note per item.",
+            "- When the ask is to judge, do not file new ideas: score each inbox result of the step(s) named, writing only `panel_score` (1 to 5) and `panel_note` (one line, naming the reason) on those notes, all in one step with `node System/Tools/jobs.mjs score .scratch/<<job>>-scores.json`, and put the panel's recommendation in the Result. Never set `keep`, `discard` or `later`: Kyle decides.",
+            "- When the ask carries Kyle's note on a result to change, file the changed version as a new inbox result with `related` linking the old one; never edit the old one.",
+            "- Never change a kept note, canon or prose. In the Result, say in plain words how many results were filed or scored, and the two or three strongest with one line each."
+          ]
+        },
+        "revise": {
+          "label": "Changes for this chapter",
+          "title": "Changes for <<what>>",
+          "agent": "Writer",
+          "ask": "Revise <<target>> of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.",
+          "ask_with_words": "\n\nKyle's words: <<words>>",
+          "steps": [
+            "Do this: follow `.claude/skills/revise-as-changes/SKILL.md` as the Writer (`.claude/agents/writer.md`) for <<target|the chapter named in the ask>> of this book (workflow step 39; the whole process is `.claude/skills/edit-book/SKILL.md`). Before any new words, read the codex: the series `Characters/` and `Lore/` notes, the places, items and threads the chapter touches, the book's `Story So Far.md` and the `Book Index.md` entries of the people in the scene, and check every fact a new line states against them; a fact no note supports goes in a { } question, never in the text. Every open to-do for the chapter in the book's `Tasks/` gets a change whose Why starts `To-do T-NNN:`. Kyle's notes in the text ({ } asks, and plain lowercase [ ] notes in older books) are instructions: each becomes a change that carries it out. Write the chapter's changes as one `chapter-changes` note in the book's `Changes/` folder: each change quotes Kyle's exact words, gives the new words and its reason, and new passages carry a second version. Kyle's sentence stays unless a kept story call, a chapter problem, a Style Guide rule or plain sense gives a reason. Never edit a scene file: Kyle keeps or refuses each change in the app. If the chapter already has a changes note with changes Kyle has not decided, stop and say so in the Result."
+          ]
+        }
+      }
     },
     "study": {
       "description": "A finished story Kyle is studying in Crow (the character and plot study app): how its author builds characters and plot. Lives at Studies/<Title>/Study.md. Its notes are analysis, never canon for Kyle's books.",

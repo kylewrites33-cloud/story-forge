@@ -1720,3 +1720,19 @@ piece goes live.
   `app/saving-checks/`): the team's answer comes into the iPad's page once and the job note says `taken: [B1]`, the
   rest of the note untouched, saved as Kyle's; the desktop does not put it in a second time, and gets it with the scene
   when the iPad saves; options put away on the iPad are away on the desktop at its next look at the vault.
+- **The kinds of ask live in one list (2026-11-12, second piece).** What a kind is called, the title a job gets when
+  Kyle gives none, the fixed instructions some kinds carry in their ask, who on the team runs it and what that agent is
+  told were kept in three places: the app's own tables (`jobLabel`, `defaultJobTitle`, `jobAsk` in `src/lib/jobs.ts`),
+  the runner's (`AGENT_FOR` and `buildPrompt` in the vault's `System/Tools/jobs.mjs`) and the schema's list of kind
+  names. They are now one list in the vault's schema, `types.job.kinds` (its `kinds_about` line says how to read it).
+  The runner reads it for the agent and the steps; the app reads it through `src/team/kinds.ts` (`kindsFrom` when the
+  schema loads, in `src/ui/App.tsx`; the schema the app was built with stands in when the copy on the device is from
+  before the list). **A new kind of ask is one entry in that list and its name in the `kind` list: no app change.**
+  Only a conversation (`chat`) is still put together by the runner's own code, because it carries the messages so far.
+- **Nothing the team is told changed.** Before the move, what the runner says for every kind (with a target and
+  without, and two conversations) was written down from the old code, 56 prompts in the vault's
+  `System/Tools/tests/fixtures/job-prompts/`; after it they are the same to the letter (`jobs.test.js`, which also
+  fails if the two lists of kind names differ). The app's labels, titles and asks for every kind were written down the
+  same way (`tests/golden/job-kinds.json`, `tests/kinds.test.ts`) and are unchanged. `node System/Tools/jobs.mjs
+  prompt <job note>` prints what a job would be told without changing anything.
+

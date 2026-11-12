@@ -4,10 +4,11 @@
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
+import { kindAsk, kindLabel, kindTitle } from '../team/kinds.ts';
 import type { FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
 
-export type JobKind = 'draft' | 'notes' | 'check' | 'learn' | 'chat' | 'rewrite' | 'table-read' | 'ideas' | 'import' | 'chapter-check' | 'todo-review' | 'summaries' | 'beats' | 'fill' | 'custom'
-  | 'combine' | 'variations' | 'learn-taste' | 'options' | 'forge' | 'workflow-step' | 'revise';
+/** A kind of job: a name from the one list of kinds in the vault's schema (`types.job.kinds`). */
+export type JobKind = string;
 
 export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'running', label: 'Working on it' },
@@ -17,35 +18,9 @@ export const JOB_GROUPS: { key: string; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' }
 ];
 
-/** What each kind of job is called in Kyle's words. Never "lint". */
+/** What each kind of job is called in Kyle's words. Never "lint". From the one list of kinds (src/team/kinds.ts). */
 export function jobLabel(kind: unknown): string {
-  switch (String(kind || '')) {
-    case 'draft': return 'Draft this scene';
-    case 'notes': return 'Notes on this chapter';
-    case 'check': return 'Deeper check for AI-sounding phrases (the team)';
-    case 'learn': return 'Learn from my edits';
-    case 'chat': return 'A question for the team';
-    case 'rewrite': return 'Rewrite this card';
-    case 'table-read': return 'Table read';
-    case 'ideas': return 'More ideas';
-    case 'import': return 'Bring in a manuscript';
-    case 'chapter-check': return 'Check this chapter for to-dos';
-    case 'todo-review': return 'Tick off fixed to-dos';
-    case 'summaries': return 'Scene summaries';
-    case 'beats': return 'Beats for this chapter';
-    case 'fill': return 'Fill braces';
-    case 'combine': return 'Combine these ideas';
-    case 'variations': return 'Variations on this idea';
-    case 'learn-taste': return 'Update my taste';
-    case 'options': return 'Options for a passage';
-    case 'forge': return 'Forge a new specialist';
-    case 'workflow-step': return 'A workflow step';
-    case 'revise': return 'Changes for this chapter';
-    case 'voice-check': return 'Voice check';
-    case 'compare-read': return 'Compare two versions';
-    case 'fill-cards': return 'Fill in the scene cards';
-    default: return 'Ask the team';
-  }
+  return kindLabel(kind);
 }
 
 /** A status in Kyle's words, for the badge on a job. */
@@ -101,52 +76,10 @@ export interface NewJob {
   page?: string;
 }
 
-/** The ## Ask for the kinds the runner has no fixed steps for: exactly what to do, then Kyle's own words.
- * The runner gives any such job to the coordinator, who follows this. */
+/** The ## Ask for the kinds with fixed instructions: exactly what to do, then Kyle's own words. From the one list of
+ * kinds in the vault's schema (src/team/kinds.ts). */
 export function jobAsk(kind: JobKind, target: string, words: string): string {
-  const his = words.trim() ? '\n\nKyle\'s words: ' + words.trim() : '';
-  switch (kind) {
-    case 'rewrite':
-      return 'Kyle pressed Rewrite on ' + target + ' in the app. Rewrite that note now, as the agent that owns its type would, following the schema\'s `regenerate` convention: read what to change in its `decision_note`, rewrite the note\'s words (never its ID), set `status: inbox` again and keep `decision_note` as a record. If the note is not `regenerate` any more (Kyle changed his mind), change nothing and say so.' + his;
-    case 'table-read':
-      return 'Run a blind table read of ' + target + ' following `.claude/skills/table-read/SKILL.md`: three Beta Readers, one persona each, reading only the compiled pages of that chapter. File the findings as inbox ideas (kind note) and put the summary in the Result.' + his;
-    case 'ideas':
-      return 'Kyle wants more ideas for this book. Run a small brainstorm following `.claude/skills/room/SKILL.md` (the Contrarian included) and file the best five to nine as inbox ideas in the book\'s Ideas folder.' + (words.trim() ? ' What they should be about, in his words: ' + words.trim() : ' Pick what the book needs most now, from its stage and its open questions.');
-    case 'import':
-      return 'Kyle added a manuscript from the app: `' + target + '` in this book. Bring it in following `.claude/skills/import/SKILL.md` (use `System/Tools/sf import` with `--dry-run` first, from the .docx when there is one), as drafted scenes after the book\'s last scene. Never overwrite a scene. Say in the Result how many chapters and scenes came in.' + his;
-    case 'chapter-check':
-      return 'Check ' + target + ' of this book for problems to fix, following `.claude/skills/chapter-todos/SKILL.md` (Check): a continuity pass, a plot pass and a character pass. File each real problem as one of the chapter\'s to-dos (a task note in the book\'s Tasks folder with `chapter`, `generated: true` and `found_by`). Never change the scenes.' + his;
-    case 'todo-review':
-      return 'Review the open to-dos of ' + target + ' of this book against its current pages, following `.claude/skills/chapter-todos/SKILL.md` (Review). Mark done only the ones the text now plainly fixes, each with a one-line `done_note`. Leave the rest open, and never touch one Kyle marked done or dropped.' + his;
-    case 'beats':
-      return 'Write the beats of ' + target + ' of this book, following `.claude/skills/chapter-beats/SKILL.md` as the Story Specialist. '
-        + 'A beat is one move of the chapter: a short title and a one-line summary. They go in the book\'s `Chapter Beats/` folder as one `chapter-beats` note for the chapter, never in the scenes. '
-        + 'If the chapter has prose, find the beats in it as it stands: each beat starts at a paragraph, and its Starts line names the scene and copies the first words of that paragraph exactly. Never change the prose. '
-        + 'If the chapter has no prose yet, plan its beats from what Kyle says the chapter should do, each with a Starts line naming the scene it belongs in and no words. '
-        + 'If the chapter already has a beats note, move it to the book\'s Archive folder first with a line saying why (never delete it), then write the new one.'
-        + (words.trim() ? '\n\nWhat the chapter should do, in Kyle\'s words: ' + words.trim() : '');
-    case 'revise':
-      return 'Revise ' + target + ' of this book as changes on Kyle\'s draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book\'s `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.' + his;
-    case 'combine':
-      return 'Kyle ticked ' + target + ' on the Ideas board and asked the team to combine them. Read each of those idea notes in this book\'s Ideas folder. '
-        + 'Write one to three new ideas that fuse what is strongest in each into one stronger idea (not a list of both), following `.claude/skills/room/SKILL.md` for the voice of the agent who owns the kind and with the Contrarian checking it is not the predictable merge. '
-        + 'File each as a new inbox idea in the book\'s Ideas folder (next free ID, `status: inbox`, `source` the agent who wrote it, `related` linking the ideas it came from). Never change the ideas it came from.' + his;
-    case 'variations':
-      return 'Kyle ticked ' + target + ' on the Ideas board and asked for variations. Read that idea note in this book\'s Ideas folder and write three takes on it, '
-        + 'each different in a way that matters (a different engine, angle, cost or turn, never a rewording), as the agent who owns its kind, with the Contrarian naming the predictable take to avoid. '
-        + 'File each as a new inbox idea in the book\'s Ideas folder (next free ID, `status: inbox`, the same `kind`, `source` the agent who wrote it, `related` linking the original). Never change the original.' + his;
-    case 'learn-taste':
-      return 'Kyle pressed Update my taste on the Taste page. Update `Taste/Taste Profile.md` following `.claude/skills/learn-taste/SKILL.md` from his keep, later and drop decisions since its last update, '
-        + 'with their one-press `reasons`, `rating` stars, `decision_note`s and the keep rate per brainstorm `round`: each bullet with its evidence (idea IDs) and a confidence. Ask him the open questions in the Result. Change no idea notes.' + his;
-    case 'forge':
-      return 'Kyle wants a new specialist on the team: ' + (words.trim() || target) + '. Forge it the way Writers Room\'s /forge did. '
-        + 'First research a knowledge folder for the field in `Library/` (a few sourced notes: every fact names its source or is marked unverified; never invent one). '
-        + 'Then write the agent as `.claude/agents/<name>.md` in the house style of the other agent files (name, description, `team:` line, `skills:` list, what it must and must not do), '
-        + 'with an empty MEMORY.md and Journal.md in `.claude/agent-memory/<name>/`, and say in the Result how it differs from the agents the team has. '
-        + 'Stop at a gate: file the new agent as an inbox idea (kind other) and record it in the Decision Ledger as proposed; it joins the roster in CLAUDE.md only after Kyle says yes.';
-    default:
-      return words.trim();
-  }
+  return kindAsk(kind, target, words);
 }
 
 function ymd(d: Date): string {
@@ -169,26 +102,7 @@ export function jobText(id: string, j: NewJob, now: Date): string {
 
 /** The title a job gets when Kyle gives no words: "Draft S-045 Grey at the barn", "Notes on Chapter 30", "Learn from Kyle's edits". */
 export function defaultJobTitle(kind: JobKind, target: string, targetTitle = ''): string {
-  const what = [target, targetTitle].filter(Boolean).join(' ');
-  switch (kind) {
-    case 'draft': return 'Draft ' + what;
-    case 'notes': return 'Notes on ' + what;
-    case 'check': return 'Check ' + what + ' for AI-sounding phrases';
-    case 'learn': return "Learn from Kyle's edits";
-    case 'rewrite': return 'Rewrite ' + what;
-    case 'table-read': return 'Table read of ' + what;
-    case 'ideas': return 'More ideas' + (what ? ' for ' + what : '');
-    case 'import': return 'Bring in ' + what;
-    case 'chapter-check': return 'Check ' + what + ' for to-dos';
-    case 'todo-review': return 'Tick off fixed to-dos in ' + what;
-    case 'beats': return 'Beats for ' + what;
-    case 'combine': return 'Combine ' + what;
-    case 'variations': return 'Variations on ' + what;
-    case 'learn-taste': return 'Update my taste';
-    case 'forge': return 'Forge a new specialist: ' + what;
-    case 'revise': return 'Changes for ' + what;
-    default: return 'Ask the team';
-  }
+  return kindTitle(kind, target, targetTitle);
 }
 
 /** A job of the same kind and target that the team has not finished yet, if there is one. */
