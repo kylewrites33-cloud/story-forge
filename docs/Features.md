@@ -793,6 +793,13 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   draft 2? changes would be the default for draft 4 as well, and subsequent drafts": each time a chapter opens, the side
   column opens on Changes from draft 3 on and on Rewrite in draft 2; a move to another tab in that chapter stays. Checks
   `pick.mjs` and `webkit-pick.mjs`.
+- **Every mark in the left margin** (2026-11-12, Kyle: "definitely we're going to want like any kind of annotations to
+  be on just the left margin, not both the left and the right", then "for now, just bring whats currently on the right
+  to the left as well, so that my manuscript text extends to the right this far when theres annotations"). The few words
+  that say what each change is ("Style Guide: was → is", "Sentence") now sit in the left margin beside their line, under
+  or above his { } notes, never on the right. A page with any marks keeps its room on the left only, so the text runs out
+  to the right as far as it does beside a { } note. This replaces the "both margins" room in the entry above. A cleaner
+  look for the marks themselves (pictures A and B in the project files' `app/change-marks/`) waits on Kyle's pick.
 - **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
   the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
   page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
