@@ -88,7 +88,8 @@ test('a chapter\'s first beats start their note; made elsewhere a moment before,
   const create = '---\ntype: chapter-beats\ntitle: Chapter 3 beats\nchapter: 3\n---\n';
   const draft = (): Draft => ({ path, baseSha: '', baseBody: '', body: '\n## The ledger\nShe finds it.\n', target: null, startWords: 0, updatedAt: NOW.toISOString(), pending: false, create });
   const now = await saved('first-beats', (src) => { src.files.delete(path); return draft(); });
-  assert.equal(now.files.get(path), create + '\n## The ledger\nShe finds it.\n');
+  // The new note takes its chapter's ID in the same save.
+  assert.equal(now.files.get(path), create.replace('chapter: 3\n', 'chapter: 3\nchapter_id: CH-003\n') + '\n## The ledger\nShe finds it.\n');
   assert.match(now.commits[0].message, /^beats: add Chapter 3 beats\n/);
   // The team wrote beats for the chapter meanwhile: nothing of theirs or of Kyle's is lost.
   const two = await saved('first-beats-both-kept', (src) => { src.files.set(path, create + '\n## Theirs\nOther beats.\n'); return draft(); });

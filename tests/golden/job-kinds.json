@@ -233,6 +233,15 @@
   "askWords": "Revise Chapter 2 of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.\n\nKyle's words: make it funnier",
   "askSame": "Revise a falconer of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.\n\nKyle's words: a falconer"
  },
+ "reply": {
+  "label": "A new card from your reply",
+  "title": "New card from your reply on Chapter 2",
+  "titleNamed": "New card from your reply on S-045 Grey at the barn",
+  "titleBare": "New card from your reply on ",
+  "ask": "Kyle replied on a change card in Chapter 2 of this book, to tell the Writer why he made a choice. Make a new card from his reply, following the `reply` steps.",
+  "askWords": "Kyle replied on a change card in Chapter 2 of this book, to tell the Writer why he made a choice. Make a new card from his reply, following the `reply` steps.\n\nThe card and his reply: make it funnier",
+  "askSame": "Kyle replied on a change card in a falconer of this book, to tell the Writer why he made a choice. Make a new card from his reply, following the `reply` steps.\n\nThe card and his reply: a falconer"
+ },
  "a-kind-nobody-defined": {
   "label": "Ask the team",
   "title": "Ask the team",

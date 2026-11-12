@@ -1,6 +1,6 @@
 {
  "set": {
-  "Series/Ember Road/Books/1 Ash Bell/Chapter Beats/Chapter 3 beats.md": "---\ntype: chapter-beats\ntitle: Chapter 3 beats\nchapter: 3\n---\n\n## The ledger\nShe finds it.\n"
+  "Series/Ember Road/Books/1 Ash Bell/Chapter Beats/Chapter 3 beats.md": "---\ntype: chapter-beats\ntitle: Chapter 3 beats\nchapter: 3\nchapter_id: CH-003\n---\n\n## The ledger\nShe finds it.\n"
  },
  "gone": [],
  "also": {
@@ -13,7 +13,8 @@
    "data": {
     "type": "chapter-beats",
     "title": "Chapter 3 beats",
-    "chapter": 3
+    "chapter": 3,
+    "chapter_id": "CH-003"
    },
    "body": "\n## The ledger\nShe finds it.\n",
    "error": null

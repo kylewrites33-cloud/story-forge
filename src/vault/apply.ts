@@ -1,6 +1,7 @@
 // What a waiting change does to a note. There are two forms and they must agree (a test holds them to it):
 // to the note as the screens hold it (properties and body), so Kyle sees his change at once, and to the note's text as
 // the vault has it, changing only the lines the change touches, for the save.
+import { resolveChapters } from '../lib/chapterids.ts';
 import { marksMessage, setStatuses } from '../lib/changes.ts';
 import { draftOnto } from '../lib/drafts.ts';
 import { applyToData, applyToText, commitMessage } from '../lib/ideas.ts';
@@ -99,7 +100,7 @@ export function overlayActions(index: VaultIndex, actions: Action[], schema?: Sc
   }));
   const base = team ? { ...index, team } : index;
   if (added && schema) return withNotes(base, schema, notes);
-  const out = { ...base, notes };
+  const out = { ...base, notes: resolveChapters(notes) };
   return sort ? resortScenes(out) : out;
 }
 
@@ -124,7 +125,7 @@ export function foldSaved(index: VaultIndex, saved: NoteRecord[], schema?: Schem
     if (!notes[n.path]) { if (read && !read.has(n.path)) return; reshaped = true; }
     notes[n.path] = n;
   });
-  const out = reshaped && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes });
+  const out = reshaped && schema ? withNotes(index, schema, notes) : resortScenes({ ...index, notes: resolveChapters(notes) });
   const books = out.books.map((b) => {
     const add = archiveFiles(files, b.folder);
     const had = b.archive || [];

@@ -67,6 +67,9 @@ docs/              Features.md and Layout.md
   Kyle 2026-10-18; every colour is a CSS variable, so new styles use the variables, never fixed colours; the stylesheet is `src/styles/`, a colour theme one line in `themes/colours.css`, a theme with its own shapes one file beside it), 16 px side gutter, no horizontal scroll, 44 px tap targets.
 - A note's property is read with `propText` or `propNum` from `src/lib/props.ts`, never `String(note.data.x || '')` by
   hand; the names come from the schema (`npm run props` after the demo schema copy changes).
+- A chapter note belongs to its chapter by `chapter_id` (CH-007), never by its number: read `chapter` from the index
+  (it is worked out from the ID there, `src/lib/chapterids.ts`), and let the save's last step write the IDs. Never
+  write or change a `chapter_id` anywhere else.
 - Files are fetched by blob sha, so an unchanged note is never downloaded twice.
 - `demo-vault/System/schema.json` is a copy of the vault's schema. Refresh it when the schema changes, and keep the demo
   vault passing `sf validate` (a test runs it when the vault is beside this repository).

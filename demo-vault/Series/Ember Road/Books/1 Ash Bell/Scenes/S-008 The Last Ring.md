@@ -3,6 +3,7 @@ type: scene
 id: S-008
 title: The Last Ring
 chapter: 4
+chapter_id: CH-004
 order: 8
 threads:
   - "[[Who Cracked the Bell]]"

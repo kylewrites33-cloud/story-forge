@@ -71,7 +71,7 @@ test('a new scene shows at once in its book, in reading order, before it is save
   const res = await pushAll(src, [a]);
   assert.deepEqual(res.done, [a.id]);
   assert.match(src.commits[0].message, /^scenes: add S-009 Chapter 5\n\nAdded in the Sparrow app\.$/);
-  assert.match(src.files.get(a.ops[0].path)!, /^type: scene\nid: S-009\ntitle: Chapter 5\nstatus: drafted\nkind: story\nchapter: 5\norder: \d+\ncreated: 2026-11-11\n/m);
+  assert.match(src.files.get(a.ops[0].path)!, /^type: scene\nid: S-009\ntitle: Chapter 5\nstatus: drafted\nkind: story\nchapter: 5\nchapter_id: CH-005\norder: \d+\ncreated: 2026-11-11\n/m);
   assert.deepEqual(scenesOf(foldSaved(index, res.saved, schema, res.removed)).map((n) => n.path), scenes.map((n) => n.path));
 });
 

@@ -1,7 +1,7 @@
 {
  "set": {
   "Series/Ember Road/Books/1 Ash Bell/Archive/Deleted chapter 4 2026-11-11/Chapter 4 changes.md": "---\ntype: chapter-changes\ntitle: Chapter 4 changes\nchapter: 4\n---\n\n> [!note] Archived\n> Its chapter 4 was deleted in the Sparrow app on 2026-11-11.\n\nChanges of four.\n",
-  "Series/Ember Road/Books/1 Ash Bell/Archive/S-008 The Last Ring.md": "---\ntype: scene\nid: S-008\ntitle: The Last Ring\nchapter: 4\norder: 8\nthreads:\n  - \"[[Who Cracked the Bell]]\"\n  - \"[[Mara and Tobin]]\"\n  - \"[[The Warden's Hunt]]\"\ncard_draft:\n  - threads\nstatus: planned\npov: \"[[Mara Quill]]\"\ngoal: Ring the bell before the frost.\nturn: Tobin rings it for her.\nhook: The Warden hears the crack.\ntension: 9\noutcome: yes-but\nmood: 3\nsummary: A planned card for the demo. Tobin pays what the town owes ([[Debt]]).\nlabels:\n  - big moment\n---\n\n> [!note] Archived\n> Deleted in the Sparrow app on 2026-11-11.\nCard notes only.\n"
+  "Series/Ember Road/Books/1 Ash Bell/Archive/S-008 The Last Ring.md": "---\ntype: scene\nid: S-008\ntitle: The Last Ring\nchapter: 4\nchapter_id: CH-004\norder: 8\nthreads:\n  - \"[[Who Cracked the Bell]]\"\n  - \"[[Mara and Tobin]]\"\n  - \"[[The Warden's Hunt]]\"\ncard_draft:\n  - threads\nstatus: planned\npov: \"[[Mara Quill]]\"\ngoal: Ring the bell before the frost.\nturn: Tobin rings it for her.\nhook: The Warden hears the crack.\ntension: 9\noutcome: yes-but\nmood: 3\nsummary: A planned card for the demo. Tobin pays what the town owes ([[Debt]]).\nlabels:\n  - big moment\n---\n\n> [!note] Archived\n> Deleted in the Sparrow app on 2026-11-11.\nCard notes only.\n"
  },
  "gone": [
   "Series/Ember Road/Books/1 Ash Bell/Changes/Chapter 4 changes.md",

@@ -5,6 +5,7 @@
 // chapter can no longer be left half moved, and no file needs a passing name on the way.
 // Scenes deleted from the book are one save too (planDelete): each goes to the book's Archive, and a chapter left with
 // no scene takes its notes there and the chapters after it close up, in the same save.
+import { bookOf, CHAPTER_NOTE_TYPES, idOf, planChapterIds, withChapterId, type IdNote } from '../lib/chapterids.ts';
 import { chapterCloseUp, chapterMove, chapterNotes, chapterShifts, closeMap, moveMap, roomMap, shiftedText, type ChapterMap, type Shift } from '../lib/chapters.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { toNumber } from '../lib/links.ts';
@@ -164,4 +165,46 @@ export async function planDelete(tree: Tree, book: string, paths: string[], at: 
     message: subject + '\n\nDeleted in the Sparrow app on ' + today(at) + '. ' + (going.length === 1 ? 'The scene as it was is' : 'The scenes as they were are') +
       ' in the book\'s Archive.' + (lines.length ? '\n\n' + lines.join('\n') : '') + '\n\nOne save.'
   };
+}
+
+const HOLDS = /\/(Archive|Snapshots|Exports|Drafts)\//;
+
+/** The last thing a save does: chapter IDs (src/lib/chapterids.ts). A new scene takes its chapter's ID, or a new one
+ * when it starts a chapter; a scene moved into another chapter takes that chapter's; a chapter note the save adds
+ * (beats, a plan, a to-do) takes its chapter's. It looks only when the save adds a chapter-carrying note or changes one's
+ * chapter, so typing never pays for it, and it does nothing in a book that has no chapter IDs yet. `known` is the vault
+ * as the device has it: the book's other scenes are taken from there and not read again. */
+export async function stampChapterIds(tree: Tree, known?: Record<string, NoteRecord>): Promise<void> {
+  const carries = (type: string) => type === 'scene' || CHAPTER_NOTE_TYPES.indexOf(type) >= 0;
+  const touched = new Map<string, NoteRecord[]>();
+  let asked = false;
+  for (const p of tree.touchedPaths()) {
+    const book = bookOf(p);
+    if (!book || !p.endsWith('.md') || HOLDS.test(p.slice(book.length))) continue;
+    const text = await tree.read(p);
+    if (text == null) continue;
+    const n = makeNote(p, '', text);
+    if (!carries(n.type)) continue;
+    if (!touched.has(book)) touched.set(book, []);
+    touched.get(book)!.push(n);
+    const was = tree.before(p);
+    const old = was == null ? null : makeNote(p, '', was);
+    if (!old || toNumber(old.data.chapter) !== toNumber(n.data.chapter) || idOf(old) !== idOf(n)) asked = true;
+  }
+  if (!asked) return;
+  const idNote = (n: NoteRecord, t: boolean): IdNote => ({ path: n.path, type: n.type, chapter: toNumber(n.data.chapter), id: idOf(n), touched: t });
+  for (const [book, list] of touched) {
+    const mine = new Set(list.map((n) => n.path));
+    // Without the device's copy (a save made outside the app's own lists), the book is read from the vault.
+    const have = known || (await bookNotes(tree, book, {})).notes;
+    const rest = Object.values(have).filter((n) => n.path.startsWith(book + '/') && !mine.has(n.path) && !tree.gone(n.path) && !HOLDS.test(n.path.slice(book.length)));
+    const scenes = rest.filter((n) => n.type === 'scene').map((n) => idNote(n, false)).concat(list.filter((n) => n.type === 'scene').map((n) => idNote(n, true)));
+    const others = list.filter((n) => n.type !== 'scene').map((n) => idNote(n, true));
+    const used = rest.filter((n) => n.type !== 'scene' && carries(n.type)).map(idOf).filter(Boolean);
+    const plan = planChapterIds(scenes, others, used);
+    for (const [path, id] of plan) {
+      const text = await tree.read(path);
+      if (text != null) tree.write(path, withChapterId(text, id));
+    }
+  }
 }

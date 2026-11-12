@@ -2,6 +2,7 @@
 type: chapter-beats
 title: Chapter 1 beats
 chapter: 1
+chapter_id: CH-001
 ---
 
 ## Dawn climb

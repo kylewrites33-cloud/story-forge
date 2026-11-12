@@ -38,6 +38,7 @@ export type Prop =
   | 'category'
   | 'change'
   | 'chapter'
+  | 'chapter_id'
   | 'chapter_title'
   | 'chapter_words'
   | 'chapters_planned'

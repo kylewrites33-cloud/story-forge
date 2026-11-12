@@ -5,6 +5,7 @@ title: The ferry leaves at dawn in S-002, at noon in S-001
 owner: Kyle
 status: open
 chapter: 1
+chapter_id: CH-001
 scene: S-002
 generated: true
 found_by: continuity
