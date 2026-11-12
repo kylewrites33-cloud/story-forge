@@ -779,9 +779,14 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   cursor steps over them and they never reach the scene. Kyle types anywhere; typing over a change's old words takes it
   off the page and its card offers I wrote my own. A press on a change picks its card; picking a card brings its change
   into sight. Accept, Reject, Undo and Accept all put words in as one step to undo without drawing the box again, so the
-  page no longer runs to the top (also in Self-Edit). Every scene of the chapter works the same way. Simple and Final
-  stay read-only pictures. In `src/write/prose.ts` (`PageChanges`, `changesField`). Checks `type.mjs` and
+  page no longer runs to the top. Every scene of the chapter works the same way. In `src/write/prose.ts` (`PageChanges`, `changesField`). Checks `type.mjs` and
   `webkit-type.mjs` in the project files' `app/saving-checks/`.
+- **One page, one Hide marks switch** (2026-11-12, Kyle: "i dont think ive used simple and final at all ... im
+  wondering if we need those other modes or not"; he chose "All changes plus Hide marks"). The four view buttons (All
+  changes, Simple, Final, Self-Edit) are gone. The Changes bar has one Hide marks switch (Show marks to bring them back):
+  the same page, still typed in, with the team's marks taken off, which is what Self-Edit was. A device that had Self-Edit
+  saved opens with marks hidden; any other saved view opens with marks shown. The older entries above that name Simple,
+  Final and Self-Edit tell how it was before.
 - **Reply to the Writer** (2026-11-12, Kyle: "i need to be able to reply within the changes, to explain to the writer
   why i made a choice, and for the writer to create a new card based on my reply"). Every card, waiting or decided, has
   Reply to the Writer: a box opens on the card, and Send to the Writer puts his words on the card as a `Reply:` line in

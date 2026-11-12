@@ -477,11 +477,6 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .changes-page.book .chg-line { min-height: 0; }
 .changes-page.book .chg-line.bk-blank { display: none; }
 .changes-page.book .chg-line.bk-blank-tag { min-height: 0; height: 0; }
-/* The page with the team's changes in blocks with a line's space between them, as the page reads while typing (Kyle,
-   2026-11-12: "can we keep the view on the writing panel as the blocks with spaces between, like in draft 2 mode? its
-   way easier to read and work on"). System screens stay indented with no > marks; the cards keep the Kindle look. */
-.changes-page.blocks .bk-q { padding-left: 1.6em; }
-.changes-page.blocks .bk-qt .md-b, .changes-page.blocks .bk-qt strong { font-variant: small-caps; letter-spacing: 0.04em; }
 .book .bk-p { text-indent: 1.5em; }
 .book .bk-p.bk-first { text-indent: 0; }
 .book .bk-q { padding-left: 1.6em; }
@@ -2813,3 +2808,7 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .lit-shown, .lit-listen { background: color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 3px; }
 .lit-check { background-color: color-mix(in srgb, var(--danger) 14%, transparent); text-decoration: underline wavy var(--danger); }
 .lit-check-now { background-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+
+/* The Edit room's one switch over the page (2026-11-12): Hide marks shows Kyle's page alone, Show marks brings the
+   team's changes back. Both are typed in. */
+.changes-bar .marks-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }

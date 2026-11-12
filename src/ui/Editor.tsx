@@ -48,7 +48,7 @@ import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
 import { findSpot, rewriteFor, spotOf, type Spot } from '../lib/rewrite.ts';
-import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
+import { AskForChanges, ChangesBar, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
@@ -959,10 +959,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const chOpenHere = chCards.filter((c) => c.status === 'open').length;
   const chBookOpen = (changes ? changes.book : []).reduce((t, x) => t + (x.chapter === chapterNum ? 0 : x.open), 0) + chAll.filter((c) => c.status === 'open').length;
   const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chList.length > 0;
-  // All changes is typed in: the writing box shows the changes as marks (Kyle, 2026-11-12: "i would love to be able to
-  // just type in the all changes section"). Simple and Final are still pictures of the page, read only.
-  const typeMarks = showMarks && chView === 'all';
-  readOnly.current = (showMarks && !typeMarks) || shownDraft != null;
+  // The page with the changes is typed in: the writing box shows them as marks (Kyle, 2026-11-12: "i would love to be
+  // able to just type in the all changes section"); Hide marks shows his page alone. Simple and Final went that day.
+  const typeMarks = showMarks;
+  readOnly.current = shownDraft != null;
   const record = (choices: Record<string, ChangeStatus>) => {
     if (!chNote || !onMarks) return;
     // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28). They go
@@ -1732,7 +1732,6 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               onNext={(showMarks && chIdx < chList.length - 1) || otherScene(1) || otherChapter(1) ? () => goChange(1) : null}
               />
           )}
-          {showMarks && !typeMarks && <p class="hint changes-hint">To type, press All changes or Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
               <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={() => sibTypedRef.current(n.path)} onCaret={(k) => { lastCaret.current = { path: n.path, at: k }; if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
@@ -1745,9 +1744,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             oldText && oldText.key === oldKey && oldText.text
               ? <div class="writer-text styled draft-readonly" role="document" aria-label={'Draft ' + shownDraft + ' of ' + title} dangerouslySetInnerHTML={{ __html: styledHtml(oldText.text, styleOpts) }} />
               : <p class={'writer-text ' + (oldText && oldText.error ? 'error' : 'hint')}>{!oldText || oldText.key !== oldKey || oldText.text === '' ? 'Opening Draft ' + shownDraft + '…' : oldText.error || 'This scene was not in Draft ' + shownDraft + '.'}</p>
-          ) : showMarks && !typeMarks
-            ? <ChangesPage text={text} placed={chPlace.placed} view={chView} current={chCur} onPick={pickChange} options={styleOpts} label={'Text of ' + title + ' with the team\'s changes'} />
-            : <ProseEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
+          ) : <ProseEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
               options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
               changes={typeMarks ? { changes: chMine, scene: sceneId, current: chCur } : null} onChangePick={pickChange} />}
           </div>

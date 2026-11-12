@@ -10,7 +10,7 @@ import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { ProseEditor } from '../write/ProseEditor.tsx';
 import type { EditorCommands } from '../write/prose.ts';
-import { ChangesPage, type ChangesView } from './Changes.tsx';
+import type { ChangesView } from './Changes.tsx';
 import type { Change, Placed } from '../lib/changes.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
@@ -147,11 +147,9 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
 
   return (
     <section class="chapter-section" data-section={note.path} onFocusCapture={onFocus}>
-      {marks && marks.view !== 'all' ? <ChangesPage text={splitLead(draft.body).text} placed={marks.placed} view={marks.view} current={marks.current} onPick={marks.onPick} options={options}
-        label={'Text of ' + String(note.data.title || note.data.id || '') + ' with the team\'s changes'} />
-      : <ProseEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
+      <ProseEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
         label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options}
-        changes={marks && marks.view === 'all' ? { changes: marks.changes || [], scene: marks.scene || '', current: marks.current } : null} onChangePick={marks ? marks.onPick : undefined} />}
+        changes={marks && marks.view === 'all' ? { changes: marks.changes || [], scene: marks.scene || '', current: marks.current } : null} onChangePick={marks ? marks.onPick : undefined} />
       {error && <p class="note-line section-error">{error}</p>}
     </section>
   );
