@@ -1,0 +1,63 @@
+@font-face { font-family: "Archivo"; font-weight: 400; font-style: normal; font-display: swap; src: url("../../fonts/archivo-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Archivo"; font-weight: 700; font-style: normal; font-display: swap; src: url("../../fonts/archivo-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Archivo"; font-weight: 900; font-style: normal; font-display: swap; src: url("../../fonts/archivo-latin-900-normal.woff2") format("woff2"); }
+/* Prism (Kyle, 2026-11-07, in place of Poster: "something that is like, ULTRA colorful dark mode"). The one loud dark theme:
+   a deep indigo-black page with every colour turned up. Page titles in a pink, orange, cyan and violet gradient, main
+   buttons and chosen tabs in a pink-to-orange gradient, Keep writing on a purple-to-blue glow, cyan kickers, lime counts and
+   ticks, a rainbow line under the top bar, sidebar icons each in their own colour and rainbow progress bars. Heavy Archivo
+   titles, round corners. */
+:root[data-theme="prism"], .theme-card[data-theme="prism"] {
+  --bg: #0b0914; --surface: #151126; --rail: #08070f; --hover: #221b3a; --text: #f7f3ff; --muted: #b3a9d1; --line: #2f2752;
+  --accent: #ff4fae; --accent-soft: #3a1033; --on-accent: #0b0914;
+  --rainbow: linear-gradient(90deg, #ff4fae, #ff9a3d, #ffe14d, #7dff6a, #3de0ff, #a46bff);
+  --fill: linear-gradient(135deg, #ff4fae, #ff8a3d); --fill-line: transparent; --on-fill: #0b0914;
+  --hero-bg: linear-gradient(135deg, #4a1470 0%, #1c1f6e 55%, #0b4a6e 100%); --on-hero: #ffffff; --hero-line: #6b3fd1; --hero-kicker: #3de0ff;
+  --hero-go: linear-gradient(135deg, #7dff6a, #3de0ff); --on-hero-go: #0b0914;
+  --next-bg: var(--surface); --kicker: #3de0ff; --next-go: linear-gradient(135deg, #ff4fae, #ff8a3d); --next-go-line: transparent; --on-next-go: #0b0914;
+  --badge: #b6ff3d; --on-badge: #0b0914;
+  --shadow: none; --shadow-lift: 0 10px 34px rgba(164, 107, 255, 0.28); --radius: 14px;
+  --serif: "Archivo", "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="prism"] :is(h1, .home-title) {
+  font-family: var(--serif); font-weight: 900; font-size: 2.6rem; line-height: 1.08; letter-spacing: -0.03em;
+  width: fit-content; max-width: 100%; background: linear-gradient(90deg, #ff4fae, #ff9a3d 35%, #3de0ff 70%, #a46bff);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+:root[data-theme="prism"] :is(h2, h3, .card-title, .hero-text b, .book-title) { font-family: var(--serif); font-weight: 900; letter-spacing: -0.015em; }
+:root[data-theme="prism"] :is(.hero-text small) { letter-spacing: 0.12em; }
+:root[data-theme="prism"] :is(button.primary, a.button.primary) { border-color: transparent; font-weight: 700; }
+:root[data-theme="prism"] button.soft, :root[data-theme="prism"] :is(.top-team, .bar-team) { background: #1f1636; border: 1px solid #3d2c6e; color: #3de0ff; }
+:root[data-theme="prism"] :is(.top-team.on, .bar-team.on) { background: linear-gradient(135deg, #3de0ff, #a46bff); color: #0b0914; border-color: transparent; }
+:root[data-theme="prism"] :is(.tabs button[aria-selected="true"], .tabs a.button[aria-selected="true"]) { background: linear-gradient(135deg, #ff4fae, #ff8a3d); border-color: transparent; color: #0b0914; }
+:root[data-theme="prism"] :is(.view-seg button[aria-pressed="true"]) { background: linear-gradient(135deg, #3de0ff, #a46bff); color: #0b0914; }
+:root[data-theme="prism"] :is(.top-bar, .writer-bar) { border-bottom: 0; box-shadow: none; background-image: linear-gradient(90deg, #ff4fae, #ff9a3d, #ffe14d, #7dff6a, #3de0ff, #a46bff); background-size: 100% 3px; background-position: bottom; background-repeat: no-repeat; background-color: var(--bg); }
+:root[data-theme="prism"] .rail-item[aria-current="page"] { background: #2a1640; color: #ff4fae; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+1) .icon { color: #ff4fae; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+2) .icon { color: #ff9a3d; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+3) .icon { color: #ffe14d; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+4) .icon { color: #7dff6a; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n+5) .icon { color: #3de0ff; }
+:root[data-theme="prism"] .rail-item:nth-of-type(6n) .icon { color: #a46bff; }
+:root[data-theme="prism"] :is(.writer-progress span, .book-progress span) { background: var(--rainbow); }
+:root[data-theme="prism"] :is(.card, .idea, .ov-panel, .book-link) { border-color: #2f2752; }
+:root[data-theme="prism"] .hero-card:hover { filter: brightness(1.12); }
+:root[data-theme="prism"] a:not(.button):not(.rail-item):not(.hero-card):not(.book-link) { color: #3de0ff; }
+:root[data-theme="prism"] input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; margin: 0; cursor: pointer; vertical-align: middle;
+  background: #1f1636 no-repeat center / 16px 16px; border: 2px solid #a46bff; border-radius: 6px; display: inline-grid;
+}
+:root[data-theme="prism"] input[type="checkbox"]:checked {
+  background-color: #b6ff3d; border-color: #b6ff3d;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='%230b0914' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-theme="prism"] input[type="checkbox"]:focus-visible { outline: 2px solid #3de0ff; outline-offset: 2px; }
+:root[data-theme="prism"] ::selection { background: #ff4fae; color: #0b0914; }
+.theme-card[data-theme="prism"] { font-family: "Archivo", sans-serif; border-color: #6b3fd1; }
+.theme-card[data-theme="prism"] .theme-name { font-weight: 900; background: linear-gradient(90deg, #ff4fae, #ff9a3d, #3de0ff); -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(1) { background: #ff4fae; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(2) { background: #ffe14d; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(3) { background: #3de0ff; }
+.theme-card[data-theme="prism"] .tp-rail i:nth-child(4) { background: #a46bff; }
+.theme-card[data-theme="prism"] .tp-page b { background: linear-gradient(90deg, #ff4fae, #ff9a3d, #3de0ff); }
+.theme-card[data-theme="prism"] .tp-page i { background: linear-gradient(90deg, #a46bff, #3de0ff); opacity: 0.7; }
+.theme-card[data-theme="prism"] .tp-page em { background: linear-gradient(135deg, #ff4fae, #ff8a3d); }

@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { App } from './ui/App.tsx';
-import './styles.css';
+import './styles/index.css';
 import { startTheme } from './lib/theme.ts';
 import { startHoldNames } from './ui/hold.ts';
 import { TOP_ROOM_EVENT, loadTopRoom, topRoom } from './lib/topbar.ts';

@@ -1,0 +1,14 @@
+/* Shared by the three square light themes, Marigold, Lo-Fi and Retro OS: square corners, and the box their own
+   checkboxes are drawn in. Comes before their files, which finish the checkboxes each in its own way. */
+/* Square corners everywhere, black outlines; dots and the round Chat button stay round. */
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *, :root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) *::before { border-radius: 0 !important; }
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) :is(.status-mark, .name-dot, .dot, .job-dot, .dot-mark, .pm, .tl-key, .cw-dot, .sev-dot, .voice-chip::before, .chart-key i, .out-button i, .sync-dot, .flow-road-num, .codex-dot, .avatar) { border-radius: 50% !important; }
+/* Checkboxes drawn per theme (Kyle, 2026-10-23: "the checkbox style still needs to change for these 3 new light modes. and
+   not the same, make them fit the theme"). Marigold: a black-edged square that fills orange with a thick black tick.
+   Lo-Fi: a white box with a hard blue shadow that fills mint with a pixel tick. Retro OS: a sunken white box with the
+   old black tick. */
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 22px; margin: 0; cursor: pointer; vertical-align: middle;
+  background: no-repeat center / 16px 16px; display: inline-grid;
+}
+:root:is([data-theme="marigold"], [data-theme="lofi"], [data-theme="retro"]) input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

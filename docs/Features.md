@@ -1812,3 +1812,17 @@ sees or anything in the vault changes. This section grows as each piece goes liv
   the unit tests and build alone. Locally: `npm run build`, `npx vite preview --port 4173`, `npm run test:webkit`
   (needs `webkit2gtk-driver` and `xvfb`). The Chromium copies and the rest of the saving checks stay in the project
   files' `app/saving-checks/`.
+- **Each theme in its own place (2026-11-12, third piece).** The one 2,800-line stylesheet had the 18 themes in its
+  middle, the shared parts of some themes inside other themes' sections. It is now `src/styles/`: `index.css` brings
+  in, in order, `app.css`, `themes/colours.css` (the eleven colour themes, **one line of values each**, and how loud
+  their buttons are), `themes/square-skins.css` (what Marigold, Lo-Fi and Retro OS share), one file for each of the
+  seven themes with their own shapes and fonts (a "skin"), and `app-after-themes.css`. A new colour theme is one line
+  in `colours.css` and one entry in `src/lib/theme.ts`; a new skin is also one file. `tests/theme.test.ts` checks that
+  every theme has all ten values, that a skin's file styles only its own theme, and that no other file names a theme.
+  **Not done, on purpose:** the plan said shapes and fonts would become values too. The seven skins were each drawn
+  from a picture Kyle sent, and their rules are particular (a title bar, a pressed button, a drawn checkbox); turning
+  them into shared values would change some 200 rules whose pressed and hover looks no picture check covers, to save
+  work only on a kind of theme that is drawn by hand anyway. One file each keeps them easy to find and to add.
+  Checked: the built stylesheet has exactly the same rules as before (same count, same bytes; only the order of a few
+  that cannot clash moved), and 360 pictures (20 pages under each of the 18 themes, iPad size) are identical, dot for
+  dot, to the app before the change (`themes.mjs` in the project files' `app/saving-checks/`).

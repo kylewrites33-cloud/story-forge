@@ -1,4 +1,4 @@
-/* The Character study app. Every colour is one of Sparrow's theme variables (styles.css), so all themes work here. */
+/* The Character study app. Every colour is one of Sparrow's theme variables (src/styles/), so all themes work here. */
 .cs { min-height: 100vh; background: var(--bg); color: var(--text); }
 .cs-clock .cs { padding-top: max(env(safe-area-inset-top, 0px), 24px); }
 .cs-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px var(--gutter); border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 2; }

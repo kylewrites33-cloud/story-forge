@@ -364,7 +364,7 @@ export interface EditorCommands {
   show: (start: number, end: number, top?: number) => void;
   hide: () => void;
   /** Light these stretches under a name of their own (Check's flags, the sentence Listen is reading); none takes it away.
-   * The light follows the words as Kyle types and is never in the text. Its look is `.lit-<name>` in styles.css. */
+   * The light follows the words as Kyle types and is never in the text. Its look is `.lit-<name>` in the stylesheet (src/styles/). */
   light: (name: string, spans: { start: number; end: number }[]) => void;
   /** Bring these characters into view, when they are not, without taking the cursor or opening the keyboard. */
   reveal: (start: number, end: number) => void;
