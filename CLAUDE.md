@@ -76,6 +76,7 @@ npm install
 npm run dev          local server with the demo vault
 npm test             node --test (Node 22.18 or later)
 npm run typecheck
+npm run test:webkit  the page checks in a real WebKit (tests/webkit/; needs a build, vite preview on 4173, webkit2gtk-driver, xvfb)
 npm run build        to dist/
 npm run icons        redraw public/icons
 ```

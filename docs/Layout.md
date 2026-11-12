@@ -161,4 +161,4 @@ src/vault/book.ts        the draft op (every scene copied to Drafts/Draft N/ wit
 src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it
 src/vault/choice.ts      a choice on a board (Choice: keep, later, drop, Rewrite, an edit to a card, a card dragged) and what it changes on a note
-
+tests/webkit/            page checks in a real WebKit, run on every pull request (the `webkit` job): run.sh; fake.mjs (a pretend GitHub that starts from demo-vault/); box, live, chapters, edit, light, watch; trial-text.mjs and light-measure.mjs are their helpers
