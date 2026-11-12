@@ -1842,3 +1842,13 @@ sees or anything in the vault changes. This section grows as each piece goes liv
   Checked: the built stylesheet has exactly the same rules as before (same count, same bytes; only the order of a few
   that cannot clash moved), and 360 pictures (20 pages under each of the 18 themes, iPad size) are identical, dot for
   dot, to the app before the change (`themes.mjs` in the project files' `app/saving-checks/`).
+- **One way to read a note's properties (2026-11-12, fourth piece).** A note's properties arrive untyped, so 48 files
+  turned them into text by hand, 134 times (`String(note.data.title || '')`), and a misspelt name read as empty
+  without anyone being told. Now they read `propText(note, 'title')` or `propNum(note, 'rating')` from
+  `src/lib/props.ts`, and the name must be one the schema has: `src/lib/prop-names.ts` lists all 263, written from
+  `demo-vault/System/schema.json` by `npm run props`, so a misspelt or made-up property fails the type check before it
+  ships. `tests/props.test.ts` fails if the list and the schema differ or if a file goes back to the cast by hand.
+  Only the reads that meant exactly the same thing were moved, so nothing behaves differently. **Smaller than the
+  plan, on purpose:** the plan had readers that also know each property's kind (a number, a list, a link) and share
+  the job runner's reader. The reads that are left do something of their own (a default, a trim, a list); they move
+  when the code around them is next changed. After a schema change: refresh the demo copy, then `npm run props`.

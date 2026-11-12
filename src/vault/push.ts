@@ -18,6 +18,7 @@ import { planDraft, planJoin, planRestore } from './book.ts';
 import { planChapters, planDelete } from './chapters.ts';
 import { startsNote } from './text.ts';
 import { Tree } from './tree.ts';
+import { propText } from '../lib/props.ts';
 
 /** The line for the vault's history: the first change's own line, with the others named under it. */
 function messageFor(lines: string[]): string {
@@ -55,11 +56,11 @@ async function planRetitle(t: Tree, path: string, title: string, what: 'scene' |
     if (to !== path) t.remove(path);
     return { to, message: 'recipes: rename ' + was + ' to ' + clean + '\n\nRenamed in the Sparrow app.' };
   }
-  const id = String(cur.data.id || '');
+  const id = propText(cur, 'id');
   const to = dir + '/' + (id ? id + ' ' : '') + clean + '.md';
   const next = applyToText(text, editChange({ title: clean }));
   if (to === path && next === text) return null;
-  const why = 'Renamed in the Sparrow app: ' + String(cur.data.title || '') + ' -> ' + clean + '.';
+  const why = 'Renamed in the Sparrow app: ' + propText(cur, 'title') + ' -> ' + clean + '.';
   if (to === path) { t.write(path, next); return { to, message: 'scenes: retitle ' + id + '\n\n' + why }; }
   if (files.some((p) => p.toLowerCase() === to.toLowerCase())) throw new Error('A scene called ' + clean + ' is already there. Choose another title.');
   t.write(to, next);

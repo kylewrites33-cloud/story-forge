@@ -5,6 +5,7 @@ import { render } from '../lib/markdown.ts';
 import { recipeName, recipeNotes, type RecipeFields } from '../lib/recipes.ts';
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
+import { propText } from '../lib/props.ts';
 
 export type OnAddRecipe = (r: RecipeFields) => Promise<string | null>;
 export type OnSaveRecipe = (note: NoteRecord, r: RecipeFields) => Promise<string | null>;
@@ -69,7 +70,7 @@ export function RecipesScreen({ index, onAdd, onSave }: { index: VaultIndex; onA
         {list.map((n) => (
           <li key={n.path} class="note-card recipe-card">
             {editing === n.path && onSave ? (
-              <RecipeForm start={{ title: recipeName(n), use_for: String(n.data.use_for || ''), body: n.body.trim() }} saveLabel="Save"
+              <RecipeForm start={{ title: recipeName(n), use_for: propText(n, 'use_for'), body: n.body.trim() }} saveLabel="Save"
                 onSave={(r) => onSave(n, r)} onDone={() => setEditing('')} />
             ) : (
               <>

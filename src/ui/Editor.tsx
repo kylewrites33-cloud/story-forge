@@ -57,6 +57,7 @@ import {
   PlanPanel, ScenePanel, SideAddForm, TargetPanel, TeamPanel, TodosPanel
 } from './EditorPanels.tsx';
 import { PREF, readPref, writePref } from '../lib/prefs.ts';
+import { propText } from '../lib/props.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // Where to land after the change arrows open another chapter: its first change, or its last when going back.
@@ -635,7 +636,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     return !asking.has(k) && !answered.has(k) && !(t && Date.now() - t < 10 * 60 * 1000);
   };
   const fill = async (auto = false) => {
-    const id = String(note.data.id || '');
+    const id = propText(note, 'id');
     if (!onJob || !id || !bookFolder) { if (!auto) setFilling({ busy: false, error: true, text: 'Filling braces needs your own vault, not the demo.' }); return; }
     const words = pageText();
     const list = findBrackets(words).filter(notAsked);
@@ -666,7 +667,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     // The move from the older way: answers this device had already used, kept in a list of its own.
     const before = loadFilled(source.key);
     fills.forEach((j) => {
-      if (String(j.data.status || '') !== 'done') return;
+      if (propText(j, 'status') !== 'done') return;
       const answers = fillAnswers(resultBody(j.body));
       const names: string[] = [];
       askItems(askBody(j.body)).forEach((it) => {
@@ -731,7 +732,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
 
   /** Send the words on the page (the selection, the paragraph or what comes before the cursor) to the team. */
   const askTeam = async (tool: PassageTool) => {
-    const id = String(note.data.id || '');
+    const id = propText(note, 'id');
     if (!onChat || !id) { setAsked({ busy: '', error: true, text: 'Asking the team needs your own vault, not the demo.' }); return; }
     const c = cmd();
     const passage = passageFor(tool, pageText(), c ? c.selection() : null);
@@ -841,12 +842,12 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // Words typed count for the day, and for the Pomodoro while it runs.
   const lastWords = useRef(words);
   useEffect(() => {
-    if (lastWords.current !== words && !beatsMode) trackWords(note.path, String(note.data.id || ''), lastWords.current, words);
+    if (lastWords.current !== words && !beatsMode) trackWords(note.path, propText(note, 'id'), lastWords.current, words);
     lastWords.current = words;
   }, [words, note.path]);
   // Words typed in the moment before leaving the page still count.
   const leaving = useRef({ path: note.path, id: '', beats: beatsMode });
-  leaving.current = { path: note.path, id: String(note.data.id || ''), beats: beatsMode };
+  leaving.current = { path: note.path, id: propText(note, 'id'), beats: beatsMode };
   useEffect(() => () => {
     const l = leaving.current;
     if (l.beats) return;
@@ -871,13 +872,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const sceneStatus = String(draft.status || note.data.status || '');
   const group = book ? book.groups.find((g) => g.scenes.some((n) => n.path === note.path)) || null : null;
   const heading = group && group.num != null ? chapterHeading(group) : sceneHeader(note.data, title);
-  const sub = [group && group.num != null ? title : String(note.data.id || ''), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
+  const sub = [group && group.num != null ? title : propText(note, 'id'), note.data.pov ? formatValue('pov', note.data.pov, propDef(schema, note.type, 'pov')) : '', sceneStatus]
     .filter(Boolean).join(' · ');
   // The bottom bar names where it goes: the chapter when it is another chapter or a one-scene chapter, else the scene.
   const sideName = (n: NoteRecord | null) => {
     if (!n) return '';
     const g = book ? book.groups.find((x) => x.scenes.some((y) => y.path === n.path)) : null;
-    return g && g.num != null && (g !== group || g.scenes.length === 1) ? chapterHeading(g) : sceneHeader(n.data, String(n.data.id || ''));
+    return g && g.num != null && (g !== group || g.scenes.length === 1) ? chapterHeading(g) : sceneHeader(n.data, propText(n, 'id'));
   };
   // A chapter of several scenes is one page: the scenes before this one above it, the rest below, a line between each.
   const together = Boolean(group && group.num != null && group.scenes.length > 1 && !beatsMode);
@@ -929,7 +930,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const curRef = useRef<string | null>(null);
   curRef.current = chCur;
   const chNote = changes ? changes.note : null;
-  const sceneId = String(note.data.id || '');
+  const sceneId = propText(note, 'id');
   // The note comes with Kyle's waiting answers already in it (the outbox), so its body, not its sha, says when to read it again.
   const chParsed = useMemo(() => (chNote ? parseChanges(chNote.body) : { intro: '', changes: [] as Change[] }), [chNote ? chNote.path : '', chNote ? chNote.body : '']);
   const chAll = chParsed.changes;
@@ -938,7 +939,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // The Edit room shows the whole chapter too: every scene's changes marked on the one page and every card in the
   // column (Kyle, 2026-10-29: "I'm always going to work on a chapter level, probably. at least in the writing portion").
   const [sibTick, setSibTick] = useState(0);
-  const sceneOf = (n: NoteRecord) => String(n.data.id || '');
+  const sceneOf = (n: NoteRecord) => propText(n, 'id');
   const sibNotes = together ? [...above, ...below] : [];
   const sibText = (n: NoteRecord) => {
     const api = sibs.current.get(n.path);
@@ -971,10 +972,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const after = chAll.map((c) => (choices[c.id] ? { ...c, status: choices[c.id] } : c));
     const ticks: { path: string; fields: Record<string, string> }[] = [];
     todoTicks(after, Object.keys(choices)).forEach((t) => {
-      const n = (todos || []).find((x) => String(x.data.id || '') === t.id);
+      const n = (todos || []).find((x) => propText(x, 'id') === t.id);
       if (!n) return;
       if (t.done && isOpen(n)) ticks.push({ path: n.path, fields: { status: 'done', done_note: t.note } });
-      else if (!t.done && !isOpen(n) && /^Edit room:/.test(String(n.data.done_note || ''))) ticks.push({ path: n.path, fields: { status: 'open', done_note: '' } });
+      else if (!t.done && !isOpen(n) && /^Edit room:/.test(propText(n, 'done_note'))) ticks.push({ path: n.path, fields: { status: 'open', done_note: '' } });
     });
     // Shown at once and kept on this device; it reaches the vault now, or when the connection is back.
     onMarks(chNote.path, choices, ticks);
@@ -1307,7 +1308,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const otherScene = (dir: 1 | -1) => {
     if (!group) return null;
     const at = group.scenes.findIndex((n) => n.path === note.path);
-    const waits = (n: NoteRecord) => chAll.some((c) => c.status === 'open' && c.scene === String(n.data.id || ''));
+    const waits = (n: NoteRecord) => chAll.some((c) => c.status === 'open' && c.scene === propText(n, 'id'));
     const list = (dir > 0 ? group.scenes.slice(at + 1) : group.scenes.slice(0, Math.max(0, at)).reverse()).filter(waits);
     return list[0] || null;
   };
@@ -1578,7 +1579,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       aria-current={inHere ? 'page' : undefined} title={chapterHeading(g)}>
                       <span class="side-num">{g.num}</span>
                       <span class="side-name">{g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path)}</span>
-                      {g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : String(n.data.status || '')) >= 0) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
+                      {g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : propText(n, 'status')) >= 0) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
                       {changes && (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open > 0 && (
                         <span class="side-changes" title="Changes from the team waiting">{g.num === chapterNum ? chAll.filter((c) => c.status === 'open').length : (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open}</span>
                       )}
@@ -1838,8 +1839,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 </div>
             )}
             {tab === 'chat' && (
-              <SceneChat convo={convo || null} thread={String(note.data.id || '')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed} fromTop
-                fullHref={link(href.chat(String(note.data.id || ''), bookFolder || ''))} />
+              <SceneChat convo={convo || null} thread={propText(note, 'id')} book={bookFolder || ''} onChat={note.data.id ? onChat : undefined} seed={seed} fromTop
+                fullHref={link(href.chat(propText(note, 'id'), bookFolder || ''))} />
             )}
             {tab === 'plan' && (
               <PlanPanel key={(bookFolder || '') + '#' + chapterNum} source={source} bookFolder={bookFolder} chapter={chapterNum} plan={plan || null} canSave={canSave} />
@@ -1858,12 +1859,12 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 }} />
             )}
             {tab === 'beats' && (
-              <BeatsList note={chapterBeats || null} chapter={chapterNum} sceneId={String(note.data.id || '')} text={beatsMode ? null : text}
+              <BeatsList note={chapterBeats || null} chapter={chapterNum} sceneId={propText(note, 'id')} text={beatsMode ? null : text}
                 lastId={group && group.scenes.length ? String(group.scenes[group.scenes.length - 1].data.id || '') : ''}
                 onGo={(at) => { const c = cmd(); if (c) c.select(at, at); closeOver(); }} beatsLink={link(href.beats(note.path))} />
             )}
             {tab === 'todos' && (
-              <TodosPanel todos={chapterList} chapter={chapterNum} sceneId={String(note.data.id || '')} onTodo={onTodo} onAdd={onAddTodo}
+              <TodosPanel todos={chapterList} chapter={chapterNum} sceneId={propText(note, 'id')} onTodo={onTodo} onAdd={onAddTodo}
                 onJob={onJob} bookFolder={bookFolder} waiting={waiting || {}} link={link} />
             )}
             {tab === 'card' && (picked
@@ -1877,7 +1878,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 onUse={(body) => { wordsNotTyped(bodyWords(body) - bodyWords(draftRef.current.body)); setDraft({ ...draftRef.current, body }); reload(); }} />
             )}
             {tab === 'team' && (
-              <TeamPanel status={sceneStatus} id={String(note.data.id || '')} title={String(note.data.title || '')} chapter={group && group.num != null ? group.num : null}
+              <TeamPanel status={sceneStatus} id={propText(note, 'id')} title={propText(note, 'title')} chapter={group && group.num != null ? group.num : null}
                 bookFolder={bookFolder} onJob={onJob} link={link} autoFill={autoFill} onAutoFill={(on) => { saveAutoFill(on); setAutoFill(on); }} recipes={recipes} />
             )}
             {tab === 'page' && <PagePanel look={look} onLook={(l) => { setLook(l); saveLook(l); }} />}
@@ -1887,7 +1888,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 deeper={<p class="hint">For a closer read by the Line Editor (a paid team job), use the Team tab's deeper check.</p>} />
             )}
             {tab === 'flow' && (
-              <FlowTab results={flow ? flow.results : []} chapter={chapterNum} sceneId={String(note.data.id || '')} flowHref={flow ? flow.href : href.home()} link={link}
+              <FlowTab results={flow ? flow.results : []} chapter={chapterNum} sceneId={propText(note, 'id')} flowHref={flow ? flow.href : href.home()} link={link}
                 names={namedIn(text, allNames).filter((x) => x.entry.type === 'character').map((x) => x.entry.name)} />
             )}
             {tab === 'options' && (

@@ -4,6 +4,7 @@
 import { castFor } from './boards.ts';
 import { linkName, nameList } from './links.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export interface CodexEntry {
   name: string;
@@ -66,8 +67,8 @@ export function codexFor(index: VaultIndex, book: BookEntry): CodexEntry[] {
   const series = index.series.find((s) => s.folder === book.seriesFolder);
   const base = NOTES(index, series && series.codex);
   const deltas = NOTES(index, book.codex);
-  base.concat(deltas.filter((d) => !base.some((b) => String(b.data.name || '') === (linkName(d.data.extends) || String(d.data.name || ''))))).forEach((n) => {
-    const name = String(n.data.name || '').trim();
+  base.concat(deltas.filter((d) => !base.some((b) => propText(b, 'name') === (linkName(d.data.extends) || propText(d, 'name'))))).forEach((n) => {
+    const name = propText(n, 'name').trim();
     if (!name) return;
     out.push({ name, type: n.type, note: n, terms: termsOf(name, n.data, false), color: 'hsl(' + nameHue(name) + ' 45% 42%)' });
   });

@@ -4,6 +4,7 @@
 // IDs never change and are never reused; the `order` property places a scene in reading order.
 import { Frontmatter } from './frontmatter.js';
 import type { FileEntry, Made, NoteRecord } from './types.ts';
+import { propText } from './props.ts';
 
 /** The next free scene ID in a book, from a fresh file list, the way `sf next-id scene` counts
  * (every file in the book except Snapshots, Exports and Archive). */
@@ -119,7 +120,7 @@ export function joinedWhy(into: { data: Record<string, unknown> }, now: Date): s
 /** The open note the team gets after a join (the old ID is gone): its path, text and history line. `mentions` are the
  * paths of the notes the app saw naming the joined scene. */
 export function joinNote(bookFolder: string, from: { data: Record<string, unknown> }, into: { data: Record<string, unknown> }, mentions: string[], now: Date): { path: string; text: string; message: string } {
-  const fromId = String(from.data.id || ''), intoId = String(into.data.id || '');
+  const fromId = propText(from, 'id'), intoId = propText(into, 'id');
   const title = 'Joined ' + fromId + ' into ' + intoId + ' ' + now.toISOString().slice(0, 10);
   const path = bookFolder + '/Notes to the Team/' + title + '.md';
   const body = '\nKyle joined ' + [fromId, from.data.title].filter(Boolean).join(' ') + ' onto the end of ' + [intoId, into.data.title].filter(Boolean).join(' ') +
@@ -148,5 +149,5 @@ export function sceneNotesFor(notes: Record<string, NoteRecord>, bookFolder: str
   const want = String(sceneId || '').toUpperCase();
   if (!want) return null;
   return Object.values(notes).find((n) => n.type === 'scene-notes' && n.path.startsWith(bookFolder + '/')
-    && String(n.data.scene || '').toUpperCase() === want) || null;
+    && propText(n, 'scene').toUpperCase() === want) || null;
 }

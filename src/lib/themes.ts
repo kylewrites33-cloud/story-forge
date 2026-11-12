@@ -5,6 +5,7 @@ import { lineAround } from './codex.ts';
 import { linkName, toNumber } from './links.ts';
 import { bookNotesOf, storyScenes, stringList } from './seeing.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export interface ChapterCol { key: string; num: number | null; title: string; scenes: NoteRecord[] }
 
@@ -81,7 +82,7 @@ export function hitsIn(scene: NoteRecord, re: RegExp | null): ThemeHit[] {
 }
 
 export function bookThemes(index: VaultIndex, book: BookEntry): NoteRecord[] {
-  return bookNotesOf(index, book, 'theme').filter((n) => String(n.data.name || '').trim())
+  return bookNotesOf(index, book, 'theme').filter((n) => propText(n, 'name').trim())
     .sort((a, b) => String(a.data.name).localeCompare(String(b.data.name)));
 }
 
@@ -100,7 +101,7 @@ export function themeGrid(index: VaultIndex, book: BookEntry): { chapters: Chapt
       if (count > max) max = count;
       return { count, cards: c.scenes.filter((s) => (linksOf.get(s.path) || []).indexOf(name.toLowerCase()) >= 0), hits };
     });
-    return { note, name, kind: String(note.data.kind || ''), keywords, cells, total: cells.reduce((n, c) => n + c.count, 0) };
+    return { note, name, kind: propText(note, 'kind'), keywords, cells, total: cells.reduce((n, c) => n + c.count, 0) };
   });
   return { chapters, rows, max };
 }

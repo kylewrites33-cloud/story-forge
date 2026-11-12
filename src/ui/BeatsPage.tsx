@@ -24,6 +24,7 @@ import { href } from '../app/route.ts';
 import { ProseEditor } from '../write/ProseEditor.tsx';
 import type { EditorCommands } from '../write/prose.ts';
 import { PREF, readPref, writePref } from '../lib/prefs.ts';
+import { propText } from '../lib/props.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
@@ -56,7 +57,7 @@ function start(source: VaultSource, group: ChapterGroup, bookFolder: string, bea
     : kept && kept.create && isUnsaved(kept) ? kept
     : { path, baseSha: '', baseBody: '', body: '', target: null, startWords: 0, updatedAt: now.toISOString(), pending: false,
       create: Frontmatter.join({ type: BEATS_TYPE, title: beatsTitle(chapter), chapter }, '') };
-  const laid = layoutChapter(group.scenes.map((n) => ({ path: n.path, id: String(n.data.id || ''), body: scenes[n.path].body })), parseBeats(beatsDraft.body));
+  const laid = layoutChapter(group.scenes.map((n) => ({ path: n.path, id: propText(n, 'id'), body: scenes[n.path].body })), parseBeats(beatsDraft.body));
   return { scenes, beatsDraft, intro: introOf(beatsDraft.body), shapes: laid.scenes, beats: laid.beats };
 }
 
@@ -343,7 +344,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     const cur = ref.current.beats;
     const last = group.scenes[group.scenes.length - 1];
     const next = focused && cur.some((x) => x.key === focused) ? addBeatAfter(cur, focused, '')
-      : addBeatAtEnd(cur, last ? { path: last.path, id: String(last.data.id || '') } : null);
+      : addBeatAtEnd(cur, last ? { path: last.path, id: propText(last, 'id') } : null);
     const k = next.find((x) => !cur.some((y) => y.key === x.key));
     if (!k) return;
     apply(next, []);

@@ -8,6 +8,7 @@ import type { BookEntry, Schema, VaultIndex } from '../lib/types.ts';
 import { ProposalBoard, type IdeasProps } from './IdeasBoard.tsx';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
+import { propText } from '../lib/props.ts';
 
 const INTRO: Record<Exclude<StoryBoard, 'characters' | 'market'>, { heading: string; intro: string; empty: string }> = {
   'story-juice': {
@@ -107,7 +108,7 @@ export function CharactersBoard({ schema, index, book }: { schema: Schema; index
           <h2>{groupLabel(g.key, 'No role yet')} <span class="meta">{g.notes.length}</span></h2>
           <ul class="cards">
             {g.notes.map((n) => {
-              const name = String(n.data.name || '');
+              const name = propText(n, 'name');
               const rows = CHARACTER_FIELDS.filter((k) => !isEmptyValue(n.data[k]));
               const waiting = ideasAbout(index, book, name).filter((i) => pileOf(i.data) === 'decide' || pileOf(i.data) === 'later');
               return (

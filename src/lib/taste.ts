@@ -3,6 +3,7 @@
 // (status, the later tag, kind, source, round, reasons), so the page costs nothing and works offline.
 import { pileOf, reasonLabel, reasonsOf, sourceOf } from './ideas.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 /** Kyle's two taste notes at the vault root, shown on the page as they are. */
 export const TASTE_FILES: { path: string; title: string }[] = [
@@ -70,7 +71,7 @@ export function tasteStats(notes: NoteRecord[]): TasteStats {
     kept: all ? all.kept : 0,
     later: all ? all.later : 0,
     dropped: all ? all.dropped : 0,
-    byKind: rows(notes, (n) => String(n.data.kind || '')).sort(bigFirst),
+    byKind: rows(notes, (n) => propText(n, 'kind')).sort(bigFirst),
     bySource: rows(notes, (n) => sourceOf(n.data)).sort(bigFirst),
     byRound: rows(notes, roundOf).sort((a, b) => Number(a.key) - Number(b.key)),
     reasons: Object.keys(reasons).map((key) => ({ key, label: reasonLabel(key), count: reasons[key] }))

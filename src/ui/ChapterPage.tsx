@@ -20,6 +20,7 @@ import type { EditorCommands } from '../write/prose.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
 import { ListenBar, ListenButton, useListen } from './Listen.tsx';
+import { propText } from '../lib/props.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
@@ -114,7 +115,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
     const s = ref.current.find((x) => x.note.path === path);
     if (!s) return;
     const body = splitLead(s.draft.body).lead + text;
-    trackWords(path, String(s.note.data.id || ''), bodyWords(s.draft.body), bodyWords(body));
+    trackWords(path, propText(s.note, 'id'), bodyWords(s.draft.body), bodyWords(body));
     setDraft(path, { ...s.draft, body, updatedAt: new Date().toISOString() });
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
@@ -203,7 +204,7 @@ export function ChapterPage({ source, group, bookTitle, codex, startAt, backTo, 
                 {i > 0 && <div class="scene-break" aria-hidden="true" />}
                 <p class="section-name">
                   <a href={href.write(s.note.path)} onClick={(e) => { e.preventDefault(); go(href.write(s.note.path)); }}>{[s.note.data.id, sceneHeader(s.note.data)].filter(Boolean).join(' ')}</a>
-                  <span class="meta"> · {num(bodyWords(s.draft.body))} words{String(s.note.data.status || '') === 'planned' ? ' · planned' : ''}</span>
+                  <span class="meta"> · {num(bodyWords(s.draft.body))} words{propText(s.note, 'status') === 'planned' ? ' · planned' : ''}</span>
                 </p>
                 <div onFocusCapture={() => setFocused(s.note.path)}>
                   <ProseEditor value={splitLead(s.draft.body).text} onChange={(t) => changed(s.note.path, t)} onCaret={() => {}} label={'Text of ' + String(s.note.data.title || s.note.data.id || '')}

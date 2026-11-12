@@ -10,6 +10,7 @@ import {
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { askProblem, isTaken, waiting, WHOLE, type OnTake } from '../team/asks.ts';
 import { Icon } from './Icon.tsx';
+import { propText } from '../lib/props.ts';
 
 /** Everything the writing screen needs for options: asking, the jobs still to deal with, and picking one. */
 export function usePassageOptions({ source, note, bookFolder, onJob, onTake, jobs, selection, pageText, body, apply, addDots, canSave }: {
@@ -44,7 +45,7 @@ export function usePassageOptions({ source, note, bookFolder, onJob, onTake, job
     if (onTake) onTake(old.map((j) => ({ path: j.path, names: [WHOLE] })));
   }, [jobsKey]);
   const ask = async (mode: OptionMode): Promise<boolean> => {
-    const id = String(note.data.id || '');
+    const id = propText(note, 'id');
     if (!onJob || !id || !bookFolder) { setSaid({ error: true, text: 'Asking the team needs your own vault, not the demo.' }); return false; }
     const p = passageAt(pageText(), selection());
     if (!p) { setSaid({ error: true, text: 'Pick some words, or put the cursor in a paragraph, then choose again.' }); return false; }
@@ -147,7 +148,7 @@ export function OptionsPanel({ jobs, done, onPick, onEnd, onDone }: {
             <p class="panel-key">{modeLabel(asked ? asked.mode : '')} · {id}</p>
             {asked && <blockquote class="options-passage">{short(asked.passage, 240)}</blockquote>}
             {state === 'waiting' && <p class="note-line"><span class="job-dot" aria-hidden="true" /> The team is writing the options. They show here when ready.</p>}
-            {state === 'failed' && <p class="hint">{String(j.data.status || '') === 'failed' ? askProblem(j) : 'No options came back' + (j.data.result ? ': ' + String(j.data.result) : '.')}</p>}
+            {state === 'failed' && <p class="hint">{propText(j, 'status') === 'failed' ? askProblem(j) : 'No options came back' + (j.data.result ? ': ' + String(j.data.result) : '.')}</p>}
             {options.map((o, k) => {
               const key = id + ':' + k;
               const mine = said && said.job === id && said.option === k ? said.r : null;

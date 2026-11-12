@@ -10,6 +10,7 @@ import type { Choice } from '../vault/choice.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';
+import { propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -19,7 +20,7 @@ export function ArcsBoard({ index, book, onDecide, waiting }: { index: VaultInde
   const arcs = bookArcs(index, book);
   const scenes = storyScenes(index, book);
   const spans = scenePositions(scenes);
-  const columns = scenes.map((s, i) => ({ key: String(s.data.id || ''), x: spans[i].mid, title: String(s.data.headline || s.data.title || ''), label: String(parseInt(String(s.data.id || '').replace(/\D/g, ''), 10) || '') }));
+  const columns = scenes.map((s, i) => ({ key: propText(s, 'id'), x: spans[i].mid, title: String(s.data.headline || s.data.title || ''), label: String(parseInt(propText(s, 'id').replace(/\D/g, ''), 10) || '') }));
   return (
     <section class="wr-page">
       <p class="crumb"><a href={href.book(book.folder)}>← {book.title}</a> · Character Arcs</p>

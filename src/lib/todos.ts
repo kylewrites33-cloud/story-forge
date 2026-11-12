@@ -5,6 +5,7 @@ import { Frontmatter } from './frontmatter.js';
 import { idNumber, toNumber } from './links.ts';
 import { safeTitle } from './scenes.ts';
 import type { BookEntry, FileEntry, Made, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export const OPEN_STATUSES = ['open', 'doing'];
 
@@ -87,5 +88,5 @@ export function planTodo(files: FileEntry[], bookFolder: string, t: NewTodo, now
 /** Where a to-do is, in Kyle's words: "Chapter 3 · S-012". */
 export function todoPlace(n: NoteRecord): string {
   const ch = toNumber(n.data.chapter);
-  return [ch != null ? 'Chapter ' + ch : '', String(n.data.scene || '')].filter(Boolean).join(' · ');
+  return [ch != null ? 'Chapter ' + ch : '', propText(n, 'scene')].filter(Boolean).join(' · ');
 }

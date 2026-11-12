@@ -5,6 +5,7 @@ import { idNumber, linkName, toNumber } from './links.ts';
 import { enumValues, propDef } from './schema.ts';
 import { MARKET_TYPES } from './vault-index.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 /** The boards the app has screens for, beyond the Chapter Grid and the Ideas board. */
 export const STORY_BOARDS = ['story-juice', 'beat-sheet', 'characters', 'conflict-matrix', 'market'] as const;
@@ -76,7 +77,7 @@ export function groupOrder(schema: Schema, type: string, by: string): string[] {
 
 /** The notes a board shows for a book. */
 export function boardNotes(index: VaultIndex, book: BookEntry, board: StoryBoard): NoteRecord[] {
-  if (board === 'story-juice') return notesOf(index, book.ideas).filter((n) => STORY_JUICE_KINDS.indexOf(String(n.data.kind || '')) >= 0);
+  if (board === 'story-juice') return notesOf(index, book.ideas).filter((n) => STORY_JUICE_KINDS.indexOf(propText(n, 'kind')) >= 0);
   if (board === 'beat-sheet') return notesOf(index, book.beats);
   if (board === 'conflict-matrix') return notesOf(index, book.conflicts);
   if (board === 'market') {
@@ -100,7 +101,7 @@ export function castFor(index: VaultIndex, book: BookEntry): CastMember[] {
   const series = index.series.find((s) => s.folder === book.seriesFolder);
   const base = notesOf(index, series && series.characters).filter((n) => n.type === 'character');
   const deltas = notesOf(index, book.characters).filter((n) => n.type === 'character');
-  const nameOf = (n: NoteRecord) => String(n.data.name || '').trim();
+  const nameOf = (n: NoteRecord) => propText(n, 'name').trim();
   const out: CastMember[] = base.map((n) => ({ name: nameOf(n), note: n, series: n, delta: null }));
   deltas.forEach((d) => {
     const target = linkName(d.data.extends) || nameOf(d);
@@ -127,7 +128,7 @@ export function ideasAbout(index: VaultIndex, book: BookEntry, name: string): No
   const first = name.split(/\s+/)[0].toLowerCase();
   return notesOf(index, book.ideas).filter((n) => {
     if (n.data.kind !== 'character') return false;
-    const t = String(n.data.title || '').toLowerCase();
+    const t = propText(n, 'title').toLowerCase();
     return t.indexOf(name.toLowerCase()) >= 0 || (first.length > 3 && new RegExp('\\b' + first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t));
   });
 }

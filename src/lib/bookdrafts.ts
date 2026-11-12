@@ -5,6 +5,7 @@
 // scene IDs never clash with the real scenes; the app reads them only to show a saved draft or export it.
 import { Frontmatter } from './frontmatter.js';
 import type { FileEntry, NoteRecord, VaultSource } from './types.ts';
+import { propText } from './props.ts';
 
 export const DRAFTS_FOLDER = 'Drafts';
 
@@ -44,7 +45,7 @@ export function copyFor(d: SavedDraft, scene: { path: string; data: Record<strin
   const name = fileName(scene.path);
   const same = d.files.find((f) => fileName(f.path) === name);
   if (same) return same;
-  const id = String(scene.data.id || '');
+  const id = propText(scene, 'id');
   return id ? d.files.find((f) => fileName(f.path).startsWith(id + ' ') || fileName(f.path) === id + '.md') || null : null;
 }
 

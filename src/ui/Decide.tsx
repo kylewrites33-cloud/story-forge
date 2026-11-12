@@ -10,6 +10,7 @@ import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { Stars } from './IdeasBoard.tsx';
 import { href } from '../app/route.ts';
+import { propNum } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 const KIND: Record<string, string> = { idea: 'Idea', beat: 'Beat', conflict: 'Conflict' };
@@ -80,7 +81,7 @@ export function DecideQueue({ index, book, onDecide, calls }: { index: VaultInde
             {here.data.panel_score != null && here.data.panel_score !== '' && <p class="decide-panel">The panel's score: <b>{String(here.data.panel_score)} of 5</b>{here.data.panel_note ? '. ' + String(here.data.panel_note) : ''}</p>}
             {here.data.pitch ? <p class="decide-pitch">{String(here.data.pitch)}</p> : null}
             <div class={'prose decide-body' + (calls ? ' call-body' : '')} dangerouslySetInnerHTML={{ __html: render(calls ? callBody(here.body) : here.body) }} />
-            {onDecide && <Stars value={Number(here.data.rating) || 0} onRate={(n) => onDecide(here.path, 'edit', '', { rating: n ? String(n) : '' })} />}
+            {onDecide && <Stars value={propNum(here, 'rating')} onRate={(n) => onDecide(here.path, 'edit', '', { rating: n ? String(n) : '' })} />}
             <p class="meta"><a href={href.note(here.path)}>Open the full note</a></p>
           </article>
           {!onDecide ? <p class="hint">Choosing needs your own vault, not the demo.</p> : calls ? (

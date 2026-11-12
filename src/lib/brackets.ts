@@ -9,6 +9,7 @@
 import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
 import { PREF, readPref, writePref } from './prefs.ts';
+import { propText } from './props.ts';
 
 export interface Bracket {
   /** The marker exactly as on the page, braces included. */
@@ -180,7 +181,7 @@ function placedAlready(after: string, answer: string): boolean {
 
 /** A fill job's state for a scene's brackets: listed in a job the team has not finished, or answered. */
 export function fillJobsFor(jobs: NoteRecord[], sceneId: string, bookFolder: string): NoteRecord[] {
-  return jobs.filter((j) => String(j.data.kind || '') === 'fill' && String(j.data.target || '') === sceneId && String(j.data.book || '') === bookFolder);
+  return jobs.filter((j) => propText(j, 'kind') === 'fill' && propText(j, 'target') === sceneId && propText(j, 'book') === bookFolder);
 }
 
 export function isOpenJob(j: NoteRecord): boolean {
@@ -192,7 +193,7 @@ export function isOpenJob(j: NoteRecord): boolean {
  * not send it again; changing its words asks afresh. */
 export function answeredKeys(jobs: NoteRecord[]): Set<string> {
   const out = new Set<string>();
-  jobs.filter((j) => String(j.data.status || '') === 'done').forEach((j) => {
+  jobs.filter((j) => propText(j, 'status') === 'done').forEach((j) => {
     const answers = fillAnswers(resultBody(j.body));
     askItems(askBody(j.body)).forEach((it) => { if (answers[it.name]) out.add(bracketKey(it)); });
   });
