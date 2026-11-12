@@ -1072,15 +1072,14 @@ button, .button { border-radius: 12px; }
   .writer.asks-left :is(.main-section .writer-text.styled, .changes-page, .draft-readonly):has(.md-ask),
   .writer.asks-left .writer-page:has(.writer-text.styled .md-ask) :is(.page-head, .writer-text.styled, .section-name) { padding-right: clamp(16px, 4vw, 48px); padding-left: calc(clamp(16px, 4vw, 48px) + 13rem); margin-left: auto; margin-right: 0; }
   .writer.asks-left :is(.main-section .writer-text.styled, .chapter-section .writer-text.styled, .changes-page, .draft-readonly) .md-ask { float: left; clear: left; margin-right: 0; margin-left: -13rem; text-align: right; border-left: 0; border-right: 3px solid var(--accent); border-radius: 6px 0 0 6px; }
-  .changes-page:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
-  .changes-page .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
-  .changes-page .chg-tag.on { border-left-color: var(--accent); }
-  .writer :is(.main-section, .chapter-section) .writer-text.prose:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
-  .writer-text.prose .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
-  .writer-text.prose .chg-tag.on { border-left-color: var(--accent); }
-  /* Kyle's { } notes in the left margin and the changes' words in the right one, both at once: the page keeps room on
-     each side (2026-11-12: the right-hand words were cut off behind the side column). */
-  .writer.asks-left .writer-page :is(.main-section, .chapter-section) .writer-text.styled.prose:has(.chg-tag):has(.md-ask) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 26rem); }
+  /* The words that say what each of the team's changes is sit in the left margin, with Kyle's { } notes, never on the
+     right; the text then takes the page's right side, as it does beside a left-margin note (Kyle, 2026-11-12: "bring
+     whats currently on the right to the left as well, so that my manuscript text extends to the right"). */
+  .changes-page:has(.chg-tag),
+  .writer :is(.main-section, .chapter-section) .writer-text.prose:has(.chg-tag),
+  .writer .writer-page:has(.writer-text.prose .chg-tag) :is(.page-head, .writer-text.styled, .section-name) { padding-right: clamp(16px, 4vw, 48px); padding-left: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); margin-left: auto; margin-right: 0; }
+  :is(.changes-page, .writer-text.prose) .chg-tag { float: left; clear: left; width: 11rem; margin: 0.25em 0 2px -13rem; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; text-align: right; white-space: normal; border-right: 3px solid var(--line); border-radius: 6px 0 0 6px; }
+  :is(.changes-page, .writer-text.prose) .chg-tag.on { border-right-color: var(--accent); }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }
