@@ -48,7 +48,7 @@ import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
 import { findSpot, rewriteFor, spotOf, type Spot } from '../lib/rewrite.ts';
-import { AskForChanges, ChangesBar, ChangesPage, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
+import { AskForChanges, ChangesBar, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
@@ -108,6 +108,15 @@ function loadTab(): Tab {
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
+
+/** How a place in `was` moves when the words become `now`: the part both share at the start and the end stays put. */
+function shiftMap(was: string, now: string): (n: number) => number {
+  let a = 0;
+  while (a < was.length && a < now.length && was[a] === now[a]) a++;
+  let b = 0;
+  while (b < was.length - a && b < now.length - a && was[was.length - 1 - b] === now[now.length - 1 - b]) b++;
+  return (n) => (n <= a ? n : n >= was.length - b ? n + now.length - was.length : now.length - b);
+}
 
 export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onRestore, onNotes, onFiles, onTake, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
@@ -950,7 +959,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const chOpenHere = chCards.filter((c) => c.status === 'open').length;
   const chBookOpen = (changes ? changes.book : []).reduce((t, x) => t + (x.chapter === chapterNum ? 0 : x.open), 0) + chAll.filter((c) => c.status === 'open').length;
   const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chList.length > 0;
-  readOnly.current = showMarks || shownDraft != null;
+  // The page with the changes is typed in: the writing box shows them as marks (Kyle, 2026-11-12: "i would love to be
+  // able to just type in the all changes section"); Hide marks shows his page alone. Simple and Final went that day.
+  const typeMarks = showMarks;
+  readOnly.current = shownDraft != null;
   const record = (choices: Record<string, ChangeStatus>) => {
     if (!chNote || !onMarks) return;
     // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28). They go
@@ -968,6 +980,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const putText = (t: string) => {
     wordsNotTyped(bodyWords(t) - bodyWords(pageText()));
+    // With the writing box on the page, the words go in as one step to undo and the page keeps its place (before, the
+    // box was drawn again and the page ran to the top).
+    const c = readOnly.current ? null : commands.current;
+    if (c) { c.apply(t, shiftMap(c.text(), t)); return; }
     changed(t);
     reload();
   };
@@ -1042,8 +1058,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const sibTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (sibTimer.current) clearTimeout(sibTimer.current); }, []);
   const sibTyped = (path: string) => {
-    if (!hasRewrite) return;
-    spotSoon(path);
+    // The chapter's changes are placed again too, for the arrows and the count, while Kyle types in All changes.
+    if (!hasRewrite && !typeMarks) return;
+    if (hasRewrite) spotSoon(path);
     if (sibTimer.current) clearTimeout(sibTimer.current);
     sibTimer.current = setTimeout(() => { sibTimer.current = null; setSibTick((k) => k + 1); }, 400);
   };
@@ -1206,8 +1223,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (chNote) setMineOpen(chNote.path + '#' + c.id);
     mineAt.current = found ? { id: c.id, at: found.at, end: found.end } : null;
     setChCur(c.id);
-    setChView('original');
-    // The writing box comes back; then Kyle's words that the change was about are picked and shown, ready to type over.
+    if (chView !== 'all') setChView('original');
+    // The writing box comes back (or is there already, in All changes); then Kyle's words that the change was about are picked and shown, ready to type over.
     setTimeout(() => goToChange(c), 60);
     closeOver();
   };
@@ -1314,9 +1331,19 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   }, [showMarks]);
   useEffect(() => {
     if (!chCur) return;
+    if (typeMarks) {
+      // The writing box draws only the lines near the screen, so the change is found by its place in the words.
+      const here = chPlace.placed.find((p) => p.change.id === chCur);
+      const sib = here ? null : sibNotes.find((n) => (sibPlace.get(n.path) || []).some((p) => p.change.id === chCur));
+      const p = here || (sib ? (sibPlace.get(sib.path) || []).find((x) => x.change.id === chCur) : null);
+      const api = sib ? sibs.current.get(sib.path) : null;
+      const c = sib ? (api ? api.commands.current : null) : commands.current;
+      if (p && c) c.reveal(p.at, p.end);
+      return;
+    }
     const el = document.querySelector('.changes-page [data-chg="' + chCur.replace(/"/g, '') + '"]');
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [chCur, showMarks]);
+  }, [chCur, showMarks, typeMarks]);
   // Word's margin: as Kyle scrolls the page, the Changes column follows to the first change in view.
   useEffect(() => {
     if (!showMarks || tab !== 'changes') return;
@@ -1325,11 +1352,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
       // Only the page's own scrolling counts: when Kyle scrolls the column itself, it stays where he puts it (Kyle,
       // 2026-10-28: "when I try to scroll up to the button, it auto scrolls back down").
       const from = e.target as Element | Document;
-      const page = document.querySelector('.changes-page');
+      const page = document.querySelector('.changes-page, .main-section .writer-text.prose');
       if (!page || (from instanceof Element && !from.contains(page))) return;
       clearTimeout(t);
       t = window.setTimeout(() => {
-        const marks = Array.from(document.querySelectorAll('.changes-page [data-chg]')) as HTMLElement[];
+        const marks = Array.from(document.querySelectorAll('.changes-page [data-chg], .writer-text.prose [data-chg]')) as HTMLElement[];
         const seen = marks.filter((m) => { const r = m.getBoundingClientRect(); return r.bottom > window.innerHeight * 0.2 && r.top < window.innerHeight; });
         const mark = seen.find((m) => m.dataset.chg === curRef.current) || seen[0];
         if (mark && mark.dataset.chg) showCard(mark.dataset.chg, true);
@@ -1705,11 +1732,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               onNext={(showMarks && chIdx < chList.length - 1) || otherScene(1) || otherChapter(1) ? () => goChange(1) : null}
               />
           )}
-          {showMarks && <p class="hint changes-hint">To type, press Self-Edit, or Edit it myself on a change.</p>}
           {above.map((n) => (
             <div key={n.path}>
               <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={() => sibTypedRef.current(n.path)} onCaret={(k) => { lastCaret.current = { path: n.path, at: k }; if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
-                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
+                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange, changes: chAll.filter((c) => c.scene === sceneOf(n)), scene: sceneOf(n) } : null} />
               <div class="scene-break" aria-hidden="true" />
             </div>
           ))}
@@ -1718,16 +1744,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             oldText && oldText.key === oldKey && oldText.text
               ? <div class="writer-text styled draft-readonly" role="document" aria-label={'Draft ' + shownDraft + ' of ' + title} dangerouslySetInnerHTML={{ __html: styledHtml(oldText.text, styleOpts) }} />
               : <p class={'writer-text ' + (oldText && oldText.error ? 'error' : 'hint')}>{!oldText || oldText.key !== oldKey || oldText.text === '' ? 'Opening Draft ' + shownDraft + '…' : oldText.error || 'This scene was not in Draft ' + shownDraft + '.'}</p>
-          ) : showMarks
-            ? <ChangesPage text={text} placed={chPlace.placed} view={chView} current={chCur} onPick={pickChange} options={styleOpts} label={'Text of ' + title + ' with the team\'s changes'} />
-            : <ProseEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
-              options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }} />}
+          ) : <ProseEditor key={loaded} value={text} onChange={changed} onCaret={(n) => { caret.current = n; clearDot(n); if (hasRewrite && tab === 'rewrite') setCaretAt(n); }} label={'Text of ' + title} commands={commands}
+              options={styleOpts} onLook={setTyping} onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
+              changes={typeMarks ? { changes: chMine, scene: sceneId, current: chCur } : null} onChangePick={pickChange} />}
           </div>
           {below.map((n) => (
             <div key={n.path}>
               <div class="scene-break" aria-hidden="true" />
               <SceneSection source={source} note={n} options={sibOpts} onSaved={onSaved} onFocus={() => setSibFocus(n.path)} onLook={setTyping} onText={() => sibTypedRef.current(n.path)} onCaret={(k) => { lastCaret.current = { path: n.path, at: k }; if (hasRewrite && tab === 'rewrite') setCaretAt(k, n.path); }} register={registerSib}
-                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange } : null} />
+                marks={showMarks ? { placed: sibPlace.get(n.path) || [], view: chView, current: chCur, onPick: pickChange, changes: chAll.filter((c) => c.scene === sceneOf(n)), scene: sceneOf(n) } : null} />
             </div>
           ))}
           {hasRewrite && onRewriteThrough && (
@@ -1802,7 +1827,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               chNote
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
-                  onPick={(id) => { const c = chCards.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
+                  onPick={(id) => { const c = chCards.find((x) => x.id === id); if ((chView === 'original' || chView === 'all') && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum}
                   onReply={changes && changes.onReply ? (c, words) => changes.onReply!(chNote.path, c.id, words) : null} replying={Boolean(changes && changes.replying)} replyProblem={changes ? changes.replyProblem : ''} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">

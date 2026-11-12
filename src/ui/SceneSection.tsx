@@ -10,8 +10,8 @@ import type { StyleOptions } from '../lib/styled.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
 import { ProseEditor } from '../write/ProseEditor.tsx';
 import type { EditorCommands } from '../write/prose.ts';
-import { ChangesPage, type ChangesView } from './Changes.tsx';
-import type { Placed } from '../lib/changes.ts';
+import type { ChangesView } from './Changes.tsx';
+import type { Change, Placed } from '../lib/changes.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const TYPING_SAVE_MS = 5 * 60 * 1000;
@@ -27,7 +27,11 @@ export interface SectionApi {
 }
 
 /** The team's changes marked on this scene, when the Edit room shows the whole chapter. */
-export interface SectionMarks { placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void }
+export interface SectionMarks {
+  placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void;
+  /** The scene's changes and its ID, for All changes, which is typed in (2026-11-12). */
+  changes?: Change[]; scene?: string;
+}
 
 export function SceneSection({ source, note, options, onSaved, onFocus, onLook, onText, onCaret, register, marks }: {
   source: VaultSource; note: NoteRecord; options: StyleOptions;
@@ -85,11 +89,20 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
   }, [source, canSave, onSaved, note, setDraft]);
 
   const [ver, setVer] = useState(0);
+  const outside = useRef(false);
   const later = () => {
     if (quiet.current) clearTimeout(quiet.current);
     quiet.current = setTimeout(() => { typingSince.current = null; save(false); }, QUIET_SAVE_MS);
   };
   const put = (text: string) => {
+    // With the writing box on the page, the words go in as one step to undo and the page keeps its place.
+    const c = commands.current;
+    if (c) {
+      const was = c.text();
+      outside.current = true;
+      try { c.apply(text, (n) => Math.min(n, text.length)); } finally { outside.current = false; }
+      if (was !== text) return;
+    }
     const d = ref.current;
     setDraft({ ...d, body: splitLead(d.body).lead + text, updatedAt: new Date().toISOString() });
     setVer((v) => v + 1);
@@ -123,7 +136,8 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
   const changed = (text: string) => {
     const d = ref.current;
     const body = splitLead(d.body).lead + text;
-    trackWords(note.path, String(note.data.id || ''), bodyWords(d.body), bodyWords(body));
+    // The team's words put in from a card are not words Kyle typed.
+    if (!outside.current) trackWords(note.path, String(note.data.id || ''), bodyWords(d.body), bodyWords(body));
     setDraft({ ...d, body, updatedAt: new Date().toISOString() });
     later();
     if (onText) onText();
@@ -133,10 +147,9 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
 
   return (
     <section class="chapter-section" data-section={note.path} onFocusCapture={onFocus}>
-      {marks ? <ChangesPage text={splitLead(draft.body).text} placed={marks.placed} view={marks.view} current={marks.current} onPick={marks.onPick} options={options}
-        label={'Text of ' + String(note.data.title || note.data.id || '') + ' with the team\'s changes'} />
-      : <ProseEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
-        label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options} />}
+      <ProseEditor key={ver} value={splitLead(draft.body).text} onChange={changed} onCaret={(n) => { if (onCaret) onCaret(n); }} onLook={onLook}
+        label={'Text of ' + String(note.data.title || note.data.id || '')} commands={commands} options={options}
+        changes={marks && marks.view === 'all' ? { changes: marks.changes || [], scene: marks.scene || '', current: marks.current } : null} onChangePick={marks ? marks.onPick : undefined} />
       {error && <p class="note-line section-error">{error}</p>}
     </section>
   );

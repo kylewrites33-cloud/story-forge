@@ -2,124 +2,22 @@
 // as in Word: All changes (old words struck through, new words underlined), Simple (the page as it would read, with a bar
 // beside each changed paragraph), Final (the page as it would read, no marks) and Original (his own page, where he types).
 // Each change has a card in the side column with its reason and Keep, No, the other version or Edit it myself.
-import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
+import type { Change, ChangeStatus } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
-import { answersTo, KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
-import { styledHtml, type StyleOptions } from '../lib/styled.ts';
+import { answersTo, KIND_LABEL, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
+import { styledHtml } from '../lib/styled.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
 
-export type ChangesView = 'all' | 'simple' | 'final' | 'original';
-export const VIEWS: [ChangesView, string][] = [['all', 'All changes'], ['simple', 'Simple'], ['final', 'Final'], ['original', 'Self-Edit']];
+/** all: the changes marked on the page Kyle types in. original: the marks hidden, his page alone (Kyle chose this one
+ * switch over All changes, Simple, Final and Self-Edit on 2026-11-12, once All changes could be typed in). */
+export type ChangesView = 'all' | 'original';
 const VIEW_KEY = 'story-forge.changes-view';
 export function loadView(): ChangesView {
-  try { const v = localStorage.getItem(VIEW_KEY) as ChangesView | null; return v && VIEWS.some(([k]) => k === v) ? v : 'all'; } catch { return 'all'; }
+  try { return localStorage.getItem(VIEW_KEY) === 'original' ? 'original' : 'all'; } catch { return 'all'; }
 }
 export function saveView(v: ChangesView) { try { localStorage.setItem(VIEW_KEY, v); } catch { /* lasts until reload */ } }
-
-type Piece = { text: string; cls: '' | 'del' | 'ins' | 'tag'; id: string };
-
-/** The page's lines, each a list of pieces: Kyle's words, and for each change its old words, its new words or both. */
-function linesOf(text: string, placed: Placed[], view: ChangesView): Piece[][] {
-  const lines: Piece[][] = [[]];
-  const add = (t: string, cls: Piece['cls'], id: string) => {
-    t.split('\n').forEach((part, i) => {
-      if (i > 0) lines.push([]);
-      if (part) lines[lines.length - 1].push({ text: part, cls, id });
-      else if (id && i === 0) lines[lines.length - 1].push({ text: '', cls, id });
-    });
-  };
-  segments(text, placed).forEach((s) => {
-    if (s.kind === 'same') { add(s.text, '', ''); return; }
-    const id = s.change.id;
-    // A few words in the margin say what the change is; only the words that differ are marked (Kyle, 2026-10-28).
-    if (view !== 'final') lines[lines.length - 1].push({ text: shortLabel(s.change), cls: 'tag', id });
-    // A struck-out line break shows nothing, and on a book page it would only split a line in two.
-    if (view === 'all') wordDiff(s.was, s.now).forEach((d) => { if (!(d.kind === 'del' && !d.text.trim())) add(d.text, d.kind === 'same' ? '' : d.kind, id); });
-    else add(s.now, view === 'simple' ? 'ins' : '', view === 'simple' ? id : '');
-  });
-  return lines;
-}
-
-const escAttr = (s: string) => s.replace(/[&"<>]/g, (c) => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' }[c] as string));
-
-// A change that only adds or moves italics cuts a *thought* in pieces, so each piece alone shows raw stars (Kyle,
-// 2026-10-28). Such a line is drawn by carrying the italic and bold state across its pieces: Kyle's words and the new
-// words follow the new text's state, the struck words the old text's.
-type Marks = { i: boolean; b: boolean };
-const loneStars = (t: string) => (t.replace(/\*\*/g, '').match(/\*/g) || []).length % 2 === 1 || (t.match(/\*\*/g) || []).length % 2 === 1;
-const htmlEsc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
-function markHtml(text: string, st: Marks): string {
-  return text.split(/(\*\*|\*)/).map((part) => {
-    if (part === '**') { st.b = !st.b; return ''; }
-    if (part === '*') { st.i = !st.i; return ''; }
-    if (!part) return '';
-    let h = htmlEsc(part);
-    if (st.i) h = '<em>' + h + '</em>';
-    if (st.b) h = '<strong>' + h + '</strong>';
-    return h;
-  }).join('');
-}
-
-/** Kyle's page with the changes marked, for reading. Pressing a change opens its card. */
-export function ChangesPage({ text, placed, view, current, onPick, options, label }: {
-  text: string; placed: Placed[]; view: ChangesView; current: string | null; onPick: (id: string) => void; options: StyleOptions; label: string;
-}) {
-  const kinds = new Map(placed.map((p) => [p.change.id, p.change.kind]));
-  let prev = '';
-  const html = linesOf(text, placed, view).map((line) => {
-    let pieces = line;
-    // The line as it will read, and whether it is a System screen line: its "> " is taken off the pieces that carry it.
-    const reads = (ps: Piece[]) => ps.filter((p) => p.cls !== 'tag' && p.cls !== 'del').map((p) => p.text).join('');
-    const full = reads(pieces);
-    const before = pieces.filter((p) => p.cls !== 'tag' && p.cls !== 'ins').map((p) => p.text).join('');
-    const q = QUOTE.exec(full);
-    if (q) {
-      let cut = q[0].length;
-      pieces = pieces.map((p) => {
-        if (!cut || p.cls === 'tag' || p.cls === 'del') return p;
-        const n = Math.min(cut, p.text.length);
-        cut -= n;
-        return { ...p, text: p.text.slice(n) };
-      });
-    }
-    const rest = q ? full.slice(q[0].length) : full;
-    const kind = q ? (rest.trim() ? 'q' : 'gap') : full.trim() || before.trim() ? 'p' : 'blank';
-    const lineCls = kind === 'blank' ? (pieces.some((p) => p.cls === 'tag') ? ' bk-blank-tag' : ' bk-blank')
-      : kind === 'gap' ? ' bk-gap' : kind === 'q' ? ' bk-q' + (TITLE.test(rest.trim()) ? ' bk-qt' : '') + (prev === 'p' || prev === '' ? ' bk-qstart' : '')
-      : ' bk-p' + (prev === 'q' || prev === 'gap' ? ' bk-after' : prev === '' ? ' bk-first' : '');
-    if (kind !== 'blank') prev = kind;
-    const ids = pieces.filter((p) => p.id).map((p) => p.id);
-    // Margin notes go first in the line so they float level with its top.
-    pieces = pieces.filter((p) => p.cls === 'tag').concat(pieces.filter((p) => p.cls !== 'tag'));
-    const carry = pieces.some((p) => p.cls !== 'tag' && loneStars(p.text));
-    const now: Marks = { i: false, b: false };
-    const was: Marks = { i: false, b: false };
-    const inner = pieces.map((p) => {
-      if (p.cls === 'tag') return '<span class="chg-tag' + (p.id === current ? ' on' : '') + '" data-chg="' + escAttr(p.id) + '">' + escAttr(p.text) + '</span>';
-      let words = '';
-      if (!carry) words = p.text ? styledHtml(p.text, options) : '';
-      else if (p.cls === 'del') words = markHtml(p.text, was);
-      else if (p.cls === 'ins') words = markHtml(p.text, now);
-      else { markHtml(p.text, was); words = markHtml(p.text, now); }
-      if (!p.id) return words;
-      const tag = p.cls === 'del' ? 'del' : p.cls === 'ins' ? 'ins' : 'span';
-      const cls = 'chg chg-' + (kinds.get(p.id) || 'line') + (p.id === current ? ' on' : '') + (view === 'simple' ? ' simple' : '');
-      return '<' + tag + ' class="' + cls + '" data-chg="' + escAttr(p.id) + '">' + (words || (p.cls === 'del' ? '' : '')) + '</' + tag + '>';
-    }).join('');
-    const marked = ids.length > 0 && view !== 'final';
-    return '<div class="chg-line' + lineCls + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
-  }).join('');
-  return (
-    <div class={'writer-text styled changes-page blocks view-' + view} role="document" aria-label={label}
-      onClick={(e) => {
-        const el = (e.target as HTMLElement).closest('[data-chg]') as HTMLElement | null;
-        if (el && el.dataset.chg) onPick(el.dataset.chg);
-      }}
-      dangerouslySetInnerHTML={{ __html: html }} />
-  );
-}
 
 /** The bar over the page while the chapter has changes: the four views, where Kyle is and the arrows. Accept all is in
  * the side column with the cards (Kyle, 2026-10-28: "in the right section would be where the accept or accept all buttons would be"). */
@@ -133,9 +31,10 @@ export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }:
 }) {
   return (
     <div class="changes-bar" role="toolbar" aria-label="The team's changes">
-      <div class="view-seg" role="group" aria-label="How to show the changes">
-        {VIEWS.map(([k, name]) => <button key={k} type="button" aria-pressed={view === k} onClick={() => onView(k)}>{name}</button>)}
-      </div>
+      <button type="button" class="marks-toggle" aria-pressed={view === 'original'} onClick={() => onView(view === 'original' ? 'all' : 'original')}
+        title={view === 'original' ? 'Show the team\'s changes on the page' : 'Read your page without the marks; you can still type'}>
+        <Icon name={view === 'original' ? 'eye' : 'eye-off'} size={18} />{view === 'original' ? 'Show marks' : 'Hide marks'}
+      </button>
       <span class="changes-count">
         {open ? (place || open + (open === 1 ? ' change' : ' changes') + ' here') : 'No changes left here'}
         {total > open ? <span class="meta"> · {total} in the book</span> : null}
