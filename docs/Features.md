@@ -919,10 +919,12 @@ on in that section? ... Maybe that area should recognize what mode we're in, and
 the current stage has been completed?"
 
 - Each book has one stage, worked out in `src/lib/bookstatus.ts` (`bookStatus`): Published (the book's stage is done),
-  "Draft 1 to 2: the rewrite" while the Writer's rewrite is in and Kyle has not been through every chapter (percent =
-  chapters marked with Done with this chapter), "Draft N to N+1: changes" while the team's changes wait (percent =
+  "Draft 2: the rewrite" while the Writer's rewrite is in and Kyle has not been through every chapter (percent =
+  chapters marked with Done with this chapter), "Draft N: changes" while the team's changes wait (percent =
   changes decided), "Draft 1: writing" (percent = words in chapters Kyle marked done against the target, the 2026-10-22
-  rule), or Planning with the workflow stage it is in (percent = steps kept).
+  rule), or Planning with the workflow stage it is in (percent = steps kept). A stage names the draft being made, never
+  "draft N to N+1" (Kyle, 2026-11-12: "we're working on draft 3 now (if anything its draft 2 to 3, though ive never like
+  this language. its draft 3)").
 - Continue where you left off shows one card per book still being worked on (never a published one), the book opened
   last first, at most three. The card names the stage, its percent and bar, the chapter, and opens the right place:
   in the rewrite, the last chapter Kyle opened, or the next chapter not through yet if he already finished that one;

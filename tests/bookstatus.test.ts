@@ -31,7 +31,7 @@ test('the rewrite pass counts chapters through and opens the last chapter Kyle w
   const index = { books: [book], notes } as unknown as VaultIndex;
   const inThree = bookStatus(index, book, [{ path: book.scenes[2], at: '2026-11-05T10:00:00Z' }]);
   assert.equal(inThree.phase, 'rewrite');
-  assert.equal(inThree.stage, 'Draft 1 to 2: the rewrite');
+  assert.equal(inThree.stage, 'Draft 2: the rewrite');
   assert.equal(inThree.percent, 50);
   assert.equal(inThree.detail, '2 of 4 chapters through');
   assert.equal(inThree.go, book.scenes[2]);

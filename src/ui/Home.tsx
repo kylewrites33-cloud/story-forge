@@ -347,7 +347,7 @@ export function useBookStatuses(source: { key: string }, index: VaultIndex): (bo
   }, [source.key, index, stages]);
 }
 
-/** "Draft 1 to 2: the rewrite · 5% done". */
+/** "Draft 2: the rewrite · 5% done". */
 function stageLine(st: BookStatus): string {
   return st.stage + (st.percent != null && st.phase !== 'published' ? ' · ' + st.percent + '% done' : '');
 }
