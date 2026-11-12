@@ -1272,7 +1272,7 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .writer-text.styled.prose { white-space: normal; cursor: text; }
 .prose .cm-quote.md-qt .md-b { font-variant: small-caps; letter-spacing: 0.04em; }
 /* Words lit on the page without touching them: the Rewrite column's place, Check's flags, the sentence being read. */
-.lit-shown, .lit-listen { background: color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 3px; }
+.lit-shown, .lit-listen, .lit-card { background: color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 3px; }
 .lit-check { background-color: color-mix(in srgb, var(--danger) 14%, transparent); text-decoration: underline wavy var(--danger); }
 .lit-check-now { background-color: color-mix(in srgb, var(--accent) 32%, transparent); }
 

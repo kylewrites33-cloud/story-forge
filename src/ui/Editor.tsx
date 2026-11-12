@@ -1346,7 +1346,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     landAt = null;
   }, [showMarks]);
   useEffect(() => {
-    if (!chCur) return;
+    if (!chCur || !showMarks) {
+      [commands.current, ...sibNotes.map((n) => { const a = sibs.current.get(n.path); return a ? a.commands.current : null; })].forEach((b) => { if (b) b.light('card', []); });
+      return;
+    }
     if (typeMarks) {
       // The writing box draws only the lines near the screen, so the change is found by its place in the words.
       const here = chPlace.placed.find((p) => p.change.id === chCur);
@@ -1354,7 +1357,17 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
       const p = here || (sib ? (sibPlace.get(sib.path) || []).find((x) => x.change.id === chCur) : null);
       const api = sib ? sibs.current.get(sib.path) : null;
       const c = sib ? (api ? api.commands.current : null) : commands.current;
-      if (p && c) c.reveal(p.at, p.end);
+      // The paragraph of the picked change is lit, as the Rewrite column lights its paragraph (Kyle, 2026-11-12: "in the
+      // draft 2 version, it was easy to tell where I was because the paragraph in the writing section got highlighted").
+      const boxes = [commands.current, ...sibNotes.map((n) => { const a = sibs.current.get(n.path); return a ? a.commands.current : null; })];
+      boxes.forEach((b) => { if (b && b !== c) b.light('card', []); });
+      if (p && c) {
+        const t = c.text();
+        const from = t.lastIndexOf('\n', Math.max(0, p.at - 1)) + 1;
+        const nl = t.indexOf('\n', Math.max(p.end, p.at));
+        c.light('card', [{ start: from, end: nl < 0 ? t.length : nl }]);
+        c.reveal(p.at, p.end);
+      }
       return;
     }
     const el = document.querySelector('.changes-page [data-chg="' + chCur.replace(/"/g, '') + '"]');
