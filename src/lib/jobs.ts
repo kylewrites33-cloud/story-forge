@@ -105,14 +105,6 @@ export function defaultJobTitle(kind: JobKind, target: string, targetTitle = '')
   return kindTitle(kind, target, targetTitle);
 }
 
-/** A job of the same kind and target that the team has not finished yet, if there is one. */
-export function openJobFor(notes: NoteRecord[], kind: string, target: string): NoteRecord | null {
-  return notes.find((n) => {
-    const s = String(n.data.status || 'requested');
-    return (s === 'requested' || s === 'running') && String(n.data.kind || '') === kind && String(n.data.target || '') === (target || '');
-  }) || null;
-}
-
 /** A new job note for the vault's Jobs folder, worked out from the files the vault has. It keeps the ID it was first
  * shown with (`keep`) unless another job took that ID meanwhile. It is Kyle's commit (no Agent trailer: the request is his). */
 export function planJob(files: FileEntry[], j: NewJob, now: Date, keep = ''): Made {

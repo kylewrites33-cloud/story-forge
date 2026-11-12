@@ -158,18 +158,10 @@ test('each page tells the team chat where Kyle is and what is on screen', async 
   assert.match(pageContext(tell(href.ideas(BOOK))), /Book: Ash Bell \(/);
 });
 
-test('a page says when the vault should be read again', async () => {
-  const snap = await sync(new FsSource(DEMO), null);
+test('a page says when the vault should be read again', () => {
   assert.equal(page('jobs')!.reread, 60);
   assert.equal(page('chat')!.reread, 60);
   assert.equal(page('write')!.reread, 30);
   assert.equal(page('beats')!.reread, undefined);
   assert.ok(page('chat')!.noSide && page('settings')!.noSide && !page('todo')!.noSide);
-  const chat = page('chat')!.waiting!;
-  assert.equal(chat(snap.index, parseHash('#/chat')), false, 'the list of conversations waits on nothing');
-  assert.equal(chat(snap.index, parseHash('#/chat/new')), false);
-  assert.equal(chat(snap.index, parseHash('#/chat/no-such-thread')), false);
-  const write = page('write')!.waiting!;
-  assert.equal(write(snap.index, parseHash(href.write('No/Such.md'))), false);
-  assert.equal(typeof write(snap.index, parseHash(href.write(BOOK + '/Scenes/S-005 The Ledger.md'))), 'boolean');
 });

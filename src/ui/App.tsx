@@ -11,8 +11,8 @@ import { rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { type NewTodo } from '../lib/todos.ts';
 import { kindsFrom } from '../team/kinds.ts';
-import type { Take } from '../team/asks.ts';
-import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
+import { NO_WATCH, openAsk, watchStep, type Take } from '../team/asks.ts';
+import { defaultJobTitle, jobLabel, jobNotes, type NewJob } from '../lib/jobs.ts';
 import { orderBetween, safeTitle } from '../lib/scenes.ts';
 import { chapterTitleEdits } from '../lib/chapters.ts';
 import { fileBase64, manuscriptPath, manuscriptProblem } from '../lib/books.ts';
@@ -39,7 +39,7 @@ import { coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { PomodoroTimer } from './Pomodoro.tsx';
 import { type ChangeStatus } from '../lib/changes.ts';
-import { chatJob, conversation, isThread, loadSideThreads, nextChatThread } from '../lib/chat.ts';
+import { chatJob, isThread, nextChatThread } from '../lib/chat.ts';
 import { pageContext } from '../lib/context.ts';
 import { TeamSide } from './Chat.tsx';
 import type { NewNote } from '../lib/notes.ts';
@@ -408,7 +408,7 @@ export function App() {
   const onJob = useCallback(async (j: NewJob): Promise<{ error: boolean; text: string }> => {
     const cur = snapRef.current;
     // Fill braces may run again while one is waiting: the page only sends asks the team does not have yet.
-    const open = cur && j.kind !== 'fill' ? openJobFor(jobNotes(overlayActions(cur.index, outboxRef.current, schemaRef.current)), j.kind, j.target) : null;
+    const open = cur && j.kind !== 'fill' ? openAsk(jobNotes(overlayActions(cur.index, outboxRef.current, schemaRef.current)), { kind: j.kind, target: j.target || '', book: j.book || '' }) : null;
     if (open) {
       const s = String(open.data.status || 'requested');
       return { error: false, text: String(open.data.id || 'A job') + ' (' + jobLabel(j.kind).toLowerCase() + (j.target ? ', ' + j.target : '') + ') is already ' + (s === 'running' ? 'being worked on' : 'waiting for the team') + '. See Jobs.' };
@@ -740,24 +740,20 @@ export function App() {
     document.addEventListener('visibilitychange', visible);
     // The clock on the screen ticks every minute.
     const timer = setInterval(() => tick((n) => n + 1), 60000);
-    // Every 15 seconds the page on screen says, through the list of pages, whether the vault should be read again:
-    // at once while the team is answering something it shows (an open conversation, a scene's chat or braces), and
-    // otherwise as often as the page asks (Jobs and Chat each minute, so a finished job shows up; an open scene every
-    // 30 seconds, so words pushed from elsewhere come into the page without reloading).
+    // Every 15 seconds: while the team has any ask, the vault is read again (the one watcher, src/team/asks.ts; it
+    // slows to once a minute when nothing has moved for 20 minutes), and otherwise as often as the page on screen asks
+    // through the list of pages (Jobs and Chat each minute; an open scene every 30 seconds, so words pushed from
+    // elsewhere come into the page without reloading).
     let beat = 0;
+    let watch = NO_WATCH;
     const quick = setInterval(() => {
       beat++;
       if (document.visibilityState !== 'visible' || !navigator.onLine) return;
-      const r = routeRef.current;
-      const pg = pageOf(r);
+      const pg = pageOf(routeRef.current);
       const cur = snapRef.current;
-      if (cur && pg && pg.waiting && pg.waiting(cur.index, r)) { runSync(); return; }
-      if (pg && pg.reread && beat % (pg.reread / 15) === 0) { runSync(); return; }
-      // The team column beside a board or page, open and waiting on a reply.
-      if (cur && !(pg && (pg.of === 'write' || pg.noSide)) && document.querySelector('.team-side')) {
-        const sides = loadSideThreads(source.key);
-        if (Object.keys(sides).some((b) => conversation(cur.index, sides[b], b).pending)) runSync();
-      }
+      const step = watchStep(watch, cur ? jobNotes(cur.index) : [], Date.now());
+      watch = step.watch;
+      if (step.read || (pg && pg.reread && beat % (pg.reread / 15) === 0)) runSync();
     }, 15000);
     return () => {
       window.removeEventListener('online', up);

@@ -15,8 +15,8 @@ import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { typedWords } from '../lib/drafts.ts';
 import { flowResults, type NewResult } from '../lib/flow.ts';
 import type { Decision } from '../lib/ideas.ts';
-import type { OnTake } from '../team/asks.ts';
-import { jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
+import { askFor, openAsk, recentProblem, type OnTake } from '../team/asks.ts';
+import { jobNotes, type NewJob } from '../lib/jobs.ts';
 import { checkOptions } from '../lib/lintcheck.ts';
 import { nameList } from '../lib/links.ts';
 import type { NewNote } from '../lib/notes.ts';
@@ -277,8 +277,8 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
   const chapter = typeof note.data.chapter === 'number' ? note.data.chapter : null;
   const beats = r.name === 'beats' && book && chapter != null ? {
     note: beatsNoteFor(view.notes, book.folder, chapter),
-    asking: jobNotes(view).find((j) => String(j.data.kind || '') === 'beats' && String(j.data.target || '') === 'Chapter ' + chapter && String(j.data.book || '') === book.folder
-      && ['requested', 'running'].indexOf(String(j.data.status || 'requested')) >= 0) || null
+    asking: openAsk(jobNotes(view), { kind: 'beats', target: 'Chapter ' + chapter, book: book.folder }),
+    problem: recentProblem(askFor(jobNotes(view), { kind: 'beats', target: 'Chapter ' + chapter, book: book.folder }))
   } : null;
   return (
     <Editor key={r.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
@@ -309,7 +309,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
       chapterBeats={book ? beatsNoteFor(view.notes, book.folder, chapter) : null}
       recipes={recipeNotes(view).map(recipeName)}
       flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
-      changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openJobFor(jobNotes(view).filter((j) => String(j.data.book || '') === book.folder), 'revise', 'Chapter ' + chapter)), book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
+      changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openAsk(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })), problem: chapter != null ? recentProblem(askFor(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })) : '', book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
       rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.commit ? (ch, done) => act.onRewriteThrough(book, ch, done) : undefined } : null}
       drafts={book ? {
         saved: book.drafts || [],

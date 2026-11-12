@@ -436,7 +436,7 @@ export function ChangesOverview({ book, chapters, calls, firstScene, rewrite }: 
 }
 
 /** Ask the Writer to revise this chapter as changes (workflow step 39), from the Changes tab. */
-export function AskForChanges({ chapter, onAsk, asking }: { chapter: number | null; onAsk: (() => Promise<{ error: boolean; text: string }>) | null; asking: boolean }) {
+export function AskForChanges({ chapter, onAsk, asking, problem }: { chapter: number | null; onAsk: (() => Promise<{ error: boolean; text: string }>) | null; asking: boolean; problem?: string }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   if (chapter == null) return null;
@@ -447,6 +447,7 @@ export function AskForChanges({ chapter, onAsk, asking }: { chapter: number | nu
           <Icon name="spark" size={18} />{busy ? 'Asking…' : 'Ask the Writer for changes on chapter ' + chapter}
         </button>}
       <p class="hint">The Writer reads this chapter, the story calls you said yes to and the Style Guide, and writes its changes for you to keep or not. It never rewrites your page. A paid team job; the Jobs page shows what it cost.</p>
+      {!asking && !said && problem && <p class="error" role="status">{problem}</p>}
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
     </div>
   );

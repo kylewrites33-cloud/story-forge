@@ -173,7 +173,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   /** The chapter's scrap (Chapter Scraps): words cut from it and loose notes, for the Scrap tab; null when it has none yet. */
   scrap?: NoteRecord | null;
   /** Beats mode: the chapter by its beats takes the page's place (its beats note, and a beats job still open). */
-  beats?: { note: NoteRecord | null; asking: NoteRecord | null } | null;
+  beats?: { note: NoteRecord | null; asking: NoteRecord | null; problem?: string } | null;
   /** The open scene's chapter beats note, listed in the right column's Beats tab. */
   chapterBeats?: NoteRecord | null;
   /** This scene's options jobs (Options for a passage), newest first. */
@@ -186,7 +186,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   flow?: { results: NoteRecord[]; href: string };
   /** The chapter's changes note, and every chapter's count of changes waiting with the scene to open, for the Changes view
    * (Workflow 1.2, step 41). */
-  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; like?: (pairs: [string, string][]) => number };
+  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; problem?: string; like?: (pairs: [string, string][]) => number };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
   drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
   /** The Writer's rewrite of the book (the copies in `Drafts/Rewrite/`), shown beside the page (2026-11-04); the chapters
@@ -1684,7 +1684,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             cmd={cmd} page={() => mainRef.current} onClose={() => setFindOpen(false)} />}
           {beats && group && group.num != null && bookFolder ? (
             <BeatsView source={source} group={group} bookFolder={bookFolder} beatsNote={beats.note} codex={codex || []} startAt={note.path}
-              onSaved={onSaved} onJob={onJob} asking={beats.asking} saver={beatsSaver}
+              onSaved={onSaved} asking={Boolean(beats.asking)} problem={beats.problem} saver={beatsSaver}
               onStatus={(text, cls) => setBeatsChip({ text, cls })} onOpen={(p) => go(href.write(p))}
               options={beatOpts} onLook={setTyping} api={beatsApi}
               onName={(i) => { const e = allNames.entries[i] || (names && names.entries[i]); if (e) { setPicked(e); openTab('card'); } }}
@@ -1803,7 +1803,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
-                  <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)}
+                  <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)} problem={changes ? changes.problem : ''}
                     onAsk={onJob && bookFolder && chapterNum != null ? () => onJob({ title: defaultJobTitle('revise', 'Chapter ' + chapterNum), kind: 'revise', target: 'Chapter ' + chapterNum, book: bookFolder, ask: jobAsk('revise', 'Chapter ' + chapterNum, '') }) : null} />
                 </div>
             )}
