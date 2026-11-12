@@ -2,7 +2,7 @@
  * GitHub API calls pass straight through; the vault's offline copy lives in IndexedDB, not here.
  * Pages (navigations) are network first, so a new deploy shows up on the next open; built files have hashed names,
  * so they are cache first. Bump VERSION to drop every old cache. */
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = 'story-forge-shell-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/apple-touch-icon.png', './icons/icon-192.png',
   './crow/index.html', './crow/manifest.webmanifest', './crow/icons/icon.svg', './crow/icons/apple-touch-icon.png', './crow/icons/icon-192.png'];
