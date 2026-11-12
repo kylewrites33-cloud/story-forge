@@ -142,7 +142,7 @@ add a dated line here when you add or change one.
   whose `thread` is a scene ID (a conversation about that scene, opened from the Team tab's "Talk about this scene") or
   `chat-NNN` (New conversation); the runner answers each in ID order from the earlier messages in its thread. The screen
   lists conversations newest first and shows one like a chat (Kyle right, the team's reply left, cost small); Kyle may send
-  again before a reply comes. While an open conversation waits for a reply the app syncs every 15 seconds (only while the
+  again before a reply comes. While any ask waits for the team (since 2026-11-12; before, only an open conversation) the app syncs every 15 seconds (only while the
   page is visible). The Jobs screen leaves chat messages out.
   Everything else from the Sudowrite and Novelcrafter lists (Kyle, 2026-10-18, "set up everything app-wise"): in the
   writing screen, codex names (characters, places, items, lore, with aliases and a character's first name) underlined in
@@ -1735,4 +1735,23 @@ piece goes live.
   fails if the two lists of kind names differ). The app's labels, titles and asks for every kind were written down the
   same way (`tests/golden/job-kinds.json`, `tests/kinds.test.ts`) and are unchanged. `node System/Tools/jobs.mjs
   prompt <job note>` prints what a job would be told without changing anything.
+- **One way to wait, and one sentence when it went wrong (2026-11-12, third piece).** While the team has any ask (a
+  job that is requested or running), the app reads the vault again every 15 seconds, on whatever page Kyle is on, so
+  the answer shows where he asked for it (`watchStep` in `src/team/asks.ts`, called from the one timer in
+  `src/ui/App.tsx`). One timeout rule: after 20 minutes with the same asks open and nothing moving, it looks once a
+  minute instead, and goes back to every 15 seconds as soon as an ask starts, finishes or is added. Before, each page
+  said which of its own asks counted (the Chat page its open conversation, the writing page its scene's chat, braces
+  and options), the team column was found by looking for it on the screen, and Beats, Changes and the workflow steps
+  said nothing, so their answers waited for the next ordinary read. Those per-page rules are gone from the list of
+  pages.
+  A feature finds its ask one way (`askFor`, `openAsk`: by kind, target and book), which Beats, Changes, the workflow
+  steps and the "already asked" check now use (that check used to ignore the book). When the team could not finish,
+  every place says the same sentence (`askProblem`): "The team could not finish this. <what the team said>. Ask again
+  when you are ready; the Jobs page has the details." Chat and Options show it on the failed message or ask. Beats,
+  the Changes tab and a workflow step show it where the ask button is for a day after the failure (`recentProblem`),
+  or until Kyle asks again; before, a failed ask on those pages just went quiet. The Beats page also says "The team is
+  working on this chapter's beats" while it waits (it was handed the job before and showed nothing).
+  Checked in Chromium at iPad and desktop sizes and in WebKit at two iPad sizes (`watch.mjs`, `webkit-watch.mjs`): on
+  Beats and on a workflow step the page says the team is working, then within 25 seconds of the team's failure says
+  the sentence, with no reload.
 

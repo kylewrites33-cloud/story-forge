@@ -1,3 +1,4 @@
+import { askProblem } from '../team/asks.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { conversation, conversations, firstWords, isSceneThread, isThread, loadSideThread, saveSideThread, type ChatMessage, type Conversation } from '../lib/chat.ts';
 import type { Decision } from '../lib/ideas.ts';
@@ -79,7 +80,7 @@ function Reply({ m, first, onCancel }: { m: ChatMessage; first: boolean; onCance
   const text = m.reply || (m.state === 'failed' ? '' : m.result);
   return (
     <div class={'chat-msg team' + (m.state === 'failed' ? ' failed' : '')}>
-      {m.state === 'failed' && <p class="error">The team could not answer this one.{m.result ? ' ' + m.result : ''}</p>}
+      {m.state === 'failed' && <p class="error">{askProblem({ data: { result: m.result } })}</p>}
       {text ? <div class="prose" dangerouslySetInnerHTML={{ __html: render(text) }} /> : m.state !== 'failed' && <p class="meta">The team finished without a reply.</p>}
       <p class="chat-meta">{[m.finished ? when(m.finished) : '', m.cost].filter(Boolean).join(' · ')}</p>
     </div>

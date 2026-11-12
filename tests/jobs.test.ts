@@ -8,7 +8,8 @@ import { Frontmatter } from '../src/lib/frontmatter.js';
 import { applyToText, commitMessage, editChange } from '../src/lib/ideas.ts';
 import { createAction } from '../src/vault/ops.ts';
 import { pushAll } from '../src/vault/push.ts';
-import { askBody, costLabel, defaultJobTitle, jobGroups, jobLabel, jobNotes, jobText, nextJobId, openJobFor, resultBody } from '../src/lib/jobs.ts';
+import { openAsk } from '../src/team/asks.ts';
+import { askBody, costLabel, defaultJobTitle, jobGroups, jobLabel, jobNotes, jobText, nextJobId, resultBody } from '../src/lib/jobs.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { PHASE } from '../src/lib/sync.ts';
 import { buildIndex, makeNote } from '../src/lib/vault-index.ts';
@@ -50,9 +51,9 @@ test('jobs group by status, newest first inside a group', () => {
   assert.deepEqual(groups.map((g) => g.key), ['running', 'requested', 'done', 'failed', 'cancelled']);
   assert.deepEqual(groups.map((g) => g.notes.map((n) => n.data.id).join(',')), ['J-003', 'J-009,J-008,J-004,J-002', 'J-007,J-001', 'J-005', 'J-006']);
   // A job of the same kind and target that is still waiting or working stops a duplicate.
-  assert.equal(openJobFor(notes, 'check', 'S-001')!.data.id, 'J-002');
-  assert.equal(openJobFor(notes, 'draft', 'S-001'), null);
-  assert.equal(openJobFor(notes, 'check', 'S-002'), null);
+  assert.equal(openAsk(notes, { kind: 'check', target: 'S-001' })!.data.id, 'J-008');
+  assert.equal(openAsk(notes, { kind: 'draft', target: 'S-001' }), null);
+  assert.equal(openAsk(notes, { kind: 'check', target: 'S-002' }), null);
 });
 
 test('a job note reads back through the vault parser with the properties the runner expects', () => {

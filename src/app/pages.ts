@@ -11,12 +11,8 @@
 // own room, between Home and Plan ("They're two very large stages. We have different AI agents responsible for those
 // steps"): the Market board and the workflow's market research steps.
 import { boardNotes, castFor, STORY_BOARDS, type StoryBoard } from '../lib/boards.ts';
-import { conversation } from '../lib/chat.ts';
 import type { PageView } from '../lib/context.ts';
 import { PILES, piles } from '../lib/ideas.ts';
-import { fillJobsFor, isOpenJob } from '../lib/brackets.ts';
-import { jobNotes } from '../lib/jobs.ts';
-import { optionJobsFor } from '../lib/options.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import { href, parseHash, type Route } from './route.ts';
 
@@ -74,8 +70,6 @@ export interface Page {
   tells?: (t: Telling) => { notes?: NoteRecord[]; lines?: string[] };
   /** Read the vault again this often while the page is open, in seconds (a multiple of 15). */
   reread?: number;
-  /** True while the team is answering something this page shows: the vault is then read again every 15 seconds. */
-  waiting?: (index: VaultIndex, route: Route) => boolean;
 }
 
 const board = (id: string) => (folder: string) => href.board(id, folder);
@@ -83,7 +77,6 @@ const notesOf = (index: VaultIndex, paths?: string[]) => (paths || []).map((p) =
 const scenesOf = (t: Telling) => ({ notes: t.book ? notesOf(t.index, t.book.scenes).filter((n) => n.data.kind !== 'test') : [] });
 const castOf = (t: Telling) => ({ notes: t.book ? castFor(t.index, t.book).map((c) => c.note) : [] });
 const boardOf = (id: StoryBoard) => (t: Telling) => ({ notes: t.book ? boardNotes(t.index, t.book, id) : [] });
-const bookOf = (index: VaultIndex, path: string) => index.books.find((b) => path.startsWith(b.folder + '/')) || null;
 
 /** Every page. A room lists its pages in the order they stand here. */
 export const PAGES = [
@@ -126,8 +119,7 @@ export const PAGES = [
   { id: 'cast-web', of: 'book', title: 'Cast web', icon: 'web', room: 'codex', to: board('cast-web'), tool: 19 },
 
   // The team's places.
-  { id: 'chat', of: 'app', title: 'Chat', icon: 'chat', room: 'team', to: () => href.chat(), bar: 'Chat with the team', noSide: true, reread: 60,
-    waiting: (index: VaultIndex, r: Route) => r.name === 'chat' && Boolean(r.thread) && r.thread !== 'new' && conversation(index, r.thread, r.book).pending },
+  { id: 'chat', of: 'app', title: 'Chat', icon: 'chat', room: 'team', to: () => href.chat(), bar: 'Chat with the team', noSide: true, reread: 60 },
   { id: 'jobs', of: 'app', title: 'Jobs', icon: 'team', room: 'team', to: () => href.jobs(), bar: 'Jobs', where: 'the Jobs page', reread: 60 },
   { id: 'team', of: 'app', title: 'Agents', icon: 'people', room: 'team', to: () => href.team(), bar: 'The team', where: 'the Team page',
     tells: (t: Telling) => ({ lines: t.route.name === 'team' && t.route.slug ? ['Looking at the team member: ' + t.route.slug] : [] }) },
@@ -153,17 +145,9 @@ export const PAGES = [
     } },
 
   // The writing screen, by scene, by its chapter's beats, and the whole chapter. Each takes a scene's path. An open
-  // scene is read again every 30 seconds, so words pushed from elsewhere come into the page without reloading, and
-  // every 15 while the team is answering its chat or its braces.
-  { id: 'write', of: 'write', title: 'Write', icon: 'pen', to: (path: string) => href.write(path), reread: 30,
-    waiting: (index: VaultIndex, r: Route) => {
-      if (r.name !== 'write') return false;
-      const note = index.notes[r.path];
-      const book = note ? bookOf(index, r.path) : null;
-      const id = note ? String(note.data.id || '') : '';
-      if (!book || !id) return false;
-      return fillJobsFor(jobNotes(index), id, book.folder).some(isOpenJob) || optionJobsFor(jobNotes(index), id, book.folder).some(isOpenJob) || conversation(index, id, book.folder).pending;
-    } },
+  // scene is read again every 30 seconds, so words pushed from elsewhere come into the page without reloading (and
+  // every 15 while the team has any ask: the one watcher, src/team/asks.ts).
+  { id: 'write', of: 'write', title: 'Write', icon: 'pen', to: (path: string) => href.write(path), reread: 30 },
   { id: 'beats', of: 'write', title: 'Beats', icon: 'beats', to: (path: string) => href.beats(path) },
   { id: 'chapter', of: 'write', title: 'Whole chapter', icon: 'pen', to: (path: string) => href.chapter(path) }
 ] as const satisfies readonly Page[];

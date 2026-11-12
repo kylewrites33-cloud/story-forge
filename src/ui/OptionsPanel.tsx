@@ -8,7 +8,7 @@ import {
   askedPassage, loadOptionsDone, modeLabel, OPTION_MODES, optionAnswers, optionsJob, optionsState, passageAt, swapIn, type OptionMode
 } from '../lib/options.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
-import { isTaken, waiting, WHOLE, type OnTake } from '../team/asks.ts';
+import { askProblem, isTaken, waiting, WHOLE, type OnTake } from '../team/asks.ts';
 import { Icon } from './Icon.tsx';
 
 /** Everything the writing screen needs for options: asking, the jobs still to deal with, and picking one. */
@@ -147,7 +147,7 @@ export function OptionsPanel({ jobs, done, onPick, onEnd, onDone }: {
             <p class="panel-key">{modeLabel(asked ? asked.mode : '')} · {id}</p>
             {asked && <blockquote class="options-passage">{short(asked.passage, 240)}</blockquote>}
             {state === 'waiting' && <p class="note-line"><span class="job-dot" aria-hidden="true" /> The team is writing the options. They show here when ready.</p>}
-            {state === 'failed' && <p class="hint">No options came back{j.data.result ? ': ' + String(j.data.result) : '.'}</p>}
+            {state === 'failed' && <p class="hint">{String(j.data.status || '') === 'failed' ? askProblem(j) : 'No options came back' + (j.data.result ? ': ' + String(j.data.result) : '.')}</p>}
             {options.map((o, k) => {
               const key = id + ':' + k;
               const mine = said && said.job === id && said.option === k ? said.r : null;

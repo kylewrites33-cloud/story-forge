@@ -3,6 +3,7 @@
 // Kyle's own), `origin` (team, brought-in, kyle) and, once judged, `panel_score` and `panel_note`. Kyle keeps, puts
 // off or drops them like any idea, so the same notes show in Writing mode, on the boards and in the codex.
 // A step and the "Judge…" step after it are one task here: the team makes, the panel scores, Kyle decides.
+import { askFor, openAsk, type AskOf } from '../team/asks.ts';
 import { Frontmatter } from './frontmatter.js';
 import { idNumber, linkName } from './links.ts';
 import { pileOf, stamp } from './ideas.ts';
@@ -107,6 +108,8 @@ export interface TaskStatus {
   dropped: NoteRecord[];
   /** The open job on this task, if any. */
   job: NoteRecord | null;
+  /** The task's latest ask, open or finished, for saying that it failed. */
+  ask: NoteRecord | null;
   /** For Check: the earlier task whose kept results changed after these were kept. */
   changedBy: FlowTask | null;
 }
@@ -127,8 +130,12 @@ export function jobTarget(t: FlowTask): string {
 }
 
 export function openFlowJob(jobs: NoteRecord[], book: string, t: FlowTask): NoteRecord | null {
-  return jobs.find((j) => str(j.data.kind) === 'workflow-step' && str(j.data.target) === jobTarget(t) && str(j.data.book) === book
-    && ['requested', 'running'].indexOf(str(j.data.status) || 'requested') >= 0) || null;
+  return openAsk(jobs, flowAsk(book, t));
+}
+
+/** What a task asks the team about: the one way to find its ask (src/team/asks.ts). */
+export function flowAsk(book: string, t: FlowTask): AskOf {
+  return { kind: 'workflow-step', target: jobTarget(t), book };
 }
 
 /** Where each task stands. Check: a task earlier in the same stage or the stage before kept something new after this
@@ -139,7 +146,7 @@ export function taskStatuses(stages: FlowStage[], results: NoteRecord[], jobs: N
   tasks.forEach((t) => {
     const mine = resultsOf(results, t);
     const by = (p: string) => mine.filter((n) => pileOf(n.data) === p);
-    out[t.key] = { state: 'none', kept: by('kept'), decide: by('decide'), later: by('later'), dropped: by('dropped'), job: openFlowJob(jobs, book, t), changedBy: null };
+    out[t.key] = { state: 'none', kept: by('kept'), decide: by('decide'), later: by('later'), dropped: by('dropped'), job: openFlowJob(jobs, book, t), ask: askFor(jobs, flowAsk(book, t)), changedBy: null };
   });
   tasks.forEach((t, i) => {
     const s = out[t.key];

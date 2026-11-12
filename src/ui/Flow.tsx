@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import { castFor } from '../lib/boards.ts';
 import { stamp, type Decision } from '../lib/ideas.ts';
+import { recentProblem } from '../team/asks.ts';
 import { jobNotes, type OnJob } from '../lib/jobs.ts';
 import { inline } from '../lib/markdown.ts';
 import {
@@ -256,6 +257,7 @@ function FlowStepView({ index, book, flow, stepKey, sourceKey, onJob, onDecide, 
         {t.make.needs && <span><span class="flow-label">Needs</span> <span dangerouslySetInnerHTML={html(t.make.needs)} /></span>}
         {t.judge && <span><span class="flow-label">Judged by</span> <span dangerouslySetInnerHTML={html(t.judge.who)} /></span>}
       </div>
+      {!s.job && recentProblem(s.ask) && <p class="error" role="status">{recentProblem(s.ask)}</p>}
       {s.job && (
         <p class="flow-working"><span class="job-dot" aria-hidden="true" /> The team is on this step ({String(s.job.data.id || 'a job')}). What it makes shows under Judge. <a href={href.jobs()}>See Jobs</a></p>
       )}

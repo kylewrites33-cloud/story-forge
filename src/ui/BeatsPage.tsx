@@ -15,7 +15,6 @@ import { bodyWords, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft, typ
 import { saveDraft } from '../vault/words.ts';
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
-import type { OnJob } from '../lib/jobs.ts';
 import { loadLook } from '../lib/page.ts';
 import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
@@ -109,7 +108,7 @@ function beatDropAt(y: number, dragged: string): string | null | undefined {
   return undefined;
 }
 
-export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords, onFiles }: {
+export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt, onSaved, saver, onStatus, onOpen, options, onName, onLook, api, onActive, head, onWords, onFiles, asking, problem }: {
   source: VaultSource; group: ChapterGroup; bookFolder: string;
   /** The chapter's beats note, or null when it has none yet. */
   beatsNote: NoteRecord | null;
@@ -118,8 +117,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   startAt: string;
   onSaved: (n: NoteRecord) => void;
   /** Not used here any more: Ask the team lives in the side column (Kyle, 2026-10-22: "redundant" in Beats). */
-  onJob?: OnJob;
-  asking?: NoteRecord | null;
+  /** The team is writing this chapter's beats now. */
+  asking?: boolean;
+  /** The sentence to show when the team's last try at them failed. */
+  problem?: string;
   saver: { current: ((closing: boolean) => Promise<boolean>) | null };
   /** The save state in Kyle's words, for the top bar's chip. */
   onStatus: (text: string, cls: string) => void;
@@ -415,6 +416,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
             {head || <h1>{chapterHeading(group)}</h1>}
             <p class="meta">The chapter by its beats. Press a number to open or close a beat. Hold a beat's name to delete it. Change any words in place; they save like the page.</p>
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
+            {asking ? <p class="tool-said ok" role="status"><span class="job-dot" aria-hidden="true" /> The team is working on this chapter's beats. They show here when it is done.</p>
+              : problem && <p class="error" role="status">{problem}</p>}
             <div class="buttons beat-tools">
               <button type="button" onClick={() => keepOpen(new Set(beats.map((b) => b.key)))}>Open all</button>
               <button type="button" onClick={() => keepOpen(new Set())}>Close all</button>
