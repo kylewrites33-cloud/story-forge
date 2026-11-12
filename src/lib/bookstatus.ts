@@ -8,6 +8,7 @@ import type { Recent } from './home.ts';
 import { toNumber } from './links.ts';
 import { chaptersDone, storyScenes } from './overview.ts';
 import { rewriteDone, rewriteFor, rewriteProgress } from './rewrite.ts';
+import { propText } from './props.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 
 export type BookPhase = 'planning' | 'writing' | 'rewrite' | 'changes' | 'publishing' | 'published';
@@ -18,6 +19,8 @@ export interface BookStatus {
   stage: string;
   /** How much of that stage is done, 0 to 100; null when there is nothing to count. */
   percent: number | null;
+  /** In the changes stage: every change in the book Kyle has decided, earlier drafts' included. */
+  decided?: number;
   /** What the percent counts: "2 of 37 chapters through". */
   detail: string;
   /** Still being worked on: shown under Continue where you left off. */
@@ -78,9 +81,14 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
     });
     const lastCh = chapterOf(lastNote);
     const here = lastNote && waiting.some((c) => c.chapter === lastCh) ? lastNote.path : null;
+    const stage = 'Draft ' + working + ': changes';
+    // Count only this draft's changes: the book note keeps how many were already decided when the pass began
+    // (`editing_pass_base`), so the earlier drafts' decided changes do not make the pass look nearly done (Kyle, 2026-11-12).
+    const base = note && propText(note, 'editing_pass') === stage ? toNumber(note.data.editing_pass_base) : null;
+    const from = base != null && base >= 0 && base < all ? base : 0;
     return {
-      phase: 'changes', stage: 'Draft ' + working + ': changes',
-      percent: pct(all - open, all), detail: open + (open === 1 ? ' change' : ' changes') + ' waiting in ' + waiting.length + (waiting.length === 1 ? ' chapter' : ' chapters'),
+      phase: 'changes', stage, decided: all - open,
+      percent: pct(all - open - from, all - from), detail: open + (open === 1 ? ' change' : ' changes') + ' waiting in ' + waiting.length + (waiting.length === 1 ? ' chapter' : ' chapters'),
       active: true, go: here || waiting[0].path, goLabel: 'Keep editing', at
     };
   }

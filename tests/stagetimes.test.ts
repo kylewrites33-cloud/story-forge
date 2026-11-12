@@ -75,3 +75,12 @@ test('editing in a pass: this pass at its own pace, then the rest of editing as 
   assert.equal(est.stages[4].left, 9);
   assert.equal(est.date, '2026-11-19');
 });
+
+test('the first day of a pass: a first guess for it, not one morning\'s pace (Kyle, 2026-11-12)', () => {
+  const dates = stageDates({ editing_start: '2026-10-29' });
+  // Draft 3 began today with 4% decided: 7 days for this pass, 7 for the final pass (no book has its dates yet), 3 to publish.
+  const est = estimate(six('editing', 35), dates, [book1], '2026-11-12', { to: 3, percent: 4, start: '2026-11-12', after: null });
+  assert.equal(est.stages[4].left, 14);
+  assert.equal(est.stages[4].due, '2026-11-26');
+  assert.equal(est.date, '2026-11-29');
+});

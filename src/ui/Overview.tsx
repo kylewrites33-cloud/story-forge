@@ -14,7 +14,7 @@ import { Icon } from './Icon.tsx';
 import { useFlow } from './Flow.tsx';
 import { useBookStatuses } from './Home.tsx';
 import type { BookStatus } from '../lib/bookstatus.ts';
-import { publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
+import { draftMade, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from '../app/route.ts';
 import { afterDraft, datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type EditPass, type Estimate } from '../lib/stagetimes.ts';
@@ -106,9 +106,9 @@ const recorded = new Set<string>();
 function statusLine(cur: SixStage | undefined, status: BookStatus): string {
   if (!cur) return 'Published';
   const short = (t: string) => t.replace(/(\d+) of (\d+)/g, '$1/$2').replace(/ through\b/, ' complete').replace(/ \(pass \d of 3\)$/, '');
-  const m = /Draft (\d+) to (\d+)/.exec(status.stage);
-  if (cur.key === 'editing' && m && (status.phase === 'rewrite' || status.phase === 'changes')) {
-    return 'Editing: ' + (status.phase === 'rewrite' ? 'Rewrite' : 'Changes') + ' (Draft ' + m[2] + ') · ' + short(status.detail);
+  const made = draftMade(status.stage);
+  if (cur.key === 'editing' && made && (status.phase === 'rewrite' || status.phase === 'changes')) {
+    return 'Editing: ' + (status.phase === 'rewrite' ? 'Rewrite' : 'Changes') + ' (Draft ' + made + ') · ' + short(status.detail);
   }
   return cur.name + ': ' + short(cur.detail);
 }
@@ -175,14 +175,14 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   const others = index.books.filter((b) => b.path !== book.path).map((b) => stageDates(index.notes[b.path] ? index.notes[b.path].data : null));
   const day = localDay(new Date());
   // The editing pass under way, timed from its own first day (`editing_pass_start`, kept by the app below).
-  const passM = /Draft (\d+) to (\d+)/.exec(status.stage);
-  const editing = (status.phase === 'rewrite' || status.phase === 'changes') && passM;
+  const passTo = draftMade(status.stage);
+  const editing = (status.phase === 'rewrite' || status.phase === 'changes') && passTo != null;
   const passSame = note && propText(note, 'editing_pass') === status.stage;
   const otherData = index.books.filter((b) => b.path !== book.path).map((b) => (index.notes[b.path] ? index.notes[b.path].data : {}) as Record<string, unknown>);
-  const pass: EditPass | null = editing && passM ? {
-    to: parseInt(passM[2], 10), percent: status.percent || 0,
+  const pass: EditPass | null = editing && passTo != null ? {
+    to: passTo, percent: status.percent || 0,
     start: passSame ? dayOf(note!.data.editing_pass_start) || day : day,
-    after: afterDraft(otherData, parseInt(passM[2], 10))
+    after: afterDraft(otherData, passTo)
   } : null;
   const est = estimate(six, dates, others, day, pass);
   // Keep the record up by itself: the stage the book is in gets a start day, finished stages an end day.
@@ -191,8 +191,10 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   if (editing && note && !passSame) {
     toWrite.editing_pass = status.stage;
     toWrite.editing_pass_start = day;
-    const was = /Draft (\d+) to (\d+)/.exec(propText(note, 'editing_pass'));
-    if (was && parseInt(was[2], 10) < parseInt(passM![2], 10)) toWrite['draft' + was[2] + '_end'] = day;
+    // How many changes were already decided, so the pass counts only its own (bookStatus reads it back).
+    if (status.decided != null) toWrite.editing_pass_base = String(status.decided);
+    const was = draftMade(propText(note, 'editing_pass'));
+    if (was != null && was < passTo!) toWrite['draft' + was + '_end'] = day;
   }
   // The estimate goes on the book note too, so the team and the Chief of Staff see it, when it moves by more than three days.
   const saved = note ? dayOf(note.data.publish_estimate) : null;

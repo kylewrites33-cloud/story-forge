@@ -245,11 +245,15 @@
         },
         "editing_pass": {
           "type": "string",
-          "description": "The editing pass under way, as the app names it (\"Draft 1 to 2: the rewrite\"); the app sets it when a pass begins (Kyle, 2026-11-07)."
+          "description": "The editing pass under way, as the app names it (\"Draft 3: changes\", named by the draft being made); the app sets it when a pass begins (Kyle, 2026-11-07)."
         },
         "editing_pass_start": {
           "type": "date",
           "description": "The day the editing pass under way began. The publish estimate times the pass from here, so earlier editing work does not slow its pace."
+        },
+        "editing_pass_base": {
+          "type": "number",
+          "description": "How many of the book's changes were already decided when the editing pass under way began, so the pass's percent counts only its own changes. Set by the app (Kyle, 2026-11-12)."
         },
         "draft2_end": {
           "type": "date",

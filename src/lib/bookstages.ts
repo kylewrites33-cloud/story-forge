@@ -34,6 +34,13 @@ export const STAGE_NAMES: Record<StageKey, string> = {
 const ORDER: StageKey[] = ['market', 'planning', 'outlining', 'writing', 'editing', 'publishing'];
 
 /** Which of the six a workflow stage belongs to, by its title; null for Writing and Editing, which count the book itself. */
+/** The draft an editing stage is making, from its name: "Draft 3: changes" is 3. An older name, "Draft 2 to 3: changes",
+ * gives the draft after "to". Null when the name has no draft. */
+export function draftMade(stage: string): number | null {
+  const m = /^Draft (\d+)(?: to (\d+))?/.exec(stage || '');
+  return m ? parseInt(m[2] || m[1], 10) : null;
+}
+
 export function sixOf(title: string): StageKey | null {
   if (/market/i.test(title)) return 'market';
   if (/outlin/i.test(title)) return 'outlining';
@@ -120,10 +127,10 @@ export function sixStages({ index, book, stages, statuses, status }: StageInput)
   let editing: { percent: number; detail: string };
   if (published || status.phase === 'publishing') editing = { percent: 100, detail: 'Done' };
   else if (status.phase === 'rewrite' || status.phase === 'changes') {
-    const m = /Draft (\d+) to (\d+)/.exec(status.stage);
-    const from = m ? parseInt(m[1], 10) : 1;
+    // The stage names the draft being made (Kyle, 2026-11-12: "draft 3 is pass 2 of 3"): draft 2 is pass 1, 3 is 2, 4 is 3.
+    const pass = Math.min(3, Math.max(1, (draftMade(status.stage) || 2) - 1));
     const part = (status.percent || 0) / 100;
-    editing = { percent: Math.min(100, Math.round(((Math.max(0, from - 1) + part) / 3) * 100)), detail: status.stage.replace(/^Draft (\d+) to (\d+): /, 'Draft $1 to $2, ') + ' · ' + status.detail + ' (pass ' + Math.min(3, Math.max(1, from)) + ' of 3)' };
+    editing = { percent: Math.min(100, Math.round(((pass - 1 + part) / 3) * 100)), detail: status.stage.replace(/^(Draft \d+): /, '$1, ') + ' · ' + status.detail + ' (pass ' + pass + ' of 3)' };
   } else if (editingStarted) {
     const saved = (book.drafts || []).reduce((m, d) => Math.max(m, d.number), 0);
     editing = { percent: pct(Math.max(0, saved - 1), 3), detail: 'Draft ' + (saved + 1) + ' started' };
