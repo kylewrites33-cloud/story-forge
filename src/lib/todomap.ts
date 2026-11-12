@@ -4,6 +4,7 @@
 // to-do with none is Writing, and a studio to-do with none is guessed from its title until Kyle moves it.
 import { idNumber, toNumber } from './links.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export interface Context { key: string; label: string; hint: string }
 
@@ -41,7 +42,7 @@ export function taskOwnerBook(index: VaultIndex, n: NoteRecord): BookEntry | nul
 
 /** The lane a task sits in: its `context`, Writing for a book's to-do, or a guess from the title. */
 export function taskContext(index: VaultIndex, n: NoteRecord): string {
-  const c = String(n.data.context || '').trim().toLowerCase();
+  const c = propText(n, 'context').trim().toLowerCase();
   if (KEYS.indexOf(c) >= 0) return c;
   if (taskOwnerBook(index, n)) return 'writing';
   return guessContext(String(n.data.title || n.path));
@@ -49,11 +50,11 @@ export function taskContext(index: VaultIndex, n: NoteRecord): string {
 
 /** Whether the lane came from the note itself (false: a guess Kyle may want to fix with Move). */
 export function contextIsSet(n: NoteRecord): boolean {
-  return KEYS.indexOf(String(n.data.context || '').trim().toLowerCase()) >= 0;
+  return KEYS.indexOf(propText(n, 'context').trim().toLowerCase()) >= 0;
 }
 
 export function taskPriority(n: NoteRecord): 'need' | 'want' {
-  return String(n.data.priority || '').trim().toLowerCase() === 'want' ? 'want' : 'need';
+  return propText(n, 'priority').trim().toLowerCase() === 'want' ? 'want' : 'need';
 }
 
 export function taskStatus(n: NoteRecord): string {
@@ -117,7 +118,7 @@ export interface Lane {
 
 function bookIsOut(index: VaultIndex, book: BookEntry): boolean {
   const n = index.notes[book.folder + '/Book.md'];
-  return Boolean(n) && String(n.data.stage || '') === 'done';
+  return Boolean(n) && propText(n, 'stage') === 'done';
 }
 
 /** The whole map: one lane per context, each with its counts. Lanes stay in CONTEXTS order, empty ones included. */

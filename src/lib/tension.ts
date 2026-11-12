@@ -5,6 +5,7 @@
 import { toNumber } from './links.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 import type { Warning, WarningCheck } from './warnings.ts';
+import { propText } from './props.ts';
 
 export const OUTCOMES = ['yes', 'yes-but', 'no', 'no-and'] as const;
 export type Outcome = (typeof OUTCOMES)[number];
@@ -70,10 +71,10 @@ export function scenePoints(scenes: NoteRecord[]): ScenePoint[] {
   const spans = scenePositions(scenes);
   return scenes.map((s, i) => {
     const t = toNumber(s.data.tension), m = toNumber(s.data.mood);
-    const o = String(s.data.outcome || '') as Outcome;
+    const o = propText(s, 'outcome') as Outcome;
     const draft = cardDraft(s.data);
     return {
-      path: s.path, id: String(s.data.id || ''), title: String(s.data.headline || s.data.title || s.data.id || ''), span: spans[i],
+      path: s.path, id: propText(s, 'id'), title: String(s.data.headline || s.data.title || s.data.id || ''), span: spans[i],
       tension: t == null ? null : clamp(Math.round(t), 1, 10),
       outcome: OUTCOMES.indexOf(o) >= 0 ? o : null,
       mood: m == null ? null : clamp(Math.round(m), -5, 5),

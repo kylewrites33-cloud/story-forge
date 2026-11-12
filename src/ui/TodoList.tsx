@@ -11,6 +11,7 @@ import { ProposalCard } from './IdeasBoard.tsx';
 import { TodoMap } from './TodoMap.tsx';
 import { CONTEXTS } from '../lib/todomap.ts';
 import { PREF, readPref, writePref } from '../lib/prefs.ts';
+import { propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -121,7 +122,7 @@ export const EDIT_KINDS = ['note', 'line', 'scene', 'structure'];
 
 /** The team's notes on the book's draft still waiting on Kyle (to decide, sent back for a rewrite, or put off). */
 export function draftNotes(index: VaultIndex, book: BookEntry): { note: NoteRecord; pile: 'decide' | 'rewrite' | 'later' }[] {
-  const notes = (book.ideas || []).map((p) => index.notes[p]).filter((n) => n && EDIT_KINDS.indexOf(String(n.data.kind || '')) >= 0);
+  const notes = (book.ideas || []).map((p) => index.notes[p]).filter((n) => n && EDIT_KINDS.indexOf(propText(n, 'kind')) >= 0);
   const by = piles(notes);
   return (['decide', 'rewrite', 'later'] as const).flatMap((pile) => (by[pile] || []).map((note) => ({ note, pile })));
 }
@@ -134,12 +135,12 @@ export function TodoList({ index, waiting, onDecide, onAdd, schema, book, onRewr
 }) {
   const drafts = schema && book ? draftNotes(index, book) : [];
   const all = taskNotes(index);
-  const owners = ['Kyle', 'Claude'].filter((o) => all.some((n) => String(n.data.owner || '') === o));
+  const owners = ['Kyle', 'Claude'].filter((o) => all.some((n) => propText(n, 'owner') === o));
   const [who, setWho] = useState('');
   const [kind, setKind] = useState('');
   const hasBook = all.some((n) => isBookTodo(index, n));
   const hasStudio = all.some((n) => !isBookTodo(index, n));
-  const shown = all.filter((n) => (!who || String(n.data.owner || '') === who)
+  const shown = all.filter((n) => (!who || propText(n, 'owner') === who)
     && (!kind || (kind === 'book') === isBookTodo(index, n)));
   const groups = taskGroups(shown);
   const openCount = all.filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length;

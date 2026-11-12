@@ -6,6 +6,7 @@ import { idNumber } from './links.ts';
 import { boardHref, bookNotesOf, sceneId, storyScenes, stringList } from './seeing.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 import type { Warning, WarningCheck } from './warnings.ts';
+import { propText } from './props.ts';
 
 export type PromiseMark = 'planted' | 'reinforced' | 'paid';
 export const MARKS: PromiseMark[] = ['planted', 'reinforced', 'paid'];
@@ -57,7 +58,7 @@ export function promiseLane(note: NoteRecord, scenes: NoteRecord[], known: strin
   const open = SETTLED.indexOf(status) < 0;
   const imp = typeof note.data.importance === 'number' ? note.data.importance : null;
   return {
-    note, id: String(note.data.id || ''), title: String(note.data.title || ''), status, kind: String(note.data.kind || ''),
+    note, id: propText(note, 'id'), title: propText(note, 'title'), status, kind: propText(note, 'kind'),
     importance: imp, open, marks, missing, unpaid: open && !marks.some((m) => m.indexOf('paid') >= 0)
   };
 }

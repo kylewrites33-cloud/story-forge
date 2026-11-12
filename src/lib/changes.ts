@@ -19,6 +19,7 @@
 // A new passage also has `Or:` with a second version. Paragraphs inside a quote are `> ` lines with a `>` line between.
 import type { NoteRecord } from './types.ts';
 import { PREF, storeOf } from './prefs.ts';
+import { propText } from './props.ts';
 
 export const CHANGES_FOLDER = 'Changes';
 export const CHANGES_TYPE = 'chapter-changes';
@@ -403,7 +404,7 @@ export function chapterChanges(notes: Record<string, NoteRecord>, bookFolder: st
     const changes = parseChanges(n.body).changes.filter((c) => c.status === 'open');
     // The scene the first waiting change is in, else the chapter's first scene.
     const id = changes.length ? changes[0].scene : '';
-    const byId = id ? Object.values(notes).find((x) => x.type === 'scene' && x.path.startsWith(bookFolder + '/') && String(x.data.id || '') === id) : null;
+    const byId = id ? Object.values(notes).find((x) => x.type === 'scene' && x.path.startsWith(bookFolder + '/') && propText(x, 'id') === id) : null;
     const path = byId ? byId.path : firstScene(chapter);
     if (path) out.push({ chapter, open: changes.length, path });
   });

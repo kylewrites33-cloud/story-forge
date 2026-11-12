@@ -65,6 +65,8 @@ docs/              Features.md and Layout.md
   desktop-only; test both sizes. Keyboard shortcuts are extras (Ctrl or Cmd+S saves in the writing screen), never the only way.
 - iPad first: large type, one accent colour, light and dark (Settings, Colours: nine light and ten dark themes per device,
   Kyle 2026-10-18; every colour is a CSS variable, so new styles use the variables, never fixed colours; the stylesheet is `src/styles/`, a colour theme one line in `themes/colours.css`, a theme with its own shapes one file beside it), 16 px side gutter, no horizontal scroll, 44 px tap targets.
+- A note's property is read with `propText` or `propNum` from `src/lib/props.ts`, never `String(note.data.x || '')` by
+  hand; the names come from the schema (`npm run props` after the demo schema copy changes).
 - Files are fetched by blob sha, so an unchanged note is never downloaded twice.
 - `demo-vault/System/schema.json` is a copy of the vault's schema. Refresh it when the schema changes, and keep the demo
   vault passing `sf validate` (a test runs it when the vault is beside this repository).
@@ -79,6 +81,7 @@ npm run typecheck
 npm run test:webkit  the page checks in a real WebKit (tests/webkit/; needs a build, vite preview on 4173, webkit2gtk-driver, xvfb)
 npm run build        to dist/
 npm run icons        redraw public/icons
+npm run props        rewrite src/lib/prop-names.ts from the demo vault's schema
 ```
 
 Branches and pull requests; Kyle merges. Never force-push. `.github/workflows/pages.yml` runs the tests and build on

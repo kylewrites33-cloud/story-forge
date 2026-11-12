@@ -6,6 +6,7 @@
 import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
 import { PREF, readPref } from './prefs.ts';
+import { propText } from './props.ts';
 
 export type OptionMode = 'expand' | 'describe' | 'tighten' | 'voice';
 
@@ -145,7 +146,7 @@ export function swapIn(text: string, passage: string, before: string, option: st
 
 /** This scene's options jobs, newest first. */
 export function optionJobsFor(jobs: NoteRecord[], sceneId: string, bookFolder: string): NoteRecord[] {
-  return jobs.filter((j) => String(j.data.kind || '') === 'options' && String(j.data.target || '') === sceneId && String(j.data.book || '') === bookFolder)
+  return jobs.filter((j) => propText(j, 'kind') === 'options' && propText(j, 'target') === sceneId && propText(j, 'book') === bookFolder)
     .sort((a, b) => String(b.data.id || b.path).localeCompare(String(a.data.id || a.path)));
 }
 

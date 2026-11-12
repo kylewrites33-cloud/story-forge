@@ -19,6 +19,7 @@ import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { useTeam } from './Team.tsx';
 import { href } from '../app/route.ts';
+import { propNum, propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 export type OnResults = (book: BookEntry, list: NewResult[]) => Promise<string | null>;
@@ -55,9 +56,9 @@ function StateChip({ s }: { s: TaskStatus | undefined }) {
 
 /** One result: its title, where it came from, the panel's score and line, and Kyle's buttons. */
 function ResultCard({ n, waiting, onDecide, kept }: { n: NoteRecord; waiting?: Record<string, Choice>; onDecide?: OnDecide; kept?: boolean }) {
-  const score = typeof n.data.panel_score === 'number' ? n.data.panel_score : parseInt(String(n.data.panel_score || ''), 10);
+  const score = typeof n.data.panel_score === 'number' ? n.data.panel_score : parseInt(propText(n, 'panel_score'), 10);
   const saving = waiting && waiting[n.path];
-  const pitch = String(n.data.pitch || '').trim() || n.body.replace(/^#+.*$/gm, '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  const pitch = propText(n, 'pitch').trim() || n.body.replace(/^#+.*$/gm, '').replace(/\s+/g, ' ').trim().slice(0, 300);
   const later = Array.isArray(n.data.tags) && (n.data.tags as unknown[]).map(String).indexOf('later') >= 0;
   return (
     <li class="flow-result">
@@ -75,7 +76,7 @@ function ResultCard({ n, waiting, onDecide, kept }: { n: NoteRecord; waiting?: R
           <button type="button" onClick={() => onDecide(n.path, 'drop', '')}>Drop</button>
         </div>
       )}
-      {onDecide && kept && String(n.data.origin || '') !== 'kyle' && (
+      {onDecide && kept && propText(n, 'origin') !== 'kyle' && (
         <div class="buttons"><button type="button" class="link" onClick={() => onDecide(n.path, 'inbox', '')}>Not sure now: back to decide</button></div>
       )}
     </li>
@@ -279,7 +280,7 @@ function FlowStepView({ index, book, flow, stepKey, sourceKey, onJob, onDecide, 
         <div>
           {!s.decide.length && !s.later.length ? <p class="meta">Nothing to judge. Make some results first.</p> : (
             <ul class="flow-results">
-              {s.decide.concat(s.later).slice().sort((a, b) => (Number(b.data.panel_score) || 0) - (Number(a.data.panel_score) || 0)).map((n) => (
+              {s.decide.concat(s.later).slice().sort((a, b) => (propNum(b, 'panel_score')) - (propNum(a, 'panel_score'))).map((n) => (
                 <ResultCard key={n.path} n={n} waiting={waiting} onDecide={onDecide} />
               ))}
             </ul>
@@ -501,7 +502,7 @@ export function FlowTab({ results, chapter, sceneId, names, flowHref, link }: {
 
 function resultsOfPlace(kept: NoteRecord[], chapter: number | null, sceneId: string): NoteRecord[] {
   return kept.filter((n) => {
-    const t = String(n.data.target || '').trim();
+    const t = propText(n, 'target').trim();
     const m = /^chapter\s+(\d+)$/i.exec(t);
     return (m && chapter != null && parseInt(m[1], 10) === chapter) || (sceneId && t === sceneId);
   });

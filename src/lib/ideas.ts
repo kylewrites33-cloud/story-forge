@@ -4,6 +4,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { idNumber } from './links.ts';
 import type { NoteRecord } from './types.ts';
+import { propText } from './props.ts';
 
 /** What Kyle can do to a proposal. "inbox" puts a decided or later one back in the pile to decide.
  * "accept" and "rework" are for scene cards: accept sets the accepted time, rework clears it. */
@@ -296,7 +297,7 @@ export interface IdeaFilter {
 }
 
 export function filterIdeas(notes: NoteRecord[], f: IdeaFilter): NoteRecord[] {
-  return notes.filter((n) => (!f.source || sourceOf(n.data) === f.source) && (!f.kind || String(n.data.kind || '') === f.kind));
+  return notes.filter((n) => (!f.source || sourceOf(n.data) === f.source) && (!f.kind || propText(n, 'kind') === f.kind));
 }
 
 /** The values a property takes on these notes, with how many notes have each, most first then A to Z. */
@@ -311,6 +312,6 @@ export function valueCounts(notes: NoteRecord[], key: string): { value: string; 
 
 /** The job target for ticked ideas: their IDs in ID order, "I-002, I-005". */
 export function ideaTarget(notes: NoteRecord[]): string {
-  return notes.map((n) => String(n.data.id || '')).filter(Boolean)
+  return notes.map((n) => propText(n, 'id')).filter(Boolean)
     .sort((a, b) => (idNumber(a) || 0) - (idNumber(b) || 0)).join(', ');
 }

@@ -9,6 +9,7 @@ import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
+import { propText } from '../lib/props.ts';
 
 /** A line with the theme's keywords marked. */
 function Marked({ line, re }: { line: string; re: RegExp | null }) {
@@ -103,7 +104,7 @@ function CellLines({ row, cell, chapter, onClose }: { row: ThemeRow; cell: Theme
         <ul class="seeing-list">
           {cell.hits.map((h, i) => (
             <li key={i}>
-              <a href={href.write(h.scene.path)} class="card-id">{String(h.scene.data.id || '')}</a>{' '}
+              <a href={href.write(h.scene.path)} class="card-id">{propText(h.scene, 'id')}</a>{' '}
               <Marked line={h.line} re={re} />{h.count > 1 ? <span class="meta"> ({h.count} times)</span> : null}
             </li>
           ))}
@@ -111,7 +112,7 @@ function CellLines({ row, cell, chapter, onClose }: { row: ThemeRow; cell: Theme
       ) : <p class="meta">None of its keywords appear in this chapter's words.</p>}
       {cell.cards.length > 0 && (
         <p class="meta">Linked on {cell.cards.length === 1 ? 'the card of ' : 'the cards of '}
-          {cell.cards.map((s, i) => <span key={s.path}>{i ? ', ' : ''}<a href={href.write(s.path)}>{String(s.data.id || '')} {sceneHeader(s.data)}</a></span>)}.
+          {cell.cards.map((s, i) => <span key={s.path}>{i ? ', ' : ''}<a href={href.write(s.path)}>{propText(s, 'id')} {sceneHeader(s.data)}</a></span>)}.
         </p>
       )}
     </div>

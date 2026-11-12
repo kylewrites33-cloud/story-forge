@@ -1,6 +1,7 @@
 // What the "seeing the book" pages (Promises, Plot Grid, Timeline, Themes, Cast web) share: the book's story scenes in
 // reading order, and the notes of one type that belong to a book or its series.
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 /** The book's scenes in reading order, without test drives. */
 export function storyScenes(index: VaultIndex, book: BookEntry): NoteRecord[] {
@@ -25,7 +26,7 @@ export function boardHref(board: string, folder: string): string {
 
 /** A scene's ID, as written on its card. */
 export function sceneId(n: NoteRecord): string {
-  return String(n.data.id || '').trim();
+  return propText(n, 'id').trim();
 }
 
 /** A list property as plain strings ("S-012", "[[S-012 The Crack]]" both give the text inside). */

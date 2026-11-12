@@ -5,6 +5,7 @@
 // guessed about the other from an answer's age.
 import { Frontmatter } from '../lib/frontmatter.js';
 import type { NoteRecord } from '../lib/types.ts';
+import { propText } from '../lib/props.ts';
 
 /** Where an ask stands. `answered`: the team finished and at least one answer is not used yet. `taken`: finished, and
  * every answer the feature names is used (or Kyle put it away). */
@@ -78,14 +79,14 @@ export type OnTake = (takes: Take[]) => void;
 /** What a feature asks about: a kind of job, and where it matters the target and the book. */
 export interface AskOf { kind: string; target?: string; book?: string }
 
-const num = (j: Job) => { const m = /(\d+)/.exec(String(j.data.id || '')); return m ? parseInt(m[1], 10) : 0; };
+const num = (j: Job) => { const m = /(\d+)/.exec(propText(j, 'id')); return m ? parseInt(m[1], 10) : 0; };
 
 /** A feature's ask: the one the team still has, or else the newest of that kind about that target in that book. Null
  * when it never asked. Beats, Changes and the workflow steps find theirs with this. */
 export function askFor<T extends Job>(jobs: T[], of: AskOf): T | null {
-  const mine = jobs.filter((j) => String(j.data.kind || '') === of.kind
-    && (of.target == null || String(j.data.target || '') === of.target)
-    && (of.book == null || String(j.data.book || '') === of.book));
+  const mine = jobs.filter((j) => propText(j, 'kind') === of.kind
+    && (of.target == null || propText(j, 'target') === of.target)
+    && (of.book == null || propText(j, 'book') === of.book));
   const newest = (list: T[]) => list.reduce<T | null>((a, b) => (a && num(a) >= num(b) ? a : b), null);
   return newest(mine.filter(waiting)) || newest(mine);
 }
@@ -98,7 +99,7 @@ export function openAsk<T extends Job>(jobs: T[], of: AskOf): T | null {
 
 /** The one sentence for an ask the team could not finish, with what the team said about it. */
 export function askProblem(job: Job): string {
-  const said = String(job.data.result || '').trim();
+  const said = propText(job, 'result').trim();
   return 'The team could not finish this.' + (said ? ' ' + said + (/[.!?…]$/.test(said) ? '' : '.') : '') + ' Ask again when you are ready; the Jobs page has the details.';
 }
 
@@ -108,9 +109,9 @@ export const FAILED_SHOWS_FOR = 24 * 60 * 60 * 1000;
 /** The sentence for a feature's ask that failed in the last day, or '' (it worked, it is still running, it failed long
  * ago, or there is none). A page shows this where its ask button is. */
 export function recentProblem(job: Job | null | undefined, now = Date.now()): string {
-  if (!job || String(job.data.status || '') !== 'failed') return '';
+  if (!job || propText(job, 'status') !== 'failed') return '';
   // `created` is a day with no time, so an ask with no finish time counts from the end of that day.
-  const t = job.data.finished ? Date.parse(String(job.data.finished)) : Date.parse(String(job.data.created || '')) + FAILED_SHOWS_FOR;
+  const t = job.data.finished ? Date.parse(String(job.data.finished)) : Date.parse(propText(job, 'created')) + FAILED_SHOWS_FOR;
   return isFinite(t) && now - t < FAILED_SHOWS_FOR ? askProblem(job) : '';
 }
 
@@ -132,7 +133,7 @@ export const NO_WATCH: Watch = { open: '', since: 0 };
 
 /** The asks the team still has, as one line: each with where it stands. */
 export function openAsks(jobs: Job[]): string {
-  return jobs.filter(waiting).map((j) => String(j.data.id || '') + ':' + String(j.data.status || 'requested')).sort().join(' ');
+  return jobs.filter(waiting).map((j) => propText(j, 'id') + ':' + String(j.data.status || 'requested')).sort().join(' ');
 }
 
 /** One look of the watcher (called every `WATCH_EVERY` seconds): should the vault be read again now, and what to

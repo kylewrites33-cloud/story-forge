@@ -3,6 +3,7 @@
 import { toNumber } from './links.ts';
 import { sceneId, storyScenes } from './seeing.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export interface TimePoint { scene: NoteRecord; at: number; day: number }
 
@@ -53,7 +54,7 @@ export function timeline(index: VaultIndex, book: BookEntry): Timeline {
   const events: TimeEvent[] = [];
   for (let i = 1; i < points.length; i++) {
     const p = points[i], prev = points[i - 1], days = p.day - prev.day;
-    const name = sceneId(p.scene) || String(p.scene.data.title || '');
+    const name = sceneId(p.scene) || propText(p.scene, 'title');
     if (days < 0) events.push({ kind: 'flashback', point: p, prev, days, text: name + ' goes back ' + dayWord(-days) + ', to ' + dayLabel(p.day) + ', after ' + (sceneId(prev.scene) || 'the scene before') + ' on ' + dayLabel(prev.day) + '.' });
     else if (isJump(days, usual)) events.push({ kind: 'jump', point: p, prev, days, text: name + ' jumps ' + dayWord(days) + ' ahead, from ' + dayLabel(prev.day) + ' to ' + dayLabel(p.day) + '.' });
   }

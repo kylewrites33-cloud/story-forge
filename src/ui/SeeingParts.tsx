@@ -5,6 +5,7 @@ import { sceneHeader } from '../lib/format.ts';
 import { toNumber } from '../lib/links.ts';
 import type { BookEntry, NoteRecord } from '../lib/types.ts';
 import { href } from '../app/route.ts';
+import { propText } from '../lib/props.ts';
 
 export function SeeingHead({ book, title, heading, children }: { book: BookEntry; title: string; heading: string; children?: ComponentChildren }) {
   return (
@@ -39,7 +40,7 @@ export function SceneHeads({ scenes, corner, shade }: { scenes: NoteRecord[]; co
       <tr class="sg-scenes">
         {scenes.map((s, i) => (
           <th key={s.path} scope="col" class={shade && shade(i) ? 'shade' : undefined}>
-            <a href={href.write(s.path)} title={String(s.data.id || '') + ': ' + sceneHeader(s.data)}>{String(s.data.id || '').replace(/^S-0*/, '') || i + 1}</a>
+            <a href={href.write(s.path)} title={propText(s, 'id') + ': ' + sceneHeader(s.data)}>{propText(s, 'id').replace(/^S-0*/, '') || i + 1}</a>
           </th>
         ))}
       </tr>

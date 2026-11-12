@@ -7,6 +7,7 @@ import type { NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
+import { propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -81,7 +82,7 @@ function JobCard({ index, note, waiting, onDecide }: { index: VaultIndex; note: 
 /** Every job Kyle asked the team for, by status. The server's runner runs them and writes the results back into the notes. */
 export function JobsScreen({ index, waiting, onDecide, syncing }: { index: VaultIndex; waiting: Record<string, Choice>; onDecide?: OnDecide; syncing?: boolean }) {
   // Chat messages are jobs too, but they read as conversations on the Chat screen.
-  const all = jobNotes(index).filter((n) => String(n.data.kind || '') !== 'chat');
+  const all = jobNotes(index).filter((n) => propText(n, 'kind') !== 'chat');
   const groups = jobGroups(all);
   const busy = all.filter((n) => ['requested', 'running'].indexOf(String(n.data.status || 'requested')) >= 0).length;
   return (

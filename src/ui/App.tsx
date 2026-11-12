@@ -47,6 +47,7 @@ import { recipeName, type RecipeFields } from '../lib/recipes.ts';
 import { WORKFLOW_PATH } from '../lib/workflow.ts';
 import { type NewResult } from '../lib/flow.ts';
 import { toNumber } from '../lib/links.ts';
+import { propText } from '../lib/props.ts';
 
 function makeSource(s: Settings): VaultSource {
   return isConnected(s) ? new GitHubSource(s) : new DemoSource();
@@ -491,7 +492,7 @@ export function App() {
     // the device and what waits for the scene follow it to the new name (2026-11-11; before, it needed the connection).
     const clean = safeTitle(title);
     if (!clean) return 'Give the scene a title first.';
-    const id = String(note.data.id || '');
+    const id = propText(note, 'id');
     const dest = note.path.slice(0, note.path.lastIndexOf('/')) + '/' + (id ? id + ' ' : '') + clean + '.md';
     const cur = snapRef.current;
     if (dest !== note.path && cur && Object.keys(cur.index.notes).some((p) => p.toLowerCase() === dest.toLowerCase())) return 'A scene called ' + clean + ' is already there. Choose another title.';

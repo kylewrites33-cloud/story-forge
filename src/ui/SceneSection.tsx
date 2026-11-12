@@ -12,6 +12,7 @@ import { ProseEditor } from '../write/ProseEditor.tsx';
 import type { EditorCommands } from '../write/prose.ts';
 import type { ChangesView } from './Changes.tsx';
 import type { Change, Placed } from '../lib/changes.ts';
+import { propText } from '../lib/props.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 const TYPING_SAVE_MS = 5 * 60 * 1000;
@@ -75,7 +76,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
       const next: Draft = { ...now, baseSha: r.merged ? '' : r.note.sha, baseBody: d.body, pending: false, error: undefined };
       if (closing && !isUnsaved(next)) { ref.current = next; putDraft(source.key, d.path, null); }
       else setDraft(next);
-      setError(mergeNotice(r.merged && !r.clash ? [String(note.data.id || '')] : [], r.clash ? [String(note.data.id || '')] : []));
+      setError(mergeNotice(r.merged && !r.clash ? [propText(note, 'id')] : [], r.clash ? [propText(note, 'id')] : []));
       return true;
     } catch (e) {
       const err = e as Error & { status?: number };
@@ -137,7 +138,7 @@ export function SceneSection({ source, note, options, onSaved, onFocus, onLook, 
     const d = ref.current;
     const body = splitLead(d.body).lead + text;
     // The team's words put in from a card are not words Kyle typed.
-    if (!outside.current) trackWords(note.path, String(note.data.id || ''), bodyWords(d.body), bodyWords(body));
+    if (!outside.current) trackWords(note.path, propText(note, 'id'), bodyWords(d.body), bodyWords(body));
     setDraft({ ...d, body, updatedAt: new Date().toISOString() });
     later();
     if (onText) onText();
