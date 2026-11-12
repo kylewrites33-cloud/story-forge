@@ -787,6 +787,22 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   the same page, still typed in, with the team's marks taken off, which is what Self-Edit was. A device that had Self-Edit
   saved opens with marks hidden; any other saved view opens with marks shown. The older entries above that name Simple,
   Final and Self-Edit tell how it was before.
+- **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
+  the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
+  page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
+  from Kyle's reply on it (`Re:` that card) is retired: it leaves the page and the open cards, and sits with the decided
+  ones as "Replaced by C-NN" with its New card link. Nothing is written for it: the app reads it from the new card being
+  there (`replaced` in `src/lib/changes.ts`). A card Kyle had already decided keeps his choice. The Writer's reply steps
+  say its new card carries over whatever on the old card his reply did not object to.
+- **Version 1 and Version 2** (2026-11-12, Kyle: "On the right side, I don't know how to choose option 1 or 2"). A card
+  with a second version labels its two versions Version 1 and Version 2 and has a Use version 1 and a Use version 2
+  button side by side (and Edit version 1 or 2, then use it); a decided one says which version went in. Before, the
+  buttons said Accept and Accept the other. The card in his picture (C-74) showed no buttons at all because the old card
+  C-61 held the same words; the replace rule above frees them.
+- **A choice on a card the Writer just made is saved** (2026-11-12). For two minutes after a save the app plans the next
+  one on the version of the vault it saved itself. If the team had saved since (the Writer's new card), the plan found
+  no such card, saved nothing, and the choice was lost. Now a save that finds nothing to do on that version looks again
+  at the vault as it is now (`src/lib/github.ts`, `commit`).
 - **Reply to the Writer** (2026-11-12, Kyle: "i need to be able to reply within the changes, to explain to the writer
   why i made a choice, and for the writer to create a new card based on my reply"). Every card, waiting or decided, has
   Reply to the Writer: a box opens on the card, and Send to the Writer puts his words on the card as a `Reply:` line in

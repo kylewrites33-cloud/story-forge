@@ -49,7 +49,7 @@ export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }:
 }
 
 // Accept and Reject, as in Word (Kyle, 2026-10-28: "keep this change is throwing me off. why not the language accept this change").
-const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Accepted the other version', no: 'Rejected', mine: 'Your own words', rewrite: 'In the rewrite' };
+const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Used version 2', no: 'Rejected', mine: 'Your own words', rewrite: 'In the rewrite', replaced: 'Replaced' };
 
 // The page as a Kindle shows it (Kyle, 2026-10-28: "when we're in editing mode, the document automatically converts to
 // the form that it's going to show up as in Kindle"): paragraphs indented with no blank lines between them, System
@@ -197,8 +197,9 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
         {c.status === 'open' ? (
           <>
             <Quote text={c.was} cls="was" />
+            {c.other != null && <p class="panel-key">Version 1</p>}
             <Quote text={c.now} cls="now" was={c.was} />
-            {c.other != null && <><p class="panel-key">Or the other version</p><Quote text={c.other} cls="now other" was={c.was} /></>}
+            {c.other != null && <><p class="panel-key">Version 2</p><Quote text={c.other} cls="now other" was={c.was} /></>}
             {c.id === editing ? (
               <>
                 <p class="chg-mine"><Icon name="pen" size={16} />You are writing this one yourself on the page. The team's version stays here while you work.</p>
@@ -209,7 +210,7 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
               </>
             ) : tweak && tweak.id === c.id && here ? (
               <>
-                <label class="panel-key" for={'tweak-' + c.id}>{c.other != null ? (tweak.other ? 'Your edit of the other version' : 'Your edit of the first version') : 'Your edit of the team\'s words'}</label>
+                <label class="panel-key" for={'tweak-' + c.id}>{c.other != null ? (tweak.other ? 'Your edit of version 2' : 'Your edit of version 1') : 'Your edit of the team\'s words'}</label>
                 <TweakBox id={'tweak-' + c.id} was={c.was} words={tweak.words} onInput={(w) => setTweak({ ...tweak, words: w })} />
                 <div class="chg-buttons">
                   <button type="button" class="primary" onClick={() => { onTweak(c, tweak.words); setTweak(null); }}>Accept my version</button>
@@ -218,16 +219,16 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
               </>
             ) : <>
             {!here ? <>
-            <p class="hint">These words are no longer on the page, so there is nothing to show there (you have probably changed them yourself). I wrote my own keeps your words. Back to Draft 1 puts Draft 1's words back in their place.</p>
+            <p class="hint">The words this card quotes are not on the page as it quotes them (you have probably changed them yourself), so it cannot put anything there. I wrote my own keeps your words. Back to Draft 1 puts Draft 1's words back in their place.</p>
             <div class="chg-buttons">
               <button type="button" class="primary" onClick={() => onDoneMine(c)}>I wrote my own</button>
               {onRevert ? <button type="button" onClick={() => onRevert(c)}>Back to Draft 1</button> : <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>}
             </div>
             </> : <div class="chg-buttons">
-              <button type="button" class="primary" onClick={() => onChoose(c, 'kept')}>Accept</button>
-              {c.other != null && <button type="button" onClick={() => onChoose(c, 'other')}>Accept the other</button>}
-              <button type="button" onClick={() => setTweak({ id: c.id, words: c.now, other: false })}>{c.other != null ? 'Edit the first, then accept' : 'Edit, then accept'}</button>
-              {c.other != null && <button type="button" onClick={() => setTweak({ id: c.id, words: c.other || '', other: true })}>Edit the other, then accept</button>}
+              <button type="button" class="primary" onClick={() => onChoose(c, 'kept')}>{c.other != null ? 'Use version 1' : 'Accept'}</button>
+              {c.other != null && <button type="button" class="primary" onClick={() => onChoose(c, 'other')}>Use version 2</button>}
+              <button type="button" onClick={() => setTweak({ id: c.id, words: c.now, other: false })}>{c.other != null ? 'Edit version 1, then use it' : 'Edit, then accept'}</button>
+              {c.other != null && <button type="button" onClick={() => setTweak({ id: c.id, words: c.other || '', other: true })}>Edit version 2, then use it</button>}
               <button type="button" onClick={() => onChoose(c, 'no')}>Reject</button>
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
               {sw && many > 1 && <button type="button" class="chg-everywhere" onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
@@ -237,8 +238,10 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
           </>
         ) : (
           <>
-            <p class="chg-done"><Icon name="check" size={16} />{STATUS_SAID[c.status]} <button type="button" class="link" onClick={() => onUndo(c)}>Undo</button></p>
-            {replyButton(c)}
+            {c.status === 'replaced'
+              ? <p class="chg-done"><Icon name="check" size={16} />{'Replaced by ' + c.replacedBy + ', the Writer\'s new card from your reply.'}</p>
+              : <p class="chg-done"><Icon name="check" size={16} />{c.other != null && c.status === 'kept' ? 'Used version 1' : STATUS_SAID[c.status]} <button type="button" class="link" onClick={() => onUndo(c)}>Undo</button></p>}
+            {c.status !== 'replaced' && replyButton(c)}
           </>
         )}
         {replies(c)}
