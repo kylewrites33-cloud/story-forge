@@ -1738,6 +1738,11 @@
         "chapter": {
           "type": "integer"
         },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The chapter's own ID, which never changes when chapters are added, moved or deleted (CH-007). Every scene of a chapter carries the same one; a chapter note with one belongs to that chapter wherever it now sits, and its `chapter` number is then only a label. Handed out by the app and by System/Tools/chapter-ids.mjs; never typed by hand."
+        },
         "chapter_title": {
           "type": "string"
         },
@@ -2278,6 +2283,11 @@
           "type": "integer",
           "description": "Book to-dos: the chapter it is about."
         },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
+        },
         "scene": {
           "type": "string",
           "pattern": "^S-\\d{3}$",
@@ -2559,6 +2569,11 @@
         },
         "chapter": {
           "type": "integer"
+        },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
         }
       },
       "body": "Callouts as they stood in the scene: Kyle's outline, Team notes (bible proposals and continuity questions), Open for Kyle questions and Source lines. Agents add new team notes here, not in the prose."
@@ -2584,6 +2599,11 @@
         "chapter": {
           "type": "integer",
           "description": "The chapter these beats belong to."
+        },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
         }
       },
       "body": "One `## ` heading per beat, in reading order: the beat's title. Under it, the one-line summary, then `Starts: S-NNN · <first words>`: the scene the beat sits in and the first ten words of the paragraph it starts at, copied exactly without * or = marks. A beat with no prose yet has `Starts: S-NNN` and no words. Never put beats in the scene files. See `.claude/skills/chapter-beats/SKILL.md`."
@@ -2609,6 +2629,11 @@
         "chapter": {
           "type": "integer",
           "description": "The chapter this plan is for."
+        },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
         }
       },
       "body": "Kyle's words, free text. Agents read it whenever they work on the chapter (sf packet includes it) and never edit it."
@@ -2634,6 +2659,11 @@
         "chapter": {
           "type": "integer",
           "description": "The chapter this scrap belongs to."
+        },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
         }
       },
       "body": "Kyle's words, free text: cut lines and spare notes. Agents leave it alone and do not treat it as canon or as a plan; read it only when Kyle asks."
@@ -2659,6 +2689,11 @@
         "chapter": {
           "type": "integer",
           "description": "The chapter these changes belong to."
+        },
+        "chapter_id": {
+          "type": "string",
+          "pattern": "^CH-\\d{3}$",
+          "description": "The ID of the chapter this belongs to (see scene.chapter_id)."
         },
         "draft": {
           "type": "integer",
@@ -2939,7 +2974,8 @@
             "learn-taste",
             "fill-cards",
             "workflow-step",
-            "revise"
+            "revise",
+            "reply"
           ]
         },
         "target": {
@@ -3241,7 +3277,7 @@
           "ask": "Revise <<target>> of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.",
           "ask_with_words": "\n\nKyle's words: <<words>>",
           "steps": [
-            "Do this: follow `.claude/skills/revise-as-changes/SKILL.md` as the Writer (`.claude/agents/writer.md`) for <<target|the chapter named in the ask>> of this book (workflow step 39; the whole process is `.claude/skills/edit-book/SKILL.md`). Before any new words, read the codex: the series `Characters/` and `Lore/` notes, the places, items and threads the chapter touches, the book's `Story So Far.md` and the `Book Index.md` entries of the people in the scene, and check every fact a new line states against them; a fact no note supports goes in a { } question, never in the text. Every open to-do for the chapter in the book's `Tasks/` gets a change whose Why starts `To-do T-NNN:`. Kyle's notes in the text ({ } asks, and plain lowercase [ ] notes in older books) are instructions: each becomes a change that carries it out. Write the chapter's changes as one `chapter-changes` note in the book's `Changes/` folder: each change quotes Kyle's exact words, gives the new words and its reason, and new passages carry a second version. Kyle's sentence stays unless a kept story call, a chapter problem, a Style Guide rule or plain sense gives a reason. Never edit a scene file: Kyle keeps or refuses each change in the app. If the chapter already has a changes note with changes Kyle has not decided, stop and say so in the Result."
+            "Do this: follow `.claude/skills/revise-as-changes/SKILL.md` as the Writer (`.claude/agents/writer.md`) for <<target|the chapter named in the ask>> of this book (workflow step 39; the whole process is `.claude/skills/edit-book/SKILL.md`). Before any new words, read the codex: the series `Characters/` and `Lore/` notes, the places, items and threads the chapter touches, the book's `Story So Far.md` and the `Book Index.md` entries of the people in the scene, and check every fact a new line states against them; a fact no note supports goes in a { } question, never in the text. Every open to-do for the chapter in the book's `Tasks/` gets a change whose Why starts `To-do T-NNN:`. Kyle's notes in the text ({ } asks, and plain lowercase [ ] notes in older books) are instructions: each becomes a change that carries it out, and every change that answers a { } ask carries two different options, the second under `Or:` (Kyle, 2026-11-12). Write the chapter's changes as one `chapter-changes` note in the book's `Changes/` folder: each change quotes Kyle's exact words, gives the new words and its reason, and new passages carry a second version. Kyle's sentence stays unless a kept story call, a chapter problem, a Style Guide rule or plain sense gives a reason. Never edit a scene file: Kyle keeps or refuses each change in the app. If the chapter already has a changes note with changes Kyle has not decided, stop and say so in the Result."
           ]
         },
         "reply": {

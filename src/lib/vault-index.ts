@@ -1,5 +1,6 @@
 // Builds the app's index of the vault: series, books and each book's scenes, with their parsed frontmatter.
 // Paths follow the layout the sf tool reads (Series/<Series>/Books/<N Title>/...), and skip the same folders.
+import { resolveChapters } from './chapterids.ts';
 import { Frontmatter } from './frontmatter.js';
 import { basename, dirname, idNumber, toNumber } from './links.ts';
 import { rocketFiles } from './market.ts';
@@ -138,7 +139,8 @@ export function resortScenes(index: VaultIndex): VaultIndex {
 export function assemble(schema: Schema, records: NoteRecord[], phase = 1): VaultIndex {
   const notes: Record<string, NoteRecord> = {};
   const warnings: string[] = [];
-  records.forEach((n) => { notes[n.path] = n; });
+  // A chapter note's chapter is read from its chapter ID (chapterids.ts), here, once, for every page.
+  resolveChapters(records).forEach((n) => { notes[n.path] = n; });
 
   const config = notes[CONFIG_PATH] ? notes[CONFIG_PATH].data : {};
   const types = appTypes(schema, phase);

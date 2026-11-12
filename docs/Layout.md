@@ -55,6 +55,7 @@ src/ui/SceneSection.tsx  another scene of the open chapter on the same page: its
 src/lib/brackets.ts      {braces} (asks for the team): finding them, the fill job, its answers, putting each answer into the page
 src/lib/live.ts          the open page stays live: line merge with a newer version, cursor mapping, the dots
 src/lib/chapters.ts      a chapter's number and name: which notes follow when a chapter is added, moved or deleted and their new text (beats, plans, scraps, change lists renamed); renaming. The save itself is src/vault/chapters.ts
+src/lib/chapterids.ts    A CHAPTER'S OWN ID (`chapter_id`, CH-007): `resolveChapters` reads a chapter note's chapter from its ID; `planChapterIds` says which IDs a save must write; `withChapterId` adds the line. Same rules as the vault's System/Tools/chapter-ids.mjs
 src/lib/plans.ts         a chapter's plan note (Chapter Plans) and scrap note (Chapter Scraps)
 src/lib/context.ts       what is on screen, sent with a chat from the team column beside a page (## Page)
 src/lib/changes.ts       the team's changes to a chapter (Changes/ notes): reading them, placing them on the page, what Kyle's answer does to the note, story calls
@@ -158,7 +159,7 @@ src/team/asks.ts         where an ask (a job note) stands: requested, running, a
 src/team/kinds.ts        the kinds of job, from the one list in the vault's schema (`types.job.kinds`, which the runner reads too): what a kind is called, its default title, its fixed ask. A new kind is an entry in that list, not a change here
 src/vault/outbox.ts      actions waiting on the device (localStorage), newer replacing older, the old queue moving over, what is left after a push; what went up but is not in the saved copy on the device yet
 src/vault/tree.ts        the vault as one save sees it: the files at the start with the save's own changes on top, so each op meets what the one before it did; files that are not text (pictures, Word files) ride in the same save
-src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following; the delete op: scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up, as one save
+src/vault/chapters.ts    the chapters op: a book's chapter numbers changed as one save (room for a new chapter, a move, closing up), every note and list that carries a number following; the delete op: scenes to the Archive, an emptied chapter's notes with them, the chapters after it closed up, as one save; `stampChapterIds`, the last step of every save (new scenes and chapter notes get their chapter's ID)
 src/vault/book.ts        the draft op (every scene copied to Drafts/Draft N/ with its note, on the vault as it is then), the restore op (a scene back in Scenes and out of the Archive) and the join op (the next scene's note to the Archive, out of Scenes, and the team told), each one save
 src/vault/words.ts       the writing page's own saves through the saving system, sent at once: a draft's words (saveDraft), a copy (saveSnapshot), split and join as one save each
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it

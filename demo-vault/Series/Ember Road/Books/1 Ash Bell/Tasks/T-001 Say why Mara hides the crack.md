@@ -5,6 +5,7 @@ title: Say why Mara hides the crack
 owner: Kyle
 status: open
 chapter: 1
+chapter_id: CH-001
 scene: S-001
 created: 2026-10-17
 ---

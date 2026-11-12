@@ -3,6 +3,7 @@ type: scene
 id: S-006
 title: Thaw Market
 chapter: 3
+chapter_id: CH-003
 order: 6
 day: 14
 threads:

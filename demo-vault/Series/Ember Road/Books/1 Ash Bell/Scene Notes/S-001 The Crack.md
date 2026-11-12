@@ -3,6 +3,7 @@ type: scene-notes
 scene: S-001
 title: The Crack
 chapter: 1
+chapter_id: CH-001
 created: 2026-10-18
 ---
 

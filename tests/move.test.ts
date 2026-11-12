@@ -72,9 +72,12 @@ test('the demo vault still passes sf validate after a move', { skip: !hasVault &
   const rel = BOOK + '/Scenes/S-006 Thaw Market.md';
   const file = path.join(dir, rel);
   const src = new MemSource();
-  src.files.set(rel, fs.readFileSync(file, 'utf8'));
+  const scenes = path.join(dir, BOOK, 'Scenes');
+  fs.readdirSync(scenes).forEach((f) => src.files.set(BOOK + '/Scenes/' + f, fs.readFileSync(path.join(scenes, f), 'utf8')));
   await pushAction(src, choiceAction([{ path: rel, decision: 'move', reason: '', at: AT, move: { order: 1.5, chapter: 1, chapterTitle: 'Frost' } }]));
   fs.writeFileSync(file, src.files.get(rel)!);
+  // The scene joined chapter 1, so it carries chapter 1's ID now.
+  assert.match(src.files.get(rel)!, /^chapter: 1\nchapter_id: CH-001$/m);
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], {
     cwd: dir, env: { ...process.env, SF_VAULT: dir }, encoding: 'utf8'
   });

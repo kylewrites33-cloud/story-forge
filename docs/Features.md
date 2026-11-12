@@ -1868,3 +1868,34 @@ sees or anything in the vault changes. This section grows as each piece goes liv
   plan, on purpose:** the plan had readers that also know each property's kind (a number, a list, a link) and share
   the job runner's reader. The reads that are left do something of their own (a default, a trim, a list); they move
   when the code around them is next changed. After a schema change: refresh the demo copy, then `npm run props`.
+
+## Chapters have their own ID (step 5 of the code structure redesign, 2026-11-12)
+
+Kyle, 2026-11-12: "can you save the status of the cards at the moment, do step 5, then try to bring the cards into it?"
+Nothing he sees changes.
+
+- **What a chapter is now.** A chapter is still the scenes that share a `chapter` number, and those scenes also share a
+  `chapter_id` (CH-007) that never changes when chapters are added, moved or deleted. A chapter's other notes (beats,
+  plan, scrap, the Edit room's change cards, scene notes, to-dos) carry the same `chapter_id`, and that line is what says
+  which chapter they belong to. The `chapter` number on them and the "Chapter 7" in a file name are labels.
+- **Reading.** `resolveChapters` in `src/lib/chapterids.ts` reads every chapter note's chapter from its ID, once, where
+  the index is put together (`assemble`, and the two places waiting and saved changes are folded in). Every page keeps
+  reading `chapter` as before and gets the right one, even from a note the team wrote with an old number (a job that
+  was running while a chapter moved). A note with no ID, or whose chapter is gone, reads by its number as before.
+- **Saving.** The last thing every save does is `stampChapterIds` (`src/vault/chapters.ts`): a new scene takes its
+  chapter's ID, or the next free one when it starts a chapter; a scene moved into another chapter takes that chapter's;
+  a new chapter note (first beats, a plan, a to-do) takes its chapter's. It only looks when a save adds such a note or
+  changes one's chapter, so typing never pays for it, and it does nothing in a book that has no chapter IDs.
+- **The labels are still kept current.** Adding, moving or deleting a chapter still corrects the numbers and file names
+  in the same one save (step 1). **Smaller than the plan, on purpose:** the plan had the number never stored and a
+  move changing one line. The team's skills, `sf` and Kyle's own eyes all read `chapter: 7` and "Chapter 7 changes",
+  and he was in the middle of 677 open cards; so the numbers stay as labels that are kept right, and the ID is what
+  holds a note to its chapter when a label is wrong. The two lists kept by number outside chapter notes (`rewrite_done`
+  on the book, the Chapter Titles note) still follow by the code from 2026-11-11.
+- **In the vault:** `chapter_id` in the schema for the seven kinds; `System/Tools/chapter-ids.mjs` gave the first IDs
+  (chapter N became CH-00N; it adds one line under `chapter:` and changes no other) and gives one to notes the team
+  writes with only a number (run at the end of every job and by the Morning check); `sf` reads by ID and `sf validate`
+  says when two chapters share an ID. An older copy of the app left open on a device keeps working: it ignores the line
+  and keeps it when it saves.
+- Checks: `tests/chapterids.test.ts`; the WebKit `chapters` check now runs on a book with chapter IDs.
+

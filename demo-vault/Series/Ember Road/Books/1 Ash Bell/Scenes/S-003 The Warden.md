@@ -4,6 +4,7 @@ id: S-003
 title: The Warden
 subtitle: That night, the Warden's house
 chapter: 2
+chapter_id: CH-002
 chapter_title: Thaw
 order: 3
 day: 1

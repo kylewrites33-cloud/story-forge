@@ -2,6 +2,7 @@
 type: chapter-changes
 title: Chapter 1 changes
 chapter: 1
+chapter_id: CH-001
 draft: 2
 step: "39"
 source: Writer

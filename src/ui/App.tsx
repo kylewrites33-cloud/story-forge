@@ -185,7 +185,8 @@ export function App() {
     if (!sent.length) return null;
     sent.forEach((a) => sending.current.add(a.id));
     const run = (async (): Promise<string | null> => {
-      const res = await pushAll(source, sent);
+      const cur = snapRef.current;
+      const res = await pushAll(source, sent, { known: cur && cur.key === source.key ? cur.index.notes : undefined });
       if (sourceRef.current !== source) {
         // Kyle pointed the app at another vault while this was saving: settle this vault's own list where it is kept.
         saveOutbox(source.key, settle(loadOutbox(source.key), res.done, res.failed, res.renames));

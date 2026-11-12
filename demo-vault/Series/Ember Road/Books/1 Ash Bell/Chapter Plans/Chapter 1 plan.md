@@ -2,6 +2,7 @@
 type: chapter-plan
 title: Chapter 1 plan
 chapter: 1
+chapter_id: CH-001
 ---
 
 Mara hears the bell crack before anyone else and has to decide whether to tell her father. Open on the sound, not on her.

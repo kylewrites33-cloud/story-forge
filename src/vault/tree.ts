@@ -55,6 +55,22 @@ export class Tree {
     return !w || this.now.get(path) !== w.text;
   }
 
+  /** The text files this save adds or changes (not the ones it removes). */
+  touchedPaths(): string[] {
+    const out: string[] = [];
+    this.now.forEach((text, path) => { if (text !== null && this.touched(path)) out.push(path); });
+    return out;
+  }
+
+  /** A file's text as the vault had it when this save read it; null for a file the save adds. */
+  before(path: string): string | null {
+    const w = this.was.get(path);
+    return w ? w.text : null;
+  }
+
+  /** Has this save taken this file out? */
+  gone(path: string): boolean { return this.now.has(path) && this.now.get(path) === null; }
+
   /** Every file as this save has them: the vault's, less the ones removed, plus the ones added. A file this save has
    * changed or added has no sha yet. */
   async files(): Promise<FileEntry[]> {

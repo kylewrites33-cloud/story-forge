@@ -15,7 +15,7 @@ import { make } from './makers.ts';
 import type { Action, Edit } from './ops.ts';
 import { settle } from './outbox.ts';
 import { planDraft, planJoin, planRestore } from './book.ts';
-import { planChapters, planDelete } from './chapters.ts';
+import { planChapters, planDelete, stampChapterIds } from './chapters.ts';
 import { startsNote } from './text.ts';
 import { Tree } from './tree.ts';
 import { propText } from '../lib/props.ts';
@@ -201,6 +201,7 @@ export async function pushActions(source: VaultSource, actions: Action[], opts: 
       if (next !== text) lines.push(editMessage(text, op.edit, path));
       t.write(path, next);
     }
+    await stampChapterIds(t, opts.known);
     const { writes, removes, blobs } = t.changes();
     return writes.length || (removes && removes.length) || (blobs && blobs.length) ? { message: messageFor(lines), writes, removes, blobs } : null;
   });
@@ -242,10 +243,19 @@ export async function pushAll(source: VaultSource, list: Action[], opts: PushOpt
   const out: PushResult = { saved: [], renames: {}, removed: [], texts: {}, done: [], failed: {}, error: null };
   // An action later in the list may be about a note an earlier save in this same push gave another path.
   const follow = (a: Action): Action => (a.ops.some((op) => out.renames[op.path]) ? settle([a], [], {}, out.renames)[0] : a);
-  const take = (p: Pushed, ids: string[]) => { out.saved.push(...p.saved); Object.assign(out.renames, p.renames); out.removed.push(...p.removed); Object.assign(out.texts, p.texts || {}); out.done.push(...ids); };
+  // What the device knows, kept current through the saves of this push: a later one sees the notes an earlier one made
+  // (a new chapter's ID, so the next new chapter does not take the same one).
+  let known = opts.known;
+  const learn = (p: Pushed) => {
+    if (!known || (!p.saved.length && !p.removed.length)) return;
+    known = { ...known };
+    p.removed.forEach((path) => { delete known![path]; });
+    p.saved.forEach((n) => { known![n.path] = n; });
+  };
+  const take = (p: Pushed, ids: string[]) => { learn(p); out.saved.push(...p.saved); Object.assign(out.renames, p.renames); out.removed.push(...p.removed); Object.assign(out.texts, p.texts || {}); out.done.push(...ids); };
   const one = async (a: Action): Promise<boolean> => {
     try {
-      take(await pushAction(source, follow(a), opts), [a.id]);
+      take(await pushAction(source, follow(a), { ...opts, known }), [a.id]);
     } catch (e) {
       out.error = (e as Error).message;
       if (wait(e)) return false;
@@ -257,7 +267,7 @@ export async function pushAll(source: VaultSource, list: Action[], opts: PushOpt
     const group = list.slice(i, i + TOGETHER);
     if (group.length > 1) {
       try {
-        take(await pushActions(source, group.map(follow), opts), group.map((a) => a.id));
+        take(await pushActions(source, group.map(follow), { ...opts, known }), group.map((a) => a.id));
         continue;
       } catch (e) {
         if (wait(e)) { out.error = (e as Error).message; return out; }

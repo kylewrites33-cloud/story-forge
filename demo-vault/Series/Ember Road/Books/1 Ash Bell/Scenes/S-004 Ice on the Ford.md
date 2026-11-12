@@ -3,6 +3,7 @@ type: scene
 id: S-004
 title: Ice on the Ford
 chapter: 2
+chapter_id: CH-002
 order: 4
 day: 4
 threads:
