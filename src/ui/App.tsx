@@ -660,6 +660,28 @@ export function App() {
     runFlush();
   }, [setOutbox, runFlush]);
 
+  /** Kyle's reply to the Writer on a change card (Kyle, 2026-11-12: "i need to be able to reply within the changes, to
+   * explain to the writer why i made a choice, and for the writer to create a new card based on my reply"): a `Reply:`
+   * line under the card and the ask for a new card from it, as one save. One ask a chapter answers every reply in it,
+   * so a reply sent while the chapter's ask still waits for the team needs no second ask. */
+  const onReply = useCallback((path: string, id: string, words: string, book: string, chapter: number): string | null => {
+    const said = words.trim();
+    if (!said) return 'Write your reply first.';
+    const cur = snapRef.current;
+    const target = 'Chapter ' + chapter;
+    const open = cur ? openAsk(jobNotes(overlayActions(cur.index, outboxRef.current, schemaRef.current)), { kind: 'reply', target, book }) : null;
+    const waits = open && String(open.data.status || 'requested') === 'requested';
+    try {
+      const at = new Date();
+      const also = waits ? [] : planned('job', { j: { title: defaultJobTitle('reply', target), kind: 'reply', target, book, ask: jobAsk('reply', target, id + ': "' + said.replace(/\s+/g, ' ') + '"') }, at: at.toISOString() }).ops;
+      setOutbox(add(outboxRef.current, textAction([{ path, change: { what: 'change-reply', id, words: said } }], also, at)));
+      runFlush();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, [planned, setOutbox, runFlush]);
+
   /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
   const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {
     if (!navigator.onLine) return 'Connect to the internet to move a chapter.';
@@ -787,7 +809,7 @@ export function App() {
 
   // What the pages are handed: the vault as shown, and the things a page can ask the app to do (`src/app/screens.tsx`).
   const acts: Actions = {
-    onDecide, onMarks, onJob, onChat, onAddScene, onAddMany, onAddChapter, onMove, onMoveChapter, onDeleteScenes, onRename, onRenameChapter, onRestore,
+    onDecide, onMarks, onReply, onJob, onChat, onAddScene, onAddMany, onAddChapter, onMove, onMoveChapter, onDeleteScenes, onRename, onRenameChapter, onRestore,
     onImport, onAddRocket, onCover, onFiles, onWords, onTitles, onRewrite, onRewriteThrough, onTake, onAddTask, onAddTodo, onAddNote, onAddRecipe, onSaveRecipe,
     onWorkflowNote, onResults, onCreateSeries, onCreateBook, onLog, saveDraft, runSync, onSave, onForget,
     foldNotes: (saved) => foldNotes(saved),

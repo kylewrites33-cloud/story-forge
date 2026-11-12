@@ -72,6 +72,8 @@ type Problem = Promise<string | null>;
 export interface Actions {
   onDecide: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
   onMarks: (path: string, marks: Record<string, ChangeStatus>, ticks: { path: string; fields: Record<string, string> }[]) => void;
+  /** Kyle's reply to the Writer on a change card, and the ask for a new card from it: one save. A plain sentence when it cannot be sent. */
+  onReply: (path: string, id: string, words: string, book: string, chapter: number) => string | null;
   onJob: (j: NewJob) => Said;
   onChat: (thread: string, words: string, book: string, page?: string) => Promise<{ thread: string; book: string } | { error: string }>;
   onAddScene: (book: BookEntry, chapter: number | null, chapterTitle: string, title: string) => Problem;
@@ -309,7 +311,10 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
       chapterBeats={book ? beatsNoteFor(view.notes, book.folder, chapter) : null}
       recipes={recipeNotes(view).map(recipeName)}
       flow={book ? { results: flowResults(view, book), href: href.flow(book.folder) } : undefined}
-      changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openAsk(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })), problem: chapter != null ? recentProblem(askFor(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })) : '', book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs) } : undefined}
+      changes={book ? { note: changesNoteFor(view.notes, book.folder, chapter), asking: chapter != null && Boolean(openAsk(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })), problem: chapter != null ? recentProblem(askFor(jobNotes(view), { kind: 'revise', target: 'Chapter ' + chapter, book: book.folder })) : '', book: chapterChanges(view.notes, book.folder, (ch) => { const g = groups.find((x) => x.num === ch); return g && g.scenes.length ? g.scenes[0].path : null; }), like: (pairs) => countLike(view.notes, book.folder, pairs),
+        replying: chapter != null && Boolean(openAsk(jobNotes(view), { kind: 'reply', target: 'Chapter ' + chapter, book: book.folder })),
+        replyProblem: chapter != null ? recentProblem(askFor(jobNotes(view), { kind: 'reply', target: 'Chapter ' + chapter, book: book.folder })) : '',
+        onReply: source.commit && chapter != null ? (path, id, words) => act.onReply(path, id, words, book.folder, chapter) : undefined } : undefined}
       rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.commit ? (ch, done) => act.onRewriteThrough(book, ch, done) : undefined } : null}
       drafts={book ? {
         saved: book.drafts || [],

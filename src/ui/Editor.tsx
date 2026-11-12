@@ -186,7 +186,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   flow?: { results: NoteRecord[]; href: string };
   /** The chapter's changes note, and every chapter's count of changes waiting with the scene to open, for the Changes view
    * (Workflow 1.2, step 41). */
-  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; problem?: string; like?: (pairs: [string, string][]) => number };
+  changes?: { note: NoteRecord | null; book: { chapter: number; open: number; path: string }[]; asking?: boolean; problem?: string; like?: (pairs: [string, string][]) => number;
+    /** Kyle's replies to the Writer on the cards (2026-11-12): whether the chapter's ask for new cards waits, its last
+     * failure, and the reply itself, which answers a plain sentence when it cannot be sent. */
+    replying?: boolean; replyProblem?: string; onReply?: (path: string, id: string, words: string) => string | null };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
   drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
   /** The Writer's rewrite of the book (the copies in `Drafts/Rewrite/`), shown beside the page (2026-11-04); the chapters
@@ -1800,7 +1803,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { const c = chCards.find((x) => x.id === id); if (chView === 'original' && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); closeOver(); }}
-                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
+                  onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum}
+                  onReply={changes && changes.onReply ? (c, words) => changes.onReply!(chNote.path, c.id, words) : null} replying={Boolean(changes && changes.replying)} replyProblem={changes ? changes.replyProblem : ''} bookOpen={chBookOpen} notePath={chNote.path} link={link} />
                 : <div class="panel-body">
                   <p class="hint">This chapter has no changes from the team. When the Writer revises a chapter (workflow step 39), its changes show here and on the page, for you to keep or not.</p>
                   <AskForChanges chapter={chapterNum} asking={Boolean(changes && changes.asking)} problem={changes ? changes.problem : ''}

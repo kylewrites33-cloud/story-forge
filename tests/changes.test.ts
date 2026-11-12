@@ -186,3 +186,26 @@ test('a change can carry what Kyle asked, what it does and the team check, each 
   assert.deepEqual(todoIds(c), ['T-048']);
   assert.equal(parseChanges(setStatus(body, 'C-01', 'kept')).changes[0].status, 'kept');
 });
+
+// Kyle's reply to the Writer on a card (2026-11-12: "i need to be able to reply within the changes, to explain to the
+// writer why i made a choice, and for the writer to create a new card based on my reply").
+test('a reply goes on its own line under the card, and the card the Writer makes from it points back', async () => {
+  const { addReply, parseChanges, shortLabel, answersTo } = await import('../src/lib/changes.ts');
+  const body = '## C-01 · line\nScene: S-001\nWhy: Sense.\nKyle: no\n\nWas:\n> a tin lantern\n\nNow:\n> a brass lantern\n\n## C-02 · small\nScene: S-001\nWhy: Typo.\nKyle: open\n\nWas:\n> teh\n\nNow:\n> the\n';
+  const one = addReply(body, 'C-01', '  The lantern is tin\n on purpose:  it is cheap.  ');
+  assert.match(one, /^Kyle: no\nReply: The lantern is tin on purpose: it is cheap\.\n\nWas:/m);
+  const two = addReply(one, 'c-01', 'And Mara owns nothing brass.');
+  assert.match(two, /Reply: The lantern is tin on purpose: it is cheap\.\nReply: And Mara owns nothing brass\.\n\nWas:/);
+  assert.equal(addReply(body, 'C-09', 'nothing'), body, 'a card that is not there changes nothing');
+  assert.equal(addReply(body, 'C-01', '   '), body);
+  const answered = two + '\n## C-03 · line\nScene: S-001\nWhy: Your reply on C-01\nRe: C-01\nAsked: The lantern is tin on purpose: it is cheap.\nChange: Makes the cheapness show.\nKyle: open\n\nWas:\n> a tin lantern\n\nNow:\n> a dented tin lantern\n';
+  const { changes } = parseChanges(answered);
+  assert.deepEqual(changes[0].replies, ['The lantern is tin on purpose: it is cheap.', 'And Mara owns nothing brass.']);
+  assert.equal(changes[0].status, 'no');
+  assert.equal(changes[0].was, 'a tin lantern');
+  assert.equal(changes[1].replies, undefined);
+  assert.equal(changes[2].re, 'C-01');
+  assert.equal(changes[2].asked, 'The lantern is tin on purpose: it is cheap.');
+  assert.equal(shortLabel(changes[2]), 'Your reply on C-01');
+  assert.deepEqual(answersTo(changes, 'C-01').map((c) => c.id), ['C-03']);
+});

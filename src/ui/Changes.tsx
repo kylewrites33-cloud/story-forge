@@ -4,7 +4,7 @@
 // Each change has a card in the side column with its reason and Keep, No, the other version or Edit it myself.
 import type { Change, ChangeStatus, Placed } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
-import { KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
+import { answersTo, KIND_LABEL, segments, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
 import { styledHtml, type StyleOptions } from '../lib/styled.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
@@ -112,7 +112,7 @@ export function ChangesPage({ text, placed, view, current, onPick, options, labe
     return '<div class="chg-line' + lineCls + (marked ? ' has-chg' : '') + (marked && ids.indexOf(current || '') >= 0 ? ' on' : '') + '">' + (inner || '<br>') + '</div>';
   }).join('');
   return (
-    <div class={'writer-text styled changes-page book view-' + view} role="document" aria-label={label}
+    <div class={'writer-text styled changes-page blocks view-' + view} role="document" aria-label={label}
       onClick={(e) => {
         const el = (e.target as HTMLElement).closest('[data-chg]') as HTMLElement | null;
         if (el && el.dataset.chg) onPick(el.dataset.chg);
@@ -215,7 +215,7 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere }: {
+export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere, onReply = null, replying = false, replyProblem = '' }: {
   changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
@@ -232,19 +232,60 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
   onElsewhere?: () => void;
   onEverywhere: (c: Change) => void; like: ((pairs: [string, string][]) => number) | null;
   chapter: number | null; bookOpen: number; notePath: string | null; link: (to: string) => Record<string, unknown>;
+  /** Kyle's reply to the Writer on a card, which asks it for a new card (Kyle, 2026-11-12); a plain sentence when it
+   * cannot be sent. Null where the vault cannot be changed. */
+  onReply?: ((c: Change, words: string) => string | null) | null;
+  /** The chapter's ask for new cards from his replies is with the team, and its last failure. */
+  replying?: boolean; replyProblem?: string;
 }) {
   const at = (c: Change) => { const i = placedIds.indexOf(c.id); return i < 0 ? placedIds.length : i; };
   const open = changes.filter((c) => c.status === 'open').sort((a, b) => (b.id === editing ? 1 : 0) - (a.id === editing ? 1 : 0) || at(a) - at(b));
   useEffect(() => { if (current) showCard(current); }, [current]);
   const decided = changes.filter((c) => c.status !== 'open');
   const [tweak, setTweak] = useState<{ id: string; words: string; other: boolean } | null>(null);
+  const [reply, setReply] = useState<{ id: string; words: string; error: string } | null>(null);
+  /** What Kyle told the Writer on this card, the cards it made from that, and the box to tell it more. */
+  const replies = (c: Change) => {
+    const said = c.replies || [];
+    const made = answersTo(changes, c.id);
+    const writing = reply && reply.id === c.id;
+    if (!said.length && !writing) return null;
+    return (
+      <div class="chg-replies">
+        {said.map((r, i) => <p key={i} class="chg-reply"><span class="chg-label">You told the Writer</span>{r}</p>)}
+        {said.length > 0 && (made.length
+          ? <p class="chg-made">{made.map((m) => <button key={m.id} type="button" class="link" onClick={() => onPick(m.id)}>{'New card ' + m.id + (m.status === 'open' ? ': see it' : ': decided')}</button>)}</p>
+          : replying ? <p class="chg-made"><span class="job-dot" aria-hidden="true" />The Writer is making a new card from your reply. It shows here in a few minutes.</p>
+          : replyProblem ? <p class="error">{replyProblem}</p> : null)}
+        {writing && reply && (
+          <>
+            <label class="panel-key" for={'reply-' + c.id}>Tell the Writer why</label>
+            <textarea id={'reply-' + c.id} class="chg-reply-box" rows={3} value={reply.words} placeholder="Why you chose this, or what you want instead"
+              onInput={(e) => setReply({ ...reply, words: (e.target as HTMLTextAreaElement).value, error: '' })} />
+            <div class="chg-buttons">
+              <button type="button" class="primary" disabled={!reply.words.trim()} onClick={() => {
+                const err = onReply ? onReply(c, reply.words) : 'Replies need your own vault, not the demo.';
+                if (err) setReply({ ...reply, error: err }); else setReply(null);
+              }}>Send to the Writer</button>
+              <button type="button" onClick={() => setReply(null)}>Cancel</button>
+            </div>
+            <p class="hint">The Writer reads your reply and makes a new card from it, here in this chapter. A paid team job; the Jobs page shows what it cost.</p>
+            {reply.error && <p class="error" role="status">{reply.error}</p>}
+          </>
+        )}
+      </div>
+    );
+  };
+  const replyButton = (c: Change) => onReply && !(reply && reply.id === c.id)
+    ? <button type="button" class="chg-reply-button" onClick={() => setReply({ id: c.id, words: '', error: '' })}><Icon name="chat" size={16} />Reply to the Writer</button>
+    : null;
   const card = (c: Change) => {
     const here = placedIds.includes(c.id);
     const sw = c.status === 'open' ? swapsOf(c) : null;
     const many = sw && like ? like(sw) : 0;
     return (
       <article key={c.id} data-card={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
-        onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a')) onPick(c.id); }}>
+        onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a, textarea, label, input')) onPick(c.id); }}>
         <p class="chg-head"><b>{shortLabel(c)}</b><span class="meta">{shortLabel(c).startsWith(KIND_LABEL[c.kind]) ? '' : KIND_LABEL[c.kind] + ' · '}{c.id}</span></p>
         {c.asked || c.does ? (
           <div class="chg-parts">
@@ -291,11 +332,16 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
               <button type="button" onClick={() => onMine(c)}>Edit it myself</button>
               {sw && many > 1 && <button type="button" class="chg-everywhere" onClick={() => onEverywhere(c)}>Accept everywhere: {sw.map(([a, b]) => a + ' → ' + b).join(', ')} ({many} in the book)</button>}
             </div>}
+            {replyButton(c)}
             </>}
           </>
         ) : (
-          <p class="chg-done"><Icon name="check" size={16} />{STATUS_SAID[c.status]} <button type="button" class="link" onClick={() => onUndo(c)}>Undo</button></p>
+          <>
+            <p class="chg-done"><Icon name="check" size={16} />{STATUS_SAID[c.status]} <button type="button" class="link" onClick={() => onUndo(c)}>Undo</button></p>
+            {replyButton(c)}
+          </>
         )}
+        {replies(c)}
       </article>
     );
   };

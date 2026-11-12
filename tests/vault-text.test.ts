@@ -59,6 +59,7 @@ const CHANGES: [string, TextChange][] = [
   [BOOKNOTE, { what: 'through', chapter: 2, done: false }],
   ['Jobs/J-021 Options for S-001 More like my voice.md', { what: 'taken', names: ['all'] }],
   ['Jobs/J-001 Check S-001 for AI-sounding phrases.md', { what: 'taken', names: ['B2', 'B1'] }],
+  [BOOK + '/Changes/Chapter 1 changes.md', { what: 'change-reply', id: 'C-02', words: 'I kept my line because Mara\nwould never say it softly.' }],
   [RECIPE, { what: 'recipe', use_for: 'a ledger page', body: 'Three lines at most.\n\nTobin signs.' }],
   [RECIPE, { what: 'recipe', use_for: '', body: 'Show a ledger page as a short block: the date, the name, the toll in pennies, and the initials of whoever wrote it. Tobin\'s hand slopes left. Never more than four lines.' }]
 ];
