@@ -21,6 +21,8 @@ src/lib/tasks.ts         the to-do list: task notes by status, due dates, what a
 src/lib/todos.ts         a book's chapter to-dos: by chapter, open first, what a new one is (planTodo, in the book's Tasks folder)
 src/lib/pomodoro.ts      the Pomodoro timer: its state on the device, words per Pomodoro, words typed all day, the Writing Log notes, and what is due from the two meters for the saving system to carry (takeTypingCounts)
 src/lib/prefs.ts         WHAT A DEVICE KEEPS, IN ONE PLACE: `PREF`, every name the app stores under (never renamed); `readPref`, `writePref`, `readJson`, `writeJson`, `storeOf`. The only file that names localStorage or sessionStorage (tests/prefs.test.ts)
+src/lib/props.ts         THE ONE WAY TO READ A NOTE'S PROPERTIES: `propText(note, 'title')`, `propNum(note, 'rating')`; the name must be in the schema (tests/props.test.ts)
+src/lib/prop-names.ts    every property name in the schema, as a type. Written by `npm run props` (scripts/make-props.js) from demo-vault/System/schema.json; do not edit
 src/lib/jobs.ts          Ask the team: job notes by status, a new job with the next free ID (planJob, for the `job` maker), Kyle's words for statuses; labels, titles and asks come from src/team/kinds.ts
 src/lib/chat.ts          Chat with the team: conversations from chat jobs by thread, messages and replies, next chat-NNN, a message's job
 src/lib/scenes.ts        new scenes (planScene, for the `scene` maker), split and join: next free ID, order between neighbours, the text and place of an archived scene, the note to the team after a join; a scene's notes

@@ -23,6 +23,7 @@ import { activeBook } from '../lib/vault-index.ts';
 import { BeatRuler } from './BeatRuler.tsx';
 import { CodexNowBox } from './CodexNow.tsx';
 import { PREF, readPref, writePref } from '../lib/prefs.ts';
+import { propText } from '../lib/props.ts';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -59,14 +60,14 @@ function CardActions({ schema, note, waiting, onDecide, handle, onJob, bookFolde
   const [asking, setAsking] = useState(false);
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [sending, setSending] = useState(false);
-  const status = String(note.data.status || '');
-  const sceneId = String(note.data.id || '');
+  const status = propText(note, 'status');
+  const sceneId = propText(note, 'id');
   const ask = async (kind: JobKind) => {
     if (!onJob) return;
     setMenu(false);
     setSending(true);
     setSaid(null);
-    const r = await onJob({ title: defaultJobTitle(kind, sceneId, String(note.data.title || '')), kind, target: sceneId, book: bookFolder || '', ask: '' });
+    const r = await onJob({ title: defaultJobTitle(kind, sceneId, propText(note, 'title')), kind, target: sceneId, book: bookFolder || '', ask: '' });
     setSending(false);
     setSaid(r);
   };
@@ -138,7 +139,7 @@ function SceneCard({ schema, note, waiting, onDecide, handle, cls, shift, onJob,
   const rows = fields.filter((k) => k !== 'title' && k !== 'headline' && k !== 'subtitle' && k !== 'labels' && k !== 'status' && k !== 'words' && !isEmptyValue(note.data[k]));
   const subtitle = fields.indexOf('subtitle') >= 0 && !isEmptyValue(note.data.subtitle) ? String(note.data.subtitle) : '';
   const labels = fields.indexOf('labels') >= 0 ? labelsOf(note.data.labels) : [];
-  const status = String(note.data.status || '');
+  const status = propText(note, 'status');
   const words = fields.indexOf('words') >= 0 ? formatValue('words', note.data.words, null) : '';
   const accepted = !isEmptyValue(note.data.accepted);
   return (
@@ -626,7 +627,7 @@ function AppearsIn({ index, note }: { index: VaultIndex; note: NoteRecord }) {
   const books = index.books.filter((b) => note.path.startsWith(b.seriesFolder + '/'));
   const found = books.map((b) => {
     const codex = codexFor(index, b);
-    const e = codex.find((x) => x.note.path === note.path) || codex.find((x) => x.name === String(note.data.name || ''));
+    const e = codex.find((x) => x.note.path === note.path) || codex.find((x) => x.name === propText(note, 'name'));
     if (!e) return null;
     const scenes = b.scenes.map((p) => index.notes[p]).filter((n) => n && n.data.kind !== 'test');
     return { book: b, list: appearances(scenes, e, matcher(codex)) };
@@ -639,11 +640,11 @@ function AppearsIn({ index, note }: { index: VaultIndex; note: NoteRecord }) {
         const first = list[0].scene, last = list[list.length - 1].scene;
         return (
           <details key={book.folder} open={found.length === 1}>
-            <summary>{book.title}: {list.length === 1 ? '1 scene' : list.length + ' scenes'} · first {String(first.data.id || '')}, last {String(last.data.id || '')}</summary>
+            <summary>{book.title}: {list.length === 1 ? '1 scene' : list.length + ' scenes'} · first {propText(first, 'id')}, last {propText(last, 'id')}</summary>
             <ul class="appears-list">
               {list.map(({ scene, presence: p, line }) => (
                 <li key={scene.path}>
-                  <a href={href.write(scene.path)}><span class="card-id">{String(scene.data.id || '')}</span> {sceneHeader(scene.data)}</a>
+                  <a href={href.write(scene.path)}><span class="card-id">{propText(scene, 'id')}</span> {sceneHeader(scene.data)}</a>
                   <span class="meta"> {[p.pov ? 'point of view' : '', p.card ? 'on the card' : '', p.named ? 'named ' + (p.named === 1 ? 'once' : p.named + ' times') : ''].filter(Boolean).join(' · ')}</span>
                   {line && <span class="appears-line">“{line}”</span>}
                 </li>

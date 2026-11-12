@@ -64,6 +64,7 @@ import type { Choice } from '../vault/choice.ts';
 import { BRAINDUMP_START, type TextChange } from '../vault/text.ts';
 import type { PAGES } from './pages.ts';
 import { href, type Route } from './route.ts';
+import { propText } from '../lib/props.ts';
 
 type Said = Promise<{ error: boolean; text: string }>;
 type Problem = Promise<string | null>;
@@ -284,7 +285,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
   } : null;
   return (
     <Editor key={r.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
-      nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), String(next.data.id || '')) : []}
+      nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), propText(next, 'id')) : []}
       book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
       onAdd={book && source.commit ? (ch, chapterTitle, title) => act.onAddScene(book, ch, chapterTitle, title) : undefined}
       onAddChapter={book && source.commit ? (after, chapterTitle) => act.onAddChapter(book, after, chapterTitle) : undefined}
@@ -301,7 +302,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
       timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLog={act.onLog} />}
       codexNow={book ? (n) => codexNow(view, book, n, note.path) : undefined}
       codex={book ? codexFor(view, book) : []} braindump={book && book.braindump ? view.notes[book.braindump] || null : null}
-      sceneNotes={book ? sceneNotesFor(view.notes, book.folder, String(note.data.id || '')) : null}
+      sceneNotes={book ? sceneNotesFor(view.notes, book.folder, propText(note, 'id')) : null}
       fillJobs={book && note.data.id ? fillJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
       optionJobs={book && note.data.id ? optionJobsFor(jobNotes(view), String(note.data.id), book.folder) : []}
       checkOpts={book ? checkOptionsFor(view, book.folder) : undefined}

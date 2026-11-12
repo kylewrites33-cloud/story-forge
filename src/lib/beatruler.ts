@@ -5,6 +5,7 @@
 import { linkName, nameList } from './links.ts';
 import { scenePositions, storyScenes } from './tension.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export const RULER_SOURCE = 'Blake Snyder, Save the Cat! (2005); Jessica Brody, Save the Cat! Writes a Novel (2018); percentages as in the vault\'s save-the-cat skill';
 
@@ -37,8 +38,8 @@ const slug = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0
 /** Which of the fifteen beats a beat note is: its position names the id ("save-the-cat catalyst"), or its title is the
  * beat's name ("Catalyst", "Dark night"). */
 export function beatDefFor(note: NoteRecord): BeatDef | null {
-  const pos = slug(String(note.data.position || ''));
-  const title = slug(String(note.data.title || ''));
+  const pos = slug(propText(note, 'position'));
+  const title = slug(propText(note, 'title'));
   const byId = SAVE_THE_CAT.slice().sort((a, b) => b.id.length - a.id.length).find((d) => new RegExp('(^|-)' + d.id + '(-|$)').test(pos));
   if (byId) return byId;
   return SAVE_THE_CAT.find((d) => d.id === title || slug(d.name) === title || (d.id === 'dark-night' && title.startsWith('dark-night'))) || null;
@@ -68,15 +69,15 @@ export function verdictFor(def: BeatDef, at: { from: number; to: number } | null
 export function beatRuler(index: VaultIndex, book: BookEntry): RulerBeat[] {
   const scenes = storyScenes(index, book);
   const spans = scenePositions(scenes);
-  const ids = scenes.map((s) => String(s.data.id || '').toUpperCase());
+  const ids = scenes.map((s) => propText(s, 'id').toUpperCase());
   const beats = (book.beats || []).map((p) => index.notes[p]).filter((n): n is NoteRecord => Boolean(n) && n.data.framework === 'save-the-cat');
   const out: RulerBeat[] = [];
   beats.forEach((b) => {
     const def = beatDefFor(b);
     if (!def) return;
     // A scene's beat link names the note's file ("B-012 Catalyst"), its ID or its title.
-    const id = String(b.data.id || '').toLowerCase();
-    const names = [id, String(b.data.title || '').toLowerCase(), b.path.replace(/^.*\//, '').replace(/\.md$/, '').toLowerCase()].filter(Boolean);
+    const id = propText(b, 'id').toLowerCase();
+    const names = [id, propText(b, 'title').toLowerCase(), b.path.replace(/^.*\//, '').replace(/\.md$/, '').toLowerCase()].filter(Boolean);
     const tagged = new Set<number>();
     scenes.forEach((s, i) => {
       const link = linkName(s.data.beat).toLowerCase();

@@ -9,6 +9,7 @@ import { stageProgress } from './flow.ts';
 import { toNumber } from './links.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 import { storyScenes } from './overview.ts';
+import { propText } from './props.ts';
 
 export type StageKey = 'market' | 'planning' | 'outlining' | 'writing' | 'editing' | 'publishing';
 
@@ -43,7 +44,7 @@ export function sixOf(title: string): StageKey | null {
 
 const pct = (done: number, total: number) => (total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0);
 const plural = (n: number, one: string, many: string) => n + ' ' + (n === 1 ? one : many);
-const kept = (n: NoteRecord) => String(n.data.status || '') === 'keep';
+const kept = (n: NoteRecord) => propText(n, 'status') === 'keep';
 
 /** Steps kept out of all steps in the workflow stages that belong to one of the six. */
 function steps(stages: FlowStage[], statuses: Record<string, TaskStatus>, key: StageKey): { done: number; total: number } {

@@ -5,6 +5,7 @@ import { castFor } from './boards.ts';
 import { storyScenes } from './tension.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 import type { Warning, WarningCheck } from './warnings.ts';
+import { propText } from './props.ts';
 
 export type ArcType = 'positive' | 'flat' | 'negative' | '';
 
@@ -66,7 +67,7 @@ const str = (v: unknown) => (v == null ? '' : String(v).trim());
 
 /** Every character of the book with an arc type or arc points. */
 export function bookArcs(index: VaultIndex, book: BookEntry): Arc[] {
-  const ids = storyScenes(index, book).map((s) => String(s.data.id || ''));
+  const ids = storyScenes(index, book).map((s) => propText(s, 'id'));
   return castFor(index, book).map((c) => {
     const d = c.note.data;
     const own = c.delta && c.delta.data.arc_points != null ? c.delta : c.series && c.series.data.arc_points != null ? c.series : null;

@@ -31,6 +31,7 @@ import type { CodexNow } from '../lib/codexnow.ts';
 import { CodexNowBox } from './CodexNow.tsx';
 import { findAll, markList } from '../lib/styled.ts';
 import { render } from '../lib/markdown.ts';
+import { propText } from '../lib/props.ts';
 
 const num = (n: number) => n.toLocaleString('en-US');
 
@@ -750,7 +751,7 @@ export function TodosPanel({ todos, chapter, sceneId, onTodo, onAdd, onJob, book
     return (
       <li key={n.path} class={'todo-row' + (done ? ' done' : '')}>
         <button type="button" class="todo-check" role="checkbox" aria-checked={done} disabled={!onTodo || Boolean(n.error)}
-          aria-label={(done ? 'Not done: ' : 'Done: ') + String(n.data.title || '')}
+          aria-label={(done ? 'Not done: ' : 'Done: ') + propText(n, 'title')}
           onClick={() => onTodo && onTodo(n.path, 'edit', '', { status: done ? 'open' : 'done' })}>
           {done && <Icon name="check" size={18} />}
         </button>

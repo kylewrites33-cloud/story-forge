@@ -5,6 +5,7 @@
 // with Kyle's and lets him bring one over at a time; the rewrite file never changes from the app.
 import { Frontmatter } from './frontmatter.js';
 import type { FileEntry } from './types.ts';
+import { propText } from './props.ts';
 
 export const REWRITE_FOLDER = 'Drafts/Rewrite';
 
@@ -58,7 +59,7 @@ export function rewriteFor(copies: FileEntry[], scene: { path: string; data: Rec
   const name = fileName(scene.path);
   const same = copies.find((f) => fileName(f.path) === name);
   if (same) return same;
-  const id = String(scene.data.id || '');
+  const id = propText(scene, 'id');
   return id ? copies.find((f) => fileName(f.path).startsWith(id + ' ') || fileName(f.path) === id + '.md') || null : null;
 }
 

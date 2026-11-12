@@ -9,6 +9,7 @@ import type { Choice } from '../vault/choice.ts';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
 import { useTeam } from './Team.tsx';
+import { propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 export type OnAddNote = (book: BookEntry, n: NewNote) => Promise<string | null>;
@@ -59,7 +60,7 @@ function NoteCard({ index, book, note, waiting, onDecide }: { index: VaultIndex;
         <span class={'pill' + (open ? '' : ' pill-final')}>{open ? 'Open' : 'Done'}</span>
         <span class="meta">To {noteTo(note)}</span>
       </div>
-      <h3>{String(note.data.title || '')}</h3>
+      <h3>{propText(note, 'title')}</h3>
       <div class="prose" dangerouslySetInnerHTML={{ __html: render(note.body) }} />
       {where && (
         <p class="meta">Answered in {where.path ? <a href={href.note(where.path)}>{where.name}</a> : where.name}</p>

@@ -11,6 +11,7 @@ import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts'
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { PREF, readPref, writePref } from '../lib/prefs.ts';
+import { propText } from '../lib/props.ts';
 
 type Show = 'character' | 'place' | 'other';
 const SHOW: [Show, string][] = [['character', 'Characters'], ['place', 'Places'], ['other', 'Items and lore']];
@@ -73,7 +74,7 @@ export function MatrixBoard({ schema, index, book }: { schema: Schema; index: Va
                     const i = scenes.indexOf(s);
                     return (
                       <tr key={s.path}>
-                        <th scope="row" class="scene-cell"><a href={href.write(s.path)}><span class="card-id">{String(s.data.id || '')}</span> {sceneHeader(s.data)}</a></th>
+                        <th scope="row" class="scene-cell"><a href={href.write(s.path)}><span class="card-id">{propText(s, 'id')}</span> {sceneHeader(s.data)}</a></th>
                         {order.map((j) => <Cell key={j} p={grid[i][j]} e={cols[j]} red={red[i][j]} />)}
                       </tr>
                     );

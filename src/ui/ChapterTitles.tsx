@@ -8,6 +8,7 @@ import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { TextChange } from '../vault/text.ts';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
+import { propText } from '../lib/props.ts';
 
 export function ChapterTitlesPage({ index, book, groups, onRename, onChange }: {
   index: VaultIndex; book: BookEntry;
@@ -61,8 +62,8 @@ export function ChapterTitlesPage({ index, book, groups, onRename, onChange }: {
         return (
           <article key={c.chapter} class={'titles-chapter' + (chosen ? ' done' : c.none ? ' more' : '')}>
             <h2>Chapter {c.chapter}<span class="meta">{chosen ? chosen : c.was ? 'Now: ' + (g && g.title ? g.title : c.was) : ''}</span></h2>
-            {g && g.scenes.some((n) => String(n.data.headline || '').trim()) && (
-              <p class="titles-about">{g.scenes.map((n) => String(n.data.headline || '').trim()).filter(Boolean).join(' ')}</p>
+            {g && g.scenes.some((n) => propText(n, 'headline').trim()) && (
+              <p class="titles-about">{g.scenes.map((n) => propText(n, 'headline').trim()).filter(Boolean).join(' ')}</p>
             )}
             <ul class="titles-options" role="group" aria-label={'Titles for chapter ' + c.chapter}>
               {c.options.map((o) => (

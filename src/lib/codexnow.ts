@@ -6,6 +6,7 @@
 import { linkName, nameList, toNumber } from './links.ts';
 import type { Presence } from './codex.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { propText } from './props.ts';
 
 export interface SecretPart { title: string; when: { book: number | null; scene: string } | null; text: string }
 
@@ -82,7 +83,7 @@ function scenesOf(index: VaultIndex, book: BookEntry): NoteRecord[] {
 /** A position in a book: at a scene, or else where the writing is (the last scene that is not just planned). */
 export function positionIn(index: VaultIndex, book: BookEntry, scenePath: string | null): Position {
   const scenes = scenesOf(index, book);
-  const ids = scenes.map((s) => String(s.data.id || '').toUpperCase());
+  const ids = scenes.map((s) => propText(s, 'id').toUpperCase());
   let at = scenePath ? scenes.findIndex((s) => s.path === scenePath) : -1;
   if (at < 0) {
     at = -1;
@@ -98,17 +99,17 @@ export function progressionsOf(index: VaultIndex, names: string[], book: BookEnt
     .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
   const out: Progress[] = [];
   books.forEach((b) => {
-    const ids = scenesOf(index, b).map((s) => String(s.data.id || '').toUpperCase());
+    const ids = scenesOf(index, b).map((s) => propText(s, 'id').toUpperCase());
     Object.values(index.notes).forEach((n) => {
       if (n.type !== 'progression' || !n.path.startsWith(b.folder + '/')) return;
       if (lower.indexOf(linkName(n.data.subject).toLowerCase()) < 0) return;
-      const at = String(n.data.at || '').toUpperCase();
+      const at = propText(n, 'at').toUpperCase();
       const i = ids.indexOf(at);
-      out.push({ note: n, book: b, index: i < 0 ? ids.length : i, change: String(n.data.change || n.data.title || ''), at, kind: String(n.data.kind || '') });
+      out.push({ note: n, book: b, index: i < 0 ? ids.length : i, change: String(n.data.change || n.data.title || ''), at, kind: propText(n, 'kind') });
     });
   });
   const bookOrder = (p: Progress) => books.indexOf(p.book);
-  return out.sort((a, b) => bookOrder(a) - bookOrder(b) || a.index - b.index || (toNumber(String(a.note.data.id || '').replace(/\D/g, '')) || 0) - (toNumber(String(b.note.data.id || '').replace(/\D/g, '')) || 0));
+  return out.sort((a, b) => bookOrder(a) - bookOrder(b) || a.index - b.index || (toNumber(propText(a.note, 'id').replace(/\D/g, '')) || 0) - (toNumber(propText(b.note, 'id').replace(/\D/g, '')) || 0));
 }
 
 export interface CodexNow {
@@ -166,11 +167,11 @@ export function bookForNote(index: VaultIndex, note: NoteRecord, active: BookEnt
 export function nowForNote(index: VaultIndex, note: NoteRecord, active: BookEntry | null, scenePath: string | null = null): CodexNow | null {
   if (NOW_TYPES.indexOf(note.type) < 0) return null;
   const book = bookForNote(index, note, active);
-  const name = String(note.data.name || '').trim();
+  const name = propText(note, 'name').trim();
   let base = note, delta: NoteRecord | null = null;
   if (note.data.extends && book) {
     const target = linkName(note.data.extends);
-    const series = Object.values(index.notes).find((n) => n.type === note.type && !n.data.extends && String(n.data.name || '') === target && n.path.startsWith(book.seriesFolder + '/'));
+    const series = Object.values(index.notes).find((n) => n.type === note.type && !n.data.extends && propText(n, 'name') === target && n.path.startsWith(book.seriesFolder + '/'));
     if (series) { base = series; delta = note; }
   } else if (book) {
     delta = Object.values(index.notes).find((n) => n.type === note.type && n.path.startsWith(book.folder + '/') && linkName(n.data.extends) === name) || null;

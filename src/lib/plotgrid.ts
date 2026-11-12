@@ -10,6 +10,7 @@ import { linkName, nameList } from './links.ts';
 import { boardHref, bookNotesOf, sceneId, seriesNotesOf, storyScenes, stringList } from './seeing.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 import type { Warning, WarningCheck } from './warnings.ts';
+import { propText } from './props.ts';
 
 export interface GridRow {
   name: string;
@@ -51,7 +52,7 @@ const lower = (s: string) => s.trim().toLowerCase();
 export function bookThreads(index: VaultIndex, book: BookEntry): { name: string; note: NoteRecord; terms: string[]; color: string }[] {
   const series = seriesNotesOf(index, book, 'thread');
   const own = bookNotesOf(index, book, 'thread');
-  const nameOf = (n: NoteRecord) => String(n.data.name || '').trim();
+  const nameOf = (n: NoteRecord) => propText(n, 'name').trim();
   const out = series.filter((n) => nameOf(n)).map((n) => ({ name: nameOf(n), note: n, data: n.data }));
   own.forEach((d) => {
     const target = linkName(d.data.extends) || nameOf(d);

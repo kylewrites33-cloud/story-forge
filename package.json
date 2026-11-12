@@ -15,7 +15,8 @@
     "test": "node --test \"tests/*.test.ts\"",
     "test:webkit": "bash tests/webkit/run.sh",
     "icons": "node scripts/make-icons.js",
-    "sync-parser": "node scripts/sync-parser.js"
+    "sync-parser": "node scripts/sync-parser.js",
+    "props": "node scripts/make-props.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

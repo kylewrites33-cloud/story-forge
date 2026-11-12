@@ -7,6 +7,7 @@ import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
+import { propText } from '../lib/props.ts';
 
 const MIN_COL = 56, MAX_COL = 120, LEFT = 52, RIGHT = 20, TOP = 18, BOTTOM = 44, PLOT = 240;
 
@@ -71,8 +72,8 @@ export function TimelineBoard({ index, book }: { index: VaultIndex; book: BookEn
               {t.missing.map((s) => {
                 const i = t.scenes.indexOf(s);
                 return (
-                  <a key={s.path} href={href.write(s.path)} aria-label={String(s.data.id || '') + ' has no day'}>
-                    <title>{String(s.data.id || '') + ': no day yet'}</title>
+                  <a key={s.path} href={href.write(s.path)} aria-label={propText(s, 'id') + ' has no day'}>
+                    <title>{propText(s, 'id') + ': no day yet'}</title>
                     <circle class="tl-hit" cx={x(i)} cy={TOP + PLOT + 10} r={20} />
                     <circle class="tl-missing" cx={x(i)} cy={TOP + PLOT + 10} r={5} />
                   </a>
@@ -81,8 +82,8 @@ export function TimelineBoard({ index, book }: { index: VaultIndex; book: BookEn
               {t.points.map((p, i) => {
                 const e = kindAt(i);
                 return (
-                  <a key={p.scene.path} href={href.write(p.scene.path)} aria-label={String(p.scene.data.id || '') + ', day ' + p.day}>
-                    <title>{String(p.scene.data.id || '') + ' · Day ' + p.day + ': ' + sceneHeader(p.scene.data)}</title>
+                  <a key={p.scene.path} href={href.write(p.scene.path)} aria-label={propText(p.scene, 'id') + ', day ' + p.day}>
+                    <title>{propText(p.scene, 'id') + ' · Day ' + p.day + ': ' + sceneHeader(p.scene.data)}</title>
                     <circle class="tl-hit" cx={x(p.at)} cy={y(p.day)} r={22} />
                     <circle class={'tl-point' + (e ? ' ' + e.kind : '')} cx={x(p.at)} cy={y(p.day)} r={7} />
                   </a>
@@ -109,7 +110,7 @@ export function TimelineBoard({ index, book }: { index: VaultIndex; book: BookEn
             <>
               <h2 class="seeing-h2">No day yet ({t.missing.length})</h2>
               <ul class="seeing-list">
-                {t.missing.map((s) => <li key={s.path}><a href={href.write(s.path)}><span class="card-id">{String(s.data.id || '')}</span> {sceneHeader(s.data)}</a></li>)}
+                {t.missing.map((s) => <li key={s.path}><a href={href.write(s.path)}><span class="card-id">{propText(s, 'id')}</span> {sceneHeader(s.data)}</a></li>)}
               </ul>
             </>
           )}

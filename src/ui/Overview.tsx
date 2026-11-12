@@ -18,6 +18,7 @@ import { publishLine, sixStages, type SixStage, type StageKey } from '../lib/boo
 import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
 import { href } from '../app/route.ts';
 import { afterDraft, datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type EditPass, type Estimate } from '../lib/stagetimes.ts';
+import { propText } from '../lib/props.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -176,7 +177,7 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   // The editing pass under way, timed from its own first day (`editing_pass_start`, kept by the app below).
   const passM = /Draft (\d+) to (\d+)/.exec(status.stage);
   const editing = (status.phase === 'rewrite' || status.phase === 'changes') && passM;
-  const passSame = note && String(note.data.editing_pass || '') === status.stage;
+  const passSame = note && propText(note, 'editing_pass') === status.stage;
   const otherData = index.books.filter((b) => b.path !== book.path).map((b) => (index.notes[b.path] ? index.notes[b.path].data : {}) as Record<string, unknown>);
   const pass: EditPass | null = editing && passM ? {
     to: parseInt(passM[2], 10), percent: status.percent || 0,
@@ -190,7 +191,7 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   if (editing && note && !passSame) {
     toWrite.editing_pass = status.stage;
     toWrite.editing_pass_start = day;
-    const was = /Draft (\d+) to (\d+)/.exec(String(note.data.editing_pass || ''));
+    const was = /Draft (\d+) to (\d+)/.exec(propText(note, 'editing_pass'));
     if (was && parseInt(was[2], 10) < parseInt(passM![2], 10)) toWrite['draft' + was[2] + '_end'] = day;
   }
   // The estimate goes on the book note too, so the team and the Chief of Staff see it, when it moves by more than three days.

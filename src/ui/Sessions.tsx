@@ -7,6 +7,7 @@ import { bookSessions, parseSession, sessionIdeas, sessionWhen, speakers, voiceC
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
+import { propText } from '../lib/props.ts';
 
 /** A session's name without the date and time its file name starts with. */
 function sessionName(n: NoteRecord): string {
@@ -98,7 +99,7 @@ export function SessionView({ index, note }: { index: VaultIndex; note: NoteReco
             {ideas.map((n) => (
               <li key={n.path}>
                 <a href={href.note(n.path)}>
-                  <span class="card-id">{String(n.data.id || '')}</span>
+                  <span class="card-id">{propText(n, 'id')}</span>
                   <span>{String(n.data.title || basename(n.path))}{n.data.source ? <span class="meta"> · {String(n.data.source)}</span> : null}</span>
                   <span class="pill pill-plain">{label(n)}</span>
                 </a>
