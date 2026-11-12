@@ -11,6 +11,7 @@
 import { Frontmatter } from './frontmatter.js';
 import { toNumber } from './links.ts';
 import type { VaultIndex } from './types.ts';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 export type Phase = 'idle' | 'work' | 'break';
 
@@ -50,8 +51,8 @@ export const WORK_MIN = 25;
 export const BREAK_MIN = 5;
 export const LOG_FOLDER = 'Writing Log';
 
-const STATE_KEY = 'sf-pomodoro';
-const logKey = (sourceKey: string) => 'sf-pomodoro-log:' + sourceKey;
+const STATE_KEY = PREF.pomodoro;
+const logKey = (sourceKey: string) => PREF.pomodoroLog + sourceKey;
 
 export function idleState(workMin = WORK_MIN, breakMin = BREAK_MIN): TimerState {
   return { phase: 'idle', endsAt: null, pausedLeft: null, startedAt: null, workMin, breakMin, base: {}, latest: {}, added: 0, ids: {}, justDone: null };
@@ -59,7 +60,7 @@ export function idleState(workMin = WORK_MIN, breakMin = BREAK_MIN): TimerState 
 
 export function loadTimer(): TimerState {
   try {
-    const raw = localStorage.getItem(STATE_KEY);
+    const raw = readPref(STATE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as TimerState;
       // Older saves may hold 50 or 10; a running Pomodoro keeps its length, the next one is 25 and 5.
@@ -71,7 +72,7 @@ export function loadTimer(): TimerState {
 }
 
 export function saveTimer(s: TimerState): void {
-  try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch { /* the timer still runs for this page */ }
+  writePref(STATE_KEY, JSON.stringify(s));
   try { window.dispatchEvent(new Event('sf-pomodoro')); } catch { /* Node tests */ }
 }
 
@@ -177,28 +178,28 @@ export function trackWords(path: string, id: string, before: number, after: numb
   const next = noteWords(s, path, id, before, before + typed);
   if (next !== s) {
     const fixed = next.latest[path] != null ? { ...next, latest: { ...next.latest, [path]: after } } : next;
-    try { localStorage.setItem(STATE_KEY, JSON.stringify(fixed)); } catch { /* fine */ }
+    writePref(STATE_KEY, JSON.stringify(fixed));
   }
   if (typed > 0) addTyped(ymd(new Date(now)), typed, now);
 }
 
 // ------------------------------------------------------------------ words typed today
 
-const TYPED_KEY = 'sf-typed';
+const TYPED_KEY = PREF.typed;
 
 /** Words typed on this device and not yet in the vault, per day, with when the first and the last of them were typed. */
 export interface TypedWaiting { days: Record<string, number>; firstAt: number; typedAt: number }
 
 export function loadTyped(): TypedWaiting {
   try {
-    const t = JSON.parse(localStorage.getItem(TYPED_KEY) || 'null') as TypedWaiting | null;
+    const t = JSON.parse(readPref(TYPED_KEY) || 'null') as TypedWaiting | null;
     if (t && t.days) return { days: t.days, firstAt: t.firstAt || 0, typedAt: t.typedAt || 0 };
   } catch { /* start empty */ }
   return { days: {}, firstAt: 0, typedAt: 0 };
 }
 
 function saveTyped(t: TypedWaiting): void {
-  try { localStorage.setItem(TYPED_KEY, JSON.stringify(t)); } catch { /* counted for this page only */ }
+  writePref(TYPED_KEY, JSON.stringify(t));
 }
 
 function addTyped(date: string, n: number, now: number): void {
@@ -237,21 +238,21 @@ export function addTypedToDay(text: string, date: string, n: number, now: Date):
 
 /** A gap with nothing typed longer than this counts nothing. */
 export const TYPING_GAP_MS = 2 * 60000;
-const ACTIVE_KEY = 'sf-typing';
+const ACTIVE_KEY = PREF.typing;
 
 /** Milliseconds of typing on this device and not yet in the vault, per day, and when Kyle last changed the page. */
 export interface TypingWaiting { days: Record<string, number>; lastAt: number; firstAt: number }
 
 export function loadTyping(): TypingWaiting {
   try {
-    const t = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null') as TypingWaiting | null;
+    const t = JSON.parse(readPref(ACTIVE_KEY) || 'null') as TypingWaiting | null;
     if (t && t.days) return { days: t.days, lastAt: t.lastAt || 0, firstAt: t.firstAt || 0 };
   } catch { /* start empty */ }
   return { days: {}, lastAt: 0, firstAt: 0 };
 }
 
 function saveTyping(t: TypingWaiting): void {
-  try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(t)); } catch { /* counted for this page only */ }
+  writePref(ACTIVE_KEY, JSON.stringify(t));
 }
 
 /** The typing time with one more change on the page at `now`: the gap since the last change counts if it is short enough.
@@ -351,11 +352,11 @@ export function advance(s: TimerState, now: number): { state: TimerState; record
 // ------------------------------------------------------------------ the log
 
 export function loadLog(sourceKey: string): PomodoroRecord[] {
-  try { return JSON.parse(localStorage.getItem(logKey(sourceKey)) || '[]') as PomodoroRecord[]; } catch { return []; }
+  try { return JSON.parse(readPref(logKey(sourceKey)) || '[]') as PomodoroRecord[]; } catch { return []; }
 }
 
 export function saveLog(sourceKey: string, list: PomodoroRecord[]): void {
-  try { localStorage.setItem(logKey(sourceKey), JSON.stringify(list)); } catch { /* kept in memory only */ }
+  writePref(logKey(sourceKey), JSON.stringify(list));
 }
 
 export function logPath(date: string): string {

@@ -18,6 +18,7 @@
 //
 // A new passage also has `Or:` with a second version. Paragraphs inside a quote are `> ` lines with a `>` line between.
 import type { NoteRecord } from './types.ts';
+import { PREF, storeOf } from './prefs.ts';
 
 export const CHANGES_FOLDER = 'Changes';
 export const CHANGES_TYPE = 'chapter-changes';
@@ -132,7 +133,7 @@ export function swapsOf(c: Change): [string, string][] | null {
   return out.length ? out : null;
 }
 
-const RULES = 'story-forge.change-rules.';
+const RULES = PREF.changeRules;
 /** The swaps Kyle accepted everywhere, kept on this device. */
 export function loadRules(sourceKey: string, s: Store | null = store()): [string, string][] {
   try { const v = s && s.getItem(RULES + sourceKey); const o = v ? JSON.parse(v) : []; return Array.isArray(o) ? o : []; } catch { return []; }
@@ -143,7 +144,7 @@ export function addRules(sourceKey: string, pairs: [string, string][], s: Store 
   try { if (s) s.setItem(RULES + sourceKey, JSON.stringify(all)); } catch { /* lasts until reload */ }
   return all;
 }
-const SKIPS = 'story-forge.change-rules-skip.';
+const SKIPS = PREF.changeRulesSkip;
 /** Changes Kyle undid after Accept everywhere took them: the rule leaves them alone from then on. */
 export function loadSkips(sourceKey: string, s: Store | null = store()): string[] {
   try { const v = s && s.getItem(SKIPS + sourceKey); const o = v ? JSON.parse(v) : []; return Array.isArray(o) ? o : []; } catch { return []; }
@@ -382,8 +383,8 @@ export function marksMessage(path: string, marks: Record<string, ChangeStatus>):
 // Before 2026-11-11 choices waited in a list of their own on the device. What is left in it moves into the outbox the
 // first time the app opens (src/vault/outbox.ts); these two read it and let go of it.
 type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
-const KEY = 'story-forge.change-choices.';
-const store = (): Store | null => { try { return globalThis.localStorage ?? null; } catch { return null; } };
+const KEY = PREF.changeChoices;
+const store = (): Store | null => { try { return storeOf(); } catch { return null; } };
 
 export function loadChoices(sourceKey: string, s: Store | null = store()): Record<string, Record<string, ChangeStatus>> {
   try { const v = s && s.getItem(KEY + sourceKey); const o = v ? JSON.parse(v) : {}; return o && typeof o === 'object' ? o : {}; } catch { return {}; }

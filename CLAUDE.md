@@ -58,6 +58,9 @@ docs/              Features.md and Layout.md
 - Index the same paths sf reads and skip the same folders (Exports, Snapshots, Archive, Templates, System/Tools, hidden).
   The one exception is the team's files in `.claude` (agents, skills, agent memory), read separately for the Team page.
 - Errors shown to Kyle are plain sentences that say what to do.
+- What a device keeps goes through `src/lib/prefs.ts` under a name in its `PREF` list; no other file names
+  `localStorage` or `sessionStorage`, and a name a device already holds is never changed. What must follow Kyle between
+  devices goes in the vault instead.
 - The iPad and desktop Chrome get the same app with the same features (Kyle, 2026-10-17). Nothing is iPad-only or
   desktop-only; test both sizes. Keyboard shortcuts are extras (Ctrl or Cmd+S saves in the writing screen), never the only way.
 - iPad first: large type, one accent colour, light and dark (Settings, Colours: nine light and ten dark themes per device,

@@ -1786,3 +1786,19 @@ piece goes live.
   Beats and on a workflow step the page says the team is working, then within 25 seconds of the team's failure says
   the sentence, with no reload.
 
+## Tidying the rest (step 6 of the code structure redesign, from 2026-11-12)
+
+Kyle, 2026-11-12: "Start whatever step next that you think is best." Step 6 changes only the app's code; nothing he
+sees or anything in the vault changes. This section grows as each piece goes live.
+
+- **What a device keeps, in one place (2026-11-12, first piece).** The app keeps 57 things on a device: the connection,
+  words and changes waiting to go up, the timer, and where each page was left (which tab, which view, what is open).
+  Thirty-four files each named their own storage key and wrapped their own try and catch around the browser's storage.
+  Now every name is listed once, in `PREF` in `src/lib/prefs.ts`, and every read and write goes through that file
+  (`readPref`, `writePref`, `readJson`, `writeJson`; `storeOf` for the few modules whose tests hand them a pretend
+  store). Nothing else in `src/` names `localStorage` or `sessionStorage`; `tests/prefs.test.ts` fails if a file
+  does, if a name is used outside the list, or if a name a device already holds is changed or removed. **The names
+  are the ones Kyle's devices already hold, so nothing was moved and nothing is forgotten.** A new setting is one line
+  in `PREF` and one in that test's list. What must follow Kyle between devices does not belong here: it goes in the
+  vault (as "used" did in step 4).
+

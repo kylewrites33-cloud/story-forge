@@ -6,6 +6,7 @@ import { askBody, costLabel, jobNotes, resultBody, type NewJob } from './jobs.ts
 import { sceneHeader } from './format.ts';
 import { idNumber } from './links.ts';
 import type { NoteRecord, VaultIndex } from './types.ts';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 export type MessageState = 'waiting' | 'working' | 'done' | 'failed' | 'cancelled';
 
@@ -215,12 +216,12 @@ export function passageMessage(tool: PassageTool, scene: string, passage: string
 
 // The team column beside the boards and pages (Kyle, 2026-10-18): one conversation per book on this device, kept until
 // Kyle starts a new one. 'new' means none yet; the first message sent gets the next chat-NNN. Open or shut is per device.
-const SIDE = 'story-forge.side-chat.';
-const SIDE_OPEN = 'story-forge.side-chat-open';
+const SIDE = PREF.sideChat;
+const SIDE_OPEN = PREF.sideChatOpen;
 
 export function loadSideThreads(sourceKey: string): Record<string, string> {
   try {
-    const v = JSON.parse(localStorage.getItem(SIDE + sourceKey) || '{}');
+    const v = JSON.parse(readPref(SIDE + sourceKey) || '{}');
     const out: Record<string, string> = {};
     if (v && typeof v === 'object') Object.keys(v).forEach((k) => { if (typeof v[k] === 'string' && isThread(v[k])) out[k] = v[k]; });
     return out;
@@ -236,15 +237,15 @@ export function saveSideThread(sourceKey: string, book: string, thread: string) 
   try {
     const all = loadSideThreads(sourceKey);
     if (isThread(thread)) all[book] = thread; else delete all[book];
-    localStorage.setItem(SIDE + sourceKey, JSON.stringify(all));
+    writePref(SIDE + sourceKey, JSON.stringify(all));
   } catch { /* lasts until reload */ }
 }
 
 /** Open or shut: as Kyle last left it on this device; open the first time on a screen wide enough to sit it beside the page. */
 export function loadSideOpen(wide: boolean): boolean {
-  try { const v = localStorage.getItem(SIDE_OPEN); return v == null ? wide : v === '1'; } catch { return wide; }
+  const v = readPref(SIDE_OPEN); return v == null ? wide : v === '1';
 }
 
 export function saveSideOpen(open: boolean) {
-  try { localStorage.setItem(SIDE_OPEN, open ? '1' : '0'); } catch { /* this visit only */ }
+  writePref(SIDE_OPEN, open ? '1' : '0');
 }

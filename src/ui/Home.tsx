@@ -24,6 +24,7 @@ import { StageStrip } from './Overview.tsx';
 import type { Decision } from '../lib/ideas.ts';
 import { nextBookNumber } from '../lib/books.ts';
 import { safeTitle } from '../lib/scenes.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 type OnCreateBook = (seriesFolder: string, seriesName: string, title: string, number: number) => Promise<string | null>;
 type OnCreateSeries = (name: string, genre: string) => Promise<string | null>;
@@ -90,10 +91,10 @@ export function CreateForm({ index, onCreateBook, onCreateSeries, seriesFolder, 
 const num = (n: number) => n.toLocaleString('en-US');
 
 function loadPref<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  try { const v = localStorage.getItem('story-forge.' + key) as T | null; return v && allowed.indexOf(v) >= 0 ? v : fallback; } catch { return fallback; }
+  const v = readPref(key) as T | null; return v && allowed.indexOf(v) >= 0 ? v : fallback;
 }
 function savePref(key: string, v: string) {
-  try { localStorage.setItem('story-forge.' + key, v); } catch { /* lasts until reload */ }
+  writePref(key, v);
 }
 
 /** The book's cover picture, or a pattern made from its title while there is none (or it is still loading). */
@@ -406,8 +407,8 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
     ? <CreateForm index={index} onCreateBook={onCreateBook} onCreateSeries={onCreateSeries} onClose={() => setCreating(false)} />
     : <button type="button" class="primary new-button" onClick={() => setCreating(true)}><Icon name="plus" size={18} />{series ? 'New series or book' : 'New book'}</button>);
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<BookSort>(() => loadPref('home-sort', SORTS, 'recent'));
-  const [view, setView] = useState<'covers' | 'list'>(() => loadPref('home-view', VIEWS, 'covers'));
+  const [sort, setSort] = useState<BookSort>(() => loadPref(PREF.homeSort, SORTS, 'recent'));
+  const [view, setView] = useState<'covers' | 'list'>(() => loadPref(PREF.homeView, VIEWS, 'covers'));
   const recent = loadRecent(source.key);
   const worked = lastWorked(index, recent);
   const statusOf = useBookStatuses(source, index);
@@ -434,7 +435,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
       {!series && (
         <label class="select">
           <span class="visually-hidden">Sort by</span>
-          <select value={sort} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value as BookSort; setSort(v); savePref('home-sort', v); }}>
+          <select value={sort} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value as BookSort; setSort(v); savePref(PREF.homeSort, v); }}>
             <option value="recent">Last worked on</option>
             <option value="name">Name</option>
             <option value="series">Series and number</option>
@@ -443,7 +444,7 @@ export function Home({ source, index, series, onCreateBook, onCreateSeries }: { 
       )}
       <div class="seg small" role="group" aria-label="View as">
         {VIEWS.map((v) => (
-          <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); savePref('home-view', v); }}>{v === 'covers' ? 'Covers' : 'List'}</button>
+          <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); savePref(PREF.homeView, v); }}>{v === 'covers' ? 'Covers' : 'List'}</button>
         ))}
       </div>
     </div>

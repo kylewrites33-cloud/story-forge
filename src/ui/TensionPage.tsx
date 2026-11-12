@@ -14,12 +14,13 @@ import type { Choice } from '../vault/choice.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneChart, type ChartPoint } from './SceneChart.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 type Tab = 'tension' | 'mood';
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
 function loadTab(): Tab {
-  try { return localStorage.getItem('story-forge.tension-tab') === 'mood' ? 'mood' : 'tension'; } catch { return 'tension'; }
+  return readPref(PREF.tensionTab) === 'mood' ? 'mood' : 'tension';
 }
 
 const num = (id: string) => String(parseInt(id.replace(/\D/g, ''), 10) || id);
@@ -28,7 +29,7 @@ export function TensionBoard({ schema, index, book, onDecide, waiting }: {
   schema: Schema; index: VaultIndex; book: BookEntry; onDecide?: OnDecide; waiting?: Record<string, Choice>;
 }) {
   const [tab, setTabState] = useState<Tab>(loadTab);
-  const setTab = (t: Tab) => { setTabState(t); try { localStorage.setItem('story-forge.tension-tab', t); } catch { /* this visit only */ } };
+  const setTab = (t: Tab) => { setTabState(t); writePref(PREF.tensionTab, t); };
   const [picked, setPicked] = useState<string | null>(null);
   const scenes = storyScenes(index, book);
   const points = scenePoints(scenes);

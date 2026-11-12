@@ -11,6 +11,7 @@ import type { FileEntry, VaultSource } from '../lib/types.ts';
 import { Quote } from './Changes.tsx';
 import { Icon } from './Icon.tsx';
 import { offlineError } from './EditorPanels.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 export interface Put {
   /** The whole page after the change. */
@@ -26,21 +27,21 @@ export interface Put {
 /** Where Kyle left off in draft 2 of a book, kept on this device (Kyle, 2026-11-06: "so we can sort of quickly get a
  * glance at where we're supposed to be when I open it up again on a new session"). */
 export function loadLeftOff(book: string): Spot | null {
-  try { const raw = localStorage.getItem('story-forge.rewrite-left-off.' + book); const s = raw ? JSON.parse(raw) : null; return s && typeof s.path === 'string' && typeof s.head === 'string' && typeof s.index === 'number' ? s : null; } catch { return null; }
+  try { const raw = readPref(PREF.rewriteLeftOff + book); const s = raw ? JSON.parse(raw) : null; return s && typeof s.path === 'string' && typeof s.head === 'string' && typeof s.index === 'number' ? s : null; } catch { return null; }
 }
 export function saveLeftOff(book: string, spot: Spot) {
-  try { localStorage.setItem('story-forge.rewrite-left-off.' + book, JSON.stringify(spot)); } catch { /* lasts until reload */ }
+  writePref(PREF.rewriteLeftOff + book, JSON.stringify(spot));
 }
 
 /** Kyle's tweaks to the Writer's paragraphs before he brings them over (Kyle, 2026-11-05: "can i put my cursor in there
  * on the right and adjust it before i move it over?"), kept per rewrite file until the browser tab closes. */
 function loadEdits(key: string): Record<number, string> {
-  try { const raw = sessionStorage.getItem('story-forge.rewrite-edits.' + key); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+  try { const raw = readPref(PREF.rewriteEdits + key, 'visit'); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
 }
 function saveEdits(key: string, edits: Record<number, string>) {
   try {
-    if (Object.keys(edits).length) sessionStorage.setItem('story-forge.rewrite-edits.' + key, JSON.stringify(edits));
-    else sessionStorage.removeItem('story-forge.rewrite-edits.' + key);
+    if (Object.keys(edits).length) writePref(PREF.rewriteEdits + key, JSON.stringify(edits), 'visit');
+    else writePref(PREF.rewriteEdits + key, null, 'visit');
   } catch { /* lasts while the tab is open */ }
 }
 
@@ -152,8 +153,8 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
     try { const m = await onThrough(done); setSaid(m ? { error: !/saved|through/i.test(m), text: m } : null); } catch (e) { setSaid({ error: true, text: (e as Error).message }); }
     setBusy(false);
   };
-  const [hideSame, setHideSame] = useState(() => { try { return localStorage.getItem('story-forge.rewrite.hide-same') === '1'; } catch { return false; } });
-  const toggleSame = () => { setHideSame(!hideSame); try { localStorage.setItem('story-forge.rewrite.hide-same', hideSame ? '0' : '1'); } catch { /* lasts until reload */ } };
+  const [hideSame, setHideSame] = useState(() => { return readPref(PREF.rewriteHideSame) === '1'; });
+  const toggleSame = () => { setHideSame(!hideSame); writePref(PREF.rewriteHideSame, hideSame ? '0' : '1'); };
   const any = sections.some((x) => x.file);
   if (!any) {
     return (

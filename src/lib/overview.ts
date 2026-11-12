@@ -7,6 +7,7 @@ import { idNumber, toNumber } from './links.ts';
 import { bookTodos, isOpen } from './todos.ts';
 import { bookNotesToTeam } from './notes.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from './types.ts';
+import { PREF, storeOf } from './prefs.ts';
 
 const str = (v: unknown) => (v == null ? '' : String(v).trim());
 
@@ -213,9 +214,9 @@ export function runway(index: VaultIndex, book: BookEntry): Runway {
 }
 
 // Finished jobs Kyle has looked at, per device and per vault, so the Overview only counts new ones.
-const SEEN = 'story-forge.seen-jobs.';
+const SEEN = PREF.seenJobs;
 
-export function loadSeenJobs(sourceKey: string, storage: Storage | null = globalThis.localStorage ?? null): string[] {
+export function loadSeenJobs(sourceKey: string, storage: Storage | null = storeOf()): string[] {
   try {
     const v = JSON.parse((storage && storage.getItem(SEEN + sourceKey)) || '[]');
     return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
@@ -223,7 +224,7 @@ export function loadSeenJobs(sourceKey: string, storage: Storage | null = global
 }
 
 /** Mark jobs seen; keeps the newest 500 so the list never grows without end. */
-export function markJobsSeen(sourceKey: string, paths: string[], storage: Storage | null = globalThis.localStorage ?? null): string[] {
+export function markJobsSeen(sourceKey: string, paths: string[], storage: Storage | null = storeOf()): string[] {
   const list = loadSeenJobs(sourceKey, storage).filter((p) => paths.indexOf(p) < 0).concat(paths).slice(-500);
   try { if (storage) storage.setItem(SEEN + sourceKey, JSON.stringify(list)); } catch { /* this visit only */ }
   return list;

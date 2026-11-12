@@ -16,17 +16,18 @@ import {
   ROOT, ROLES, PARTS, PART_WORDS, beatOwner, sceneField, buildLibrary, driveGrid, faceFor, facePath, handoffs, initials, isForce, lensesFor, players, scenesOf, splitMoment, studyFiles, tally, turnAt, valueShift,
   type Beat, type Engine, type Lens, type Part, type Reading, type Role, type Verdict, type Side, type Study, type StudyCharacter, type StudyLibrary, type StudyScene
 } from '../lib/study.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 // ------------------------------------------------------------------ loading, with a copy kept on the device
 
 interface Cached { files: FileEntry[]; texts: Record<string, [string, string]>; }
-const CACHE = 'character-study.cache.';
+const CACHE = PREF.studyCache;
 
 function loadCache(key: string): Cached | null {
-  try { const v = JSON.parse(localStorage.getItem(CACHE + key) || 'null'); return v && Array.isArray(v.files) ? v : null; } catch { return null; }
+  try { const v = JSON.parse(readPref(CACHE + key) || 'null'); return v && Array.isArray(v.files) ? v : null; } catch { return null; }
 }
 function saveCache(key: string, c: Cached): void {
-  try { localStorage.setItem(CACHE + key, JSON.stringify(c)); } catch { /* the copy is a convenience */ }
+  writePref(CACHE + key, JSON.stringify(c));
 }
 function libraryFrom(c: Cached): StudyLibrary {
   return buildLibrary(c.files, new Map(Object.entries(c.texts).map(([p, [, t]]) => [p, t])));
@@ -95,9 +96,9 @@ const traitsHref = (s: Study, name = '', lens = '') => '#/s/' + enc(s.folder.sli
 const plotHref = (s: Study, view: PlotViewName) => studyHref(s, 'plot') + (view === 'board' ? '' : '/' + view);
 
 // The lens picked on each side, remembered on this device. '' is the plain card (character) or the overview (plot).
-const LENS_KEY = 'character-study.lens';
+const LENS_KEY = PREF.studyLens;
 function loadLens(): Record<Side, string> {
-  try { const v = JSON.parse(localStorage.getItem(LENS_KEY) || '{}'); return { character: String(v.character || ''), plot: String(v.plot || '') }; } catch { return { character: '', plot: '' }; }
+  try { const v = JSON.parse(readPref(LENS_KEY) || '{}'); return { character: String(v.character || ''), plot: String(v.plot || '') }; } catch { return { character: '', plot: '' }; }
 }
 
 // ------------------------------------------------------------------ the app
@@ -135,7 +136,7 @@ export function StudyApp() {
   const setLens = (side: Side, name: string) => {
     const next = { ...lens, [side]: name };
     setLensState(next);
-    try { localStorage.setItem(LENS_KEY, JSON.stringify(next)); } catch { /* lasts until reload */ }
+    writePref(LENS_KEY, JSON.stringify(next));
   };
 
   const study = lib && route.study ? lib.studies.find((s) => s.folder === ROOT + route.study) || null : null;

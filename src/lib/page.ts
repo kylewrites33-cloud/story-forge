@@ -1,3 +1,4 @@
+import { PREF, readPref, writePref } from './prefs.ts';
 // How the writing page looks on this device: text size, line spacing, page width, font and paper colour.
 // Kept in the browser's storage, so the iPad and the desktop can each have their own.
 
@@ -28,7 +29,7 @@ export const LOOK_CHOICES: { key: keyof PageLook; label: string; options: [strin
   { key: 'asks', label: 'Asks for the team in { }', options: [['left', 'Left margin'], ['margin', 'Right margin'], ['inline', 'In the text']] }
 ];
 
-const KEY = 'story-forge.page-look';
+const KEY = PREF.pageLook;
 
 export function cleanLook(v: unknown): PageLook {
   const out: PageLook = { ...DEFAULT_LOOK };
@@ -42,16 +43,16 @@ export function cleanLook(v: unknown): PageLook {
 
 export function loadLook(): PageLook {
   try {
-    const l = cleanLook(JSON.parse(localStorage.getItem(KEY) || 'null'));
+    const l = cleanLook(JSON.parse(readPref(KEY) || 'null'));
     // Kyle, 2026-11-06: "I want to experiment with these green curly notes showing on the left side". Once per device,
     // notes in the margin move to the left margin; Page, Asks for the team, Right margin puts them back.
-    if (l.asks === 'margin' && !localStorage.getItem(KEY + '.asks-left')) { l.asks = 'left'; localStorage.setItem(KEY + '.asks-left', '1'); saveLook(l); }
+    if (l.asks === 'margin' && !readPref(PREF.pageLookAsksLeft)) { l.asks = 'left'; writePref(PREF.pageLookAsksLeft, '1'); saveLook(l); }
     return l;
   } catch { return DEFAULT_LOOK; }
 }
 
 export function saveLook(l: PageLook): void {
-  try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { /* lasts until reload */ }
+  writePref(KEY, JSON.stringify(l));
 }
 
 const SIZES = { small: '1.05rem', medium: '1.2rem', large: '1.4rem', huge: '1.65rem' };

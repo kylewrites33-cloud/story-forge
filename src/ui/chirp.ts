@@ -1,3 +1,4 @@
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 // The Pomodoro's two sounds (Kyle, 2026-10-22: "chirp at the end of 25, and a different chirp after 5"). Kyle didn't
 // hear the first version on the iPad (2026-10-22), so they are short sound files made on the device and played through a
 // plain audio player, which the iPad plays even on silent. The first chirps sounded like an alarm and bells weren't
@@ -73,13 +74,13 @@ export const BIRDS: Bird[] = [
 ];
 
 export type Moment = 'work' | 'break';
-const PICK_KEY = 'sf-timer-sounds';
+const PICK_KEY = PREF.timerSounds;
 const DEFAULT_PICK: Record<Moment, string> = { work: 'little-song', break: 'tsweet' };
 
 /** Which bird plays at the end of writing and at the end of the break, on this device. */
 export function loadPick(): Record<Moment, string> {
   try {
-    const p = JSON.parse(localStorage.getItem(PICK_KEY) || '{}') as Partial<Record<Moment, string>>;
+    const p = JSON.parse(readPref(PICK_KEY) || '{}') as Partial<Record<Moment, string>>;
     const ok = (id?: string) => !!id && BIRDS.some((b) => b.id === id);
     return { work: ok(p.work) ? p.work! : DEFAULT_PICK.work, break: ok(p.break) ? p.break! : DEFAULT_PICK.break };
   } catch { return { ...DEFAULT_PICK }; }
@@ -87,7 +88,7 @@ export function loadPick(): Record<Moment, string> {
 
 export function savePick(moment: Moment, id: string): void {
   const p = { ...loadPick(), [moment]: id };
-  try { localStorage.setItem(PICK_KEY, JSON.stringify(p)); } catch { /* kept for this visit only */ }
+  writePref(PICK_KEY, JSON.stringify(p));
 }
 
 const players = new Map<string, HTMLAudioElement>();

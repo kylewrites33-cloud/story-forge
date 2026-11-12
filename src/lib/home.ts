@@ -2,16 +2,17 @@
 // pages and reading time, the Chapter Grid filter, and an outline pasted in as new scenes.
 import { linkName, nameList, toNumber } from './links.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 /** A scene Kyle opened in the writing screen, newest first. Kept per source on the device. */
 export interface Recent { path: string; at: string }
 
 const RECENT_MAX = 12;
-const recentKey = (source: string) => 'story-forge.recent.' + source;
+const recentKey = (source: string) => PREF.recent + source;
 
 export function loadRecent(source: string): Recent[] {
   try {
-    const v = JSON.parse(localStorage.getItem(recentKey(source)) || '[]');
+    const v = JSON.parse(readPref(recentKey(source)) || '[]');
     return Array.isArray(v) ? v.filter((r) => r && typeof r.path === 'string' && typeof r.at === 'string') : [];
   } catch {
     return [];
@@ -24,7 +25,7 @@ export function addRecent(list: Recent[], path: string, now: Date): Recent[] {
 }
 
 export function noteRecent(source: string, path: string, now: Date = new Date()): void {
-  try { localStorage.setItem(recentKey(source), JSON.stringify(addRecent(loadRecent(source), path, now))); } catch { /* the list is a convenience */ }
+  writePref(recentKey(source), JSON.stringify(addRecent(loadRecent(source), path, now)));
 }
 
 /** When Kyle last wrote in each book, from the recent list. */
@@ -89,17 +90,17 @@ export function labelsOf(v: unknown): string[] {
 /** Pages and reading time for a word count. Kyle can change both rates in Settings. */
 export interface ReadRates { wordsPerPage: number; wordsPerMinute: number }
 export const DEFAULT_RATES: ReadRates = { wordsPerPage: 250, wordsPerMinute: 250 };
-const RATES_KEY = 'story-forge.read-rates';
+const RATES_KEY = PREF.readRates;
 
 export function loadRates(): ReadRates {
   try {
-    const v = JSON.parse(localStorage.getItem(RATES_KEY) || 'null');
+    const v = JSON.parse(readPref(RATES_KEY) || 'null');
     if (v && v.wordsPerPage > 0 && v.wordsPerMinute > 0) return { wordsPerPage: v.wordsPerPage, wordsPerMinute: v.wordsPerMinute };
   } catch { /* defaults */ }
   return DEFAULT_RATES;
 }
 export function saveRates(r: ReadRates): void {
-  try { localStorage.setItem(RATES_KEY, JSON.stringify(r)); } catch { /* lasts until reload */ }
+  writePref(RATES_KEY, JSON.stringify(r));
 }
 
 /** "about 12 pages · 48 minutes to read". */

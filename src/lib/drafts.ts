@@ -10,6 +10,7 @@ import { Prose, wordCount } from './prose.js';
 import { makeNote } from './vault-index.ts';
 import { merge3 } from './live.ts';
 import type { FileEntry, Made, NoteRecord, VaultSource } from './types.ts';
+import { PREF, storeOf } from './prefs.ts';
 
 export interface Draft {
   path: string;
@@ -36,10 +37,10 @@ export interface Draft {
   create?: string;
 }
 
-const KEY = 'story-forge.drafts.';
+const KEY = PREF.drafts;
 
 type Store = Storage | null;
-const defaultStore = (): Store => globalThis.localStorage ?? null;
+const defaultStore = (): Store => storeOf();
 
 export function loadDrafts(sourceKey: string, storage: Store = defaultStore()): Record<string, Draft> {
   try {
@@ -355,7 +356,7 @@ export async function flushDrafts(source: VaultSource, sourceKey: string, now: D
   return { saved, error, notice: mergeNotice(mergedIn, clashed) };
 }
 
-const NOTICE = 'story-forge.sync-notice.';
+const NOTICE = PREF.syncNotice;
 
 /** The last merge notice Kyle has not closed yet. */
 export function loadNotice(sourceKey: string, storage: Store = defaultStore()): string | null {

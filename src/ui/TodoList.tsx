@@ -10,6 +10,7 @@ import { href } from '../app/route.ts';
 import { ProposalCard } from './IdeasBoard.tsx';
 import { TodoMap } from './TodoMap.tsx';
 import { CONTEXTS } from '../lib/todomap.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
@@ -113,7 +114,7 @@ function AddTask({ onAdd }: { onAdd: (t: NewTask) => Promise<string | null> }) {
   );
 }
 
-const VIEW_KEY = 'story-forge.todo-view';
+const VIEW_KEY = PREF.todoView;
 
 /** Idea kinds that are notes on written pages rather than story proposals (the old Edit Queue's notes). */
 export const EDIT_KINDS = ['note', 'line', 'scene', 'structure'];
@@ -142,8 +143,8 @@ export function TodoList({ index, waiting, onDecide, onAdd, schema, book, onRewr
     && (!kind || (kind === 'book') === isBookTodo(index, n)));
   const groups = taskGroups(shown);
   const openCount = all.filter((n) => ['open', 'doing'].indexOf(String(n.data.status || 'open')) >= 0).length;
-  const [view, setViewState] = useState<string>(() => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'map'; } catch { return 'map'; } });
-  const setView = (v: string) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* this visit only */ } };
+  const [view, setViewState] = useState<string>(() => { return readPref(VIEW_KEY) === 'list' ? 'list' : 'map'; });
+  const setView = (v: string) => { setViewState(v); writePref(VIEW_KEY, v); };
   const switcher = (
     <div class="tabs view-switch" role="tablist" aria-label="How to show the to-dos">
       {[{ key: 'map', label: 'Map' }, { key: 'list', label: 'List' }].map((t) => (

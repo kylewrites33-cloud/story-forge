@@ -22,6 +22,7 @@ import { nowForNote } from '../lib/codexnow.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { BeatRuler } from './BeatRuler.tsx';
 import { CodexNowBox } from './CodexNow.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 export function Warnings({ list }: { list: string[] }) {
   if (!list.length) return null;
@@ -288,7 +289,7 @@ function GridCover({ source, book }: { source: VaultSource; book: BookEntry }) {
 type GridView = 'cards' | 'outline';
 // Outline first and by default (Kyle, 2026-10-18); a new key so every device starts on Outline once.
 function loadGridView(): GridView {
-  try { return localStorage.getItem('story-forge.grid-view-2') === 'cards' ? 'cards' : 'outline'; } catch { return 'outline'; }
+  return readPref(PREF.gridView) === 'cards' ? 'cards' : 'outline';
 }
 
 const STEP_NAME = { drafting: 'Drafting', revising: 'Revising', finishing: 'Finishing', done: 'Done' };
@@ -501,7 +502,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
           </label>
           <div class="seg small" role="group" aria-label="View as">
             {(['outline', 'cards'] as GridView[]).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); try { localStorage.setItem('story-forge.grid-view-2', v); } catch { /* lasts until reload */ } }}>
+              <button key={v} type="button" aria-pressed={view === v} onClick={() => { setView(v); writePref(PREF.gridView, v); }}>
                 <Icon name={v} size={18} />{v === 'cards' ? 'Cards' : 'Outline'}
               </button>
             ))}
