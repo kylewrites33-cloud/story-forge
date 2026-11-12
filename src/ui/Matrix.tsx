@@ -10,12 +10,13 @@ import { plannedNotNamed } from '../lib/codexnow.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 type Show = 'character' | 'place' | 'other';
 const SHOW: [Show, string][] = [['character', 'Characters'], ['place', 'Places'], ['other', 'Items and lore']];
 
 function loadShow(): Show {
-  try { const v = localStorage.getItem('story-forge.matrix-show'); return v === 'place' || v === 'other' ? v : 'character'; } catch { return 'character'; }
+  const v = readPref(PREF.matrixShow); return v === 'place' || v === 'other' ? v : 'character';
 }
 
 export function MatrixBoard({ schema, index, book }: { schema: Schema; index: VaultIndex; book: BookEntry }) {
@@ -42,7 +43,7 @@ export function MatrixBoard({ schema, index, book }: { schema: Schema; index: Va
       <p class="meta">Every scene of {book.title} down the side, and who appears in it across the top. A full dot means point of view or on the scene's card; a light dot means only named in the text. A red square means on the card of a written scene but never named in its prose. Press a scene to write it, or a name to open its note.</p>
       <div class="seg small" role="group" aria-label="Show">
         {SHOW.map(([k, l]) => (
-          <button key={k} type="button" aria-pressed={show === k} onClick={() => { setShow(k); try { localStorage.setItem('story-forge.matrix-show', k); } catch { /* lasts until reload */ } }}>{l}</button>
+          <button key={k} type="button" aria-pressed={show === k} onClick={() => { setShow(k); writePref(PREF.matrixShow, k); }}>{l}</button>
         ))}
       </div>
       {!scenes.length || !cols.length ? (

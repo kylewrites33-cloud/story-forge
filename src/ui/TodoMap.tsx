@@ -12,14 +12,15 @@ import {
 import type { NoteRecord, VaultIndex } from '../lib/types.ts';
 import type { Choice } from '../vault/choice.ts';
 import { href } from '../app/route.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 type OnDecide = (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 
-const FILTER_KEY = 'story-forge.todo-map-filter';
+const FILTER_KEY = PREF.todoMapFilter;
 
 function loadFilter(): MapFilter {
   try {
-    const f = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
+    const f = JSON.parse(readPref(FILTER_KEY) || '{}');
     return { who: ['kyle', 'team'].indexOf(f.who) >= 0 ? f.who : '', priority: ['need', 'want'].indexOf(f.priority) >= 0 ? f.priority : '' };
   } catch {
     return { who: '', priority: '' };
@@ -27,7 +28,7 @@ function loadFilter(): MapFilter {
 }
 
 function saveFilter(f: MapFilter): void {
-  try { localStorage.setItem(FILTER_KEY, JSON.stringify(f)); } catch { /* this visit only */ }
+  writePref(FILTER_KEY, JSON.stringify(f));
 }
 
 /** One to-do on the map: a Done circle, the title with its marks, and, opened, its details and the other moves. */

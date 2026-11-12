@@ -5,12 +5,13 @@ import { useState } from 'preact/hooks';
 import { beatRuler, placeLabel, RULER_SOURCE, SAVE_THE_CAT, VERDICT_LABEL } from '../lib/beatruler.ts';
 import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
-const KEY = 'story-forge.beat-ruler';
+const KEY = PREF.beatRuler;
 
 export function BeatRuler({ index, book }: { index: VaultIndex; book: BookEntry }) {
-  const [open, setOpenState] = useState(() => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } });
-  const setOpen = (v: boolean) => { setOpenState(v); try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* this visit only */ } };
+  const [open, setOpenState] = useState(() => { return readPref(KEY) === '1'; });
+  const setOpen = (v: boolean) => { setOpenState(v); writePref(KEY, v ? '1' : '0'); };
   if (!book.scenes.length) return null;
   const beats = beatRuler(index, book);
   const off = beats.filter((b) => b.verdict === 'early' || b.verdict === 'late');

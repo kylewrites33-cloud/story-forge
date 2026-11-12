@@ -9,15 +9,16 @@ import type { BookEntry, NoteRecord, Schema, VaultIndex } from '../lib/types.ts'
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneHeads, SeeingHead, WarningList } from './SeeingParts.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
-const MODE_KEY = 'story-forge.plot-grid-mode';
+const MODE_KEY = PREF.plotGridMode;
 
 export function PlotGridBoard({ index, book, onDecide }: {
   schema: Schema; index: VaultIndex; book: BookEntry;
   onDecide?: (path: string, decision: Decision, reason: string, fields?: Record<string, string>) => void;
 }) {
-  const [mode, setModeState] = useState<GridMode>(() => { try { return localStorage.getItem(MODE_KEY) === 'cast' ? 'cast' : 'threads'; } catch { return 'threads'; } });
-  const setMode = (m: GridMode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* this visit only */ } };
+  const [mode, setModeState] = useState<GridMode>(() => { return readPref(MODE_KEY) === 'cast' ? 'cast' : 'threads'; });
+  const setMode = (m: GridMode) => { setModeState(m); writePref(MODE_KEY, m); };
   const [said, setSaid] = useState('');
   const { scenes, rows } = plotGrid(index, book, mode);
   const canPress = mode === 'threads' && Boolean(onDecide);

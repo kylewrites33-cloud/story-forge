@@ -13,16 +13,17 @@ import { Icon } from './Icon.tsx';
 import { when } from './Jobs.tsx';
 import { parseWorkflow, stepsFor } from '../lib/workflow.ts';
 import { href } from '../app/route.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
-const PREFILL = 'sf-chat-prefill';
+const PREFILL = PREF.chatPrefill;
 
 /** Words to start a new conversation with (or, given a thread, the next message in it), set by Talk or "Ask the team
  * about this scene" and taken once by the Chat screen. */
 export function takeChatPrefill(thread = ''): string {
   const key = PREFILL + (thread ? ':' + thread : '');
   try {
-    const v = sessionStorage.getItem(key) || '';
-    sessionStorage.removeItem(key);
+    const v = readPref(key, 'visit') || '';
+    writePref(key, null, 'visit');
     return v;
   } catch { return ''; }
 }
@@ -31,11 +32,11 @@ export function takeChatPrefill(thread = ''): string {
 export function askAboutScene(data: Record<string, unknown>) {
   const id = String(data.id || '');
   const name = [id, String(data.title || '')].filter(Boolean).join(' ');
-  try { if (id) sessionStorage.setItem(PREFILL + ':' + id, 'About ' + name + ': '); } catch { /* the box starts empty */ }
+  try { if (id) writePref(PREFILL + ':' + id, 'About ' + name + ': ', 'visit'); } catch { /* the box starts empty */ }
 }
 
 function talkTo(name: string) {
-  try { sessionStorage.setItem(PREFILL, name + ', '); } catch { /* the conversation starts empty */ }
+  writePref(PREFILL, name + ', ', 'visit');
 }
 
 export function useTeam(index: VaultIndex | null): Team {
@@ -71,7 +72,7 @@ const SORTS: { key: TeamSort; label: string }[] = [
 ];
 
 function loadSort(): TeamSort {
-  try { const v = localStorage.getItem('sf-team-sort'); return v === 'az' || v === 'team' ? v : 'recent'; } catch { return 'recent'; }
+  const v = readPref(PREF.teamSort); return v === 'az' || v === 'team' ? v : 'recent';
 }
 
 /** The whole team as a table: agent, specialty, last used, ideas, kept, lessons and Talk. */
@@ -88,7 +89,7 @@ export function TeamScreen({ source, index, schema, canTalk, extra }: { source: 
   const jobModel = String((index.config || {}).job_model || '');
   const quickModel = String((index.config || {}).job_quick_model || '');
   const wf = useMemo(() => parseWorkflow(team.workflow, team.members.map((m) => m.name)), [team]);
-  const pick = (s: TeamSort) => { setSort(s); try { localStorage.setItem('sf-team-sort', s); } catch { /* per visit only */ } };
+  const pick = (s: TeamSort) => { setSort(s); writePref(PREF.teamSort, s); };
   const rows = sortMembers(team.members, stats, sort);
   return (
     <section class="team-screen">

@@ -23,6 +23,7 @@ import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
 import { ProseEditor } from '../write/ProseEditor.tsx';
 import type { EditorCommands } from '../write/prose.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // While Kyle types without a two-minute pause, the words still go to the vault this often (Kyle, 2026-10-20).
@@ -59,9 +60,9 @@ function start(source: VaultSource, group: ChapterGroup, bookFolder: string, bea
   return { scenes, beatsDraft, intro: introOf(beatsDraft.body), shapes: laid.scenes, beats: laid.beats };
 }
 
-const openKey = (bookFolder: string, chapter: number | null) => 'story-forge.beats-open.' + bookFolder + '#' + chapter;
+const openKey = (bookFolder: string, chapter: number | null) => PREF.beatsOpen + bookFolder + '#' + chapter;
 function loadOpen(key: string): number[] {
-  try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+  try { const v = JSON.parse(readPref(key) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
 /** A text box that grows with its words, for a beat's summary. */
@@ -190,7 +191,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
   };
   const keepOpen = (next: Set<string>, beats = ref.current.beats) => {
     setOpen(next);
-    try { localStorage.setItem(okey, JSON.stringify(beats.map((b, i) => (next.has(b.key) ? i : -1)).filter((i) => i >= 0))); } catch { /* the device would not keep it */ }
+    writePref(okey, JSON.stringify(beats.map((b, i) => (next.has(b.key) ? i : -1)).filter((i) => i >= 0)));
   };
 
   const unsavedAll = (s: State) => Object.values(s.scenes).some(isUnsaved) || isUnsaved(s.beatsDraft);

@@ -1,3 +1,4 @@
+import { PREF, readPref, writePref } from './prefs.ts';
 // Room at the top of the iPad home-screen app. iPadOS lays its clock and battery bar over the app and reports no safe
 // area for it (Kyle's screenshot, 2026-10-20); in split view or a window it puts its window button (•••) on the app's top
 // left corner, again with no safe area (2026-10-22). Neither can be measured, so the app judges from the window's size.
@@ -8,7 +9,7 @@
 
 export type TopRoom = 'auto' | 'room' | 'none';
 
-export const TOP_ROOM_KEY = 'sparrow.top-room';
+export const TOP_ROOM_KEY = PREF.topRoom;
 /** Sent on window when Kyle changes the choice, so the app applies it at once. */
 export const TOP_ROOM_EVENT = 'sparrow-top-room';
 
@@ -41,10 +42,10 @@ export function cleanTopRoom(v: string | null): TopRoom {
 }
 
 export function loadTopRoom(): TopRoom {
-  try { return cleanTopRoom(localStorage.getItem(TOP_ROOM_KEY)); } catch { return 'auto'; }
+  return cleanTopRoom(readPref(TOP_ROOM_KEY));
 }
 
 export function saveTopRoom(c: TopRoom): void {
-  try { localStorage.setItem(TOP_ROOM_KEY, c); } catch { /* lasts until reload */ }
+  writePref(TOP_ROOM_KEY, c);
   window.dispatchEvent(new Event(TOP_ROOM_EVENT));
 }

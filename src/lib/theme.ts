@@ -1,3 +1,4 @@
+import { PREF, readPref, writePref } from './prefs.ts';
 // The app's colours: eight light themes and ten dark ones, or Match this device (Violet by day, Violet Night by night).
 // The colours themselves live in styles.css under [data-theme]; this file names them and remembers the choice per device.
 // Some dark ids are older than their names (midnight is Graphite, ember Warm Clay, forest Claude) so a saved choice still works.
@@ -36,7 +37,7 @@ export const THEMES: Theme[] = [
 /** Match this device: Violet when the device is light, Violet Night when it is dark. */
 export const AUTO = 'auto';
 
-const KEY = 'story-forge.theme';
+const KEY = PREF.theme;
 
 export function themeById(id: string): Theme | undefined {
   return THEMES.find((t) => t.id === id);
@@ -47,7 +48,7 @@ export function cleanTheme(v: unknown): string {
 }
 
 export function loadTheme(): string {
-  try { return cleanTheme(localStorage.getItem(KEY)); } catch { return AUTO; }
+  return cleanTheme(readPref(KEY));
 }
 
 /** The theme that shows for a choice, given whether the device is set to dark. */
@@ -72,7 +73,7 @@ export function applyTheme(choice: string): void {
 
 export function saveTheme(choice: string): void {
   const c = cleanTheme(choice);
-  try { localStorage.setItem(KEY, c); } catch { /* lasts until reload */ }
+  writePref(KEY, c);
   applyTheme(c);
 }
 

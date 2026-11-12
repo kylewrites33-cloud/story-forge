@@ -9,15 +9,16 @@ import { styledHtml } from '../lib/styled.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 /** all: the changes marked on the page Kyle types in. original: the marks hidden, his page alone (Kyle chose this one
  * switch over All changes, Simple, Final and Self-Edit on 2026-11-12, once All changes could be typed in). */
 export type ChangesView = 'all' | 'original';
-const VIEW_KEY = 'story-forge.changes-view';
+const VIEW_KEY = PREF.changesView;
 export function loadView(): ChangesView {
-  try { return localStorage.getItem(VIEW_KEY) === 'original' ? 'original' : 'all'; } catch { return 'all'; }
+  return readPref(VIEW_KEY) === 'original' ? 'original' : 'all';
 }
-export function saveView(v: ChangesView) { try { localStorage.setItem(VIEW_KEY, v); } catch { /* lasts until reload */ } }
+export function saveView(v: ChangesView) { writePref(VIEW_KEY, v); }
 
 /** The bar over the page while the chapter has changes: the four views, where Kyle is and the arrows. Accept all is in
  * the side column with the cards (Kyle, 2026-10-28: "in the right section would be where the accept or accept all buttons would be"). */

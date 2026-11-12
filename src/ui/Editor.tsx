@@ -56,6 +56,7 @@ import {
   AddChapterAtEnd, ArchiveList, BeatsList, CardPanel, CodexCard, CopiesPanel, DeleteAsk, FindBar, MarksPanel, MoveChapter, NotesPanel, offlineError, PagePanel,
   PlanPanel, ScenePanel, SideAddForm, TargetPanel, TeamPanel, TodosPanel
 } from './EditorPanels.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 const QUIET_SAVE_MS = 2 * 60 * 1000;
 // Where to land after the change arrows open another chapter: its first change, or its last when going back.
@@ -74,10 +75,10 @@ const WIDE_LEFT = '(min-width: 900px)';
 const WIDE_RIGHT = '(min-width: 1200px)';
 const wide = (q: string) => typeof matchMedia === 'function' && matchMedia(q).matches;
 function loadSide(key: string, fallback: boolean): boolean {
-  try { const v = localStorage.getItem('story-forge.' + key); return v == null ? fallback : v === 'open'; } catch { return fallback; }
+  const v = readPref(key); return v == null ? fallback : v === 'open';
 }
 function saveSide(key: string, open: boolean) {
-  try { localStorage.setItem('story-forge.' + key, open ? 'open' : 'closed'); } catch { /* lasts until reload */ }
+  writePref(key, open ? 'open' : 'closed');
 }
 type Tab = 'rewrite' | 'changes' | 'flow' | 'chat' | 'plan' | 'scrap' | 'beats' | 'todos' | 'card' | 'notes' | 'marks' | 'copies' | 'target' | 'tools' | 'page' | 'team' | 'check' | 'options';
 const TABS: [Tab, string][] = [['rewrite', 'Rewrite'], ['changes', 'Changes'], ['chat', 'Chat'], ['plan', 'Plan'], ['scrap', 'Scrap'], ['beats', 'Beats'], ['flow', 'Workflow'], ['card', 'Card'], ['todos', 'To-dos'], ['notes', 'Notes'], ['marks', 'Marks'],
@@ -100,9 +101,9 @@ const MORE_GROUPS: [string, [Tab, string, string][]][] = [
   ['Tools', [['check', 'scan', 'Check for AI phrases'], ['page', 'type', 'Page look'], ['notes', 'idea', 'Braindump (whole book)']]],
 ];
 // The right-hand column opens on the tab Kyle used last on this device; the team's chat the first time.
-const TAB_KEY = 'story-forge.panel-tab';
+const TAB_KEY = PREF.panelTab;
 function loadTab(): Tab {
-  try { const t = localStorage.getItem(TAB_KEY) as Tab | null; return t && TABS.some(([k]) => k === t) ? t : 'chat'; } catch { return 'chat'; }
+  try { const t = readPref(TAB_KEY) as Tab | null; return t && TABS.some(([k]) => k === t) ? t : 'chat'; } catch { return 'chat'; }
 }
 
 export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
@@ -211,15 +212,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [chMenu, setChMenu] = useState<string | null>(null);
   const [chAdd, setChAdd] = useState<{ key: string; kind: 'chapter' | 'scene' | 'rename' | 'move' | 'delete' } | null>(null);
   const [naming, setNaming] = useState<string | null>(null);
-  const [toolsOpen, setToolsOpen] = useState(() => { try { return localStorage.getItem('story-forge.side-tools') === '1'; } catch { return false; } });
+  const [toolsOpen, setToolsOpen] = useState(() => { return readPref(PREF.sideTools) === '1'; });
   const namingDone = useRef(false);
   // Chapters whose scenes Kyle asked to see in the list (hold a chapter, Show scenes), kept per book on the device.
-  const shownKey = 'story-forge.shown-scenes.' + (book ? book.folder : '');
-  const [shownScenes, setShownScenes] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(shownKey) || '[]'); } catch { return []; } });
+  const shownKey = PREF.shownScenes + (book ? book.folder : '');
+  const [shownScenes, setShownScenes] = useState<string[]>(() => { try { return JSON.parse(readPref(shownKey) || '[]'); } catch { return []; } });
   const toggleScenes = (k: string) => {
     const next = shownScenes.indexOf(k) >= 0 ? shownScenes.filter((x) => x !== k) : shownScenes.concat(k);
     setShownScenes(next);
-    try { localStorage.setItem(shownKey, JSON.stringify(next)); } catch { /* lasts until reload */ }
+    writePref(shownKey, JSON.stringify(next));
   };
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; x: number; y: number; fired: number }>({ t: null, x: 0, y: 0, fired: 0 });
   const beatsSaver = useRef<((closing: boolean) => Promise<boolean>) | null>(null);
@@ -236,11 +237,11 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const [message, setMessage] = useState<string | null>(null);
   // Between 900 and 1200 px the chapter list and the right-hand column share the room beside the page: the right one
   // (the team's chat) wins when both were open.
-  const left0 = () => wide(WIDE_LEFT) && loadSide('chapters', true) && (wide(WIDE_RIGHT) || !loadSide('scene-panel', true));
+  const left0 = () => wide(WIDE_LEFT) && loadSide(PREF.sideChapters, true) && (wide(WIDE_RIGHT) || !loadSide(PREF.sidePanel, true));
   const [left, setLeft] = useState(left0);
-  const [right, setRight] = useState(() => (wide(WIDE_RIGHT) || (wide(WIDE_LEFT) && !left0())) && loadSide('scene-panel', true));
+  const [right, setRight] = useState(() => (wide(WIDE_RIGHT) || (wide(WIDE_LEFT) && !left0())) && loadSide(PREF.sidePanel, true));
   const [tab, setTabState] = useState<Tab>(loadTab);
-  const setTab = (t: Tab) => { setTabState(t); setMoreList(false); try { localStorage.setItem(TAB_KEY, t); } catch { /* lasts until reload */ } };
+  const setTab = (t: Tab) => { setTabState(t); setMoreList(false); writePref(TAB_KEY, t); };
   // The More list fills the column in place of the open tab until one is picked or More is pressed again.
   const [moreList, setMoreList] = useState(false);
   // The right-hand column opens at its top, and every tab or the More list starts at the top too (Kyle, 2026-10-23:
@@ -576,20 +577,20 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
 
   // Between 900 and 1200 px only one side fits beside the page, so opening one closes the other.
   const shared = () => wide(WIDE_LEFT) && !wide(WIDE_RIGHT);
-  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide('chapters', v); if (v && right && shared()) setRight(false); };
-  const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide('scene-panel', v); if (v && left && shared()) setLeft(false); };
+  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide(PREF.sideChapters, v); if (v && right && shared()) setRight(false); };
+  const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide(PREF.sidePanel, v); if (v && left && shared()) setLeft(false); };
   const toggleRight = () => showRight(!right);
   // The chapter list keeps where Kyle left it scrolled, per book, across scenes and visits to other screens (Kyle,
   // 2026-10-22: "rather than moving the left side chapter bar as i select through ... simply remember its position when
   // i leave and re-enter"). Only the very first time, with nothing remembered, does it open at the chapter he is in.
   const sideRef = useRef<HTMLElement | null>(null);
   const sideShown = Boolean(book && left && !focus);
-  const sideKey = 'story-forge.chapter-list-scroll.' + (book ? book.folder : '');
+  const sideKey = PREF.chapterListScroll + (book ? book.folder : '');
   useLayoutEffect(() => {
     const side = sideRef.current;
     if (!sideShown || !side) return;
     let saved: number | null = null;
-    try { const v = localStorage.getItem(sideKey); saved = v == null ? null : Number(v); } catch { /* no storage: open at the chapter */ }
+    try { const v = readPref(sideKey); saved = v == null ? null : Number(v); } catch { /* no storage: open at the chapter */ }
     if (saved != null && isFinite(saved)) { side.scrollTop = saved; }
     else {
       const here = side.querySelector<HTMLElement>('.side-scene[aria-current="page"]');
@@ -599,7 +600,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         side.scrollTop = Math.max(0, top - side.clientHeight / 4);
       }
     }
-    const keep = () => { try { localStorage.setItem(sideKey, String(Math.round(side.scrollTop))); } catch { /* lasts until reload */ } };
+    const keep = () => { writePref(sideKey, String(Math.round(side.scrollTop))); };
     side.addEventListener('scroll', keep, { passive: true });
     return () => side.removeEventListener('scroll', keep);
   }, [sideShown, sideKey]);
@@ -899,13 +900,13 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // ---- Saved drafts (Kyle, 2026-10-24: "i see value in at least labeling and keeping draft 1 accessible") ----
   const savedList = drafts ? drafts.saved : [];
   const working = workingNumber(savedList);
-  const viewKey = 'story-forge.draft-view.' + (bookFolder || '');
-  const [draftView, setDraftViewState] = useState<number | null>(() => { try { const v = Number(sessionStorage.getItem(viewKey)); return v > 0 ? v : null; } catch { return null; } });
+  const viewKey = PREF.draftView + (bookFolder || '');
+  const [draftView, setDraftViewState] = useState<number | null>(() => { const v = Number(readPref(viewKey, 'visit')); return v > 0 ? v : null; });
   const setDraftView = async (n: number | null) => {
     // Leaving the working draft on screen: its words reach the vault first, as on any other page.
     if (n != null && draftView == null) { if (quiet.current) clearTimeout(quiet.current); await save(false); }
     setDraftViewState(n);
-    try { if (n == null) sessionStorage.removeItem(viewKey); else sessionStorage.setItem(viewKey, String(n)); } catch { /* lasts until reload */ }
+    try { if (n == null) writePref(viewKey, null, 'visit'); else writePref(viewKey, String(n), 'visit'); } catch { /* lasts until reload */ }
   };
   const shownDraft = draftView != null && savedList.some((d) => d.number === draftView) ? draftView : null;
   const [oldText, setOldText] = useState<{ key: string; text: string | null; error?: string } | null>(null);
@@ -1137,9 +1138,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // The first time a scene with a rewrite opens on this device, the column opens on it (Kyle: "at all times").
   useEffect(() => {
     if (!hasRewrite || !bookFolder) return;
-    const k = 'story-forge.rewrite-opened.' + bookFolder;
+    const k = PREF.rewriteOpened + bookFolder;
     let seen = false;
-    try { seen = sessionStorage.getItem(k) === '1'; sessionStorage.setItem(k, '1'); } catch { /* opens once per load */ }
+    try { seen = readPref(k, 'visit') === '1'; writePref(k, '1', 'visit'); } catch { /* opens once per load */ }
     if (!seen && tab !== 'rewrite') openTab('rewrite');
   }, [hasRewrite, bookFolder]);
   const nextOpen = (after: string | null) => {
@@ -1601,7 +1602,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             {/* The boards and the archive stay folded behind one button, so the column is only chapters (Kyle,
                 2026-10-22: "i dont anticipate using those frequently and would prefer them not to take visual space"). */}
             <div class="side-tools">
-              <button type="button" class="side-tools-toggle" aria-expanded={toolsOpen} onClick={() => { const v = !toolsOpen; setToolsOpen(v); try { localStorage.setItem('story-forge.side-tools', v ? '1' : ''); } catch { /* lasts until reload */ } }}>
+              <button type="button" class="side-tools-toggle" aria-expanded={toolsOpen} onClick={() => { const v = !toolsOpen; setToolsOpen(v); writePref(PREF.sideTools, v ? '1' : ''); }}>
                 <Icon name="grid" size={18} />Book tools<Icon name={toolsOpen ? 'up' : 'down'} size={16} />
               </button>
               {toolsOpen && (

@@ -5,15 +5,16 @@ import { sameSlot, type Choice } from './choice.ts';
 import { isMaker } from './makers.ts';
 import { choiceAction, marksAction, type Action, type Op } from './ops.ts';
 import { validChange } from './text.ts';
+import { PREF, storeOf } from '../lib/prefs.ts';
 
-const KEY = 'story-forge.outbox.';
-const LANDED = 'story-forge.landed.';
+const KEY = PREF.outbox;
+const LANDED = PREF.landed;
 /** Where choices waited before the outbox (until 2026-11-11). Read once to move them over; a device that has not opened
  * the app since then may still hold some. */
-const OLD_QUEUE = 'story-forge.queue.';
+const OLD_QUEUE = PREF.oldQueue;
 
 type Store = Storage | null;
-const store = (): Store => globalThis.localStorage ?? null;
+const store = (): Store => storeOf();
 
 function validOp(op: Op): boolean {
   if (!op || typeof op.path !== 'string') return false;

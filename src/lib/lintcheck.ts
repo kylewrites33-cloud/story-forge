@@ -5,6 +5,7 @@
 import { Lint, type LintIssue, type LintOptions, type LintStats } from './lint.js';
 import { Prose } from './prose.js';
 import { nameList, toNumber } from './links.ts';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 /** A flag with where its words are on the page (`from`, `to`) and which paragraph and line of the page it is in. */
 export interface CheckIssue extends LintIssue { from: number; to: number; para: number; line: number }
@@ -96,10 +97,10 @@ export function sevWord(sev: number): string {
 }
 
 // Whether flags are drawn on the page (on unless Kyle turned it off on this device).
-const SHOW = 'story-forge.check-show';
+const SHOW = PREF.checkShow;
 export function loadShowFlags(): boolean {
-  try { return localStorage.getItem(SHOW) !== 'off'; } catch { return true; }
+  return readPref(SHOW) !== 'off';
 }
 export function saveShowFlags(on: boolean) {
-  try { if (on) localStorage.removeItem(SHOW); else localStorage.setItem(SHOW, 'off'); } catch { /* lasts until reload */ }
+  try { if (on) writePref(SHOW, null); else writePref(SHOW, 'off'); } catch { /* lasts until reload */ }
 }

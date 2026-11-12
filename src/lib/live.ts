@@ -1,3 +1,4 @@
+import { PREF, readPref, writePref } from './prefs.ts';
 // The open page stays live (Kyle, 2026-10-18: "push it to the doc (assuming i dont need to refresh the page each
 // time)"). When a scene changes somewhere else while Kyle has it open (a Claude session put a paragraph in, another
 // device saved), its lines are merged into his page: lines only the other side changed come in, lines only he changed
@@ -139,21 +140,21 @@ export function mapFor(before: string, after: string): (n: number) => number {
 
 // ---- The dots: lines the team or another place added, until Kyle clicks into them (this device only) ----
 
-const DOTS = 'story-forge.added.';
+const DOTS = PREF.dots;
 const MAX_DOTS = 200;
 
 export function loadDots(sourceKey: string, path: string): string[] {
   try {
-    const all = JSON.parse(localStorage.getItem(DOTS + sourceKey) || '{}');
+    const all = JSON.parse(readPref(DOTS + sourceKey) || '{}');
     return Array.isArray(all[path]) ? all[path].filter((x: unknown) => typeof x === 'string') : [];
   } catch { return []; }
 }
 
 export function saveDots(sourceKey: string, path: string, lines: string[]) {
   try {
-    const all = JSON.parse(localStorage.getItem(DOTS + sourceKey) || '{}');
+    const all = JSON.parse(readPref(DOTS + sourceKey) || '{}');
     if (lines.length) all[path] = lines.slice(-MAX_DOTS); else delete all[path];
-    localStorage.setItem(DOTS + sourceKey, JSON.stringify(all));
+    writePref(DOTS + sourceKey, JSON.stringify(all));
   } catch { /* the dots last until the page reloads */ }
 }
 

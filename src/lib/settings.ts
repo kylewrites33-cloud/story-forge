@@ -1,5 +1,6 @@
 // Connection settings. They live in this browser's localStorage and nowhere else; the token never leaves the browser
 // except in requests to api.github.com.
+import { PREF, storeOf } from './prefs.ts';
 
 export interface Settings {
   owner: string;
@@ -12,9 +13,9 @@ export interface Settings {
 
 export const DEFAULTS: Settings = { owner: 'kylewrites33-cloud', repo: 'author-business', branch: 'main', root: '', token: '' };
 
-const KEY = 'story-forge.settings';
+const KEY = PREF.settings;
 
-export function loadSettings(storage: Storage | null = globalThis.localStorage ?? null): Settings {
+export function loadSettings(storage: Storage | null = storeOf()): Settings {
   try {
     const raw = storage && storage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
@@ -24,7 +25,7 @@ export function loadSettings(storage: Storage | null = globalThis.localStorage ?
   }
 }
 
-export function saveSettings(s: Settings, storage: Storage | null = globalThis.localStorage ?? null): Settings {
+export function saveSettings(s: Settings, storage: Storage | null = storeOf()): Settings {
   const clean = normalise(s);
   if (storage) storage.setItem(KEY, JSON.stringify(clean));
   return clean;

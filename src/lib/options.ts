@@ -5,6 +5,7 @@
 // of the scene and swaps the passage for the option, only where the passage still is, word for word.
 import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
+import { PREF, readPref } from './prefs.ts';
 
 export type OptionMode = 'expand' | 'describe' | 'tighten' | 'voice';
 
@@ -157,8 +158,8 @@ export function optionsState(j: NoteRecord): 'waiting' | 'ready' | 'failed' {
 }
 
 // Options jobs Kyle has dealt with on this device (picked one, or put them away), so they stop showing.
-const DONE = 'story-forge.options-done.';
+const DONE = PREF.optionsDoneOld;
 
 export function loadOptionsDone(sourceKey: string): Set<string> {
-  try { const v = JSON.parse(localStorage.getItem(DONE + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
+  try { const v = JSON.parse(readPref(DONE + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
 }

@@ -8,6 +8,7 @@
 // each ask a bracket.
 import { askBody, resultBody, type NewJob } from './jobs.ts';
 import type { NoteRecord } from './types.ts';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 export interface Bracket {
   /** The marker exactly as on the page, braces included. */
@@ -206,19 +207,19 @@ export function askingKeys(jobs: NoteRecord[]): Set<string> {
 }
 
 // Answers already put into the page on this device (job ID and bracket name), so Undo never brings one back twice.
-const FILLED = 'story-forge.filled.';
+const FILLED = PREF.filledOld;
 
 export function loadFilled(sourceKey: string): Set<string> {
-  try { const v = JSON.parse(localStorage.getItem(FILLED + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
+  try { const v = JSON.parse(readPref(FILLED + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
 }
 
 // Fill brackets on their own: after a closed bracket has sat for a while, the app sends it without being asked (per device).
-const AUTO = 'story-forge.fill-auto';
+const AUTO = PREF.fillAuto;
 
 export function loadAutoFill(): boolean {
-  try { return localStorage.getItem(AUTO) === 'on'; } catch { return false; }
+  return readPref(AUTO) === 'on';
 }
 
 export function saveAutoFill(on: boolean) {
-  try { if (on) localStorage.setItem(AUTO, 'on'); else localStorage.removeItem(AUTO); } catch { /* lasts until reload */ }
+  try { if (on) writePref(AUTO, 'on'); else writePref(AUTO, null); } catch { /* lasts until reload */ }
 }

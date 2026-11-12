@@ -10,6 +10,7 @@ import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SeeingHead } from './SeeingParts.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
 const tenseWord = (t: number | null) => (t == null ? 'not said' : t >= 8 ? 'hostile' : t >= 5 ? 'tense' : t >= 3 ? 'uneasy' : 'calm');
 const scenesWord = (n: number) => (n === 1 ? '1 scene' : n + ' scenes');
@@ -17,19 +18,19 @@ const initials = (s: string) => s.replace(/^the\s+/i, '').split(/\s+/).filter(Bo
 const short = (s: string) => (s.length > 20 ? s.slice(0, 19) + '…' : s);
 
 function storedFocus(key: string): string {
-  try { return localStorage.getItem(key) || ''; } catch { return ''; }
+  return readPref(key) || '';
 }
 
 export function CastWebBoard({ index, book }: { index: VaultIndex; book: BookEntry }) {
   const web = castWeb(index, book);
   const { nodes, edges } = web;
-  const key = 'sf-castweb-focus:' + book.folder;
+  const key = PREF.castWebFocus + book.folder;
   const [name, setName] = useState(() => storedFocus(key));
   const found = nodes.findIndex((n) => n.name === name);
   const focus = found >= 0 ? found : defaultFocus(web);
   const pick = (i: number) => {
     setName(nodes[i].name);
-    try { localStorage.setItem(key, nodes[i].name); } catch { /* this visit only */ }
+    writePref(key, nodes[i].name);
   };
   const ties = (i: number) => edges.filter((e) => e.a === i || e.b === i).length;
   const order = nodes.map((_, i) => i).sort((x, y) => nodes[y].scenes - nodes[x].scenes || nodes[x].name.localeCompare(nodes[y].name));

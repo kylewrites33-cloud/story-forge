@@ -5,6 +5,7 @@
 // cancelling the sentence and Resume reads it again from its start: the browsers' own pause is unreliable.
 import { readingMap } from './lintcheck.ts';
 import { Prose } from './prose.js';
+import { PREF, readPref, writePref } from './prefs.ts';
 
 /** One piece to say: the words, where they are on the page, and which scene of the page (Whole chapter) they are in. */
 export interface SpeechItem { say: string; start: number; end: number; part: number }
@@ -168,16 +169,16 @@ export function voiceChoices(voices: { voiceURI: string; name: string; lang: str
 export const RATES: [number, string][] = [[0.8, 'Slow'], [1, 'Normal'], [1.2, 'Brisk'], [1.4, 'Fast'], [1.7, 'Faster']];
 
 // Speed and voice stay on this device: the iPad and the computer have different voices.
-const PREFS = 'story-forge.listen';
+const PREFS = PREF.listen;
 
 export function loadListenPrefs(): { rate: number; voice: string } {
   try {
-    const v = JSON.parse(localStorage.getItem(PREFS) || '{}');
+    const v = JSON.parse(readPref(PREFS) || '{}');
     const rate = typeof v.rate === 'number' && v.rate >= 0.5 && v.rate <= 2 ? v.rate : 1;
     return { rate, voice: typeof v.voice === 'string' ? v.voice : '' };
   } catch { return { rate: 1, voice: '' }; }
 }
 
 export function saveListenPrefs(p: { rate: number; voice: string }) {
-  try { localStorage.setItem(PREFS, JSON.stringify(p)); } catch { /* lasts until reload */ }
+  writePref(PREFS, JSON.stringify(p));
 }

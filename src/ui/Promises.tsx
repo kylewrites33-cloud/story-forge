@@ -7,17 +7,18 @@ import type { BookEntry, VaultIndex } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { EmptyBox } from './screens.tsx';
 import { SceneHeads, SeeingHead, WarningList } from './SeeingParts.tsx';
+import { PREF, readPref, writePref } from '../lib/prefs.ts';
 
-const SHOW_KEY = 'story-forge.promises-settled';
+const SHOW_KEY = PREF.promisesSettled;
 const WORD: Record<PromiseMark, string> = { planted: 'Planted', reinforced: 'Reinforced', paid: 'Paid off' };
 
 export function PromisesBoard({ index, book }: { index: VaultIndex; book: BookEntry }) {
-  const [showSettled, setShowSettled] = useState(() => { try { return localStorage.getItem(SHOW_KEY) === '1'; } catch { return false; } });
+  const [showSettled, setShowSettled] = useState(() => { return readPref(SHOW_KEY) === '1'; });
   const { scenes, lanes } = promiseLanes(index, book);
   const settled = lanes.filter((l) => !l.open);
   const shown = lanes.filter((l) => l.open || showSettled);
   const fifth = scenes.length ? lastFifthStart(scenes.length) : 0;
-  const toggle = () => { const v = !showSettled; setShowSettled(v); try { localStorage.setItem(SHOW_KEY, v ? '1' : '0'); } catch { /* this visit only */ } };
+  const toggle = () => { const v = !showSettled; setShowSettled(v); writePref(SHOW_KEY, v ? '1' : '0'); };
 
   return (
     <section class="seeing">
