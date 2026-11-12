@@ -24,7 +24,8 @@ import { askBody, defaultJobTitle, jobAsk, resultBody, type OnJob } from '../lib
 import { passageFor, passageMessage, type PassageTool } from '../lib/chat.ts';
 import { SceneChat, type OnChat } from './Chat.tsx';
 import type { Conversation } from '../lib/chat.ts';
-import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, saveFilled, type Bracket } from '../lib/brackets.ts';
+import { fromOldWay, isTaken, takenNames, type OnTake, type Take } from '../team/asks.ts';
+import { answeredKeys, askingKeys, askItems, bracketKey, fillAnswers, fillJob, findBrackets, isOpenJob, loadAutoFill, loadFilled, placeAnswer, saveAutoFill, type Bracket } from '../lib/brackets.ts';
 import { lineAt, loadDots, mapFor, merge3, saveDots, takeFresh } from '../lib/live.ts';
 import { chapterTodos, isOpen, type NewTodo } from '../lib/todos.ts';
 import { trackWords, wordsNotTyped } from '../lib/pomodoro.ts';
@@ -108,7 +109,7 @@ export interface EditorBook { title: string; folder: string; groups: ChapterGrou
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onRestore, onNotes, onFiles, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
+export function Editor({ source, schema, note, next, prev, nextMentions, book, backTo, onSaved, onChanged, onAdd, onAddChapter, onRenameChapter, onMoveChapter, onDeleteScenes, onRestore, onNotes, onFiles, onTake, onJob, onChat, codex, codexNow, braindump, sceneNotes, todos, onTodo, onMarks, onAddTodo, waiting, timer, fillJobs, convo, plan, scrap, beats, chapterBeats, optionJobs, checkOpts, recipes = [], flow, changes, drafts, rewrite = null }: {
   source: VaultSource; schema: Schema; note: NoteRecord;
   /** The scene after this one in reading order, for Join, and the book's notes that name it. */
   next: NoteRecord | null;
@@ -140,6 +141,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   onFiles: (files: DeviceFile[]) => Promise<void>;
   /** Ask the team for a job on this scene, its chapter or the book. */
   onJob?: OnJob;
+  /** Answers of the team's that the page has used (a brace answer put in, options picked or put away). */
+  onTake?: OnTake;
   /** Send a message to the team in this scene's conversation (the toolbar's Rewrite, Describe, Brainstorm, Write on). */
   onChat?: OnChat;
   /** The book's characters, places, items and lore, whose names light up in the text. */
@@ -258,7 +261,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   };
   const dotSet = useMemo(() => new Set(dots), [dots]);
   const fills = fillJobs || [];
-  const fillKey = fills.map((j) => j.path + '@' + j.sha).join(';');
+  const fillKey = fills.map((j) => j.path + '@' + j.sha + '@' + takenNames(j).join(',')).join(';');
   const asking = useMemo(() => askingKeys(fills), [fillKey]);
   const answered = useMemo(() => answeredKeys(fills), [fillKey]);
   const askingMarkers = useMemo(() => {
@@ -636,8 +639,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     setFilling({ busy: false, error: r.error, text: r.error ? r.text : 'The team is filling ' + (list.length === 1 ? '1 ask' : list.length + ' asks') + '. Keep writing: the words appear by each one, with a dot beside them. Your braces stay until you delete them.' });
   };
 
-  // The team's answers: put each one into the page once, where its braces are now.
-  const filled = useRef<Set<string>>(loadFilled(source.key));
+  // The team's answers: put each one into the page once, where its braces are now. "Used" is written on the job note
+  // in the vault (src/team/asks.ts), so another device never puts the same answer in again.
+  const tookNow = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (beatsMode) return;
     const start = pageText();
@@ -645,32 +649,36 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     const maps: ((n: number) => number)[] = [];
     const added: string[] = [];
     const lost: { key: string; marker: string; answer: string }[] = [];
-    let any = false;
+    const takes: Take[] = [];
+    // The move from the older way: answers this device had already used, kept in a list of its own.
+    const before = loadFilled(source.key);
     fills.forEach((j) => {
       if (String(j.data.status || '') !== 'done') return;
       const answers = fillAnswers(resultBody(j.body));
-      // An answer from long ago that is no longer needed here was used on another device: say nothing about it.
-      const old = Date.now() - Date.parse(String(j.data.finished || j.data.created || '')) > 3 * 60 * 60 * 1000;
+      const names: string[] = [];
       askItems(askBody(j.body)).forEach((it) => {
         const key = String(j.data.id || j.path) + ':' + it.name;
         const answer = answers[it.name];
-        if (!answer || filled.current.has(key)) return;
-        filled.current.add(key);
-        any = true;
+        if (!answer || isTaken(j, it.name) || tookNow.current.has(key)) return;
+        tookNow.current.add(key);
+        names.push(it.name);
+        // Used under the older way (on this device, or long enough ago to have been used on the other): only say so.
+        if (fromOldWay(j) && (before.has(key) || Date.now() - Date.parse(String(j.data.finished || j.data.created || '')) > 3 * 60 * 60 * 1000)) return;
         const r = placeAnswer(cur, it, answer);
-        if (!r) { if (!old && cur.indexOf(answer.trim().slice(0, 40)) < 0) lost.push({ key, marker: it.marker, answer }); return; }
+        if (!r) { if (cur.indexOf(answer.trim().slice(0, 40)) < 0) lost.push({ key, marker: it.marker, answer }); return; }
         cur = r.text;
         maps.push(r.map);
         // What to look for afterwards: a later answer on the same line changes that line again.
         answer.split('\n').map((l) => l.trim()).filter(Boolean).forEach((l) => added.push(l.slice(0, 60)));
       });
+      if (names.length) takes.push({ path: j.path, names });
     });
-    if (!any) return;
-    saveFilled(source.key, filled.current);
+    if (!takes.length) return;
     if (cur !== start) {
       applyText(cur, (n) => maps.reduce((x, f) => f(x), n));
       addDots(cur.split('\n').filter((l) => l.trim() && added.some((a) => l.indexOf(a) >= 0)));
     }
+    if (onTake) onTake(takes);
     if (lost.length) setUnplaced((u) => u.concat(lost));
   }, [fillKey]);
 
@@ -732,7 +740,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     return s && s.end > s.start ? { part: 0, at: s.start } : null;
   });
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const opt = usePassageOptions({ source, note, bookFolder, onJob, jobs: optionJobs || [], canSave, addDots,
+  const opt = usePassageOptions({ source, note, bookFolder, onJob, onTake, jobs: optionJobs || [], canSave, addDots,
     selection: () => { const c = cmd(); return c ? c.selection() : null; }, pageText, body: () => draftRef.current.body, apply: applyText });
 
   // The ••• menu in the bar, the menu over picked words, and the format row above the iPad's keyboard (design review, 2026-10-22).

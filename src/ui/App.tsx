@@ -10,6 +10,7 @@ import type { Decision } from '../lib/ideas.ts';
 import { rocketFile, rocketProblem } from '../lib/market.ts';
 import type { NewTask } from '../lib/tasks.ts';
 import { type NewTodo } from '../lib/todos.ts';
+import type { Take } from '../team/asks.ts';
 import { defaultJobTitle, jobLabel, jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { orderBetween, safeTitle } from '../lib/scenes.ts';
 import { chapterTitleEdits } from '../lib/chapters.ts';
@@ -584,6 +585,15 @@ export function App() {
     runFlush();
   }, [setOutbox, runFlush]);
 
+  /** Answers of the team's that a page has used (src/team/asks.ts): marked on their job notes as one save, shown at
+   * once, waiting with everything else when there is no connection. */
+  const onTake = useCallback((takes: Take[]) => {
+    const list = takes.filter((t) => t.names.length);
+    if (!list.length) return;
+    setOutbox(add(outboxRef.current, textAction(list.map((t) => ({ path: t.path, change: { what: 'taken' as const, names: t.names } })))));
+    runFlush();
+  }, [setOutbox, runFlush]);
+
   /** Done with this chapter in the Rewrite tab (Kyle, 2026-11-05): the book note marks the chapter through; when the last
    * rewritten chapter is through, Draft 2 is saved by itself and the pages go on as draft 3. */
   const onRewriteThrough = useCallback(async (book: BookEntry, chapter: number, done: boolean): Promise<string | null> => {
@@ -777,7 +787,7 @@ export function App() {
   // What the pages are handed: the vault as shown, and the things a page can ask the app to do (`src/app/screens.tsx`).
   const acts: Actions = {
     onDecide, onMarks, onJob, onChat, onAddScene, onAddMany, onAddChapter, onMove, onMoveChapter, onDeleteScenes, onRename, onRenameChapter, onRestore,
-    onImport, onAddRocket, onCover, onFiles, onWords, onTitles, onRewrite, onRewriteThrough, onAddTask, onAddTodo, onAddNote, onAddRecipe, onSaveRecipe,
+    onImport, onAddRocket, onCover, onFiles, onWords, onTitles, onRewrite, onRewriteThrough, onTake, onAddTask, onAddTodo, onAddNote, onAddRecipe, onSaveRecipe,
     onWorkflowNote, onResults, onCreateSeries, onCreateBook, onLog, saveDraft, runSync, onSave, onForget,
     foldNotes: (saved) => foldNotes(saved),
     noteOpened: (path) => { if (lastOpened.current !== path) { lastOpened.current = path; noteRecent(source.key, path); } }

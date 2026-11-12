@@ -1,18 +1,19 @@
 // Options for a passage, in the writing screen: the strip under the tool row where Kyle chooses Expand, Describe, Tighten
 // or More like my voice for the words he picked (or the paragraph at the cursor), and the Options tab beside the page
 // where the team's two or three versions wait until he picks one. Nothing on the page changes before he does.
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { resultBody, type OnJob } from '../lib/jobs.ts';
 import { saveSnapshot } from '../vault/words.ts';
 import {
-  askedPassage, loadOptionsDone, modeLabel, OPTION_MODES, optionAnswers, optionsJob, optionsState, passageAt, saveOptionsDone, swapIn, type OptionMode
+  askedPassage, loadOptionsDone, modeLabel, OPTION_MODES, optionAnswers, optionsJob, optionsState, passageAt, swapIn, type OptionMode
 } from '../lib/options.ts';
 import type { NoteRecord, VaultSource } from '../lib/types.ts';
+import { isTaken, waiting, WHOLE, type OnTake } from '../team/asks.ts';
 import { Icon } from './Icon.tsx';
 
 /** Everything the writing screen needs for options: asking, the jobs still to deal with, and picking one. */
-export function usePassageOptions({ source, note, bookFolder, onJob, jobs, selection, pageText, body, apply, addDots, canSave }: {
-  source: VaultSource; note: NoteRecord; bookFolder: string | null; onJob?: OnJob; jobs: NoteRecord[];
+export function usePassageOptions({ source, note, bookFolder, onJob, onTake, jobs, selection, pageText, body, apply, addDots, canSave }: {
+  source: VaultSource; note: NoteRecord; bookFolder: string | null; onJob?: OnJob; onTake?: OnTake; jobs: NoteRecord[];
   /** Where the words picked (or the cursor) are in the page, or null. */
   selection: () => { start: number; end: number } | null;
   pageText: () => string;
@@ -24,13 +25,24 @@ export function usePassageOptions({ source, note, bookFolder, onJob, jobs, selec
 }) {
   const [busy, setBusy] = useState<OptionMode | ''>('');
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
-  const [done, setDone] = useState(() => loadOptionsDone(source.key));
+  // Options Kyle has dealt with (picked one, or put them away) stop showing. That is written on the job note in the
+  // vault (src/team/asks.ts), so they stop showing on his other device too; `put` covers the moment before it shows.
+  const [put, setPut] = useState<string[]>([]);
+  const idOf = (j: NoteRecord) => String(j.data.id || j.path);
+  const done = new Set(jobs.filter((j) => isTaken(j)).map(idOf).concat(put));
   const markDone = (j: NoteRecord) => {
-    const next = new Set(done);
-    next.add(String(j.data.id || j.path));
-    saveOptionsDone(source.key, next);
-    setDone(next);
+    setPut((p) => p.concat(idOf(j)));
+    if (onTake) onTake([{ path: j.path, names: [WHOLE] }]);
   };
+  // The move from the older way: options this device had put away, kept in a list of its own.
+  const jobsKey = jobs.map(idOf).join(';');
+  useEffect(() => {
+    const before = loadOptionsDone(source.key);
+    const old = jobs.filter((j) => before.has(idOf(j)) && !isTaken(j) && !waiting(j));
+    if (!old.length) return;
+    setPut((p) => p.concat(old.map(idOf)));
+    if (onTake) onTake(old.map((j) => ({ path: j.path, names: [WHOLE] })));
+  }, [jobsKey]);
   const ask = async (mode: OptionMode): Promise<boolean> => {
     const id = String(note.data.id || '');
     if (!onJob || !id || !bookFolder) { setSaid({ error: true, text: 'Asking the team needs your own vault, not the demo.' }); return false; }
@@ -66,9 +78,9 @@ export function usePassageOptions({ source, note, bookFolder, onJob, jobs, selec
     apply(before.replace(/\s*$/, '') + '\n\n' + add, (n) => n);
     addDots(add.split('\n').filter((l) => l.trim()));
   };
-  const ready = jobs.filter((j) => !done.has(String(j.data.id || j.path)) && optionsState(j) === 'ready').length;
-  const waiting = jobs.filter((j) => !done.has(String(j.data.id || j.path)) && optionsState(j) === 'waiting').length;
-  return { busy, said, setSaid, ask, pick, end, done, markDone, ready, waiting };
+  const ready = jobs.filter((j) => !done.has(idOf(j)) && optionsState(j) === 'ready').length;
+  const open = jobs.filter((j) => !done.has(idOf(j)) && optionsState(j) === 'waiting').length;
+  return { busy, said, setSaid, ask, pick, end, done, markDone, ready, waiting: open };
 }
 
 const short = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s);

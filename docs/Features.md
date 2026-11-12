@@ -1696,3 +1696,27 @@ tell you.").
   replace, codex names, Check's marks, the picked-words menu, Bring over and Undo, the chapter page, and the Markdown
   that reaches the vault. What only Kyle's iPad can say: the on-screen keyboard, autocorrect, dictation and the
   selection handles on his real page. Not covered by a check: Listen's light (no speech in a test browser).
+
+
+## One way to ask the team (step 4 of the code structure redesign, from 2026-11-12)
+
+Kyle, 2026-11-12, in the project chat: "can i start stage 4 of app design while the prospective draft 3 work is being
+done?", then "go". The plan is in the vault's `Docs/Sparrow/20 Code Structure Redesign.md`; this section grows as each
+piece goes live.
+
+- **An answer used on one device is used on the other (2026-11-12, first piece).** When the app puts a brace answer
+  into the page, or Kyle picks one of the team's options or puts them away, the job note in the vault gets a `taken`
+  line (`taken: [B1]` for a brace, `taken: [all]` for the whole ask). It goes up through the saving system like every
+  other change (`taken` in `src/vault/text.ts`, `onTake` in `src/ui/App.tsx`), shows at once and waits with no
+  connection. Every device reads it (`src/team/asks.ts`: `isTaken`, `askState`), so the desktop no longer puts in an
+  answer the iPad already used. Before, each device kept its own list (`story-forge.filled.`,
+  `story-forge.options-done.`) and guessed about the other: an answer over three hours old was taken as used elsewhere.
+- **The move from the older way.** Asks the team finished before 13:00 UTC on 2026-11-12 (`fromOldWay`) are still told
+  from the device's own list and the three-hour rule, once, and then marked `taken` in the vault. That code and the two
+  lists can be removed once both of Kyle's devices have opened the app after this went live.
+- **Not changed:** how an ask is sent, what the team writes, where an answer lands in the page, the note the page shows
+  when a brace is gone and its answer has nowhere to go.
+- **Checked** with two browsers that share nothing, on one pretend GitHub (`taken.mjs` in the project files'
+  `app/saving-checks/`): the team's answer comes into the iPad's page once and the job note says `taken: [B1]`, the
+  rest of the note untouched, saved as Kyle's; the desktop does not put it in a second time, and gets it with the scene
+  when the iPad saves; options put away on the iPad are away on the desktop at its next look at the vault.

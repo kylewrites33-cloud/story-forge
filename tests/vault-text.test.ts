@@ -57,6 +57,8 @@ const CHANGES: [string, TextChange][] = [
   [TITLES, { what: 'title-own', chapter: 2, title: 'Low Water' }],
   [BOOKNOTE, { what: 'through', chapter: 2, done: true }],
   [BOOKNOTE, { what: 'through', chapter: 2, done: false }],
+  ['Jobs/J-021 Options for S-001 More like my voice.md', { what: 'taken', names: ['all'] }],
+  ['Jobs/J-001 Check S-001 for AI-sounding phrases.md', { what: 'taken', names: ['B2', 'B1'] }],
   [RECIPE, { what: 'recipe', use_for: 'a ledger page', body: 'Three lines at most.\n\nTobin signs.' }],
   [RECIPE, { what: 'recipe', use_for: '', body: 'Show a ledger page as a short block: the date, the name, the toll in pennies, and the initials of whoever wrote it. Tobin\'s hand slopes left. Never more than four lines.' }]
 ];

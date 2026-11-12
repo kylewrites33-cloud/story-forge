@@ -2460,7 +2460,9 @@
       "scope": "book",
       "folder": "",
       "filename": "Timeline",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "body": "One line per event, oldest first: `- <YYYY-MM-DDTHH:MMZ>[ to <HH:MMZ>] · <stage> · <what happened> · <who>`. Stage is market, planning, outlining, writing, editing or publishing. Who is Kyle, an agent's name, or app. Never edit or delete a line; a correction is a new line that says so.",
       "properties": {
         "type": {
@@ -2972,6 +2974,13 @@
         },
         "result": {
           "type": "string"
+        },
+        "taken": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          },
+          "description": "The answers of this job Kyle has already used in the app, by name (B1, B2 for the braces of a fill job; all for the job as a whole, as when he picks one of its options or puts them away). The app writes it (2026-11-12), so his iPad and desktop never use an answer twice. Agents leave it alone."
         }
       },
       "board": {

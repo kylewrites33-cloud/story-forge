@@ -212,10 +212,6 @@ export function loadFilled(sourceKey: string): Set<string> {
   try { const v = JSON.parse(localStorage.getItem(FILLED + sourceKey) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
 }
 
-export function saveFilled(sourceKey: string, done: Set<string>) {
-  try { localStorage.setItem(FILLED + sourceKey, JSON.stringify(Array.from(done).slice(-500))); } catch { /* lasts until reload */ }
-}
-
 // Fill brackets on their own: after a closed bracket has sat for a while, the app sends it without being asked (per device).
 const AUTO = 'story-forge.fill-auto';
 

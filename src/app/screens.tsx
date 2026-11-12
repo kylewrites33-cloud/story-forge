@@ -15,6 +15,7 @@ import { buildDocx, exportName, manuscript } from '../lib/docx.ts';
 import { typedWords } from '../lib/drafts.ts';
 import { flowResults, type NewResult } from '../lib/flow.ts';
 import type { Decision } from '../lib/ideas.ts';
+import type { OnTake } from '../team/asks.ts';
 import { jobNotes, openJobFor, type NewJob } from '../lib/jobs.ts';
 import { checkOptions } from '../lib/lintcheck.ts';
 import { nameList } from '../lib/links.ts';
@@ -90,6 +91,8 @@ export interface Actions {
   onTitles: (path: string, change: TextChange) => void;
   onRewrite: (path: string, reason: string) => Promise<void>;
   onRewriteThrough: (book: BookEntry, chapter: number, done: boolean) => Problem;
+  /** Answers of the team's that a page has used: marked on their job notes, so no device uses them again. */
+  onTake: OnTake;
   onAddTask: (t: NewTask) => Problem;
   onAddTodo: (bookFolder: string, t: NewTodo) => Problem;
   onAddNote: (book: BookEntry, n: NewNote) => Problem;
@@ -290,6 +293,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
       onNotes={book ? (was, body) => act.onWords(book.braindump || book.folder + '/Braindump.md', { what: 'words', of: 'braindump', was, body, start: BRAINDUMP_START, name: book.title }) : undefined}
       onFiles={act.onFiles}
       onJob={book && source.commit ? act.onJob : undefined} onChat={book && source.commit ? act.onChat : undefined}
+      onTake={source.commit ? act.onTake : undefined}
       todos={book ? bookTodos(view, book) : []} onTodo={source.commit ? act.onDecide : undefined} onMarks={source.commit ? act.onMarks : undefined} waiting={waiting}
       onAddTodo={book && source.commit ? (t) => act.onAddTodo(book.folder, t) : undefined}
       timer={(variant) => <PomodoroTimer source={source} index={view} variant={variant} onLog={act.onLog} />}
