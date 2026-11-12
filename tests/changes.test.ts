@@ -208,4 +208,15 @@ test('a reply goes on its own line under the card, and the card the Writer makes
   assert.equal(changes[2].asked, 'The lantern is tin on purpose: it is cheap.');
   assert.equal(shortLabel(changes[2]), 'Your reply on C-01');
   assert.deepEqual(answersTo(changes, 'C-01').map((c) => c.id), ['C-03']);
+  // A card still open that the Writer answered is retired: the new card stands in for it (Kyle, 2026-11-12: "shouldn't
+  // the writer scrap the old card"). A card Kyle already decided keeps his choice.
+  assert.equal(changes[0].replacedBy, undefined);
+  const openOld = answered.replace('Kyle: no\nReply:', 'Kyle: open\nReply:');
+  const again = parseChanges(openOld).changes;
+  assert.equal(again[0].status, 'replaced');
+  assert.equal(again[0].replacedBy, 'C-03');
+  assert.equal(again[2].status, 'open');
+  const { placeChanges } = await import('../src/lib/changes.ts');
+  const on = placeChanges('a tin lantern', again, 'S-001');
+  assert.deepEqual(on.placed.map((p) => p.change.id), ['C-03'], 'only the new card is on the page');
 });

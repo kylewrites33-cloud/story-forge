@@ -580,11 +580,29 @@ test('GitHub: several files written and removed as one commit, read first at the
   assert.deepEqual(res, { commit: gh.state.head, shas: { 'a.md': await blobSha('A\nmore\n'), 'new/c.md': await blobSha('C é\n') } });
   assert.deepEqual(gh.state.calls.map((c) => c.split(' ')[0] + ' ' + c.split(' ')[1].split('/').slice(0, 3).join('/')),
     ['GET /git/ref', 'GET /git/commits', 'GET /git/trees', 'GET /contents/vault', 'GET /contents/vault', 'POST /git/trees', 'POST /git/commits', 'PATCH /git/refs']);
-  // Nothing to change: nothing is sent.
+  // Nothing to change on the version this device last saved: it asks once where the branch is now (the team may have
+  // saved since, 2026-11-12), and sends nothing.
   const before = gh.state.calls.length;
   assert.equal(await src.commit(async () => null), null);
   assert.equal(await src.commit(async () => ({ message: 'x', writes: [] })), null);
-  assert.equal(gh.state.calls.length, before, 'the app remembers where its own save left the branch');
+  assert.deepEqual(gh.state.calls.slice(before).map((c) => c.split(' ')[0] + ' ' + c.split(' ')[1].split('/').slice(0, 3).join('/')), ['GET /git/ref', 'GET /git/ref'], 'only where the branch is');
+  assert.equal(gh.state.calls.filter((c) => /^(POST|PATCH)/.test(c)).length, 3, 'nothing more is sent than the first save');
+});
+
+test('GitHub: a save that finds nothing to change on the device\'s last version looks again at the branch as it is now', async () => {
+  // Kyle, 2026-11-12: a choice on a card the Writer had just made was lost, because the save read the note as this
+  // device last saved it, where that card was not yet.
+  const gh = fakeGitHub({ 'vault/a.md': 'A\n' });
+  const src = new GitHubSource(settings, gh.fetch);
+  await src.commit(async ({ read }) => ({ message: 'app: first', writes: [{ path: 'a.md', text: (await read('a.md'))!.text + 'mine\n' }] }));
+  // The team saves from elsewhere.
+  gh.commitTo({ 'vault/a.md': gh.files()['vault/a.md'] + 'C-10\n' }, 'jobs: the Writer');
+  const res = await src.commit(async ({ read }) => {
+    const a = (await read('a.md'))!.text;
+    return a.includes('C-10') ? { message: 'app: on C-10', writes: [{ path: 'a.md', text: a.replace('C-10', 'C-10 kept') }] } : null;
+  });
+  assert.ok(res, 'the save happened');
+  assert.equal(gh.files()['vault/a.md'], 'A\nmine\nC-10 kept\n');
 });
 
 test('GitHub: a picture goes up in the same save as the notes, and only once when the save has to be made again', async () => {

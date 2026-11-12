@@ -26,8 +26,11 @@ export const CHANGES_TYPE = 'chapter-changes';
 
 export type ChangeKind = 'small' | 'line' | 'story' | 'new';
 /** open: waiting on Kyle. kept: the Now words went in. other: the second version went in. no: refused. mine: Kyle wrote his own.
- * rewrite: the Writer's rewrite carried it and Kyle brought that paragraph over, or he finished the chapter in the Rewrite tab (2026-11-05). */
-export type ChangeStatus = 'open' | 'kept' | 'other' | 'no' | 'mine' | 'rewrite';
+ * rewrite: the Writer's rewrite carried it and Kyle brought that paragraph over, or he finished the chapter in the Rewrite tab (2026-11-05).
+ * replaced: Kyle replied on it and the Writer made a new card from his reply (one with `Re:` this card), so this one is
+ * retired. Never written in the note: it is read from the new card being there (Kyle, 2026-11-12: "Once the writer makes a
+ * new card, shouldn't the writer scrap the old card since we've established something's wrong with it?"). */
+export type ChangeStatus = 'open' | 'kept' | 'other' | 'no' | 'mine' | 'rewrite' | 'replaced';
 export const KINDS: ChangeKind[] = ['small', 'line', 'story', 'new'];
 const STATUSES: ChangeStatus[] = ['open', 'kept', 'other', 'no', 'mine', 'rewrite'];
 
@@ -52,6 +55,8 @@ export interface Change {
   replies?: string[];
   /** The card this one answers: the Writer made it from Kyle's reply on that card (`Re: C-07`). */
   re?: string;
+  /** The newest card made from Kyle's reply on this one, when this one was still open: it stands in for this one. */
+  replacedBy?: string;
 }
 
 export const KIND_LABEL: Record<ChangeKind, string> = { small: 'Fix', line: 'Sentence', story: 'Story', new: 'New passage' };
@@ -228,6 +233,13 @@ export function parseChanges(body: string): { intro: string; changes: Change[] }
     }
   });
   close();
+  // A card still open that the Writer answered with a new card from Kyle's reply is retired: the new card takes its place
+  // on the page and in every count. Once Kyle has decided a card, his choice stands.
+  out.forEach((n) => {
+    if (!n.re) return;
+    const old = out.find((c) => c.id === n.re && c !== n);
+    if (old && (old.status === 'open' || old.status === 'replaced')) { old.status = 'replaced'; old.replacedBy = n.id; }
+  });
   return { intro: intro.join('\n').trim(), changes: out };
 }
 
@@ -372,7 +384,7 @@ export function setStatuses(text: string, marks: Record<string, ChangeStatus>): 
   return next;
 }
 
-const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for', rewrite: 'took the rewrite for' };
+const SAID: Record<ChangeStatus, string> = { open: 'opened again', kept: 'kept', other: 'kept the other version of', no: 'said no to', mine: 'wrote his own words for', rewrite: 'took the rewrite for', replaced: 'replaced' };
 
 /** The line Kyle's choices on one changes note leave in the vault's history. */
 export function marksMessage(path: string, marks: Record<string, ChangeStatus>): string {

@@ -154,6 +154,7 @@ export class GitHubSource implements VaultSource {
     const what = 'the branch "' + this.s.branch + '"';
     // A picture or a Word file is sent once, even when the save has to be planned again.
     const sent = new Map<string, string>();
+    let checked: typeof this.last = null;
     for (let attempt = 0; ; attempt++) {
       const hint = this.last && Date.now() - this.last.at < 120000 ? this.last : null;
       this.last = null;
@@ -185,7 +186,11 @@ export class GitHubSource implements VaultSource {
       const removes = (plan && plan.removes) || [];
       const blobs = (plan && plan.blobs) || [];
       if (!plan || (!plan.writes.length && !removes.length && !blobs.length)) {
-        if (hint) this.last = hint;
+        // Nothing to do on the version this device last saved may only mean the team has saved since (a card the Writer
+        // just made, which Kyle chose on): plan again on the branch as it is now before saying there was nothing.
+        if (hint) { checked = hint; continue; }
+        // The branch was where this device left it: keep the shortcut for the next save.
+        if (checked && checked.commit === parent) this.last = checked;
         return null;
       }
       await baseTree();
