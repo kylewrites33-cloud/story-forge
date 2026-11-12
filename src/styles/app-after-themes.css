@@ -1078,6 +1078,9 @@ button, .button { border-radius: 12px; }
   .writer :is(.main-section, .chapter-section) .writer-text.prose:has(.chg-tag) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); }
   .writer-text.prose .chg-tag { float: right; clear: right; width: 12rem; margin: 0.25em -13rem 2px 0; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; border-left: 3px solid var(--line); border-radius: 0 6px 6px 0; white-space: normal; }
   .writer-text.prose .chg-tag.on { border-left-color: var(--accent); }
+  /* Kyle's { } notes in the left margin and the changes' words in the right one, both at once: the page keeps room on
+     each side (2026-11-12: the right-hand words were cut off behind the side column). */
+  .writer.asks-left .writer-page :is(.main-section, .chapter-section) .writer-text.styled.prose:has(.chg-tag):has(.md-ask) { padding-right: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 26rem); }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }

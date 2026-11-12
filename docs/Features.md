@@ -787,6 +787,14 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   the same page, still typed in, with the team's marks taken off, which is what Self-Edit was. A device that had Self-Edit
   saved opens with marks hidden; any other saved view opens with marks shown. The older entries above that name Simple,
   Final and Self-Edit tell how it was before.
+- **Pressing a card, both margins, and which column opens** (2026-11-12). Kyle: "why does tapping on the card in draft 3
+  not bring the relevant writing paragraph up to it?": a press on a card always brings its words into sight, also when
+  it is the card already picked (before, a second press did nothing after he had scrolled away). With his { } notes in
+  the left margin and the changes' words in the right one, the page keeps room on both sides (the right-hand words were
+  cut off behind the side column). Kyle: "can it default to changes when I'm in draft 3 and rewrite only when I'm in
+  draft 2? changes would be the default for draft 4 as well, and subsequent drafts": each time a chapter opens, the side
+  column opens on Changes from draft 3 on and on Rewrite in draft 2; a move to another tab in that chapter stays. Checks
+  `pick.mjs` and `webkit-pick.mjs`.
 - **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
   the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
   page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
