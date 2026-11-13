@@ -83,16 +83,64 @@ export function Quote({ text, cls, was }: { text: string; cls: string; /** Draft
   return <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+/** The edit box Kyle last pressed, and until when a lost cursor is put back in it (see TweakBox). */
+let tweakHeld: { id: string; until: number; start: number; end: number } | null = null;
+
 /** The edit box over a copy of its words, so Kyle's own words show greyer there too while he types. */
 function TweakBox({ id, was, words, onInput }: { id: string; was: string; words: string; onInput: (w: string) => void }) {
   const back = useRef<HTMLDivElement>(null);
+  const area = useRef<HTMLTextAreaElement>(null);
+  // On the iPad the cursor showed in the box and went at once (Kyle, 2026-11-13: "wont let me tap and type in this card
+  // window. it enables but immediately disables the cursor"). For a moment after Kyle presses the box, a cursor taken
+  // away by anything but his own next press is put back, also when the box was drawn again.
+  useEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    let pressed: EventTarget | null = null;
+    const down = (e: Event) => { pressed = e.target; };
+    const mine = () => { pressed = el; tweakHeld = { id, until: Date.now() + 1500, start: el.selectionStart, end: el.selectionEnd }; };
+    const keep = () => { if (tweakHeld && tweakHeld.id === id && document.activeElement === el) { tweakHeld.start = el.selectionStart; tweakHeld.end = el.selectionEnd; } };
+    const restore = () => {
+      if (!tweakHeld || tweakHeld.id !== id || Date.now() > tweakHeld.until) return;
+      setTimeout(() => {
+        if (!el.isConnected || document.activeElement === el || (pressed && pressed !== el)) return;
+        const h = tweakHeld;
+        el.focus({ preventScroll: true });
+        if (h) el.setSelectionRange(h.start, h.end);
+      }, 0);
+    };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('touchstart', down, true);
+    el.addEventListener('pointerdown', mine);
+    el.addEventListener('touchstart', mine);
+    el.addEventListener('focus', mine);
+    el.addEventListener('keyup', keep);
+    el.addEventListener('select', keep);
+    el.addEventListener('blur', restore);
+    // Drawn again while Kyle had just pressed it: the new box takes the cursor.
+    if (tweakHeld && tweakHeld.id === id && Date.now() < tweakHeld.until && document.activeElement !== el) {
+      const h = tweakHeld;
+      el.focus({ preventScroll: true });
+      el.setSelectionRange(h.start, h.end);
+    }
+    return () => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('touchstart', down, true);
+      el.removeEventListener('pointerdown', mine);
+      el.removeEventListener('touchstart', mine);
+      el.removeEventListener('focus', mine);
+      el.removeEventListener('keyup', keep);
+      el.removeEventListener('select', keep);
+      el.removeEventListener('blur', restore);
+    };
+  }, [id]);
   const parts = wordDiff(was, words).filter((d) => d.kind !== 'del');
   return (
     <div class="chg-tweak-wrap">
       <div class="chg-tweak chg-tweak-back" ref={back} aria-hidden="true">
         {parts.map((d) => d.kind === 'ins' ? <span class="chg-new">{d.text}</span> : d.text)}{'\n'}
       </div>
-      <textarea id={id} class="chg-tweak" rows={Math.min(14, Math.max(3, Math.ceil(words.length / 34) + words.split('\n').length))} value={words}
+      <textarea ref={area} id={id} class="chg-tweak" rows={Math.min(14, Math.max(3, Math.ceil(words.length / 34) + words.split('\n').length))} value={words}
         onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)}
         onScroll={(e) => { if (back.current) back.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop; }} />
     </div>
