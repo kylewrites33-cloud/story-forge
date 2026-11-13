@@ -75,3 +75,34 @@ test('the connection test reports what it found', async () => {
 test('settings are trimmed and the vault folder loses its slashes', () => {
   assert.deepEqual(normalise({ owner: ' kyle ', repo: 'vault ', branch: '', root: '/notes/', token: ' t ' }), { owner: 'kyle', repo: 'vault', branch: 'main', root: 'notes', token: 't' });
 });
+
+test('saves from one device take turns, so two at once never race for the branch (2026-11-13)', async () => {
+  let head = 'c0';
+  let patches = 0, refused = 0;
+  const log: string[] = [];
+  const fn = async (url: string, init?: RequestInit) => {
+    const m = (init && init.method) || 'GET';
+    log.push(m + ' ' + url.replace(/^.*author-business/, ''));
+    await new Promise((r) => setTimeout(r, 5));
+    if (url.includes('/git/ref/heads/')) return Response.json({ object: { sha: head } });
+    if (url.includes('/git/commits/')) return Response.json({ tree: { sha: 't-' + head } });
+    if (url.includes('/contents/')) return Response.json({ sha: 's', encoding: 'base64', content: btoa('hello') });
+    if (m === 'POST' && url.endsWith('/git/trees')) return Response.json({ sha: 'tx' }, { status: 201 });
+    if (m === 'POST' && url.endsWith('/git/commits')) return Response.json({ sha: 'c' + (patches + 1) + '-' + JSON.parse(String(init!.body)).parents[0] }, { status: 201 });
+    if (m === 'PATCH') {
+      const sha = JSON.parse(String(init!.body)).sha as string;
+      if (!sha.endsWith('-' + head)) { refused++; return Response.json({ message: 'not a fast forward' }, { status: 422 }); }
+      head = sha; patches++;
+      return Response.json({ object: { sha } });
+    }
+    return new Response('{}', { status: 404 });
+  };
+  const src = new GitHubSource(settings, fn);
+  const save = (path: string) => src.commit(async (h) => { await h.read(path); return { message: 'save ' + path, writes: [{ path, text: 'x ' + path }] }; });
+  const [a, b] = await Promise.all([save('A.md'), save('B.md')]);
+  assert.ok(a && b);
+  assert.equal(patches, 2);
+  assert.equal(refused, 0, 'the second save waited for the first instead of being refused');
+  // The second starts where the first left the branch: no fresh look at the branch needed.
+  assert.equal(log.filter((l) => l.includes('/git/ref/heads/')).length, 1);
+});
