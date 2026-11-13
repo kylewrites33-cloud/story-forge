@@ -812,6 +812,11 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   card"). Pressing a card (or moving to a change with the arrows) lights the whole paragraph its change sits in, in the
   same colour the Rewrite column uses; the light moves with the next card and goes when marks are hidden. It is never in
   the text (`lit-card` in `src/write/prose.ts`'s lights).
+- **The card's edit box keeps its cursor** (2026-11-13, Kyle: "wont let me tap and type in this card window. it enables
+  but immediately disables the cursor", on the iPad in "Your edit of version 1"). For a second and a half after Kyle
+  presses the box, a cursor taken away by anything but his own next press is put back where it was, also when the box is
+  drawn again. Chromium and desktop WebKit never lost it, so what took it on the iPad is not known; checks
+  `tweak-focus.mjs` and `webkit-tweak.mjs` take the cursor away on purpose and see it come back.
 - **The new card replaces the old one** (2026-11-12, Kyle: "Once the writer makes a new card, shouldn't the writer scrap
   the old card since we've established something's wrong with it? ... don't we need a brand new card and for the writing
   page to reflect the new card's changes recommended instead of the old card?"). A card still open that has a card made
