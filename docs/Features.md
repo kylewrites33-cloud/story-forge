@@ -1921,3 +1921,22 @@ Nothing he sees changes.
   and keeps it when it saves.
 - Checks: `tests/chapterids.test.ts`; the WebKit `chapters` check now runs on a book with chapter IDs.
 
+
+## A new chapter opens at once; saves take turns (2026-11-13)
+
+Kyle, 2026-11-13: "I've noticed the saving is slow after I tap into a new chapter. Is everything working okay?" Nothing
+was lost (every choice and edit of the day was in the vault). Two causes, found against a pretend GitHub holding the
+whole Quest Declined 2 vault, in WebKitGTK:
+- **The tap waited for the save.** Leaving a scene (a chapter in the list, the scene strip, Previous and Next, a link)
+  saved the scene first and only then opened the next page: four calls to GitHub, a few seconds on the real one, with
+  nothing happening. Now another chapter or scene opens at once and the scene Kyle left saves behind it (`go` in
+  `src/ui/Editor.tsx`). Until that save lands the 30-second sync leaves the scene alone (`holdOpen`); if it cannot
+  land, the words wait on the device for the next sync, as offline. A save already on its way lands first, then what
+  was typed since (before, the tap did nothing while a save was on its way). A page that opens a scene that was on the
+  page (its beats, the whole chapter, another scene of the chapter) still waits, so it opens with the saved words.
+- **Two saves raced.** The scene's save and a card chosen in the new chapter went up at the same moment; the one that
+  lost was refused by GitHub and made again from the start. Now saves from one device take turns (`commit` in
+  `src/lib/github.ts`): the second starts where the first left the branch. A save that hangs holds the next for 25
+  seconds at most.
+Measured (250 ms a call): the tap opened the next chapter after 1.1 s, now 0.06 s; the first card in the new chapter
+lands right after the scene, never refused.

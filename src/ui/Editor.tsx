@@ -303,12 +303,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (el && first && first.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) el.scrollIntoView({ block: 'start' });
   }, [note.path]);
   const registerSib = useCallback((path: string, api: SectionApi | null) => { if (api) sibs.current.set(path, api); else sibs.current.delete(path); }, []);
-  const saveSiblings = async (closing: boolean): Promise<boolean> => {
+  /** `apis`: the scenes as they were on the page, for a save that goes on after the page has gone. */
+  const saveSiblings = async (closing: boolean, apis: SectionApi[] = Array.from(sibs.current.values())): Promise<boolean> => {
     let ok = true;
-    for (const api of Array.from(sibs.current.values())) if (!(await api.save(closing))) ok = false;
+    for (const api of apis) if (!(await api.save(closing))) ok = false;
     return ok;
   };
   const saving = useRef(false);
+  /** The save on its way, if one is: leaving the page waits for it before saving what was typed since. */
+  const inFlight = useRef<Promise<void>>(Promise.resolve());
   const quiet = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingSince = useRef<number | null>(null);
   const kept = useRef(true);
@@ -334,6 +337,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     }
     if (saving.current) return false;
     saving.current = true;
+    let landed = (): void => undefined;
+    inFlight.current = new Promise<void>((r) => { landed = r; });
     setState('saving');
     try {
       const r = await saveDraft(source, d, new Date());
@@ -361,6 +366,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
       return false;
     } finally {
       saving.current = false;
+      landed();
     }
   }, [source, canSave, onSaved, setDraft]);
 
@@ -519,14 +525,31 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   }, [focus, leaveFocus]);
   useEffect(() => () => { try { if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* gone */ }); } catch { /* not offered */ } }, []);
 
-  /** Leave the writing screen for another page, saving first (as Done does). */
+  /** Leave the writing screen for another page, saving first (as Done does). Another scene or chapter opens at once
+   * and this scene's words save behind it (Kyle, 2026-11-13: "the saving is slow after I tap into a new chapter"; the
+   * tap used to wait for the whole save, a few seconds on GitHub). Until that save lands the 30-second sync leaves this
+   * scene alone, and if it cannot land the words wait on the device for the next sync, as they do offline. A page that
+   * opens a scene that is on this page (its beats, the whole chapter, the next scene of the chapter) still waits, so
+   * it opens with the saved words. */
   const go = async (to: string) => {
     if (quiet.current) clearTimeout(quiet.current);
     if (beatsSaver.current && !(await beatsSaver.current(true))) return;
-    const ok = await save(true);
-    // The chapter's other scenes: a scene that cannot save now waits on the device for the next sync.
-    await saveSiblings(true);
-    if (ok) location.hash = to;
+    const others = Array.from(sibs.current.entries());
+    const leaving = async (): Promise<boolean> => {
+      // A save already on its way (two quiet minutes, five of typing) lands first; then what was typed since goes up.
+      await inFlight.current;
+      const ok = await save(true);
+      // The chapter's other scenes: a scene that cannot save now waits on the device for the next sync.
+      await saveSiblings(true, others.map(([, api]) => api));
+      return ok;
+    };
+    if (beatsMode || [note.path].concat(others.map(([p]) => p)).some((p) => to.indexOf(encodeURIComponent(p)) >= 0)) {
+      if (await leaving()) location.hash = to;
+      return;
+    }
+    const held = [note.path].concat(others.map(([p]) => p)).map((p) => holdOpen(p));
+    leaving().catch(() => false).then(() => held.forEach((r) => r()));
+    location.hash = to;
   };
   const done = () => go(backTo);
   const link = (to: string) => ({ href: to, onClick: (e: MouseEvent) => { e.preventDefault(); go(to); } });

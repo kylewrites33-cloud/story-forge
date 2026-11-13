@@ -146,9 +146,26 @@ export class GitHubSource implements VaultSource {
     return { text: fromBase64(body.content), sha: body.sha };
   }
 
+  /** The save running now: the next one waits for it. */
+  private turn: Promise<unknown> = Promise.resolve();
+
   /** One save of any number of files as one commit, all or nothing: read at the branch's commit, build a tree on it, commit,
-   * and move the branch (never forced). If the branch moved meanwhile, read and build again on the newer commit. */
+   * and move the branch (never forced). If the branch moved meanwhile, read and build again on the newer commit.
+   * Saves from this device take turns (Kyle, 2026-11-13: "the saving is slow after I tap into a new chapter"): the scene
+   * he left and a card he chose at the same moment used to race, and the loser was refused and made again from the
+   * start. Waiting its turn, the second save starts where the first left the branch. A save that hangs holds the next
+   * one for 25 seconds at most. */
   async commit(build: (head: Head) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
+    const before = this.turn;
+    let finished = (): void => undefined;
+    this.turn = new Promise<void>((r) => { finished = r; });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([before.catch(() => undefined), new Promise((r) => { timer = setTimeout(r, 25000); })]);
+    clearTimeout(timer);
+    try { return await this.commitNow(build); } finally { finished(); }
+  }
+
+  private async commitNow(build: (head: Head) => Promise<CommitPlan | null>): Promise<CommitResult | null> {
     const prefix = this.s.root ? this.s.root + '/' : '';
     const branch = this.s.branch.split('/').map(encodeURIComponent).join('/');
     const what = 'the branch "' + this.s.branch + '"';
