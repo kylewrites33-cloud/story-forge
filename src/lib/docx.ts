@@ -1,8 +1,10 @@
 // Export to Word: the book's scenes in reading order as one .docx, made on the device (no server, nothing saved in the
 // vault). The layout follows the vault tool's `sf compile --docx` (Docx.build in sf.js): title, then each chapter as a
-// Heading 1 on a new page, scenes split by "* * *", first-line-indented paragraphs. Italics and bold are read with the
+// Heading 1 on a new page, scenes split by "* * *", first-line-indented paragraphs. Quotes, dashes and ellipses come out
+// curly and long (Kindle.smart, 2026-11-14); the vault keeps its own marks. Italics and bold are read with the
 // writing screen's own rules (styled.ts), so what is slanted on the page is slanted in Word.
 import { chapterGroups, chapterHeading } from './board.ts';
+import { Kindle } from './kindle.js';
 import { Prose, wordCount } from './prose.js';
 import { marks, runs } from './styled.ts';
 import type { BookEntry, DeviceFile, NoteRecord, Schema, VaultIndex } from './types.ts';
@@ -144,7 +146,7 @@ export function buildDocx(title: string, author: string, m: Manuscript, when: Da
   });
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
   const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-  const document = head + '<w:document ' + W + '><w:body>' + body.join('') +
+  const document = head + '<w:document ' + W + '><w:body>' + Kindle.smart(body.join('')) +
     '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>';
   const style = (id: string, name: string, ppr: string, rpr: string) => '<w:style w:type="paragraph" w:styleId="' + id + '"><w:name w:val="' + name + '"/><w:basedOn w:val="Normal"/><w:qFormat/>' +
     (ppr ? '<w:pPr>' + ppr + '</w:pPr>' : '') + (rpr ? '<w:rPr>' + rpr + '</w:rPr>' : '') + '</w:style>';

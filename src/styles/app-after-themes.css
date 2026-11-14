@@ -1288,3 +1288,20 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 /* The Edit room's one switch over the page (2026-11-12): Hide marks shows Kyle's page alone, Show marks brings the
    team's changes back. Both are typed in. */
 .changes-bar .marks-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+/* The Kindle file's ready check and Look inside (2026-11-14). */
+.details-export .buttons, .export-card .buttons { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0; }
+.ready-check { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-left: 4px solid var(--danger); border-radius: var(--radius); padding: 12px 16px; background: var(--surface); }
+.ready-check.ready { border-left-color: var(--ok); }
+.ready-check h3 { margin: 0 0 8px; font-size: 1rem; }
+.ready-check ul { margin: 0 0 8px; padding-left: 1.2em; display: grid; gap: 4px; font-size: 1rem; }
+.ready-check .ready-problems li { color: var(--text); }
+.ready-check .ready-good li { color: var(--muted); }
+.ready-check .ready-good { list-style: none; padding-left: 0; }
+.ready-check .ready-good li::before { content: '✓ '; color: var(--ok); font-weight: 600; }
+.look-inside { width: 100%; display: grid; gap: 10px; justify-items: center; }
+.look-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.details-export .segmented button, .export-card .segmented button { min-height: 44px; padding: 0 14px; border: 0; border-radius: 0; background: var(--surface); color: var(--text); }
+.details-export .segmented button + button, .export-card .segmented button + button { border-left: 1px solid var(--line); }
+.details-export .segmented button.on, .export-card .segmented button.on { background: var(--accent); color: var(--on-accent); }
+.look-frame { max-width: 100%; height: 70vh; min-height: 420px; border: 10px solid var(--text); border-radius: 18px; background: #fff; box-sizing: border-box; }

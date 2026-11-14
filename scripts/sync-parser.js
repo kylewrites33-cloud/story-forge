@@ -1,6 +1,7 @@
 // Copies the FRONTMATTER section of the vault's sf.js into src/lib/frontmatter.js, its prose section (with the two
 // helpers it needs) into src/lib/prose.js, and its lint section (with the five helpers it needs) into src/lib/lint.js,
-// so the app counts words, reads prose and finds AI-sounding phrases the way sf does.
+// and its Kindle section into src/lib/kindle.js, so the app counts words, reads prose, finds AI-sounding phrases and
+// makes the Kindle file the way sf does.
 // Usage: node scripts/sync-parser.js [path to author-business]   (default ../author-business)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +13,7 @@ const sfPath = path.join(vault, 'System', 'Tools', 'sf.js');
 const out = path.join(here, '..', 'src', 'lib', 'frontmatter.js');
 const proseOut = path.join(here, '..', 'src', 'lib', 'prose.js');
 const lintOut = path.join(here, '..', 'src', 'lib', 'lint.js');
+const kindleOut = path.join(here, '..', 'src', 'lib', 'kindle.js');
 
 export const HEADER = `// @ts-nocheck
 /* The frontmatter parser, copied as is from author-business System/Tools/sf.js (the FRONTMATTER section), so the app
@@ -80,6 +82,17 @@ export function renderLint(sfText) {
     '\n  return { wordCount, sum, mean, stdev, escRe };\n})();\n\nexport ' + lint.join('\n') + '\n';
 }
 
+export const KINDLE_HEADER = `// @ts-nocheck
+/* The Kindle file's shared parts, copied as is from author-business System/Tools/sf.js (the Kindle section): curly quotes,
+ * the stylesheet, the title page, the series pages, the cover size and the ready check, so the app's Make the Kindle file
+ * and \`sf compile --epub\` make the same pages. Do not edit it here: change sf.js, then copy again with
+ * \`npm run sync-parser\`. tests/kindle.test.ts checks the copy when the vault is checked out beside this repository. */
+`;
+
+export function renderKindle(sfText) {
+  return KINDLE_HEADER + 'export ' + linesBetween(sfText.split('\n'), 'const Kindle = (() => {', '})();', 'Kindle section').join('\n') + '\n';
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (!fs.existsSync(sfPath)) {
     console.error('Cannot find ' + sfPath + '. Give the path to author-business.');
@@ -89,5 +102,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.writeFileSync(out, render(sf));
   fs.writeFileSync(proseOut, renderProse(sf));
   fs.writeFileSync(lintOut, renderLint(sf));
-  console.log('Copied the frontmatter parser, the prose helpers and the linter from ' + sfPath);
+  fs.writeFileSync(kindleOut, renderKindle(sf));
+  console.log('Copied the frontmatter parser, the prose helpers, the linter and the Kindle parts from ' + sfPath);
 }
