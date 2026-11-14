@@ -4,7 +4,8 @@ id: I-010
 title: A Hum for Every Lie
 kind: character
 status: keep
-source: Character Specialist
+source: Story Specialist
+lens: character
 pitch: Mara hums the bell's note under her breath whenever she lies.
 round: 2
 rating: 4

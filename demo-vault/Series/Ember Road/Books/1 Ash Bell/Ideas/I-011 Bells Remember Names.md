@@ -4,7 +4,8 @@ id: I-011
 title: Bells Remember Names
 kind: world
 status: inbox
-source: Genre Specialist
+source: Story Specialist
+lens: genre
 pitch: Each bell keeps the name of the person who first rang it, and says it once when it cracks.
 round: 1
 created: 2026-10-17

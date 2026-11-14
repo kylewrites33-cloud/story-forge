@@ -4,7 +4,8 @@ id: I-006
 title: The Warden Keeps a Ledger
 kind: character
 status: keep
-source: Character Specialist
+source: Story Specialist
+lens: character
 pitch: The Warden writes down every bell Mara rings, and has for twelve years.
 round: 1
 rating: 5

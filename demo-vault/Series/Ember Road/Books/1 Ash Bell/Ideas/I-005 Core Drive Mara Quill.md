@@ -4,7 +4,8 @@ id: I-005
 title: "Core Drive: Mara Quill"
 kind: character
 status: inbox
-source: Character Specialist
+source: Story Specialist
+lens: character
 pitch: Mara keeps every bell ringing herself, so nobody learns she broke one.
 ---
 ## The idea

@@ -4,7 +4,8 @@ id: I-013
 title: The Town Votes on the Bell
 kind: plot
 status: discard
-source: Plot Specialist
+source: Story Specialist
+lens: plot
 pitch: The town holds a vote on whether to melt the bell for coin.
 round: 2
 rating: 2

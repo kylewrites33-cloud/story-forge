@@ -4,7 +4,8 @@ id: I-002
 title: Open on the Ferry
 kind: scene
 status: inbox
-source: Plot Specialist
+source: Story Specialist
+lens: plot
 pitch: Start the book on the night ferry, with Mara already holding the bell.
 reasoning: The current opening spends two pages on the dock before anything moves.
 risk: Readers lose the dock, where Tobin is first seen.

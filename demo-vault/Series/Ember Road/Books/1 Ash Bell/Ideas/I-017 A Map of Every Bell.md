@@ -4,7 +4,8 @@ id: I-017
 title: A Map of Every Bell
 kind: world
 status: discard
-source: Genre Specialist
+source: Story Specialist
+lens: genre
 pitch: Endpapers with a map of every bell in the valley, each with a short story.
 round: 3
 reasons:
