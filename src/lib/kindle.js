@@ -109,8 +109,13 @@ export const Kindle = (() => {
   const LONG_SCREEN = 8;
 
   // ------------------------------------------------------------------ the title page
-  const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
-  const numberWord = (n) => (n >= 0 && n < WORDS.length && n === Math.floor(n) ? WORDS[n] : String(n));
+  const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const numberWord = (n) => {
+    if (n !== Math.floor(n) || n < 0 || n > 99) return String(n);
+    if (n < 20) return WORDS[n];
+    return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + WORDS[n % 10] : '');
+  };
 
   // The subtitle: `subtitle` on Book.md, or what follows "<title>:" in `long_title`.
   function subtitleOf(title, data) {
@@ -127,6 +132,101 @@ export const Kindle = (() => {
     const series = info.series ? info.series + (info.number != null ? ', Book ' + numberWord(info.number) : '') : '';
     return '<section class="titlepage" epub:type="titlepage"><h1>' + x(info.title) + '</h1>' + line('subtitle', info.subtitle) +
       line('series', series) + line('author', info.author) + line('publisher', info.publisher) + '</section>';
+  }
+
+  // ------------------------------------------------------------------ the book look (Build 2)
+  // One look per series (Kyle, 2026-11-14, Kindle plan Build 2), kept in the series' `Book Look.md`: the chapter
+  // heading, the first paragraph of a chapter and after a scene break, and the scene break. Fewer choices than Vellum, on
+  // purpose; each is a few lines of CSS a Kindle is documented to show (Kindle Publishing Guidelines 2026.3: drop caps
+  // 11.3.6, small caps and borders in the supported CSS table). The defaults are the look the file had before.
+  const LOOK_OPTIONS = {
+    chapter_number: [['numeral', 'Chapter 3'], ['word', 'Chapter Three'], ['roman', 'Chapter III'], ['bare', '3'], ['none', 'No number']],
+    heading_align: [['center', 'Centred'], ['left', 'Left']],
+    heading_style: [['classic', 'Classic'], ['caps', 'Spaced capitals'], ['rule', 'With a line'], ['bold', 'Bold title']],
+    first_paragraph: [['plain', 'Plain'], ['dropcap', 'Drop cap'], ['smallcaps', 'First words in small caps']],
+    after_break: [['plain', 'Plain'], ['dropcap', 'Drop cap'], ['smallcaps', 'First words in small caps']],
+    scene_break: [['stars', '* * *'], ['dots', '\u00b7 \u00b7 \u00b7'], ['line', 'A short line'], ['space', 'A blank space']]
+  };
+  const LOOK_DEFAULT = { chapter_number: 'numeral', heading_align: 'center', heading_style: 'classic', first_paragraph: 'plain', after_break: 'plain', scene_break: 'stars' };
+
+  // A Book Look note's properties as a whole look: anything missing or unknown is the default.
+  function lookOf(data) {
+    const out = {};
+    Object.keys(LOOK_DEFAULT).forEach((k) => {
+      const v = String((data && data[k]) || '').trim();
+      out[k] = LOOK_OPTIONS[k].some((o) => o[0] === v) ? v : LOOK_DEFAULT[k];
+    });
+    return out;
+  }
+
+  function roman(n) {
+    let r = '';
+    [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
+      .forEach(([v, s]) => { while (n >= v) { r += s; n -= v; } });
+    return r;
+  }
+
+  // "Chapter 3" as the look says it; '' for no number. A number that is not a whole number stays as written.
+  function chapterLabel(num, look) {
+    const n = /^\d+$/.test(String(num)) ? +num : null;
+    const how = (look || LOOK_DEFAULT).chapter_number;
+    if (how === 'none') return '';
+    if (how === 'bare') return String(num);
+    if (n == null) return 'Chapter ' + num;
+    return 'Chapter ' + (how === 'word' ? numberWord(n) : how === 'roman' ? roman(n) : String(n));
+  }
+
+  function breakHtml(look) {
+    const b = (look || LOOK_DEFAULT).scene_break;
+    if (b === 'line') return '<hr class="break"/>';
+    if (b === 'space') return '<p class="break space">\u00a0</p>';
+    return '<p class="break">' + (b === 'dots' ? '\u00b7 \u00b7 \u00b7' : '* * *') + '</p>';
+  }
+
+  // The look's own CSS, after the stylesheet.
+  function lookCss(look) {
+    const l = look || LOOK_DEFAULT;
+    const out = [];
+    if (l.heading_align === 'left') out.push('h1.chapter{text-align:left;}');
+    if (l.heading_style === 'caps') out.push('h1.chapter .ctitle{text-transform:uppercase;letter-spacing:0.12em;font-size:1.1em;}');
+    if (l.heading_style === 'rule') out.push('h1.chapter .ctitle{border-top:1px solid;padding-top:0.5em;' + (l.heading_align === 'left' ? 'margin-right:60%;' : 'margin-left:30%;margin-right:30%;') + '}');
+    if (l.heading_style === 'bold') out.push('h1.chapter .ctitle{font-weight:bold;}');
+    if (l.first_paragraph === 'dropcap' || l.after_break === 'dropcap') {
+      // Amazon's own drop cap (Kindle Publishing Guidelines 2026.3, 11.3.6).
+      out.push('span.dropcap{font-weight:normal;font-size:320%;float:left;margin-top:-0.3225em;margin-bottom:-0.3245em;margin-right:0.03em;}');
+      out.push('@media amzn-mobi{span.dropcap{font-size:3em;font-weight:bold;float:none;margin:0;}}');
+    }
+    if (l.first_paragraph === 'smallcaps' || l.after_break === 'smallcaps') out.push('span.lead{font-variant:small-caps;letter-spacing:0.05em;}');
+    if (l.scene_break === 'line') out.push('hr.break{border:0;border-top:1px solid;width:25%;margin:1.2em auto;}');
+    if (l.scene_break === 'space') out.push('p.break.space{margin:0.6em 0;}');
+    return out.length ? out.join('\n') + '\n' : '';
+  }
+
+  // The first words of a paragraph dressed as the look says: a drop cap, or the first words in small caps.
+  function opening(p, how) {
+    const m = /^(<p class="first">)([^<]*)/.exec(p);
+    if (!m || how === 'plain' || !m[2]) return p;
+    const t = m[2], rest = p.slice(m[0].length);
+    if (how === 'dropcap') {
+      const d = /^(["'\u201c\u2018(]*[\p{L}\p{N}])/u.exec(t);
+      return d ? m[1] + '<span class="dropcap">' + d[1] + '</span>' + t.slice(d[1].length) + rest : p;
+    }
+    const w = /^(\S+(?:\s+\S+){0,3})/.exec(t);
+    return w ? m[1] + '<span class="lead">' + w[1] + '</span>' + t.slice(w[1].length) + rest : p;
+  }
+
+  // A chapter's page dressed in the look: its number, its first paragraphs, its scene breaks. Both builders make the
+  // page in the plain look first; this is the one place the look changes it.
+  function dress(html, look) {
+    const l = look || LOOK_DEFAULT;
+    let out = html.replace(/<span class="num">Chapter ([^<]+)<\/span> ?/, (m, n) => {
+      const label = chapterLabel(n, l);
+      return label ? '<span class="num">' + label + '</span> ' : '';
+    });
+    out = out.split('<p class="break">* * *</p>').join(breakHtml(l));
+    let k = 0;
+    out = out.replace(/<p class="first">[^<]*/g, (p) => opening(p, k++ === 0 ? l.first_paragraph : l.after_break));
+    return out;
   }
 
   // ------------------------------------------------------------------ front and back pages
@@ -273,5 +373,5 @@ export const Kindle = (() => {
     return { problems, good };
   }
 
-  return { smart, CSS, LONG_SCREEN, numberWord, subtitleOf, titlePage, matterSections, mergeMatter, alsoBy, bookMatter, imageSize, coverProblems, check };
+  return { smart, CSS, LONG_SCREEN, numberWord, LOOK_OPTIONS, LOOK_DEFAULT, lookOf, chapterLabel, breakHtml, lookCss, dress, subtitleOf, titlePage, matterSections, mergeMatter, alsoBy, bookMatter, imageSize, coverProblems, check };
 })();

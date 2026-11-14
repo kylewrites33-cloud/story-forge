@@ -238,3 +238,24 @@ test('a deleted beat\'s words go to the Archive as one file from the device, und
   assert.equal(src.files.get(path.replace(/\.md$/, ' (2).md')), 'Other words.\n');
   assert.equal(src.commits[0].message, f.message);
 });
+
+// ---- the series' Book look ----
+
+test('the Book look: started with its first save, then only the lines it changes, shown as it will be saved', async () => {
+  const LOOK = 'Series/Ember Road/Book Look.md';
+  const start = '---\ntype: book-look\ntitle: "Book look"\nsource: Sparrow app\ncreated: 2026-11-14\n---\n';
+  const look = (values: Record<string, string>): TextChange => ({ what: 'look', values, start, name: 'Ember Road' });
+  const src = await vault();
+  src.files.delete(LOOK);
+  await pushAction(src, act(LOOK, look({ first_paragraph: 'dropcap', scene_break: 'line' }), 'l1'));
+  assert.equal(src.files.get(LOOK), start.replace('\n---\n', '\nfirst_paragraph: dropcap\nscene_break: line\n---\n'));
+  assert.equal(src.commits[0].message, 'book look: Ember Road\n\nChosen in the Sparrow app.');
+  const res = await pushAction(src, act(LOOK, look({ first_paragraph: 'plain', scene_break: 'line' }), 'l2'));
+  assert.match(src.files.get(LOOK)!, /^first_paragraph: plain$/m);
+  assert.equal((await indexOf(src)).notes[LOOK].data.scene_break, 'line');
+  const fresh = await indexOf(src);
+  assert.deepEqual(foldSaved(fresh, res.saved, schema, res.removed, res.texts).notes[LOOK], fresh.notes[LOOK]);
+  const text = src.files.get(LOOK)!;
+  const edit = { type: 'text' as const, change: look({ heading_align: 'left' }) };
+  assert.deepEqual(editRecord(makeNote(LOOK, 'x', text), edit), makeNote(LOOK, 'x', editText(text, edit)));
+});

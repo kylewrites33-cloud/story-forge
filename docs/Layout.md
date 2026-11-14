@@ -38,7 +38,7 @@ src/lib/covers.ts        book covers: shrink on the device, the two files to sav
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name, its backup copy ready to save (backupFile)
 src/lib/epub.ts          the Kindle file: the book as an EPUB 3 for KDP (screens boxed, the book's and the series' Book Matter pages, cover), its pages and ready check (kindleFile), the matter pages' editing
-src/lib/kindle.js        the vault tool's Kindle section, copied as is (do not edit; see CLAUDE.md): curly quotes, the stylesheet, the title page, series pages and Also by, the cover size, the ready check
+src/lib/kindle.js        the vault tool's Kindle section, copied as is (do not edit; see CLAUDE.md): curly quotes, the stylesheet, the title page, series pages and Also by, the cover size, the ready check, the series' Book look (dress, lookCss)
 src/lib/lookinside.ts    Look inside: the Kindle file's own pages as one page for a sandboxed frame, at a Kindle's, phone's or iPad's width, light, sepia or dark
 src/lib/theme.ts         colour themes per device: Match this device, eight light, six dark (colours in src/styles/themes/)
 src/fonts/               Space Mono and Space Grotesk (Marigold theme, Typewriter page font), Pixelify Sans and DotGothic16 (Lo-Fi theme), VT323 (Retro OS theme), Literata (Library), Nunito (Pebble), Archivo (Prism); woff2, SIL OFL licences beside them

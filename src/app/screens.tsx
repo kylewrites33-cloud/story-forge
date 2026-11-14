@@ -90,7 +90,7 @@ export interface Actions {
   onAddRocket: (book: BookEntry, file: File) => Said;
   onCover: (book: BookEntry, file: File) => Problem;
   onFiles: (files: DeviceFile[]) => Promise<void>;
-  onWords: (path: string, change: Extract<TextChange, { what: 'words' }>) => void;
+  onWords: (path: string, change: Extract<TextChange, { what: 'words' | 'look' }>) => void;
   onTitles: (path: string, change: TextChange) => void;
   onRewrite: (path: string, reason: string) => Promise<void>;
   onRewriteThrough: (book: BookEntry, chapter: number, done: boolean) => Problem;
