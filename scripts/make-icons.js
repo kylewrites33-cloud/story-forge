@@ -16,6 +16,16 @@ export const BACKGROUND = '#d64236';
 export const BIRD_TRANSFORM = 'translate(0 512) scale(0.1 -0.1)';
 export const BIRD = 'M2913 4056 c-341 -65 -620 -281 -972 -754 -46 -61 -86 -112 -89 -112 -3 0 -28 15 -56 34 -138 91 -259 131 -401 131 -234 0 -334 -142 -225 -318 17 -27 30 -50 30 -51 0 -2 -30 -5 -68 -8 -223 -16 -338 -199 -245 -389 20 -40 58 -92 98 -133 56 -58 65 -72 65 -104 2 -414 311 -901 740 -1169 758 -473 1791 -167 2203 652 232 463 197 978 -96 1410 l-54 79 135 151 c163 182 167 187 153 214 -21 38 -205 67 -353 55 l-78 -7 -61 67 c-187 203 -468 301 -726 252z m414 -352 c121 -60 146 -224 49 -320 -90 -91 -234 -77 -304 28 -113 171 72 382 255 292z m-476 -684 c299 -57 447 -370 332 -702 -231 -665 -1100 -751 -1684 -169 -92 92 -156 168 -148 175 20 17 297 207 379 261 543 353 874 482 1121 435z';
 
+// Crow's icon, from Kyle's picture scripts/crow-icon-source.png (Kyle, 2026-11-14: "can you change the app icon", in
+// the Crow project): a black crow against a pale moon on a night-blue square. Traced with potrace in a 512 square as two
+// shapes: the moon and crow together, then the crow on top (the eye is a hole). Run with `npm run icons`.
+export const CROW_BACKGROUND = '#353c67';
+export const CROW_MOON = '#e5e3ef';
+export const CROW_INK = '#15181e';
+export const CROW_TRANSFORM = 'translate(0 512) scale(0.1 -0.1)';
+export const CROW_MOON_SHAPE = 'M2490 4894 c-886 -59 -1698 -696 -1981 -1554 -139 -422 -152 -795 -43 -1230 l37 -145 -159 -160 c-88 -88 -194 -202 -238 -252 -43 -51 -85 -93 -92 -93 -12 0 -14 -118 -14 -730 l0 -730 1435 0 c1313 0 1435 1 1435 16 0 9 17 37 39 63 50 61 131 175 186 264 l45 71 117 41 c585 203 1068 641 1358 1230 414 840 258 1789 -414 2518 -418 454 -1106 731 -1711 691z';
+export const CROW_SHAPE = 'M2470 3803 c-407 -67 -715 -369 -930 -908 -96 -241 -95 -239 -303 -381 -548 -376 -873 -655 -1166 -1003 l-71 -85 0 -713 0 -713 1424 0 1423 0 62 78 c193 242 396 615 466 860 50 172 66 271 72 447 9 277 -33 446 -178 723 -94 179 -95 188 -54 356 73 298 170 507 256 551 53 28 404 97 735 145 114 16 209 32 212 34 14 14 -215 126 -398 194 -74 27 -241 82 -370 121 -144 43 -304 100 -412 145 -196 83 -309 119 -443 141 -83 14 -265 18 -325 8z m600 -272 c58 -40 76 -125 37 -182 -52 -78 -140 -88 -203 -25 -115 115 32 299 166 207z';
+
 const CRC = new Int32Array(256).map((_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -105,15 +115,25 @@ function svg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${BACKGROUND}"/><path transform="${BIRD_TRANSFORM}" fill="#fff" d="${BIRD}"/></svg>\n`;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const src = readPng(path.join(here, 'icon-source.png'));
-  fs.mkdirSync(out, { recursive: true });
-  fs.writeFileSync(path.join(out, 'icon-192.png'), icon(src, 192, 0.22));
-  fs.writeFileSync(path.join(out, 'icon-512.png'), icon(src, 512, 0.22));
+function crowSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="${CROW_BACKGROUND}"/><g transform="${CROW_TRANSFORM}"><path fill="${CROW_MOON}" d="${CROW_MOON_SHAPE}"/><path fill="${CROW_INK}" stroke="${CROW_INK}" stroke-width="12" d="${CROW_SHAPE}"/></g></svg>\n`;
+}
+
+// Writes every size of one app's icon from its picture into dir.
+function writeIcons(source, dir, vector) {
+  const src = readPng(path.join(here, source));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'icon-192.png'), icon(src, 192, 0.22));
+  fs.writeFileSync(path.join(dir, 'icon-512.png'), icon(src, 512, 0.22));
   // The bird already sits inside the middle 80 percent, so the whole square works as the maskable icon.
-  fs.writeFileSync(path.join(out, 'icon-512-maskable.png'), icon(src, 512));
+  fs.writeFileSync(path.join(dir, 'icon-512-maskable.png'), icon(src, 512));
   // iPad and iPhone round the corners themselves.
-  fs.writeFileSync(path.join(out, 'apple-touch-icon.png'), icon(src, 180));
-  fs.writeFileSync(path.join(out, 'icon.svg'), svg());
-  console.log('Wrote icons to ' + out);
+  fs.writeFileSync(path.join(dir, 'apple-touch-icon.png'), icon(src, 180));
+  fs.writeFileSync(path.join(dir, 'icon.svg'), vector);
+  console.log('Wrote icons to ' + dir);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  writeIcons('icon-source.png', out, svg());
+  writeIcons('crow-icon-source.png', path.join(here, '..', 'public', 'crow', 'icons'), crowSvg());
 }
