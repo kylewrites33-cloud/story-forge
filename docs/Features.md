@@ -713,6 +713,14 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   Each card names the agent that made it after its number ("Line · C-12 · Line Editor"), from the card's `By:` line, so each
   agent's first-pick rate can be counted (2026-11-14; Kyle: "can you clarify which agent made the cards? so we can track
   success and improve metrics?"). Older cards with no `By:` line show no name.
+  A card that points at another place (a repeat, a thing said twice, "the scene already says") lights that other place
+  too while its card is picked: a soft wash with a dotted line under it, a dashed bar and a dashed "Said first here" (or
+  "Said again here") label in the left margin, where the change itself has a solid bar. The card gets a Show where it is
+  said first button that brings it into sight; when the quoted words are in another chapter, the card says which one. The
+  words are the quotes in the card's Why that are not its own old words (`echoQuotes`, `findEchoes` in
+  `src/lib/changes.ts`); a one- or two-word quote lights only its nearest use (2026-11-14; Kyle: "these repeats are
+  difficult to parse. maybe one way around it would be to highlight both sections referenced in a chapter? so i dont
+  have to guess at the location of the first instance?").
   Simple and Final are for reading; All changes and Self-Edit are typed in (All changes since 2026-11-12, below). All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is

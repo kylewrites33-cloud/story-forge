@@ -6,7 +6,7 @@
 cd "$(dirname "$0")"
 export no_proxy=localhost,127.0.0.1 NO_PROXY=localhost,127.0.0.1
 fail=0
-for s in ${@:-box live chapters edit light watch}; do
+for s in ${@:-box live chapters edit echo light watch}; do
   echo "== $s"
   timeout 900 node $s.mjs 2>&1 | tail -25 | cut -c1-600
   [ "${PIPESTATUS[0]}" = 0 ] || { fail=1; echo "!! $s FAILED"; }

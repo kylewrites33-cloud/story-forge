@@ -506,3 +506,72 @@ export function todoTicks(changes: Change[], touched: string[]): { id: string; d
   });
   return out;
 }
+
+// ---- The other place a repeat card means (Kyle, 2026-11-14: "these repeats are difficult to parse. maybe one way around
+// it would be to highlight both sections referenced in a chapter? so i dont have to guess at the location of the first
+// instance?"). A repeat card changes one place and quotes the other in its Why; that other place is found here so the page
+// can light it too, and the card can say which chapter it is in when it is not on this page.
+
+/** Cards whose Why points at words somewhere else: repeats, things said twice, "the scene already says". */
+const POINTS_ELSEWHERE = /\b(repeat\w*|repetition|said twice|told twice|twice|already (?:says|said|has|had|told|tells)|earlier|lines? (?:up|above|on)|paragraphs? (?:up|above|on|earlier|later)|just above)\b/i;
+
+/** The words a card quotes from the other place: the quotes in its Why (or its own parts) that are not its own old words.
+ * Long quotes cut with "..." are searched piece by piece. Empty for cards that do not point elsewhere. */
+export function echoQuotes(c: Change): string[] {
+  const why = [c.why, c.does || '', c.check || ''].join(' ');
+  if (!POINTS_ELSEWHERE.test(why) || /^\s*Names?:/i.test(c.why)) return [];
+  const out: string[] = [];
+  const re = /"([^"\n]{2,400})"|“([^”\n]{2,400})”/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(why))) {
+    (m[1] || m[2]).split(/\.\.\.|…/).forEach((piece) => {
+      const p = piece.trim().replace(/^[,;:]\s*/, '');
+      if (p.replace(/[^\p{L}\p{N}]/gu, '').length >= 3 && !out.includes(p)) out.push(p);
+    });
+  }
+  return out;
+}
+
+/** Same length as the text, so places found in it are places in the text: curly quotes straightened, lower case. */
+const plain = (t: string) => t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').toLowerCase();
+
+/** Where else in these words the card's quotes are: outside its own old words (at to end), in page order. A short quote
+ * (one or two words) is only looked for near the change, at most its two nearest. */
+export function findEchoes(text: string, c: Change, at: number, end: number): { from: number; to: number }[] {
+  const quotes = echoQuotes(c);
+  if (!quotes.length) return [];
+  const hay = plain(text);
+  const found: { from: number; to: number }[] = [];
+  quotes.forEach((q) => {
+    const needle = plain(q);
+    const short = needle.length < 16;
+    const hits: { from: number; to: number }[] = [];
+    for (let i = hay.indexOf(needle); i >= 0; i = hay.indexOf(needle, i + 1)) {
+      const to = i + needle.length;
+      if (i < end && at < to) continue;
+      if (short) {
+        const word = /[\p{L}\p{N}]/u;
+        if ((i > 0 && word.test(hay[i - 1])) || (to < hay.length && word.test(hay[to]))) continue;
+        if (Math.min(Math.abs(i - end), Math.abs(at - to)) > 2500) continue;
+      }
+      hits.push({ from: i, to });
+    }
+    const dist = (h: { from: number; to: number }) => (h.to <= at ? at - h.to : h.from - end);
+    (short ? hits.sort((a, b) => dist(a) - dist(b)).slice(0, 2) : hits).forEach((h) => found.push(h));
+  });
+  found.sort((a, b) => a.from - b.from || b.to - a.to);
+  // Overlapping finds (a quote and a piece of it) become one.
+  const merged: { from: number; to: number }[] = [];
+  found.forEach((f) => {
+    const last = merged[merged.length - 1];
+    if (last && f.from <= last.to) last.to = Math.max(last.to, f.to);
+    else merged.push({ ...f });
+  });
+  return merged;
+}
+
+/** The quotes a card makes that are in none of these words: the ones to look for in other chapters. */
+export function echoMissing(c: Change, texts: string[]): string[] {
+  const hay = texts.map(plain);
+  return echoQuotes(c).filter((q) => q.length >= 16 && !hay.some((h) => h.includes(plain(q))));
+}

@@ -9,7 +9,7 @@ import { history, historyKeymap, insertNewline, isolateHistory, redo, standardKe
 import { Annotation, EditorState, StateEffect, StateField, Transaction, type Range, type TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { ASK_RE } from '../lib/brackets.ts';
-import { placeChanges, shortLabel, wordDiff, type Change } from '../lib/changes.ts';
+import { findEchoes, placeChanges, shortLabel, wordDiff, type Change } from '../lib/changes.ts';
 import { mentions } from '../lib/codex.ts';
 import { clip, edit, restAt, type Look } from '../lib/prosedit.ts';
 import { allRuns, findAll, insertText, marks, runs, stylesAt, toggleStyle, unstyle, type StyleKind, type StyleOptions } from '../lib/styled.ts';
@@ -175,12 +175,12 @@ class NewWords extends WidgetType {
 }
 
 class Tag extends WidgetType {
-  label: string; id: string; on: boolean;
-  constructor(label: string, id: string, on: boolean) { super(); this.label = label; this.id = id; this.on = on; }
-  eq(o: Tag) { return o.label === this.label && o.id === this.id && o.on === this.on; }
+  label: string; id: string; on: boolean; extra: string;
+  constructor(label: string, id: string, on: boolean, extra = '') { super(); this.label = label; this.id = id; this.on = on; this.extra = extra; }
+  eq(o: Tag) { return o.label === this.label && o.id === this.id && o.on === this.on && o.extra === this.extra; }
   toDOM() {
     const el = document.createElement('span');
-    el.className = 'chg-tag' + (this.on ? ' on' : '');
+    el.className = 'chg-tag' + (this.on ? ' on' : '') + (this.extra ? ' ' + this.extra : '');
     el.dataset.chg = this.id;
     el.textContent = this.label;
     return el;
@@ -214,6 +214,16 @@ function changeDecos(state: EditorState, pc: PageChanges | null): DecorationSet 
       out.push(Decoration.line({ class: 'has-chg' + (on ? ' on' : '') }).range(l.from));
       if (l.to >= p.end || l.number >= state.doc.lines) break;
     }
+    // The picked card's other place, when it quotes one (a repeat): lit in its own look, with its own margin label
+    // (Kyle, 2026-11-14: "highlight both sections referenced in a chapter").
+    if (on) findEchoes(doc, p.change, p.at, p.end).forEach((e) => {
+      out.push(Decoration.widget({ widget: new Tag(e.to <= p.at ? 'Said first here' : 'Said again here', id, true, 'chg-echo-tag'), side: -1 }).range(e.from));
+      out.push(Decoration.mark({ class: 'chg-echo', attributes: { 'data-chg': id, 'data-echo': '1' } }).range(e.from, e.to));
+      for (let l = state.doc.lineAt(e.from); ; l = state.doc.line(l.number + 1)) {
+        out.push(Decoration.line({ class: 'has-echo' }).range(l.from));
+        if (l.to >= e.to || l.number >= state.doc.lines) break;
+      }
+    });
   });
   return Decoration.set(out, true);
 }

@@ -163,8 +163,13 @@ export function showCard(id: string, gentle = false) {
 }
 
 /** The side column's Changes tab: one card per change in this scene, waiting ones in page order (like Word's margin), then the ones no longer on the page. */
-export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere, onReply = null, replying = false, replyProblem = '' }: {
+/** Where a repeat card's other place is: on this page (with a way to bring it into sight), or in another chapter. */
+export type EchoInfo = { before: boolean; go: () => void } | { chapter: number; title: string } | null;
+
+export function ChangesPanel({ echo, changes, placedIds, current, onAcceptAll, onPick, onChoose, onUndo, onMine, onTweak, editing, onDoneMine, onStopMine, onRevert, onEverywhere, like, chapter, bookOpen, notePath, link, elsewhere = 0, onElsewhere, onReply = null, replying = false, replyProblem = '' }: {
   changes: Change[]; /** The placed changes' ids in page order. */ placedIds: string[]; current: string | null;
+  /** The other place a card quotes (repeats), lit on the page when the card is picked. */
+  echo?: (c: Change) => EchoInfo;
   /** Word's Accept All: every waiting change still on the page. */ onAcceptAll: () => void; onPick: (id: string) => void;
   onChoose: (c: Change, status: ChangeStatus) => void; onUndo: (c: Change) => void; onMine: (c: Change) => void;
   /** Kyle's own version of the team's words, edited on the card, goes in as his own words (Kyle, 2026-10-28). */
@@ -242,6 +247,12 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
             {c.check && <details class="chg-check"><summary>The team's check</summary><p class="chg-why">{c.check}</p></details>}
           </div>
         ) : c.why && <p class="chg-why">{c.why}</p>}
+        {c.status === 'open' && here && echo && (() => {
+          const e = echo(c);
+          if (!e) return null;
+          if ('chapter' in e) return <p class="chg-echo-note">{'The other place is in chapter ' + e.chapter + (e.title && !/^chapter\s/i.test(e.title) ? ', ' + e.title : '') + '.'}</p>;
+          return <button type="button" class="chg-echo-go" onClick={e.go}><Icon name="search" size={16} />{e.before ? 'Show where it is said first' : 'Show where it is said again'}</button>;
+        })()}
         {c.status === 'open' ? (
           <>
             <Quote text={c.was} cls="was" />

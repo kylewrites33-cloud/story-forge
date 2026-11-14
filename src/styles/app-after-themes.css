@@ -1014,6 +1014,14 @@ button, .button { border-radius: 12px; }
    and inline before the change. */
 :is(.changes-page, .writer-text.prose) .chg-tag { display: inline-block; margin: 0 6px 0 0; padding: 0 6px; border-radius: 6px; background: var(--hover); color: var(--muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.7em; line-height: 1.6; vertical-align: 0.15em; cursor: pointer; text-decoration: none; }
 :is(.changes-page, .writer-text.prose) .chg-tag.on { background: var(--accent-soft); color: var(--accent); }
+:is(.changes-page, .writer-text.prose) .chg-tag.chg-echo-tag { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
+/* A repeat card's other place (Kyle, 2026-11-14): lit while its card is picked, in a look of its own: a soft wash with a
+   dotted line under it and a dashed bar in the left margin, where the change itself has a solid one. */
+.writer-text.prose .chg-echo { background: color-mix(in srgb, var(--accent) 12%, transparent); border-bottom: 2px dotted var(--accent); border-radius: 2px; cursor: pointer; }
+.writer-text.prose .cm-line.has-echo { position: relative; }
+.writer-text.prose .cm-line.has-echo::before { content: ''; position: absolute; left: calc(-1 * clamp(10px, 2.4vw, 30px)); top: 0.2em; bottom: 0.2em; width: 0; border-left: 3px dashed var(--accent); }
+.chg-echo-go { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; justify-self: start; }
+.chg-echo-note { margin: 0; font-size: 0.94rem; color: var(--accent); }
 
 /* The side column's cards. */
 .changes-panel { display: grid; gap: 10px; }
@@ -1080,6 +1088,7 @@ button, .button { border-radius: 12px; }
   .writer .writer-page:has(.writer-text.prose .chg-tag) :is(.page-head, .writer-text.styled, .section-name) { padding-right: clamp(16px, 4vw, 48px); padding-left: calc(clamp(16px, 4vw, 48px) + 13rem); max-width: calc(var(--page-width, 44rem) + 13rem); margin-left: auto; margin-right: 0; }
   :is(.changes-page, .writer-text.prose) .chg-tag { float: left; clear: left; width: 11rem; margin: 0.25em 0 2px -13rem; padding: 2px 8px; font-size: 0.78em; line-height: 1.4; vertical-align: baseline; text-align: right; white-space: normal; border-right: 3px solid var(--line); border-radius: 6px 0 0 6px; }
   :is(.changes-page, .writer-text.prose) .chg-tag.on { border-right-color: var(--accent); }
+  :is(.changes-page, .writer-text.prose) .chg-tag.chg-echo-tag { border: 0; border-right: 3px dashed var(--accent); }
 }
 .ask-changes { display: grid; gap: 8px; margin-top: 8px; }
 .ask-changes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; justify-self: start; }
