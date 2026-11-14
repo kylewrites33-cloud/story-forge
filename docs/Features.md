@@ -710,6 +710,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   changed paragraph), Final (no marks) and Self-Edit (Kyle's page as it stands, with every change he accepted, where he types; called Original until 2026-10-28, Kyle: "original sounds like im editing draft 1", "make the button called Self-Edit"). Up and down arrows step through
   the changes and on into the next chapter that has any.
   A change that only adds italics shows the words in italics, not raw stars (2026-10-28).
+  Each card names the agent that made it after its number ("Line · C-12 · Line Editor"), from the card's `By:` line, so each
+  agent's first-pick rate can be counted (2026-11-14; Kyle: "can you clarify which agent made the cards? so we can track
+  success and improve metrics?"). Older cards with no `By:` line show no name.
   Simple and Final are for reading; All changes and Self-Edit are typed in (All changes since 2026-11-12, below). All changes marks only the words that
   differ, so a name change strikes one word, not its sentence, and All changes and Simple put a few words beside each
   change saying what it is ("Name: Grey → Basil", "Typo: teh → the", "Story call I-089"): in the margin when the page is

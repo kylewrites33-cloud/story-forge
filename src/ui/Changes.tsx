@@ -234,7 +234,7 @@ export function ChangesPanel({ changes, placedIds, current, onAcceptAll, onPick,
     return (
       <article key={c.id} data-card={c.id} class={'chg-card chg-' + c.kind + (c.id === current ? ' on' : '') + (c.status !== 'open' ? ' decided' : '')}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('button, a, textarea, label, input')) onPick(c.id); }}>
-        <p class="chg-head"><b>{shortLabel(c)}</b><span class="meta">{shortLabel(c).startsWith(KIND_LABEL[c.kind]) ? '' : KIND_LABEL[c.kind] + ' · '}{c.id}</span></p>
+        <p class="chg-head"><b>{shortLabel(c)}</b><span class="meta">{shortLabel(c).startsWith(KIND_LABEL[c.kind]) ? '' : KIND_LABEL[c.kind] + ' · '}{c.id}{c.by ? ' · ' + c.by : ''}</span></p>
         {c.asked || c.does ? (
           <div class="chg-parts">
             {c.asked && <p class="chg-why"><span class="chg-label">You asked</span>{c.asked}</p>}

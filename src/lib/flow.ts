@@ -304,7 +304,7 @@ export function resultText(id: string, r: NewResult, now: Date): string {
   const words = r.text.trim();
   const data: Record<string, unknown> = {
     type: 'idea', id, title: resultTitle(words) || 'Result', kind: kindForStep(r.step), status: r.status,
-    source: r.origin === 'kyle' ? 'Kyle' : r.origin === 'brought-in' ? 'Kyle (brought in)' : 'Story Specialist',
+    source: r.origin === 'kyle' ? 'Kyle' : r.origin === 'brought-in' ? 'Kyle' : 'Story Specialist',
     pitch: words.replace(/\s+/g, ' ').slice(0, 300), step: r.step, origin: r.origin
   };
   if (r.target) data.target = r.target;

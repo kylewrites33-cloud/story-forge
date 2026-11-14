@@ -106,6 +106,7 @@ export type Prop =
   | 'labels'
   | 'lane'
   | 'length'
+  | 'lens'
   | 'lie'
   | 'life_before'
   | 'limits'

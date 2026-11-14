@@ -883,7 +883,28 @@
           "default": "inbox"
         },
         "source": {
-          "type": "string"
+          "enum": [
+            "Writer",
+            "Story Specialist",
+            "Contrarian",
+            "Market Analyst",
+            "Developmental Editor",
+            "Line Editor",
+            "Beta Reader",
+            "Continuity Keeper",
+            "Coordinator",
+            "Kyle"
+          ],
+          "description": "Who made the idea, by roster name exactly as in CLAUDE.md, so each agent's first-pick rate can be counted (Kyle, 2026-11-14). Coordinator for a pooled job no single agent owns; Kyle for his own. A lens goes in lens, never here."
+        },
+        "lens": {
+          "enum": [
+            "character",
+            "plot",
+            "genre",
+            "series"
+          ],
+          "description": "The lens brief that made the idea, when the Story Specialist ran one (Character, Plot or Genre lens, or a series breakdown)."
         },
         "session": {
           "type": "link",
@@ -3277,7 +3298,7 @@
           "ask": "Revise <<target>> of this book as changes on Kyle's draft (workflow step 39), following `.claude/skills/revise-as-changes/SKILL.md` as the Writer: one `chapter-changes` note in the book's `Changes/` folder, each change quoting his exact words with the new words and the reason. Follow only the story calls he kept. Never edit a scene file.",
           "ask_with_words": "\n\nKyle's words: <<words>>",
           "steps": [
-            "Do this: follow `.claude/skills/revise-as-changes/SKILL.md` as the Writer (`.claude/agents/writer.md`) for <<target|the chapter named in the ask>> of this book (workflow step 39; the whole process is `.claude/skills/edit-book/SKILL.md`). Before any new words, read the codex: the series `Characters/` and `Lore/` notes, the places, items and threads the chapter touches, the book's `Story So Far.md` and the `Book Index.md` entries of the people in the scene, and check every fact a new line states against them; a fact no note supports goes in a { } question, never in the text. Every open to-do for the chapter in the book's `Tasks/` gets a change whose Why starts `To-do T-NNN:`. Kyle's notes in the text ({ } asks, and plain lowercase [ ] notes in older books) are instructions: each becomes a change that carries it out, and every change that answers a { } ask carries two different options, the second under `Or:` (Kyle, 2026-11-12). Write the chapter's changes as one `chapter-changes` note in the book's `Changes/` folder: each change quotes Kyle's exact words, gives the new words and its reason, and new passages carry a second version. Kyle's sentence stays unless a kept story call, a chapter problem, a Style Guide rule or plain sense gives a reason. Never edit a scene file: Kyle keeps or refuses each change in the app. If the chapter already has a changes note with changes Kyle has not decided, stop and say so in the Result."
+            "Do this: follow `.claude/skills/revise-as-changes/SKILL.md` as the Writer (`.claude/agents/writer.md`) for <<target|the chapter named in the ask>> of this book (workflow step 39; the whole process is `.claude/skills/edit-book/SKILL.md`). Before any new words, read the codex: the series `Characters/` and `Lore/` notes, the places, items and threads the chapter touches, the book's `Story So Far.md` and the `Book Index.md` entries of the people in the scene, and check every fact a new line states against them; a fact no note supports goes in a { } question, never in the text. Every open to-do for the chapter in the book's `Tasks/` gets a change whose Why starts `To-do T-NNN:`. Kyle's notes in the text ({ } asks, and plain lowercase [ ] notes in older books) are instructions: each becomes a change that carries it out, and every change that answers a { } ask carries two different options, the second under `Or:` (Kyle, 2026-11-12). So does every other change with a real choice of words (a crutch word, a repeated word, a wordy line, a sense fix, a to-do, a story call); only a fix with one right answer (a typo, a capital, punctuation, an em dash, a name, a settled fact) carries one (Kyle, 2026-11-12: \"We don't need two options for typos, obviously\"; `revise-as-changes`, leash rule 11). Write the chapter's changes as one `chapter-changes` note in the book's `Changes/` folder: each change quotes Kyle's exact words, gives the new words and its reason, and new passages carry a second version. Kyle's sentence stays unless a kept story call, a chapter problem, a Style Guide rule or plain sense gives a reason. Never edit a scene file: Kyle keeps or refuses each change in the app. If the chapter already has a changes note with changes Kyle has not decided, stop and say so in the Result."
           ]
         },
         "reply": {
