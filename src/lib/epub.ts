@@ -3,9 +3,13 @@
 // and italics as Export to Word (docx.ts). System screens (format C1) are boxed, left-aligned blocks with a bold
 // small-caps title, the look Kyle set in Vellum with Inset. Front and back matter come from the book's `Book Matter.md`
 // note; the cover is the newest full-size picture in the book's Cover/ folder. The vault tool's `sf compile --epub`
-// makes the same file (Epub.build in sf.js); keep the two in step.
+// makes the same file (Epub.build in sf.js); keep the two in step. Since 2026-11-14 (Docs/Sparrow/21 Kindle Plan.md,
+// Build 1) the parts both need are one copy of sf's Kindle section (kindle.js): curly quotes made as the file is made,
+// the stylesheet, the title page, the series' own pages, the cover size and the ready check.
 import { exportName, isScreen, manuscript, pieces, zip } from './docx.ts';
 import { Frontmatter } from './frontmatter.js';
+import { Kindle } from './kindle.js';
+import type { KindlePage, KindleSection } from './kindle.js';
 import type { Manuscript } from './docx.ts';
 import type { BookEntry, Schema, VaultIndex, VaultSource } from './types.ts';
 
@@ -16,15 +20,7 @@ export interface MatterPage { place: 'front' | 'back'; title: string; body: stri
 
 /** The pages of a Book Matter note, in the order written. Text before the first heading is a note to the team and is left out. */
 export function matterPages(body: string): MatterPage[] {
-  const out: MatterPage[] = [];
-  let cur: MatterPage | null = null;
-  String(body || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\r\n?/g, '\n').split('\n').forEach((line) => {
-    const h = /^##\s+(front|back)\s*:\s*(.+?)\s*$/i.exec(line);
-    if (h) { cur = { place: h[1].toLowerCase() as 'front' | 'back', title: h[2], body: '' }; out.push(cur); return; }
-    if (cur) cur.body += line + '\n';
-  });
-  out.forEach((p) => { p.body = p.body.trim(); });
-  return out.filter((p) => p.body);
+  return Kindle.matterSections(body).filter((p) => p.body);
 }
 
 /** A line's words as XHTML: italics and bold as the writing screen reads them, highlights dropped (notes to self),
@@ -58,7 +54,7 @@ export function screenHtml(p: string): string {
     out.push('<p' + (cls ? ' class="' + cls + '"' : '') + '>' + inlineHtml(title ? l.trim().slice(2, -2) : l.trim()) + '</p>');
     gap = false;
   });
-  return '<div class="screen">' + out.join('') + '</div>';
+  return '<div class="screen' + (out.length > Kindle.LONG_SCREEN ? ' long' : '') + '">' + out.join('') + '</div>';
 }
 
 /** A run of prose (a scene, or a page of matter) as paragraphs; the first has no indent. */
@@ -101,28 +97,8 @@ export function bookId(title: string, author: string): string {
   return [a.slice(0, 8), a.slice(8, 12), '5' + a.slice(13, 16), '8' + a.slice(17, 20), a.slice(20, 32)].join('-');
 }
 
-export const CSS = [
-  'p{margin:0;text-indent:1.5em;}',
-  'p.first,p.noindent{text-indent:0;}',
-  'p.break{text-align:center;text-indent:0;margin:1em 0;}',
-  'h1.chapter{text-align:center;font-weight:normal;margin:2em 0 1.5em;page-break-before:always;}',
-  'h1.chapter .num{display:block;font-size:0.75em;letter-spacing:0.12em;text-transform:uppercase;}',
-  'h1.chapter .ctitle{display:block;font-size:1.3em;margin-top:0.4em;}',
-  'div.screen{margin:1em 0.5em;padding:0.5em 0.8em;border:1px solid;page-break-inside:avoid;}',
-  'div.screen p{text-indent:0;text-align:left;}',
-  'div.screen p.t{font-weight:bold;font-variant:small-caps;}',
-  'div.screen p.sp{margin-top:0.8em;}',
-  '.titlepage{text-align:center;margin-top:30%;}',
-  '.titlepage h1{font-weight:normal;font-size:1.8em;margin-bottom:1em;}',
-  '.titlepage p{text-align:center;text-indent:0;}',
-  'section.matter h2{text-align:center;font-weight:normal;margin:2em 0 1em;}',
-  'section.matter p{margin-bottom:0.6em;}',
-  'section.copyright{font-size:0.85em;margin-top:2em;}',
-  'section.dedication,section.epigraph{text-align:center;margin-top:30%;}',
-  'section.dedication p,section.epigraph p{text-align:center;}',
-  'nav ol{list-style-type:none;padding-left:0;}',
-  'nav li{margin:0.3em 0;}'
-].join('\n') + '\n';
+/** The stylesheet, checked against Amazon's Kindle Publishing Guidelines 2026.3 (kindle.js has the reasons). */
+export const CSS: string = Kindle.CSS;
 
 export interface EpubInput {
   title: string;
@@ -131,15 +107,19 @@ export interface EpubInput {
   matter?: MatterPage[];
   cover?: { bytes: Uint8Array; type: 'image/jpeg' | 'image/png' };
   series?: { name: string; number: number | null };
+  subtitle?: string;
+  publisher?: string;
 }
 
-/** The .epub itself. */
-export function buildEpub(input: EpubInput, when: Date = new Date()): Uint8Array {
+/** The files of the .epub in order, and its pages as a reader meets them (for the ready check and Look inside). Quotes,
+ * dashes and ellipses are made curly and long here, as the pages are made; the vault keeps its own marks. */
+export function epubFiles(input: EpubInput, when: Date = new Date()): { files: { name: string; data: string | Uint8Array }[]; pages: KindlePage[] } {
   const { title, author, manuscript: m } = input;
   const matter = input.matter || [];
   const modified = when.toISOString().replace(/\.\d+Z$/, 'Z');
-  const page = (t: string, body: string, type = '') => '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n' +
-    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en" lang="en"><head><meta charset="utf-8"/><title>' + x(t) +
+  const t = (s: string) => Kindle.smart(x(s));
+  const page = (label: string, body: string, type = '') => '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n' +
+    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en" lang="en"><head><meta charset="utf-8"/><title>' + t(label) +
     '</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body' + (type ? ' epub:type="' + type + '"' : '') + '>' + body + '</body></html>\n';
   const files: { name: string; data: string | Uint8Array }[] = [
     { name: 'mimetype', data: 'application/epub+zip' },
@@ -149,11 +129,14 @@ export function buildEpub(input: EpubInput, when: Date = new Date()): Uint8Array
   const items: string[] = ['<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>', '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>', '<item id="css" href="style.css" media-type="text/css"/>'];
   const spine: string[] = [];
   const toc: { href: string; label: string }[] = [];
-  const add = (id: string, label: string, html: string, inToc: boolean, type = '') => {
-    files.push({ name: 'OEBPS/' + id + '.xhtml', data: page(label, html, type) });
+  const pages: KindlePage[] = [];
+  const add = (id: string, label: string, html: string, inToc: boolean, type: string, kind: KindlePage['kind']) => {
+    const body = Kindle.smart(html);
+    files.push({ name: 'OEBPS/' + id + '.xhtml', data: page(label, body, type) });
     items.push('<item id="' + id + '" href="' + id + '.xhtml" media-type="application/xhtml+xml"/>');
     spine.push('<itemref idref="' + id + '"/>');
     if (inToc) toc.push({ href: id + '.xhtml', label });
+    pages.push({ id, label, html: body, kind });
   };
   // Kindle wants the cover as an image marked cover-image and no cover page of its own (KDP help G6GTK3T3NUHKLEFX).
   if (input.cover) {
@@ -161,8 +144,9 @@ export function buildEpub(input: EpubInput, when: Date = new Date()): Uint8Array
     files.push({ name: 'OEBPS/cover.' + ext, data: input.cover.bytes });
     items.push('<item id="cover" href="cover.' + ext + '" media-type="' + input.cover.type + '" properties="cover-image"/>');
   }
-  add('title', title, '<section class="titlepage" epub:type="titlepage"><h1>' + x(title) + '</h1>' + (author ? '<p>' + x(author) + '</p>' : '') + '</section>', false);
-  matter.filter((p) => p.place === 'front').forEach((p, i) => add('front' + (i + 1), p.title, matterHtml(p), !QUIET.test(p.title)));
+  const s = input.series;
+  add('title', title, Kindle.titlePage({ title, subtitle: input.subtitle, series: s && s.name, number: s ? s.number : null, author, publisher: input.publisher }), false, '', 'title');
+  matter.filter((p) => p.place === 'front').forEach((p, i) => add('front' + (i + 1), p.title, matterHtml(p), !QUIET.test(p.title), '', 'matter'));
   spine.push('<itemref idref="nav"/>');
   let firstChapter = '';
   m.chapters.forEach((c, i) => {
@@ -170,25 +154,31 @@ export function buildEpub(input: EpubInput, when: Date = new Date()): Uint8Array
     if (!firstChapter) firstChapter = id + '.xhtml';
     const body = '<section epub:type="chapter">' + headingHtml(c.heading) + '\n' +
       c.parts.map((part) => proseHtml(part)).join('\n<p class="break">* * *</p>\n') + '</section>';
-    add(id, c.heading, body, true, 'bodymatter');
+    add(id, c.heading, body, true, 'bodymatter', 'chapter');
   });
-  matter.filter((p) => p.place === 'back').forEach((p, i) => add('back' + (i + 1), p.title, matterHtml(p), true));
-  const navList = toc.map((t) => '<li><a href="' + t.href + '">' + x(t.label) + '</a></li>').join('');
+  matter.filter((p) => p.place === 'back').forEach((p, i) => add('back' + (i + 1), p.title, matterHtml(p), true, '', 'matter'));
+  const navList = toc.map((e) => '<li><a href="' + e.href + '">' + t(e.label) + '</a></li>').join('');
   const landmarks = '<nav epub:type="landmarks" hidden="hidden"><ol><li><a epub:type="toc" href="nav.xhtml">Contents</a></li>' +
     (firstChapter ? '<li><a epub:type="bodymatter" href="' + firstChapter + '">Start</a></li>' : '') + '</ol></nav>';
   files.push({ name: 'OEBPS/nav.xhtml', data: page('Contents', '<nav epub:type="toc" id="toc"><h2>Contents</h2><ol>' + navList + '</ol></nav>' + landmarks) });
   const id = bookId(title, author);
-  files.push({ name: 'OEBPS/toc.ncx', data: '<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:' + id + '"/></head><docTitle><text>' + x(title) + '</text></docTitle><navMap>' +
-    toc.map((t, i) => '<navPoint id="n' + (i + 1) + '" playOrder="' + (i + 1) + '"><navLabel><text>' + x(t.label) + '</text></navLabel><content src="' + t.href + '"/></navPoint>').join('') + '</navMap></ncx>\n' });
-  const series = input.series && input.series.name
-    ? '<meta property="belongs-to-collection" id="series">' + x(input.series.name) + '</meta><meta refines="#series" property="collection-type">series</meta>' +
-      (input.series.number != null ? '<meta refines="#series" property="group-position">' + input.series.number + '</meta>' : '')
+  files.push({ name: 'OEBPS/toc.ncx', data: '<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:' + id + '"/></head><docTitle><text>' + t(title) + '</text></docTitle><navMap>' +
+    toc.map((e, i) => '<navPoint id="n' + (i + 1) + '" playOrder="' + (i + 1) + '"><navLabel><text>' + t(e.label) + '</text></navLabel><content src="' + e.href + '"/></navPoint>').join('') + '</navMap></ncx>\n' });
+  const series = s && s.name
+    ? '<meta property="belongs-to-collection" id="series">' + t(s.name) + '</meta><meta refines="#series" property="collection-type">series</meta>' +
+      (s.number != null ? '<meta refines="#series" property="group-position">' + s.number + '</meta>' : '')
     : '';
   files.push({ name: 'OEBPS/content.opf', data: '<?xml version="1.0" encoding="UTF-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/">' +
-    '<dc:identifier id="bookid">urn:uuid:' + id + '</dc:identifier><dc:title>' + x(title) + '</dc:title><dc:language>en</dc:language>' + (author ? '<dc:creator>' + x(author) + '</dc:creator>' : '') +
+    '<dc:identifier id="bookid">urn:uuid:' + id + '</dc:identifier><dc:title>' + t(title) + '</dc:title><dc:language>en</dc:language>' + (author ? '<dc:creator>' + t(author) + '</dc:creator>' : '') +
+    (input.publisher ? '<dc:publisher>' + t(input.publisher) + '</dc:publisher>' : '') +
     series + '<meta property="dcterms:modified">' + modified + '</meta>' + (input.cover ? '<meta name="cover" content="cover"/>' : '') + '</metadata><manifest>' + items.join('') +
     '</manifest><spine toc="ncx">' + spine.join('') + '</spine></package>\n' });
-  return zip(files, when);
+  return { files, pages };
+}
+
+/** The .epub itself. */
+export function buildEpub(input: EpubInput, when: Date = new Date()): Uint8Array {
+  return zip(epubFiles(input, when).files, when);
 }
 
 /** The newest full-size cover in the book's Cover/ folder ("Original cover <time>.jpg", covers.ts), or null. */
@@ -217,18 +207,52 @@ export function starterMatter(author: string, when: Date = new Date()): string {
     '## Back: About the Author\n';
 }
 
-/** Everything the Kindle button needs, gathered from the vault: the book, its matter, its cover. `notes` lets the Edit
- * room pass a saved draft's words instead of the scene files. */
-export async function kindleFile(source: VaultSource, schema: Schema, index: VaultIndex, book: BookEntry, when: Date = new Date()):
-  Promise<{ bytes: Uint8Array; name: string; chapters: number; words: number; missing: string[] }> {
+/** What a Kindle file is, made: the download, its pages for Look inside, and the ready check. */
+export interface KindleMade {
+  bytes: Uint8Array;
+  name: string;
+  chapters: number;
+  words: number;
+  /** Plain words for what is not in it yet (the cover, the copyright page). */
+  missing: string[];
+  /** The ready check: anything that would embarrass the book, and what is right. */
+  check: { problems: string[]; good: string[] };
+  files: { name: string; data: string | Uint8Array }[];
+  pages: KindlePage[];
+}
+
+/** The series folder a book sits in ("Series/Quest Declined"). */
+export const seriesFolder = (book: BookEntry) => book.folder.replace(/\/Books\/[^/]+$/, '');
+/** Where the series' own pages live: About the author, Also by, written once for every book (Kyle, 2026-11-14). */
+export const seriesMatterPath = (book: BookEntry) => seriesFolder(book) + '/Book Matter.md';
+
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+
+/** A first series Book Matter note: the pages written once for every book in the series, as empty headings. */
+export function starterSeriesMatter(author: string, when: Date = new Date()): string {
+  const day = when.getFullYear() + '-' + String(when.getMonth() + 1).padStart(2, '0') + '-' + String(when.getDate()).padStart(2, '0');
+  return '---\ntype: book-matter\ntitle: "Book matter"\nsource: Sparrow app\ncreated: ' + day + '\n---\n' +
+    'Pages written once for every book in the series. A book\'s own page of the same name wins; Also by lists the series\' other books that have a store link, then these words.\n\n' +
+    '## Back: About the Author\n\n' +
+    '## Back: Also by ' + (author || 'the Author') + '\n';
+}
+
+/** Everything the Kindle button needs, gathered from the vault: the book, its matter and the series', its cover. */
+export async function kindleFile(source: VaultSource, schema: Schema, index: VaultIndex, book: BookEntry, when: Date = new Date()): Promise<KindleMade> {
   const m = manuscript(schema, index, book);
   if (!m.scenes) throw new Error('This book has no written scenes yet, so there is nothing to put in a Kindle file.');
   const data = index.notes[book.path] ? index.notes[book.path].data : {};
-  const author = typeof data.author === 'string' ? data.author : '';
+  const author = str(data.author);
   const fresh = await loadMatter(source, index, book);
-  const matter = fresh ? matterPages(splitNote(fresh.text).body) : [];
+  const seriesNote = await loadNote(source, index, seriesMatterPath(book));
+  const bookBody = fresh ? splitNote(fresh.text).body : '', seriesBody = seriesNote ? splitNote(seriesNote.text).body : '';
+  const sf = seriesFolder(book);
+  const books = index.books.filter((b) => b.folder.indexOf(sf + '/Books/') === 0)
+    .map((b) => ({ title: b.title, number: b.number, url: str(index.notes[b.path] ? index.notes[b.path].data.amazon_url : '') }));
+  const matter = Kindle.bookMatter(bookBody, seriesBody, book.seriesName, books, { title: book.title, url: str(data.amazon_url) }) as MatterPage[];
+  const sections: KindleSection[] = Kindle.mergeMatter(Kindle.matterSections(bookBody), Kindle.matterSections(seriesBody));
   const missing: string[] = [];
-  if (!matter.length) missing.push('front and back matter (no copyright page yet)');
+  if (!matter.some((p) => /^copyright$/i.test(p.title))) missing.push('the copyright page');
   let cover: EpubInput['cover'];
   if (source.readBytes) {
     try {
@@ -237,8 +261,19 @@ export async function kindleFile(source: VaultSource, schema: Schema, index: Vau
     } catch { /* offline: made without the cover, and said so */ }
   }
   if (!cover) missing.push('the cover');
-  const bytes = buildEpub({ title: book.title, author, manuscript: m, matter, cover, series: { name: book.seriesName, number: book.number } }, when);
-  return { bytes, name: exportName(book, when).replace(/\.docx$/, '.epub'), chapters: m.chapters.length, words: m.words, missing };
+  const made = epubFiles({ title: book.title, author, manuscript: m, matter, cover, series: { name: book.seriesName, number: book.number },
+    subtitle: Kindle.subtitleOf(book.title, data), publisher: str(data.publisher) }, when);
+  const check = Kindle.check({ pages: made.pages, matter: sections, cover: cover ? cover.bytes : null, author });
+  return { bytes: zip(made.files, when), name: exportName(book, when).replace(/\.docx$/, '.epub'), chapters: m.chapters.length, words: m.words, missing, check, files: made.files, pages: made.pages };
+}
+
+/** A note as the vault has it now (fresh when the source can), or as the app shows it, or null. */
+async function loadNote(source: VaultSource, index: VaultIndex, p: string): Promise<{ text: string; sha: string } | null> {
+  if (source.readFresh) {
+    try { return await source.readFresh(p); } catch { /* not there yet, or offline */ }
+  }
+  const n = index.notes[p];
+  return n ? { text: Frontmatter.join(n.data, n.body), sha: n.sha } : null;
 }
 
 /** The Book Matter note as the vault has it now (fresh when the source can, so a save made a moment ago counts), or null. */

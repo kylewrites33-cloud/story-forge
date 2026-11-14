@@ -24,6 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # The Kindle files the app makes must pass the W3C's EPUBCheck with no errors or warnings (tests/epubcheck/).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: bash tests/epubcheck/run.sh
       - run: npm run build
       - if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3

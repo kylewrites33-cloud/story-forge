@@ -15,7 +15,8 @@ import {
 import type { BookEntry, DeviceFile, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import type { TextChange } from '../vault/text.ts';
 import { backupFile, buildDocx, exportName, manuscript } from '../lib/docx.ts';
-import { kindleFile, matterPath, splitNote, starterMatter } from '../lib/epub.ts';
+import { kindleFile, matterPath, seriesMatterPath, splitNote, starterMatter, starterSeriesMatter, type KindleMade } from '../lib/epub.ts';
+import { previewDoc, SCREEN_NAME, SCREEN_WIDTH, type Paper, type Screen, type TypeSize } from '../lib/lookinside.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
@@ -232,77 +233,140 @@ export function ExportWord({ source, schema, index, book, card, onFiles, onMatte
 }
 
 /** The Kindle file (Kyle, 2026-11-04, replacing Vellum for the ebook): an EPUB ready for KDP, made on this device and
- * downloaded, with System screens boxed, the Book Matter note's pages and the cover. Said plainly what is missing. */
+ * downloaded, with System screens boxed, the book's and the series' front and back pages and the cover. Since 2026-11-14
+ * (Docs/Sparrow/21 Kindle Plan.md, Build 1) the file is checked before it downloads (anything that would embarrass the
+ * book, in plain sentences; green means upload) and Look inside shows its own pages at Kindle, phone and iPad widths. */
 type OnMatter = (path: string, change: Extract<TextChange, { what: 'words' }>) => void;
 
 function KindleFile({ source, schema, index, book, onMatter }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; onMatter: OnMatter }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const run = async () => {
+  const [made, setMade] = useState<KindleMade | null>(null);
+  const [look, setLook] = useState(false);
+  const make = async (): Promise<KindleMade | null> => {
     setBusy(true);
     setSaid({ error: false, text: 'Making the Kindle file…' });
     try {
       const k = await kindleFile(source, schema, index, book);
-      downloadFile(k.bytes as Uint8Array<ArrayBuffer>, k.name, 'application/epub+zip');
-      setSaid({
-        error: false,
-        text: 'Made ' + k.name + ': ' + k.chapters + (k.chapters === 1 ? ' chapter, ' : ' chapters, ') + num(k.words) + ' words. Look for it in your downloads.' +
-          (k.missing.length ? ' Not in it yet: ' + k.missing.join(' and ') + '.' : '') +
-          (k.missing.indexOf('the cover') >= 0 ? ' KDP wants the cover inside the file too: add the full-size cover on Book details, then make the file again.' : '')
-      });
+      setMade(k);
+      setSaid(null);
+      setBusy(false);
+      return k;
     } catch (e) {
       setSaid({ error: true, text: 'The Kindle file could not be made: ' + (e instanceof Error ? e.message : String(e)) });
+      setBusy(false);
+      return null;
     }
-    setBusy(false);
+  };
+  const download = (k: KindleMade) => {
+    downloadFile(k.bytes as Uint8Array<ArrayBuffer>, k.name, 'application/epub+zip');
+    setSaid({ error: false, text: 'Made ' + k.name + ': ' + k.chapters + (k.chapters === 1 ? ' chapter, ' : ' chapters, ') + num(k.words) + ' words. Look for it in your downloads.' });
+  };
+  const run = async () => {
+    setLook(false);
+    const k = await make();
+    if (k && !k.check.problems.length) download(k);
+  };
+  const lookInside = async () => {
+    if (look) { setLook(false); return; }
+    const k = await make();
+    if (k) setLook(true);
   };
   return (
     <>
       <h2>Kindle file</h2>
-      <p class="hint">The ebook to upload to KDP, with System screens in boxes, the copyright page and back matter from the book matter page, and the cover.</p>
-      <button type="button" onClick={run} disabled={busy}><Icon name="download" size={18} />Make the Kindle file</button>
+      <p class="hint">The ebook to upload to KDP: curly quotes, System screens in boxes, the title page, the front and back pages, and the cover. It is checked first, and downloads straight away when all is well.</p>
+      <p class="buttons">
+        <button type="button" onClick={run} disabled={busy}><Icon name="download" size={18} />Make the Kindle file</button>
+        <button type="button" onClick={lookInside} disabled={busy} aria-pressed={look}>{look ? 'Close Look inside' : 'Look inside'}</button>
+      </p>
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
-      <MatterEditor index={index} book={book} onMatter={onMatter} />
+      {made && !look && <ReadyCheck made={made} onDownload={() => download(made)} />}
+      {made && look && <LookInside made={made} />}
+      <MatterEditor index={index} path={matterPath(book)} name={book.title} label="Front and back matter" author={bookAuthor(index, book)} onMatter={onMatter}
+        hint={'Each page starts with a heading: "## Front: Copyright" comes before chapter 1, "## Back: Next in the series" after the last chapter, in the order written here. A page with nothing under its heading is left out. Links: [the next book](https://...).'} />
+      <MatterEditor index={index} path={seriesMatterPath(book)} name={book.seriesName} label={'Pages for every ' + book.seriesName + ' book'} author={bookAuthor(index, book)} onMatter={onMatter} series
+        hint={'Written once for the whole series: "## Back: About the Author" and "## Back: Also by ' + (bookAuthor(index, book) || 'the author') + '". A book\'s own page of the same name wins. Also by lists the series\' other books that have a store link on Book details, then what you write here (your other series); it leaves out the book it is in.'} />
     </>
   );
 }
 
-/** Front and back matter (Kyle, 2026-11-04): the book's Book Matter note, edited here as plain words. A
- * `## Front: Copyright` heading starts a page before chapter 1, `## Back: About the Author` one after the last chapter.
- * Opens with the words as the app shows them and saves through the one saving system. */
-function MatterEditor({ index, book, onMatter }: { index: VaultIndex; book: BookEntry; onMatter: OnMatter }) {
+const bookAuthor = (index: VaultIndex, book: BookEntry) => { const data = index.notes[book.path] ? index.notes[book.path].data : {}; return typeof data.author === 'string' ? data.author : ''; };
+
+/** The ready check (2026-11-14): green means upload; otherwise each thing to fix, in plain words, and Download anyway. */
+function ReadyCheck({ made, onDownload }: { made: KindleMade; onDownload: () => void }) {
+  const { problems, good } = made.check;
+  return (
+    <div class={'ready-check' + (problems.length ? '' : ' ready')} role="status">
+      <h3>{problems.length ? 'Before you upload: ' + problems.length + (problems.length === 1 ? ' thing to fix' : ' things to fix') : 'Ready to upload'}</h3>
+      {problems.length > 0 && <ul class="ready-problems">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+      {good.length > 0 && <ul class="ready-good">{good.map((p) => <li key={p}>{p}</li>)}</ul>}
+      {problems.length > 0 && <p class="buttons"><button type="button" class="link" onClick={onDownload}>Download anyway</button></p>}
+    </div>
+  );
+}
+
+/** Look inside (2026-11-14): the file's own pages in a frame, at a Kindle's, a phone's or an iPad's width, on light,
+ * sepia or dark paper, in small or large type. Close to a Kindle, not exact. */
+function LookInside({ made }: { made: KindleMade }) {
+  const [screen, setScreen] = useState<Screen>('kindle');
+  const [paper, setPaper] = useState<Paper>('light');
+  const [size, setSize] = useState<TypeSize>('small');
+  const doc = useMemo(() => previewDoc(made, paper, size), [made, paper, size]);
+  const pick = <T extends string>(label: string, now: T, set: (v: T) => void, all: [T, string][]) => (
+    <div class="segmented" role="group" aria-label={label}>
+      {all.map(([v, name]) => <button key={v} type="button" aria-pressed={now === v} class={now === v ? 'on' : ''} onClick={() => set(v)}>{name}</button>)}
+    </div>
+  );
+  return (
+    <div class="look-inside">
+      <div class="look-controls">
+        {pick('Screen', screen, setScreen, (Object.keys(SCREEN_NAME) as Screen[]).map((k) => [k, SCREEN_NAME[k]]))}
+        {pick('Paper', paper, setPaper, [['light', 'Light'], ['sepia', 'Sepia'], ['dark', 'Dark']])}
+        {pick('Type', size, setSize, [['small', 'Small type'], ['large', 'Large type']])}
+      </div>
+      <iframe class="look-frame" title="Look inside the Kindle file" sandbox="" srcdoc={doc} style={{ width: SCREEN_WIDTH[screen] + 'px' }} />
+      <p class="hint">Close to a Kindle, not exact: a Kindle picks its own font and margins. For the real thing, send the file to your Kindle app.</p>
+    </div>
+  );
+}
+
+/** Front and back matter (Kyle, 2026-11-04): a Book Matter note (the book's, or since 2026-11-14 the series'), edited
+ * here as plain words. Opens with the words as the app shows them and saves through the one saving system. */
+function MatterEditor({ index, path, name, label, hint, author, onMatter, series }: { index: VaultIndex; path: string; name: string; label: string; hint: string; author: string; onMatter: OnMatter; series?: boolean }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   // The words as Kyle opened them (or last saved them here): what changed elsewhere since is merged in when they save.
   const opened = useRef('');
-  const author = () => { const data = index.notes[book.path] ? index.notes[book.path].data : {}; return typeof data.author === 'string' ? data.author : ''; };
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
+  const starter = () => (series ? starterSeriesMatter(author) : starterMatter(author));
   const show = () => {
     setSaid(null);
     // The note as the app shows it, with words that are still waiting to save.
-    const n = index.notes[matterPath(book)];
-    const words = n ? n.body.replace(/^\n+/, '') : splitNote(starterMatter(author())).body;
+    const n = index.notes[path];
+    const words = n ? n.body.replace(/^\n+/, '') : splitNote(starter()).body;
     opened.current = n ? words : '';
     setText(words);
     setOpen(true);
   };
   const save = () => {
-    onMatter(matterPath(book), { what: 'words', of: 'matter', was: opened.current, body: text, start: splitNote(starterMatter(author())).head, name: book.title });
+    onMatter(path, { what: 'words', of: 'matter', was: opened.current, body: text, start: splitNote(starter()).head, name });
     opened.current = text;
     setSaid({ error: false, text: navigator.onLine ? 'Saved. The next Kindle file has these pages.' : 'Kept on this device. It saves when you are connected, and the next Kindle file has these pages.' });
   };
   if (!open) {
     return (
       <>
-        <button type="button" class="link" onClick={show}>Front and back matter</button>
+        <button type="button" class="link" onClick={show}>{label}</button>
         {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
       </>
     );
   }
   return (
     <div class="matter-editor">
-      <h3>Front and back matter</h3>
-      <p class="hint">Each page starts with a heading: "## Front: Copyright" comes before chapter 1, "## Back: About the Author" after the last chapter, in the order written here. A page with nothing under its heading is left out. Links: [the next book](https://...).</p>
-      <textarea value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} rows={16} spellcheck aria-label="Front and back matter" />
+      <h3>{label}</h3>
+      <p class="hint">{hint}</p>
+      <textarea value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} rows={16} spellcheck aria-label={label} />
       <p class="buttons">
         <button type="button" class="primary" onClick={save}>Save</button>
         <button type="button" class="link" onClick={() => setOpen(false)}>Close</button>

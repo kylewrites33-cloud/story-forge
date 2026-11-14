@@ -48,6 +48,22 @@ add a dated line here when you add or change one.
   Front and back matter, under the button, opens that note's words in a box to edit and Save (it starts one with the
   copyright line filled in from the book's author and the year). The message after making the file names what is not in it yet
   (the cover, or the copyright page). The file passes EPUBCheck 5.1 with no errors (Quest Declined 1, 2026-11-04).
+  Build 1 of the Kindle plan (Kyle, 2026-11-14: "have opus build it. oks to alll"; vault `Docs/Sparrow/21 Kindle Plan.md`):
+  quotes and apostrophes come out curly, two hyphens a long dash and three dots one ellipsis, in the Kindle file and the
+  Word file, as the file is made (the scene text is never changed; 'em, 'til, a quote after a dash, a quote in a quote,
+  feet and inches all tested). The title page has the subtitle (`subtitle` on Book.md, or what follows "Title:" in
+  `long_title`), "Series, Book Two", the author and `publisher`. Pages written once for the series live in the series'
+  own `Book Matter.md` ("Pages for every <series> book", under the button) and fill in any page the book does not have;
+  an "Also by" page lists the series' other books that have an `amazon_url` on Book.md, linked, then its own words, never
+  the book it is in. Make the Kindle file checks first and downloads straight away when all is green; otherwise it lists
+  what to fix in plain sentences (a { } note, a stray mark, a straight quote, a chapter with no title or very few words,
+  no cover, a cover under 1,600 by 2,560 or the wrong shape, no copyright page, a link that goes nowhere or a blank like
+  [ISBN], an empty page, no author) with Download anyway. Look inside shows the file's own pages in a frame at Kindle,
+  phone or iPad width, light, sepia or dark paper, small or large type. The stylesheet follows Amazon's Kindle Publishing
+  Guidelines 2026.3: side margins in percents, a screen longer than eight lines may split across pages. The GitHub
+  tests run the W3C's EPUBCheck on the demo book and a book of hard cases (tests/epubcheck/), and a test checks the app
+  and `sf compile --epub` make the same title, front and back pages; their shared parts are one copy of sf's Kindle
+  section (src/lib/kindle.js).
   Since 2026-10-23 the same button is also a card, "Export the whole book", at the top of Publish's first page (the
   Market board), because Kyle could not find Book details behind the top bar's page menu.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and
