@@ -220,3 +220,11 @@ test('a reply goes on its own line under the card, and the card the Writer makes
   const on = placeChanges('a tin lantern', again, 'S-001');
   assert.deepEqual(on.placed.map((p) => p.change.id), ['C-03'], 'only the new card is on the page');
 });
+
+test('a card names the agent that made it', () => {
+  const body = '## C-01 · line\nScene: S-001\nWhy: Sense: the line\nBy: Line Editor\nKyle: open\n\nWas:\n> a lamp\n\nNow:\n> a tin lamp\n\n## C-02 · line\nScene: S-001\nWhy: Repeat\nKyle: open\n\nWas:\n> a cup\n\nNow:\n> a mug\n';
+  const { changes } = parseChanges(body);
+  assert.equal(changes[0].by, 'Line Editor');
+  assert.equal(changes[1].by, undefined);
+  assert.equal(changes[0].why, 'Sense: the line');
+});

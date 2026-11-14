@@ -53,6 +53,9 @@ export interface Change {
   /** Kyle's replies to the Writer on this card, explaining a choice (Kyle, 2026-11-12: "i need to be able to reply
    * within the changes, to explain to the writer why i made a choice"). `Reply:` lines, oldest first. */
   replies?: string[];
+  /** Which agent made the card (`By: Writer`), so each agent's first-pick rate can be counted (Kyle, 2026-11-13: "can
+   * you clarify which agent made the cards? so we can track success and improve metrics?"). */
+  by?: string;
   /** The card this one answers: the Writer made it from Kyle's reply on that card (`Re: C-07`). */
   re?: string;
   /** The newest card made from Kyle's reply on this one, when this one was still open: it stands in for this one. */
@@ -187,7 +190,7 @@ export function changesNoteFor(notes: Record<string, NoteRecord>, bookFolder: st
 }
 
 const HEAD = /^##\s+(C-\d+)\s*(?:·\s*(\w+))?\s*$/i;
-const FIELD = /^(Scene|Why|Kyle|Asked|Change|Check|Reply|Re):\s*(.*)$/i;
+const FIELD = /^(Scene|Why|Kyle|Asked|Change|Check|Reply|Re|By):\s*(.*)$/i;
 const QUOTE = /^(Was|Now|Or):\s*$/i;
 
 /** The lines before the first change (the Writer's report) and the changes, in order. */
@@ -228,6 +231,7 @@ export function parseChanges(body: string): { intro: string; changes: Change[] }
       else if (key === 'change') cur.does = f[2].trim();
       else if (key === 'check') cur.check = f[2].trim();
       else if (key === 'reply') { if (f[2].trim()) cur.replies = (cur.replies || []).concat(f[2].trim()); }
+      else if (key === 'by') { if (f[2].trim()) cur.by = f[2].trim(); }
       else if (key === 're') { const r = /C-\d+/i.exec(f[2]); if (r) cur.re = r[0].toUpperCase(); }
       else { const s = f[2].trim().toLowerCase() as ChangeStatus; cur.status = STATUSES.indexOf(s) >= 0 ? s : 'open'; }
     }
