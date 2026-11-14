@@ -43,12 +43,12 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, changesIn, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, changesIn, echoMissing, echoQuotes, findEchoes, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
 import { findSpot, rewriteFor, spotOf, type Spot } from '../lib/rewrite.ts';
-import { AskForChanges, ChangesBar, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView } from './Changes.tsx';
+import { AskForChanges, ChangesBar, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView, type EchoInfo } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
@@ -1417,6 +1417,31 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     document.addEventListener('scroll', follow, true);
     return () => { clearTimeout(t); document.removeEventListener('scroll', follow, true); };
   }, [showMarks, tab]);
+  /** The other place a repeat card quotes (Kyle, 2026-11-14: "so i dont have to guess at the location of the first
+   * instance"): on this page, a way to bring it into sight; in another chapter, which one. */
+  const echoOf = (c: Change): EchoInfo => {
+    const p = chList.find((x) => x.change.id === c.id);
+    if (!p || !echoQuotes(c).length) return null;
+    const n = sibFor(c);
+    const t = n ? sibText(n) : text;
+    const hits = findEchoes(t, c, p.at, p.end);
+    if (hits.length) {
+      const h = hits.find((x) => x.to <= p.at) || hits[0];
+      return { before: h.to <= p.at, go: () => {
+        setChCur(c.id);
+        const api = n ? sibApi(c) : null;
+        const ed = api ? api.commands.current : commands.current;
+        if (ed) ed.reveal(h.from, h.to);
+      } };
+    }
+    const lost = echoMissing(c, [t, ...sibNotes.map(sibText)]);
+    if (!lost.length || !book) return null;
+    for (const g of book.groups) {
+      if (g.num == null || g.num === chapterNum) continue;
+      if (g.scenes.some((s) => echoMissing(c, [s.body]).length < lost.length)) return { chapter: g.num, title: g.title };
+    }
+    return null;
+  };
   const pickChange = (id: string) => { setChCur(id); openTab('changes'); };
 
   // The page's heading: the chapter, the scene line, the chapter strip and the target bar. Beats mode shows it too.
@@ -1880,7 +1905,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             )}
             {tab === 'changes' && (
               chNote
-                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll}
+                ? <ChangesPanel elsewhere={chAll.filter((c) => c.status === 'open' && !chCards.includes(c)).length} onElsewhere={() => goScene(1)} changes={chCards} placedIds={chList.map((p) => p.change.id)} current={chCur} onAcceptAll={acceptAll} echo={echoOf}
                   editing={editingId} onDoneMine={doneMine} onStopMine={() => setMineOpen(null)} onRevert={firstDraft ? revertToDraft : null}
                   onPick={(id) => { const c = chCards.find((x) => x.id === id); if ((chView === 'original' || chView === 'all') && id === editingId && c) goToChange(c); else if (chView === 'original') setChView('all'); setChCur(id); setCardPress((n) => n + 1); closeOver(); }}
                   onChoose={chooseChange} onUndo={undoChange} onMine={editMine} onTweak={tweakChange} onEverywhere={acceptEverywhere} like={changes && changes.like ? changes.like : null} chapter={chapterNum}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { rewriteSpan,
-  applyChange, findWords, finalText, marksMessage, parseChanges, placeChanges, revertChange, segments, setStatus, setStatuses
+  applyChange, echoMissing, findEchoes, findWords, finalText, marksMessage, parseChanges, placeChanges, revertChange, segments, setStatus, setStatuses
 } from '../src/lib/changes.ts';
 
 const BODY = `Touched about a fifth of the chapter. Carries out call I-014.
@@ -227,4 +227,28 @@ test('a card names the agent that made it', () => {
   assert.equal(changes[0].by, 'Line Editor');
   assert.equal(changes[1].by, undefined);
   assert.equal(changes[0].why, 'Sense: the line');
+});
+
+// Kyle, 2026-11-14: "highlight both sections referenced in a chapter? so i dont have to guess at the location of the first instance?"
+test('a repeat card finds the other place it quotes', () => {
+  const page = 'Snow fell.\n\n*The message system.* Sometime during Basil’s battle with the Demon Lord, the message system had been knocked out. Ever since, nothing.\n\nShe hated loot through Argo\'s "You May Like" automated selection.\n\nAnd when the messaging system broke down after the battle, she\'d stopped talking to anyone entirely. It was grim.';
+  const card = parseChanges(`## C-65 · line\nScene: S-011\nWhy: Repeat: the scene already says "Sometime during Basil's battle with the Demon Lord, the message system had been knocked out." Here: "And when the messaging system broke down after the battle". Sense too.\nKyle: open\n\nWas:\n> And when the messaging system broke down after the battle, she'd stopped talking to anyone entirely. It was grim.\n\nNow:\n> And after the Demon Lord battle, she'd stopped talking to anyone entirely. It was grim.\n`).changes[0];
+  const at = page.indexOf('And when'), end = page.length;
+  const hits = findEchoes(page, card, at, end);
+  assert.equal(hits.length, 1);
+  assert.equal(page.slice(hits[0].from, hits[0].to), 'Sometime during Basil’s battle with the Demon Lord, the message system had been knocked out.');
+  // Not on this page: the card says so through echoMissing, and a card that points nowhere else finds nothing.
+  assert.deepEqual(echoMissing(card, ['Other words.']).length, 2);
+  assert.deepEqual(echoMissing(card, [page]), []);
+  const plainCard = { ...card, why: 'Sense: "good time" means a pleasant time.' };
+  assert.deepEqual(findEchoes(page, plainCard, at, end), []);
+});
+
+test('a repeated word card lights the nearest other use only', () => {
+  const page = 'He realized it far away. ' + 'x '.repeat(1500) + 'He realized the door was shut. Then he realized the key was gone.';
+  const card = parseChanges('## C-1 · line\nScene: S-1\nWhy: Repeated word: "realized" in two sentences running.\nKyle: open\n\nWas:\n> Then he realized the key was gone.\n\nNow:\n> Then he saw the key was gone.\n').changes[0];
+  const at = page.indexOf('Then he'), end = page.length;
+  const hits = findEchoes(page, card, at, end);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].from, page.indexOf('realized the door'));
 });
