@@ -15,7 +15,8 @@ import {
 import type { BookEntry, DeviceFile, Schema, SeriesEntry, VaultIndex, VaultSource } from '../lib/types.ts';
 import type { TextChange } from '../vault/text.ts';
 import { backupFile, buildDocx, exportName, manuscript } from '../lib/docx.ts';
-import { kindleFile, matterPath, seriesMatterPath, splitNote, starterMatter, starterSeriesMatter, type KindleMade } from '../lib/epub.ts';
+import { bookLook, epubFiles, kindleFile, lookPath, matterPath, seriesMatterPath, splitNote, starterMatter, starterSeriesMatter, type BookLook, type KindleMade } from '../lib/epub.ts';
+import { Kindle } from '../lib/kindle.js';
 import { previewDoc, SCREEN_NAME, SCREEN_WIDTH, type Paper, type Screen, type TypeSize } from '../lib/lookinside.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { href } from '../app/route.ts';
@@ -236,7 +237,7 @@ export function ExportWord({ source, schema, index, book, card, onFiles, onMatte
  * downloaded, with System screens boxed, the book's and the series' front and back pages and the cover. Since 2026-11-14
  * (Docs/Sparrow/21 Kindle Plan.md, Build 1) the file is checked before it downloads (anything that would embarrass the
  * book, in plain sentences; green means upload) and Look inside shows its own pages at Kindle, phone and iPad widths. */
-type OnMatter = (path: string, change: Extract<TextChange, { what: 'words' }>) => void;
+type OnMatter = (path: string, change: Extract<TextChange, { what: 'words' | 'look' }>) => void;
 
 function KindleFile({ source, schema, index, book, onMatter }: { source: VaultSource; schema: Schema; index: VaultIndex; book: BookEntry; onMatter: OnMatter }) {
   const [said, setSaid] = useState<{ error: boolean; text: string } | null>(null);
@@ -283,6 +284,7 @@ function KindleFile({ source, schema, index, book, onMatter }: { source: VaultSo
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
       {made && !look && <ReadyCheck made={made} onDownload={() => download(made)} />}
       {made && look && <LookInside made={made} />}
+      <BookLookPicker index={index} book={book} made={made} make={make} onMatter={onMatter} />
       <MatterEditor index={index} path={matterPath(book)} name={book.title} label="Front and back matter" author={bookAuthor(index, book)} onMatter={onMatter}
         hint={'Each page starts with a heading: "## Front: Copyright" comes before chapter 1, "## Back: Next in the series" after the last chapter, in the order written here. A page with nothing under its heading is left out. Links: [the next book](https://...).'} />
       <MatterEditor index={index} path={seriesMatterPath(book)} name={book.seriesName} label={'Pages for every ' + book.seriesName + ' book'} author={bookAuthor(index, book)} onMatter={onMatter} series
@@ -308,7 +310,7 @@ function ReadyCheck({ made, onDownload }: { made: KindleMade; onDownload: () => 
 
 /** Look inside (2026-11-14): the file's own pages in a frame, at a Kindle's, a phone's or an iPad's width, on light,
  * sepia or dark paper, in small or large type. Close to a Kindle, not exact. */
-function LookInside({ made }: { made: KindleMade }) {
+function LookInside({ made }: { made: { files: KindleMade['files']; pages: KindleMade['pages'] } }) {
   const [screen, setScreen] = useState<Screen>('kindle');
   const [paper, setPaper] = useState<Paper>('light');
   const [size, setSize] = useState<TypeSize>('small');
@@ -327,6 +329,59 @@ function LookInside({ made }: { made: KindleMade }) {
       </div>
       <iframe class="look-frame" title="Look inside the Kindle file" sandbox="" srcdoc={doc} style={{ width: SCREEN_WIDTH[screen] + 'px' }} />
       <p class="hint">Close to a Kindle, not exact: a Kindle picks its own font and margins. For the real thing, send the file to your Kindle app.</p>
+    </div>
+  );
+}
+
+const LOOK_NAMES: [keyof BookLook, string][] = [['chapter_number', 'Chapter number'], ['heading_align', 'Heading'], ['heading_style', 'Heading style'],
+  ['first_paragraph', 'A chapter\'s first paragraph'], ['after_break', 'After a scene break'], ['scene_break', 'Scene break']];
+
+/** Book look (Kyle's Kindle plan, Build 2, 2026-11-14): the series' chapter headings, first paragraphs and scene breaks,
+ * picked once for every book in it, shown in Look inside as each choice is made, and saved in the series' Book Look note. */
+function BookLookPicker({ index, book, made, make, onMatter }: { index: VaultIndex; book: BookEntry; made: KindleMade | null; make: () => Promise<KindleMade | null>; onMatter: OnMatter }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<BookLook>(() => bookLook(index, book));
+  const [said, setSaid] = useState('');
+  const sample = useMemo(() => {
+    if (!made) return null;
+    // The title page and the first two chapters are enough to judge a look, and quick to make on every choice.
+    const m = made.input.manuscript;
+    return epubFiles({ ...made.input, matter: [], look: draft, manuscript: { ...m, chapters: m.chapters.slice(0, 2) } });
+  }, [made, draft]);
+  const show = async () => {
+    if (open) { setOpen(false); return; }
+    setDraft(bookLook(index, book));
+    setSaid('');
+    setOpen(true);
+    if (!made) await make();
+  };
+  const save = () => {
+    const day = new Date();
+    const start = '---\ntype: book-look\ntitle: "Book look"\nsource: Sparrow app\ncreated: ' + day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0') + '\n---\n';
+    onMatter(lookPath(book), { what: 'look', values: { ...draft }, start, name: book.seriesName });
+    setSaid(navigator.onLine ? 'Saved. Every ' + book.seriesName + ' Kindle file now has this look.' : 'Kept on this device. It saves when you are connected.');
+  };
+  if (!open) return <button type="button" class="link" onClick={show}>{'Book look for ' + book.seriesName}</button>;
+  return (
+    <div class="book-look">
+      <h3>{'Book look for ' + book.seriesName}</h3>
+      <p class="hint">Set once for every book in the series. The pages below show this book's first two chapters in the look you pick.</p>
+      {LOOK_NAMES.map(([k, label]) => (
+        <div class="look-row" key={k}>
+          <span class="look-label">{label}</span>
+          <div class="choice-row" role="group" aria-label={label}>
+            {Kindle.LOOK_OPTIONS[k].map(([v, name]) => (
+              <button key={v} type="button" aria-pressed={draft[k] === v} class={draft[k] === v ? 'on' : ''} onClick={() => setDraft({ ...draft, [k]: v })}>{name}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {sample ? <LookInside made={sample} /> : <p class="hint">Making the pages…</p>}
+      <p class="buttons">
+        <button type="button" class="primary" onClick={save}>Save the look</button>
+        <button type="button" class="link" onClick={() => setOpen(false)}>Close</button>
+      </p>
+      {said && <p class="hint" role="status">{said}</p>}
     </div>
   );
 }

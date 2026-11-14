@@ -82,6 +82,8 @@ EXTRA_TYPES.push('progression');
 EXTRA_TYPES.push('chapter-titles');
 // Front and back matter for the Kindle file (2026-11-04).
 EXTRA_TYPES.push('book-matter');
+// A series' look for its Kindle files (2026-11-14).
+EXTRA_TYPES.push('book-look');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

@@ -137,9 +137,11 @@ test('sf compile --epub and the app make the same pages', { skip: !hasVault && '
   const { src, schema, index } = await demo();
   const app = unzip((await kindleFile(src, schema, index, index.books[0])).bytes);
   // sf leaves out scenes whose status is not drafted yet and the app does not, so the demo's chapters differ; every other
-  // page must match: the stylesheet, the title page, the front and back pages.
+  // page must match: the stylesheet (with the series' Book Look), the title page, the front and back pages.
   const td = new TextDecoder();
   assert.ok([...sf.keys()].every((n) => app.has(n)), 'sf made a file the app did not');
+  assert.match(td.decode(sf.get('OEBPS/ch001.xhtml')), /<span class="dropcap">/, 'sf reads the series\' Book Look');
+  assert.match(td.decode(app.get('OEBPS/ch001.xhtml')), /<span class="dropcap">/, 'the app reads the series\' Book Look');
   for (const [name, data] of app) {
     if (!sf.has(name) || /(ch\d+\.xhtml|nav\.xhtml|toc\.ncx|content\.opf)$/.test(name)) continue;
     const a = td.decode(data).replace(/<meta property="dcterms:modified">[^<]*<\/meta>/, '');
@@ -159,4 +161,32 @@ test('Look inside shows the file\'s own pages in reading order, the contents aft
   assert.doesNotMatch(doc, /\.xhtml"/);
   assert.match(doc, /#f8ecd4/);
   assert.match(doc, /div\.screen\{/, 'the file\'s own stylesheet');
+});
+
+test('the Book look: chapter numbers, first paragraphs and scene breaks, the plain look unchanged', () => {
+  const look = (o: Record<string, string>) => Kindle.lookOf(o);
+  assert.deepEqual(Kindle.lookOf({ chapter_number: 'nonsense' }), Kindle.LOOK_DEFAULT);
+  assert.equal(Kindle.chapterLabel('3', look({ chapter_number: 'word' })), 'Chapter Three');
+  assert.equal(Kindle.chapterLabel('37', look({ chapter_number: 'word' })), 'Chapter Thirty-Seven');
+  assert.equal(Kindle.chapterLabel('14', look({ chapter_number: 'roman' })), 'Chapter XIV');
+  assert.equal(Kindle.chapterLabel('3', look({ chapter_number: 'bare' })), '3');
+  const page = '<section epub:type="chapter"><h1 class="chapter"><span class="num">Chapter 3</span> <span class="ctitle">Tank</span></h1>\n<p class="first">"Hello there, old friend," she said.</p>\n<p>More.</p>\n<p class="break">* * *</p>\n<p class="first">Later that day it rained.</p></section>';
+  assert.equal(Kindle.dress(page, Kindle.LOOK_DEFAULT), page, 'the plain look changes nothing');
+  const d = Kindle.dress(page, look({ chapter_number: 'none', first_paragraph: 'dropcap', after_break: 'smallcaps', scene_break: 'line' }));
+  assert.match(d, /<h1 class="chapter"><span class="ctitle">Tank<\/span>/);
+  assert.match(d, /<p class="first"><span class="dropcap">"H<\/span>ello there/);
+  assert.match(d, /<hr class="break"\/>/);
+  assert.match(d, /<p class="first"><span class="lead">Later that day it<\/span> rained\./);
+  assert.match(Kindle.smart(d), /<span class="dropcap">“H<\/span>/, 'the quote in a drop cap still curls');
+  assert.match(Kindle.lookCss(look({ first_paragraph: 'dropcap' })), /font-size:320%;float:left;margin-top:-0\.3225em/, 'Amazon\'s own drop cap');
+  assert.equal(Kindle.lookCss(Kindle.LOOK_DEFAULT), '');
+});
+
+test('the series\' Book Look note reaches the app\'s Kindle file', async () => {
+  const { src, schema, index } = await demo();
+  const book = index.books[0];
+  const k = await kindleFile(src, schema, index, book, new Date(2026, 10, 14), Kindle.lookOf({ first_paragraph: 'dropcap', chapter_number: 'word' }) as never);
+  const f = unzip(k.bytes), td = new TextDecoder();
+  assert.match(td.decode(f.get('OEBPS/ch001.xhtml')), /Chapter One<\/span>[\s\S]*<span class="dropcap">/);
+  assert.match(td.decode(f.get('OEBPS/style.css')), /span\.dropcap/);
 });

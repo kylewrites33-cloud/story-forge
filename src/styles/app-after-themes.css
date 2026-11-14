@@ -1305,3 +1305,11 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .details-export .segmented button + button, .export-card .segmented button + button { border-left: 1px solid var(--line); }
 .details-export .segmented button.on, .export-card .segmented button.on { background: var(--accent); color: var(--on-accent); }
 .look-frame { max-width: 100%; height: 70vh; min-height: 420px; border: 10px solid var(--text); border-radius: 18px; background: #fff; box-sizing: border-box; }
+/* Book look (2026-11-14). */
+.book-look { width: 100%; display: grid; gap: 12px; }
+.book-look h3 { margin: 8px 0 0; font-size: 1rem; }
+.look-row { display: grid; gap: 6px; }
+.look-label { font-weight: 600; font-size: 0.95rem; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.details-export .choice-row button, .export-card .choice-row button { min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); }
+.details-export .choice-row button.on, .export-card .choice-row button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }

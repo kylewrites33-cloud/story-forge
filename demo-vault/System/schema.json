@@ -2849,6 +2849,88 @@
       },
       "body": "One `## Front: <page name>` or `## Back: <page name>` heading per page, in reading order: front pages come before chapter 1, back pages after the last chapter. Under it the page's words as plain prose; web links as [words](https://...). Pages named Copyright, Dedication or Epigraph show without a heading. A page whose name starts with \"Also by\" lists the series' other books that have an `amazon_url`, each linked, then its own words (other series); a line that names or links the book it is in is left out. Text above the first heading is a note to the team and is left out of the book."
     },
+    "book-look": {
+      "description": "A series' look for its Kindle files (Kyle, 2026-11-14, Kindle plan Build 2): chapter headings, first paragraphs and scene breaks, set once so every book in the series matches. Chosen on Book details in the app (Book look); sf compile --epub reads it too. A property left out is its first choice, the look the file had before.",
+      "scope": "series",
+      "folder": "",
+      "filename": "Book Look",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "book-look"
+        },
+        "title": {
+          "type": "string",
+          "description": "\"Book look\"."
+        },
+        "chapter_number": {
+          "enum": [
+            "numeral",
+            "word",
+            "roman",
+            "bare",
+            "none"
+          ],
+          "default": "numeral",
+          "description": "How a chapter heading gives its number: numeral \"Chapter 3\", word \"Chapter Three\", roman \"Chapter III\", bare \"3\", none."
+        },
+        "heading_align": {
+          "enum": [
+            "center",
+            "left"
+          ],
+          "default": "center",
+          "description": "Chapter headings centred or on the left."
+        },
+        "heading_style": {
+          "enum": [
+            "classic",
+            "caps",
+            "rule",
+            "bold"
+          ],
+          "default": "classic",
+          "description": "classic (the title under a small spaced number), caps (the title in spaced capitals), rule (a short line over the title), bold (a bold title)."
+        },
+        "first_paragraph": {
+          "enum": [
+            "plain",
+            "dropcap",
+            "smallcaps"
+          ],
+          "default": "plain",
+          "description": "A chapter's first paragraph: plain, dropcap (Amazon's drop cap) or smallcaps (its first words in small caps)."
+        },
+        "after_break": {
+          "enum": [
+            "plain",
+            "dropcap",
+            "smallcaps"
+          ],
+          "default": "plain",
+          "description": "The first paragraph after a scene break: plain, dropcap or smallcaps."
+        },
+        "scene_break": {
+          "enum": [
+            "stars",
+            "dots",
+            "line",
+            "space"
+          ],
+          "default": "stars",
+          "description": "The scene break: stars (* * *), dots, line (a short line) or space (a blank gap)."
+        },
+        "source": {
+          "type": "string"
+        },
+        "created": {
+          "type": "date"
+        }
+      },
+      "body": "Nothing needed. A note to the team, if any."
+    },
     "knowledge": {
       "description": "A craft note in the Library. Shelves are subfolders.",
       "scope": "vault",

@@ -64,6 +64,13 @@ add a dated line here when you add or change one.
   tests run the W3C's EPUBCheck on the demo book and a book of hard cases (tests/epubcheck/), and a test checks the app
   and `sf compile --epub` make the same title, front and back pages; their shared parts are one copy of sf's Kindle
   section (src/lib/kindle.js).
+  Build 2 (2026-11-14): Book look for <series>, under the Kindle file, picks the series' look once for every book: the
+  chapter number (Chapter 3, Chapter Three, Chapter III, 3, or none), the heading centred or left, its style (classic,
+  spaced capitals, a short line over the title, a bold title), a chapter's first paragraph and the one after a scene break
+  (plain, Amazon's own drop cap, or the first words in small caps), and the scene break (* * *, dots, a short line, a
+  blank space). Look inside below the choices shows this book's first two chapters in the look as each choice is made;
+  Save the look writes the series' `Book Look.md` (type `book-look`, one property line per choice), which both the app
+  and `sf compile --epub` read (Kindle.dress and Kindle.lookCss in the shared Kindle section).
   Since 2026-10-23 the same button is also a card, "Export the whole book", at the top of Publish's first page (the
   Market board), because Kyle could not find Book details behind the top bar's page menu.
   The writing screen has three parts, like Sudowrite: the book's chapters and scenes on the left (press one to save and

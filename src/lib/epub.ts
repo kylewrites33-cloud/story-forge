@@ -109,7 +109,12 @@ export interface EpubInput {
   series?: { name: string; number: number | null };
   subtitle?: string;
   publisher?: string;
+  /** The series' Book Look (Kindle.lookOf): chapter headings, first paragraphs, scene breaks. */
+  look?: BookLook;
 }
+
+/** A series' look for its Kindle files (Build 2, 2026-11-14): one value per choice in Kindle.LOOK_OPTIONS. */
+export type BookLook = Record<'chapter_number' | 'heading_align' | 'heading_style' | 'first_paragraph' | 'after_break' | 'scene_break', string>;
 
 /** The files of the .epub in order, and its pages as a reader meets them (for the ready check and Look inside). Quotes,
  * dashes and ellipses are made curly and long here, as the pages are made; the vault keeps its own marks. */
@@ -124,7 +129,7 @@ export function epubFiles(input: EpubInput, when: Date = new Date()): { files: {
   const files: { name: string; data: string | Uint8Array }[] = [
     { name: 'mimetype', data: 'application/epub+zip' },
     { name: 'META-INF/container.xml', data: '<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>\n' },
-    { name: 'OEBPS/style.css', data: CSS }
+    { name: 'OEBPS/style.css', data: CSS + Kindle.lookCss(input.look) }
   ];
   const items: string[] = ['<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>', '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>', '<item id="css" href="style.css" media-type="text/css"/>'];
   const spine: string[] = [];
@@ -154,7 +159,7 @@ export function epubFiles(input: EpubInput, when: Date = new Date()): { files: {
     if (!firstChapter) firstChapter = id + '.xhtml';
     const body = '<section epub:type="chapter">' + headingHtml(c.heading) + '\n' +
       c.parts.map((part) => proseHtml(part)).join('\n<p class="break">* * *</p>\n') + '</section>';
-    add(id, c.heading, body, true, 'bodymatter', 'chapter');
+    add(id, c.heading, Kindle.dress(body, input.look), true, 'bodymatter', 'chapter');
   });
   matter.filter((p) => p.place === 'back').forEach((p, i) => add('back' + (i + 1), p.title, matterHtml(p), true, '', 'matter'));
   const navList = toc.map((e) => '<li><a href="' + e.href + '">' + t(e.label) + '</a></li>').join('');
@@ -219,12 +224,22 @@ export interface KindleMade {
   check: { problems: string[]; good: string[] };
   files: { name: string; data: string | Uint8Array }[];
   pages: KindlePage[];
+  /** What it was made from, so Book look can show the same book in another look without fetching it again. */
+  input: EpubInput;
 }
 
 /** The series folder a book sits in ("Series/Quest Declined"). */
 export const seriesFolder = (book: BookEntry) => book.folder.replace(/\/Books\/[^/]+$/, '');
 /** Where the series' own pages live: About the author, Also by, written once for every book (Kyle, 2026-11-14). */
 export const seriesMatterPath = (book: BookEntry) => seriesFolder(book) + '/Book Matter.md';
+/** Where the series' look lives (Build 2): its chapter headings, first paragraphs and scene breaks. */
+export const lookPath = (book: BookEntry) => seriesFolder(book) + '/Book Look.md';
+
+/** The series' look as the vault (or this device) has it now. */
+export function bookLook(index: VaultIndex, book: BookEntry): BookLook {
+  const n = index.notes[lookPath(book)];
+  return Kindle.lookOf(n ? n.data : {}) as BookLook;
+}
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
@@ -238,7 +253,7 @@ export function starterSeriesMatter(author: string, when: Date = new Date()): st
 }
 
 /** Everything the Kindle button needs, gathered from the vault: the book, its matter and the series', its cover. */
-export async function kindleFile(source: VaultSource, schema: Schema, index: VaultIndex, book: BookEntry, when: Date = new Date()): Promise<KindleMade> {
+export async function kindleFile(source: VaultSource, schema: Schema, index: VaultIndex, book: BookEntry, when: Date = new Date(), look?: BookLook): Promise<KindleMade> {
   const m = manuscript(schema, index, book);
   if (!m.scenes) throw new Error('This book has no written scenes yet, so there is nothing to put in a Kindle file.');
   const data = index.notes[book.path] ? index.notes[book.path].data : {};
@@ -261,10 +276,11 @@ export async function kindleFile(source: VaultSource, schema: Schema, index: Vau
     } catch { /* offline: made without the cover, and said so */ }
   }
   if (!cover) missing.push('the cover');
-  const made = epubFiles({ title: book.title, author, manuscript: m, matter, cover, series: { name: book.seriesName, number: book.number },
-    subtitle: Kindle.subtitleOf(book.title, data), publisher: str(data.publisher) }, when);
+  const input: EpubInput = { title: book.title, author, manuscript: m, matter, cover, series: { name: book.seriesName, number: book.number },
+    subtitle: Kindle.subtitleOf(book.title, data), publisher: str(data.publisher), look: look || bookLook(index, book) };
+  const made = epubFiles(input, when);
   const check = Kindle.check({ pages: made.pages, matter: sections, cover: cover ? cover.bytes : null, author });
-  return { bytes: zip(made.files, when), name: exportName(book, when).replace(/\.docx$/, '.epub'), chapters: m.chapters.length, words: m.words, missing, check, files: made.files, pages: made.pages };
+  return { bytes: zip(made.files, when), name: exportName(book, when).replace(/\.docx$/, '.epub'), chapters: m.chapters.length, words: m.words, missing, check, files: made.files, pages: made.pages, input };
 }
 
 /** A note as the vault has it now (fresh when the source can), or as the app shows it, or null. */

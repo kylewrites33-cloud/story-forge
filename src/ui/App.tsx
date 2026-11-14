@@ -581,9 +581,10 @@ export function App() {
   /** A scene brought back from the book's Archive: in Scenes again and out of the Archive in one save. */
   const onRestore = useCallback(async (book: BookEntry, path: string): Promise<void> => { await sendNow(restoreAction(book.folder, path)); }, [sendNow]);
 
-  /** Words Kyle wrote in a box of their own (the front and back matter, the book's Braindump): they show at once and
+  /** Words Kyle wrote in a box of their own (the front and back matter, the book's Braindump), and a series' Book look:
+   * they show at once and
    * wait with everything else (2026-11-11; before, they needed the connection). */
-  const onWords = useCallback((path: string, change: Extract<TextChange, { what: 'words' }>): void => {
+  const onWords = useCallback((path: string, change: Extract<TextChange, { what: 'words' | 'look' }>): void => {
     setOutbox(add(outboxRef.current, textAction([{ path, change }])));
     runFlush();
   }, [setOutbox, runFlush]);

@@ -8,6 +8,13 @@ export declare const Kindle: {
   CSS: string;
   LONG_SCREEN: number;
   numberWord(n: number): string;
+  LOOK_OPTIONS: Record<string, [string, string][]>;
+  LOOK_DEFAULT: Record<string, string>;
+  lookOf(data: Record<string, unknown>): Record<string, string>;
+  chapterLabel(num: string | number, look?: Record<string, string>): string;
+  breakHtml(look?: Record<string, string>): string;
+  lookCss(look?: Record<string, string>): string;
+  dress(html: string, look?: Record<string, string>): string;
   subtitleOf(title: string, data: Record<string, unknown>): string;
   titlePage(info: TitleInfo): string;
   matterSections(body: string): KindleSection[];

@@ -42,13 +42,16 @@ export type TextChange =
   | { what: 'words'; of: 'matter' | 'braindump'; was: string; body: string; start: string; name: string }
   /** The Edit room: Kyle's reply to the Writer on one change card of a chapter's changes note, a `Reply:` line under
    * the card (2026-11-12). The ask that has the Writer make a new card from it goes in the same save. */
-  | { what: 'change-reply'; id: string; words: string };
+  | { what: 'change-reply'; id: string; words: string }
+  /** Book details, Book look (2026-11-14): a series' look for its Kindle files, one property line per choice. `start` is
+   * the note's text when the vault does not have it yet; `name` is the series, for the history. */
+  | { what: 'look'; values: Record<string, string>; start: string; name: string };
 
 /** Does this change start its note when the vault does not have it yet? The Writing Log's do (the first Pomodoro or
  * the first words of a day make that day's note), and so do the first words of a book's front and back matter or its
  * Braindump. Every other change is to a note that is already there. */
-export function startsNote(c: TextChange): c is Extract<TextChange, { what: 'log-pomodoro' | 'log-typed' | 'log-typing' | 'words' }> {
-  return c.what === 'log-pomodoro' || c.what === 'log-typed' || c.what === 'log-typing' || c.what === 'words';
+export function startsNote(c: TextChange): c is Extract<TextChange, { what: 'log-pomodoro' | 'log-typed' | 'log-typing' | 'words' | 'look' }> {
+  return c.what === 'log-pomodoro' || c.what === 'log-typed' || c.what === 'log-typing' || c.what === 'words' || c.what === 'look';
 }
 
 /** The properties a book's Braindump starts with. */
@@ -81,6 +84,7 @@ export function validChange(c: unknown): c is TextChange {
   if (x.what === 'log-typed') return typeof x.date === 'string' && typeof x.words === 'number' && x.words > 0 && typeof x.at === 'string';
   if (x.what === 'log-typing') return typeof x.date === 'string' && typeof x.minutes === 'number' && x.minutes > 0 && typeof x.at === 'string';
   if (x.what === 'change-reply') return typeof x.id === 'string' && /^C-\d+$/i.test(x.id) && typeof x.words === 'string' && x.words.trim().length > 0;
+  if (x.what === 'look') return Boolean(x.values) && typeof x.values === 'object' && Object.values(x.values).every((v) => typeof v === 'string') && typeof x.start === 'string' && typeof x.name === 'string';
   if (x.what === 'words') return (x.of === 'matter' || x.of === 'braindump') && typeof x.was === 'string' && typeof x.body === 'string' && typeof x.start === 'string' && typeof x.name === 'string';
   return x.what === 'recipe' && typeof x.use_for === 'string' && typeof x.body === 'string';
 }
@@ -96,6 +100,7 @@ export function changeText(text: string, c: TextChange): string {
   if (c.what === 'log-typed') return addTypedToDay(text, c.date, c.words, new Date(c.at));
   if (c.what === 'log-typing') return addTypingToDay(text, c.date, c.minutes, new Date(c.at));
   if (c.what === 'words') return withWords(text, c);
+  if (c.what === 'look') return Object.keys(c.values).reduce((t, k) => Frontmatter.setScalar(t, k, c.values[k]) as string, text || c.start);
   if (c.what === 'change-reply') return addReply(text, c.id, c.words);
   return editRecipeText(text, c.use_for, c.body);
 }
@@ -135,6 +140,7 @@ export function changeMessage(text: string, c: TextChange, path: string): string
   if (c.what === 'log-typed') return 'log: ' + c.words + (c.words === 1 ? ' word' : ' words') + ' typed on ' + c.date + '\n\nKept by the Sparrow app.';
   if (c.what === 'log-typing') return 'log: ' + c.minutes + (c.minutes === 1 ? ' minute' : ' minutes') + ' typing on ' + c.date + '\n\nKept by the Sparrow app.';
   if (c.what === 'change-reply') return 'changes: Kyle replied on ' + c.id.toUpperCase() + ' in ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '') + '\n\nWritten in the Sparrow app.';
+  if (c.what === 'look') return 'book look: ' + c.name + '\n\nChosen in the Sparrow app.';
   if (c.what === 'words') {
     if (c.of === 'braindump') return 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.';
     return 'book matter: ' + (text ? '' : 'start for ') + c.name;
