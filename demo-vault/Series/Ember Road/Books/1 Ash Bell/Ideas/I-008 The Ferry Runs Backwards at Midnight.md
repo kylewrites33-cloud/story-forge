@@ -4,8 +4,7 @@ id: I-008
 title: The Ferry Runs Backwards at Midnight
 kind: world
 status: keep
-source: Story Specialist
-lens: plot
+source: Plot Specialist
 pitch: After midnight the ferry crosses from the far bank, and its passengers are a day older.
 round: 1
 rating: 4
