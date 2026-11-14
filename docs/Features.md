@@ -1084,7 +1084,9 @@ part of Sparrow's sidebar yet; it may join Sparrow later.
 
 - **Crow** (Kyle, 2026-10-26: "this app, I want to be named Crow", and "an icon on my iPad, and all of the information
   can persist between sessions, the way Sparrow does"). Its own manifest, name and crow icon, so Add to Home Screen gives
-  a separate Crow icon. From that icon it has its own storage, so Crow has its own Settings with a key box (in the same
+  a separate Crow icon. The icon is Kyle's own picture of a black crow against a pale moon on a night-blue square (Kyle,
+  2026-11-14: "can you change the app icon"); `npm run icons` makes every size from `scripts/crow-icon-source.png`, as
+  for Sparrow. From that icon it has its own storage, so Crow has its own Settings with a key box (in the same
   browser tab it shares Sparrow's key). Sparrow's service worker keeps Crow's page and files too, each app's page under its
   own name, so both open offline; the last-read studies are kept on the device.
 
