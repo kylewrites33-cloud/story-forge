@@ -206,6 +206,10 @@
         "number": {
           "type": "integer"
         },
+        "bonus": {
+          "type": "boolean",
+          "description": "A bonus or side book (a bonus chapter, a novella) that sits with the main book of the same number. Tools leave it out when \"Book 1\" is looked up by number, so Book 1 still means the main book (T-148, 2026-11-19)."
+        },
         "stage": {
           "enum": "book_stage",
           "default": "spark"
@@ -1588,7 +1592,8 @@
             "inventory",
             "knowledge",
             "relationship",
-            "status"
+            "status",
+            "location"
           ]
         }
       },
@@ -3718,6 +3723,125 @@
         }
       },
       "body": "What the step found, with sources named, then what the next step takes from it."
+    },
+    "potential": {
+      "description": "One story element of a book in planning (a character, a group, a plot thread, an engine, a setting, a promise) with its potentials scored against the book's current best gestalt. The Story Specialist re-scores it whenever another element solidifies (Kyle, 2026-11-15: \"track potentials according to potentials and probabilities ... it all depends on the contribution to the current best story gestalt\"). Skill: potentials.",
+      "scope": "book",
+      "folder": "Potentials",
+      "filename": "{title}",
+      "required": [
+        "type",
+        "title",
+        "element",
+        "must_have"
+      ],
+      "properties": {
+        "type": {
+          "const": "potential"
+        },
+        "title": {
+          "type": "string"
+        },
+        "element": {
+          "enum": [
+            "character",
+            "group",
+            "thread",
+            "engine",
+            "setting",
+            "promise",
+            "theme"
+          ]
+        },
+        "must_have": {
+          "type": "integer",
+          "description": "0 to 100, a judgment: how irritated a reader would be if the book left it out (promises made, what would be weird to skip). Checked only by readers."
+        },
+        "presence": {
+          "type": "string",
+          "description": "Characters and groups: my odds of each page share, lead/strong/support/backseat/offstage, adding to 100, in steps of 10."
+        },
+        "round": {
+          "type": "integer",
+          "description": "The scoring round this note was last scored in (Gestalt.md lists the rounds)."
+        },
+        "depends_on": {
+          "type": "list",
+          "items": {
+            "type": "string"
+          }
+        },
+        "solid": {
+          "type": "boolean",
+          "description": "true once Kyle has said this element is part of the story; only Kyle's word sets it."
+        },
+        "in_outline": {
+          "type": "integer",
+          "description": "Threads, engines, settings, promises, themes: my chance (10, 30, 50, 70, 90) that the kept outline gives it a real part. Scored against the outline once it is kept."
+        }
+      },
+      "body": "A one-line lead, then ## Potentials: a table | # | Potential | Odds | State | Why it's plausible | Depends on |, best first. Odds: my chance Kyle keeps that row, in five steps (10, 30, 50, 70, 90), written before he settles it; State: open, kept (his words) or dropped (why). A row that is a fork in Gestalt.md takes its odds from the Stage Log. Then ## If this solidifies and ## Shifts (dated, append-only)."
+    },
+    "gestalt": {
+      "description": "The current best shape of a book in planning: what is solid, the leading shape, the open forks, and every scoring round of the book's Potentials. One note per book, Gestalt.md. Skill: potentials.",
+      "scope": "book",
+      "folder": "",
+      "filename": "Gestalt",
+      "required": [
+        "type",
+        "title",
+        "round"
+      ],
+      "properties": {
+        "type": {
+          "const": "gestalt"
+        },
+        "title": {
+          "type": "string"
+        },
+        "round": {
+          "type": "integer"
+        }
+      },
+      "body": "## Solid (Kyle's word, dated), ## Leading shape (three sentences at most), ## Open forks (each with its Stage Log round, odds, and its ifs written ahead: what moves where if it settles), ## Elements at a glance (built by System/Tools/potentials.mjs table), ## Rounds (dated, append-only)."
+    },
+    "kyle-words": {
+      "description": "Everything Kyle has said about a book, word for word and dated, never rewritten; added to in the same turn he says something. For the book being planned his newest words beat the published books. One note per book, Kyle's Words.md.",
+      "scope": "book",
+      "folder": "",
+      "filename": "Kyle's Words",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "kyle-words"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "body": "Two lines on what it is, ## Long sources (links to the brain dumps, one line each), then one entry per statement in date order, newest at the bottom: the date and time, where it was said, and the quote exactly as written. Agents append; they never edit an entry."
+    },
+    "decisions": {
+      "description": "The short list of what Kyle has settled or is leaning toward for a book, in plain words, each line with the quote of his that makes it so. Only Kyle's words put a line here; newest wins; every worker reads the whole list before touching the plan. One note per book, Decisions.md. Not the same as the decision type (one note per decision in a Decisions folder).",
+      "scope": "book",
+      "folder": "",
+      "filename": "Decisions",
+      "required": [
+        "type",
+        "title"
+      ],
+      "properties": {
+        "type": {
+          "const": "decisions"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "body": "One line per decision: - D-NNN · settled|leaning · the decision in plain words · \"shortest quote\" (Kyle, date, where). Sections: the people, the world and its rules, the threads, The shape, Kyle's open questions, Replaced, Fixes owed to Books 1 and 2, Unsure. Numbers are never reused."
     }
   },
   "boards": {
