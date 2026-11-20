@@ -1,0 +1,144 @@
+/* Sparrow Pocket's own stylesheet (2026-11-20). Made for a black-and-white E Ink phone (Kyle's Bigme HiBreak Pro):
+ * pure white, black text, solid 2px black lines, no greys that need colour to read, nothing that means something by
+ * colour alone, no shadows, and nothing that moves (E Ink leaves ghosts). What is chosen is shown inverted (white on
+ * black) or with a thick line. Large type, 48px tap targets, no sideways scroll from 360 to 430 px wide. The app's colour
+ * themes are not used here; Pocket keeps its own two colours as variables. */
+:root {
+  --ink: #000;
+  --paper: #fff;
+  --line: 2px solid var(--ink);
+  --prose: Georgia, 'Noto Serif', 'Times New Roman', serif;
+  --ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; transition: none !important; animation: none !important; }
+html { scroll-behavior: auto; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 18px/1.45 var(--ui); overflow-x: hidden; }
+a { color: var(--ink); }
+button, input, textarea { font: inherit; color: var(--ink); }
+button, .pk-button {
+  min-height: 48px; padding: 8px 14px; background: var(--paper); border: var(--line); border-radius: 6px; font-weight: 600;
+  text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:active, .pk-button:active { background: var(--ink); color: var(--paper); }
+button:disabled { border-style: dashed; font-weight: 400; cursor: default; }
+button:disabled:active { background: var(--paper); color: var(--ink); }
+.pk-primary { background: var(--ink); color: var(--paper); }
+.pk-primary:active { background: var(--paper); color: var(--ink); }
+.pk-primary:disabled { background: var(--paper); color: var(--ink); }
+.pk-wide { width: 100%; }
+.pk-link {
+  background: none; border: 0; padding: 0 2px; min-height: 48px; display: inline-flex; align-items: center; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; border-radius: 0;
+}
+.pk-link:active { background: var(--ink); color: var(--paper); }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.pk { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
+.pk h1 { font-size: 26px; line-height: 1.2; margin: 12px 0 8px; }
+.pk h2 { font-size: 20px; margin: 24px 0 8px; }
+.pk-kicker { display: block; font: 700 14px/1.3 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 4px; }
+.pk-sub, .pk-quiet { font-size: 16px; margin: 4px 0; }
+.pk-note, .pk-error { border: var(--line); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.pk-error { border-width: 4px; font-weight: 600; }
+.pk-error::before { content: 'Problem: '; font-weight: 800; }
+.pk-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.pk-buttons > * { flex: 1 1 auto; }
+
+/* The key */
+.pk-key { text-align: left; }
+.pk-steps { padding: 0; margin: 12px 0; list-style: none; border: var(--line); border-radius: 8px; counter-reset: s; }
+.pk-steps li { counter-increment: s; padding: 12px 12px 12px 44px; position: relative; border-top: var(--line); }
+.pk-steps li:first-child { border-top: 0; }
+.pk-steps li::before { content: counter(s); position: absolute; left: 14px; font-weight: 800; }
+.pk-label { display: block; font-weight: 700; margin: 8px 0 4px; }
+.pk-keyrow { display: flex; gap: 8px; margin-bottom: 12px; }
+.pk-keyrow input { flex: 1; min-width: 0; min-height: 48px; padding: 8px 10px; border: var(--line); border-radius: 6px; background: var(--paper); }
+
+/* The chapters */
+.pk-bookhead { border-bottom: var(--line); padding: 8px 0 12px; margin-bottom: 16px; }
+.pk-bookpick { font-size: 24px; font-weight: 800; border: 0; padding: 0; margin: 0; min-height: 48px; background: none; justify-content: flex-start; text-align: left; }
+.pk-carry { display: block; background: var(--ink); color: var(--paper); border-radius: 10px; padding: 14px 16px; text-decoration: none; margin: 0 0 20px; }
+.pk-carry > span { display: block; }
+.pk-carry .pk-kicker { color: var(--paper); }
+.pk-carry-title { font-size: 26px; font-weight: 800; margin: 2px 0 4px; }
+.pk-list { list-style: none; padding: 0; margin: 0; border: var(--line); border-radius: 8px; overflow: hidden; }
+.pk-list li + li { border-top: var(--line); }
+.pk-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; text-decoration: none;
+  border: 0; border-radius: 0; background: var(--paper); font-weight: 400; text-align: left; justify-content: flex-start;
+}
+.pk-row.on { box-shadow: inset 6px 0 0 var(--ink); font-weight: 700; }
+.pk-row:active { background: var(--ink); color: var(--paper); }
+.pk-row-num { min-width: 2ch; font-variant-numeric: tabular-nums; }
+.pk-row-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pk-row-end { white-space: nowrap; }
+.pk-count { border: var(--line); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+.pk-foot { margin-top: 24px; border-top: var(--line); padding-top: 8px; }
+
+/* One card at a time */
+.pk-cardhead { border-bottom: var(--line); margin: 0 -16px 12px; padding: 0 16px 0; }
+.pk-topline { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0; flex-wrap: wrap; }
+.pk-undo { font-size: 16px; display: inline-flex; align-items: center; gap: 6px; }
+.pk-nav { display: flex; align-items: center; gap: 4px; }
+.pk-navbtn { min-width: 76px; border: 0; background: none; font-weight: 700; padding: 8px 4px; text-decoration: none; display: inline-flex; align-items: center; min-height: 48px; }
+.pk-navbtn:last-child { justify-content: flex-end; }
+.pk-navbtn:disabled { border: 0; opacity: 1; color: var(--ink); font-weight: 400; text-decoration: line-through; }
+.pk-navtitle { flex: 1; text-align: center; display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.pk-navtitle b { font-size: 18px; overflow-wrap: anywhere; }
+.pk-navtitle span { font-size: 15px; }
+.pk-progress { height: 8px; border: var(--line); border-radius: 4px; margin: 6px 0 10px; overflow: hidden; }
+.pk-progress span { display: block; height: 100%; background: var(--ink); }
+.pk-card { margin-bottom: 16px; }
+.pk-cardkind { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 8px; font-size: 16px; }
+.pk-cardkind b { font-size: 18px; }
+.pk-why { margin: 0 0 12px; font-size: 17px; }
+.pk-box { border: var(--line); border-radius: 8px; padding: 12px 14px; margin: 0 0 12px; }
+.pk-box .pk-primary { margin-top: 10px; }
+.pk-yours { border-style: dashed; }
+.pk-prose { font: 20px/1.5 var(--prose); overflow-wrap: anywhere; }
+.pk-prose .bk-p, .pk-prose .bk-q { margin: 0 0 0.4em; }
+.pk-prose .bk-q { padding-left: 1.2em; border-left: 2px solid var(--ink); font-family: var(--ui); font-size: 0.9em; }
+.pk-prose .bk-qt { font-weight: 700; font-variant: small-caps; }
+.pk-prose .bk-gap { height: 0.4em; }
+.pk-prose .chg-new { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.pk-prose em, .pk-prose i { font-style: italic; }
+.pk-prose mark { background: none; color: inherit; outline: 2px solid var(--ink); }
+.pk-replies { border-top: var(--line); padding-top: 8px; }
+.pk-replies p { margin: 0 0 8px; }
+.pk-waiting::before { content: '… '; font-weight: 800; }
+.pk-done { text-align: left; padding: 16px 0; }
+
+/* The bar of four at the foot of a card, and the sheets that open from the foot */
+.pk-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--paper);
+  border-top: var(--line); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); gap: 6px; max-width: 640px; margin: 0 auto;
+}
+.pk-bar > * { min-height: 56px; font-size: 15px; line-height: 1.15; padding: 4px; text-align: center; border: var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; background: var(--paper); }
+.pk-bar > a:active { background: var(--ink); color: var(--paper); }
+.pk-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 4px solid var(--ink); padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+  max-height: 75vh; overflow-y: auto; max-width: 640px; margin: 0 auto;
+}
+.pk-sheeted { padding-bottom: 60vh; }
+.pk-sheethead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
+.pk-sheethead > span { flex: 1; font-size: 16px; text-align: center; }
+.pk-box-text { width: 100%; border: 3px solid var(--ink); border-radius: 8px; padding: 10px 12px; font: 20px/1.45 var(--prose); background: var(--paper); resize: vertical; }
+.pk-choice {
+  display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; margin: 0 0 8px; padding: 10px 14px;
+  border: var(--line); border-radius: 8px; text-decoration: none; min-height: 56px; background: var(--paper); font-weight: 400;
+}
+.pk-choice b { font-size: 18px; }
+.pk-choice span { font-size: 16px; }
+
+/* The chapter as a page */
+.pk-readhead { border-bottom: var(--line); margin: 0 -16px 12px; padding: 0 16px; }
+.pk-scene + .pk-scene { border-top: var(--line); margin-top: 16px; padding-top: 16px; }
+.pk-para { display: flex; gap: 8px; margin: 0 0 14px; }
+.pk-para .pk-prose { flex: 1; min-width: 0; cursor: pointer; padding: 2px 4px; border: 2px solid transparent; border-radius: 4px; }
+.pk-para.on .pk-prose { border-color: var(--ink); border-width: 3px; }
+.pk-bar-mark { flex: 0 0 14px; align-self: stretch; display: block; position: relative; }
+.pk-bar-mark:not(.none)::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: 6px; background: var(--ink); }
+/* The bar is a 48px-wide press target that reaches into the gutter, though it draws 6px wide. */
+.pk-bar-mark:not(.none)::after { content: ''; position: absolute; top: 0; bottom: 0; left: -16px; width: 48px; }

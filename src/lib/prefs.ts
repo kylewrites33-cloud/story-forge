@@ -104,5 +104,8 @@ export const PREF = {
   rewriteOpened: 'story-forge.rewrite-opened.', // the Rewrite tab opened itself once this visit, per book
   // ---- Crow (the study app, src/study/)
   studyCache: 'character-study.cache.',
-  studyLens: 'character-study.lens'
+  studyLens: 'character-study.lens',
+  // ---- Sparrow Pocket (the phone page, src/pocket/; 2026-11-20)
+  pocketBook: 'sparrow-pocket.book', // the book last used on this phone
+  pocketPlace: 'sparrow-pocket.place' // where Kyle left off: book, chapter and card
 } as const;
