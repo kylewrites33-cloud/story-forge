@@ -43,7 +43,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, changesIn, echoMissing, echoQuotes, findEchoes, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, changesIn, echoMissing, echoQuotes, findEchoes, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, twoVersions, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
@@ -985,6 +985,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   const sibFor = (c: Change) => (c.scene && c.scene !== sceneId ? sibNotes.find((n) => sceneOf(n) === c.scene) || null : null);
   const sibApi = (c: Change) => { const n = sibFor(c); return n ? sibs.current.get(n.path) || null : null; };
   const chOpenHere = chCards.filter((c) => c.status === 'open').length;
+  const chTwoHere = chCards.filter(twoVersions).length;
   const chBookOpen = (changes ? changes.book : []).reduce((t, x) => t + (x.chapter === chapterNum ? 0 : x.open), 0) + chAll.filter((c) => c.status === 'open').length;
   const showMarks = !beatsMode && shownDraft == null && chView !== 'original' && chList.length > 0;
   // The page with the changes is typed in: the writing box shows them as marks (Kyle, 2026-11-12: "i would love to be
@@ -1151,7 +1152,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   });
   const onRewriteThrough = rewrite && rewrite.onThrough && chapterNum != null ? async (done: boolean) => {
     if (done) {
-      const open = chCards.filter((c) => c.status === 'open');
+      const open = chCards.filter((c) => c.status === 'open' && !twoVersions(c));
       if (open.length) record(Object.fromEntries(open.map((c) => [c.id, 'rewrite' as ChangeStatus])));
       // The page reaches the vault first, so a draft saved after the last chapter holds every paragraph brought over.
       if (quiet.current) clearTimeout(quiet.current);
@@ -1901,7 +1902,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             })()}
             {!moreList && <>
             {tab === 'rewrite' && (
-              <RewritePanel source={source} sections={rewriteSections} chapter={chapterNum} through={rewriteThrough} openCards={chOpenHere} onThrough={onRewriteThrough} />
+              <RewritePanel source={source} sections={rewriteSections} chapter={chapterNum} through={rewriteThrough} openCards={chOpenHere - chTwoHere} twoVersions={chTwoHere} onChanges={() => openTab('changes')} onThrough={onRewriteThrough} />
             )}
             {tab === 'changes' && (
               chNote

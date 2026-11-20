@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { changesIn } from '../src/lib/changes.ts';
+import { changesIn, twoVersions } from '../src/lib/changes.ts';
 import { test } from 'node:test';
 import { align, bringOver, paragraphs, rewriteDone, rewriteFiles, rewriteFor, rewriteProgress, findSpot, rowAt, similarity, span, spotOf, takeOut, theirWords, withRewriteDone } from '../src/lib/rewrite.ts';
 
@@ -155,4 +155,13 @@ test('a paragraph of Kyle\'s the Writer split in three is one row, and Bring ove
   assert.equal(words, theirs.slice(1, 4).join('\n\n'));
   const r = bringOver(text, mine, rows, 1, words);
   assert.equal(r.text, 'Then he stopped.\n\n' + words + '\n\nThe end.\n');
+});
+
+test('a change with two versions stays open when its paragraph is brought over (Kyle, 2026-11-20)', () => {
+  const c = (id: string, now: string, other: string | null) => ({ id, kind: 'line' as const, scene: 'S-001', why: '', status: 'open' as const, was: '', now, other });
+  const placed = [{ change: c('C-01', 'a wolf den', 'a deer carcass'), at: 0, end: 10 }, { change: c('C-02', 'mule', null), at: 12, end: 20 }, { change: c('C-03', 'same', 'same'), at: 22, end: 28 }];
+  assert.deepEqual(changesIn(placed, 0, 30).map((x) => x.id), ['C-02', 'C-03']);
+  assert.equal(twoVersions(placed[0].change), true);
+  assert.equal(twoVersions(placed[1].change), false);
+  assert.equal(twoVersions({ ...placed[0].change, status: 'kept' as const }), false);
 });

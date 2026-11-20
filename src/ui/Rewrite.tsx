@@ -133,7 +133,7 @@ function follow(f: Follower): () => void {
 }
 
 /** The side column's Rewrite tab: the Writer's version of this chapter, scene by scene and paragraph by paragraph beside Kyle's. */
-export function RewritePanel({ source, sections, chapter, through = false, openCards = 0, onThrough }: {
+export function RewritePanel({ source, sections, chapter, through = false, openCards = 0, twoVersions = 0, onChanges, onThrough }: {
   source: VaultSource;
   sections: RewriteSection[];
   chapter: number | null;
@@ -141,6 +141,9 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
   through?: boolean;
   /** The chapter's changes still open, which Done with this chapter closes as handled by the rewrite. */
   openCards?: number;
+  /** The chapter's open changes with two versions, which stay open for Kyle to pick in Changes. */
+  twoVersions?: number;
+  onChanges?: () => void;
   /** Done with this chapter (or open it again): marks it in the book note and says what else happened. */
   onThrough?: (done: boolean) => Promise<string | null>;
 }) {
@@ -169,6 +172,9 @@ export function RewritePanel({ source, sections, chapter, through = false, openC
         <p class="hint rewrite-through"><Icon name="check" size={16} /> You are through this chapter.{onThrough && <> <button type="button" class="link" disabled={busy} onClick={() => mark(false)}>Open it again</button></>}</p>
       )}
       {said && <p class={said.error ? 'error' : 'hint'} role="status">{said.text}</p>}
+      {twoVersions > 0 && (
+        <p class="hint rewrite-two">{twoVersions === 1 ? 'One of the Writer\'s changes has' : twoVersions + ' of the Writer\'s changes have'} two versions for you to pick from. {twoVersions === 1 ? 'It stays' : 'They stay'} open in Changes, even after you bring a paragraph over.{onChanges && <> <button type="button" class="link" onClick={onChanges}>Show {twoVersions === 1 ? 'it' : 'them'}</button></>}</p>
+      )}
       <label class="rewrite-same-toggle"><input type="checkbox" checked={hideSame} onChange={toggleSame} /> Hide paragraphs that match yours</label>
       {sections.map((x) => <RewriteScene key={x.key} source={source} section={x} hideSame={hideSame} named={sections.length > 1} />)}
       {onThrough && !through && (
