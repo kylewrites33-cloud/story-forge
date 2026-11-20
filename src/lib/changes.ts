@@ -20,6 +20,7 @@
 import type { NoteRecord } from './types.ts';
 import { PREF, storeOf } from './prefs.ts';
 import { propText } from './props.ts';
+import { isOpen } from './todos.ts';
 
 export const CHANGES_FOLDER = 'Changes';
 export const CHANGES_TYPE = 'chapter-changes';
@@ -512,6 +513,27 @@ export function todoTicks(changes: Change[], touched: string[]): { id: string; d
     else if (went.length) out.push({ id, done: true, note: 'Edit room: ' + went.map((c) => c.id + ' ' + DID[c.status]).join(', ') + '.' });
   });
   return out;
+}
+
+/** The to-do notes Kyle's answers tick off or open again, as the fields each one's save sets: done with a "Edit room:"
+ * note when every change naming it is decided and one went in, open again on Undo (only one the Edit room closed).
+ * `after` is the chapter's changes with the new answers on them, `touched` the changes just answered, `todos` the
+ * book's to-do notes. The writing page and Sparrow Pocket both send these with the answers, as one save. */
+export function todoEdits(after: Change[], touched: string[], todos: NoteRecord[]): { path: string; fields: Record<string, string> }[] {
+  const out: { path: string; fields: Record<string, string> }[] = [];
+  todoTicks(after, touched).forEach((t) => {
+    const n = todos.find((x) => propText(x, 'id') === t.id);
+    if (!n) return;
+    if (t.done && isOpen(n)) out.push({ path: n.path, fields: { status: 'done', done_note: t.note } });
+    else if (!t.done && !isOpen(n) && /^Edit room:/.test(propText(n, 'done_note'))) out.push({ path: n.path, fields: { status: 'open', done_note: '' } });
+  });
+  return out;
+}
+
+/** What Kyle's own edit of a version records (Edit, then accept): the version's words unchanged are that version
+ * (kept, or other for version 2); anything else is his own words. */
+export function tweakStatus(c: Change, words: string): ChangeStatus {
+  return words === c.now ? 'kept' : c.other != null && words === c.other ? 'other' : 'mine';
 }
 
 // ---- The other place a repeat card means (Kyle, 2026-11-14: "these repeats are difficult to parse. maybe one way around

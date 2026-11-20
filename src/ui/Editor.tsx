@@ -43,7 +43,7 @@ import { typedWords } from '../lib/drafts.ts';
 import { makeNote } from '../lib/vault-index.ts';
 import type { CheckOptions } from '../lib/lintcheck.ts';
 import { CheckPanel } from './CheckPanel.tsx';
-import { addRules, addSkip, applyChange, changesIn, echoMissing, echoQuotes, findEchoes, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoTicks, twoVersions, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
+import { addRules, addSkip, applyChange, changesIn, echoMissing, echoQuotes, findEchoes, findWords, loadRules, loadSkips, parseChanges, placeChanges, revertChange, rewriteSpan, ruleFits, swapsOf, todoEdits, tweakStatus, twoVersions, type Change, type ChangeStatus, type Placed } from '../lib/changes.ts';
 import { copyFor, workingNumber, type SavedDraft } from '../lib/bookdrafts.ts';
 import { styledHtml } from '../lib/styled.ts';
 import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection } from './Rewrite.tsx';
@@ -997,13 +997,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     // The to-dos these changes carry out tick off by themselves, and open again on Undo (Kyle, 2026-10-28). They go
     // up in the same save as the answers.
     const after = chAll.map((c) => (choices[c.id] ? { ...c, status: choices[c.id] } : c));
-    const ticks: { path: string; fields: Record<string, string> }[] = [];
-    todoTicks(after, Object.keys(choices)).forEach((t) => {
-      const n = (todos || []).find((x) => propText(x, 'id') === t.id);
-      if (!n) return;
-      if (t.done && isOpen(n)) ticks.push({ path: n.path, fields: { status: 'done', done_note: t.note } });
-      else if (!t.done && !isOpen(n) && /^Edit room:/.test(propText(n, 'done_note'))) ticks.push({ path: n.path, fields: { status: 'open', done_note: '' } });
-    });
+    const ticks = todoEdits(after, Object.keys(choices), todos || []);
     // Shown at once and kept on this device; it reaches the vault now, or when the connection is back.
     onMarks(chNote.path, choices, ticks);
   };
@@ -1207,7 +1201,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     if (!r) { setMessage('Those words changed after the team wrote ' + c.id + ', so it could not go in. Use Edit it myself to put your own words in.'); return; }
     if (sib) putSib(sib, r.text); else putText(r.text);
     const n = nextOpen(c.id);
-    record({ [c.id]: words === c.now ? 'kept' : c.other != null && words === c.other ? 'other' : 'mine' });
+    record({ [c.id]: tweakStatus(c, words) });
     setChCur(n ? n.change.id : null);
   };
   const undoChange = (c: Change) => {
