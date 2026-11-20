@@ -1324,3 +1324,8 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .details-export .choice-row button, .export-card .choice-row button { min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); }
 .details-export .choice-row button.on, .export-card .choice-row button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* Settings, Your phone: the square code for Sparrow Pocket (2026-11-20). The picture is black on white whatever the
+ * theme, with its own white border all round (the code's quiet zone), so a phone's camera can read it. */
+.phone-code { width: min(100%, 320px); }
+.phone-code svg { display: block; width: 100%; height: auto; }

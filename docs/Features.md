@@ -1986,3 +1986,48 @@ whole Quest Declined 2 vault, in WebKitGTK:
   seconds at most.
 Measured (250 ms a call): the tap opened the next chapter after 1.1 s, now 0.06 s; the first card in the new chapter
 lands right after the scene, never refused.
+
+## Sparrow Pocket, the change cards on the phone (2026-11-20)
+
+Kyle: "an easy way for me to make changes to chapters on the phone ... really simplified and probably a totally
+different approach", then "I was more thinking of going through the cards and suggesting new cards or tweaks, and maybe
+rewriting the text", then "lets try it with my android phone" and "bigme hibreak pro" (a phone with a six-inch
+black-and-white E Ink screen and Chrome). Its own page at `pocket/` on the same address, like Crow; the design pictures
+are in the project files' `app/phone-editor/cards first/`, and screenshots of what was built in `app/phone-editor/built/`.
+
+- **Made for E Ink.** Its own small stylesheet (`src/pocket/pocket.css`), not the colour themes: white page, black text,
+  solid 2px black lines, nothing that needs colour to read, no shadows and no animation or transition at all (E Ink
+  leaves ghosts). Chosen things are inverted or get a thick line; the team's new words in a version are underlined
+  (the Edit room shows Kyle's own words greyer instead). Prose in a 20px serif, tap targets 48px or more, no sideways
+  scroll from 360 to 430 px wide. It works the same on an ordinary phone.
+- **Opening.** The book last used on this phone (a button over the title changes it when there is more than one), a
+  Carry on block for the chapter and card he stopped at ("9 cards waiting. You stopped at card 3."), then each chapter
+  that has a changes note with its waiting cards, or "done". Sync, Your key and Open Sparrow at the foot.
+- **One card at a time.** The card's few words and kind, its Why (or You asked and The change), Yours (the Was), then
+  Version 1 and Version 2 with Use version 1 and Use version 2, or the new words with Accept for a card with one version,
+  in the Edit room's page order. "Card 3 of 9" with Back and Next; Reject, Tweak, Tell the Writer and In the chapter at
+  the foot. After a choice the next waiting card shows, with "Used version 2 on C-03. Undo" at the top until the next
+  choice. A card whose words are no longer on the page offers I wrote my own and Reject.
+- **Tweak** opens the version's words in a plain box (shown as they are stored, *stars* and all); Save and use is the
+  Edit room's Edit, then accept: the words go in and the answer is the version's when unchanged, else his own words.
+- **Tell the Writer** is the Edit room's Reply to the Writer: the `Reply:` line on the card and one reply ask a chapter,
+  as one save (`replyAction` in `src/team/reply.ts`, which the Edit room now uses too). The card then says "The Writer
+  is making a new card from your reply" until the new card comes, then links to it.
+- **In the chapter.** The chapter as a clean reading page, a black bar in the left margin beside each paragraph with a
+  waiting card (pressing the bar opens its card). Pressing a paragraph offers See its card and Rewrite it myself, which
+  opens only that paragraph in a box, as stored; Save changes only that paragraph of the scene, through the writing
+  page's own save (the body and the computed words line; changes made elsewhere merged, a clash kept as a copy).
+- **Not yet: Ask for a card.** The design's second choice on a paragraph (his words as a { } note and a Writer card from
+  it) has no job kind to use today: `revise` stops when the chapter has undecided cards, and `fill` answers braces into
+  the page, not as cards. It needs a kind in the vault's schema first, so the button is left out.
+- **Saves.** Every press saves what the Edit room saves for it, through the same parts: answers and the to-dos they tick
+  through the outbox (`marksAction`), scene words through `saveDraft` and kept on the phone until they land (offline,
+  they wait and go up at the next sync), the same saved copy of the vault on the device. Checked against a pretend
+  GitHub: the same choices in Pocket and in the Edit room left the changes note, the to-do, the reply ask and the scene
+  the same, byte for byte. One difference: Pocket saves the scene after each card, the writing page after a pause.
+- **The key, and Add my phone.** On a new phone Pocket asks for the key, with Test and save (Settings' own connection
+  test), kept through `src/lib/prefs.ts` like Settings. The easy way: Sparrow's Settings, Your phone, Add my phone shows
+  a square code (QR) drawn on the device (`src/lib/qr.ts`, no new dependency) holding Pocket's address with the key
+  after `#`, which is never sent to a server. Pocket takes it on open, keeps it, and wipes it from the address bar at
+  once. The code was proved to scan with two decoders (zxing-cpp and OpenCV), at several key lengths, from the Settings
+  page itself.

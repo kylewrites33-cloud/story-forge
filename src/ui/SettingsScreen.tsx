@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { GitHubSource } from '../lib/github.ts';
-import { normalise, type Settings } from '../lib/settings.ts';
+import { isConnected, normalise, phoneLink, type Settings } from '../lib/settings.ts';
+import { qrSvg } from '../lib/qr.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
 import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
@@ -76,6 +77,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
         </p>
         {result && <p class={result.ok ? 'ok' : 'error'} role="status">{result.text}</p>}
       </form>
+      <AddPhone settings={props.settings} />
       <ReadingRates />
       <h2>Forget</h2>
       <p>Removes the token and the saved copy of the vault from this browser.</p>
@@ -83,6 +85,30 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
         <button type="button" onClick={() => { setForm({ ...form, token: '' }); props.onForget(); setResult({ ok: true, text: 'Forgotten.' }); }}>Forget token</button>
       </p>
     </section>
+  );
+}
+
+/** Add my phone (2026-11-20): a square code holding Sparrow Pocket's address with the saved key after `#`, drawn on
+ * this device (src/lib/qr.ts), so the phone's camera opens Pocket ready to use and the key never goes to a server. */
+function AddPhone({ settings }: { settings: Settings }) {
+  const [open, setOpen] = useState(false);
+  const page = new URL('pocket/', location.href.replace(/#.*$/, '')).href;
+  return (
+    <>
+      <h2>Your phone</h2>
+      <div class="settings">
+        <p class="hint">Sparrow Pocket goes through a chapter's change cards on your phone, one at a time. <a href={page}>Open Sparrow Pocket</a>.</p>
+        {!isConnected(settings) ? <p class="hint">Save your key above first; the square code carries it to the phone.</p> : !open ? (
+          <p class="buttons"><button type="button" class="primary" onClick={() => setOpen(true)}>Add my phone</button></p>
+        ) : (
+          <>
+            <div class="phone-code" dangerouslySetInnerHTML={{ __html: qrSvg(phoneLink(settings, page), 'Square code for Sparrow Pocket') }} />
+            <p class="hint">Point the phone's camera at the square and open the address it finds. Pocket keeps your key on the phone and wipes it from the address bar. Anyone who can see this square can use your key, so close it when you are done.</p>
+            <p class="buttons"><button type="button" onClick={() => setOpen(false)}>Close the code</button></p>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

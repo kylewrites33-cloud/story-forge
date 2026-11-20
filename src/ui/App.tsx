@@ -25,11 +25,12 @@ import { saveDraft as saveWritten } from '../vault/words.ts';
 import type { Choice } from '../vault/choice.ts';
 import { foldSaved, overlayActions } from '../vault/apply.ts';
 import type { MakerName, Payloads } from '../vault/makers.ts';
-import { chaptersAction, deleteAction, choiceAction, createAction, draftAction, filesAction, marksAction, newId, restoreAction, textAction, type Action } from '../vault/ops.ts';
+import { chaptersAction, deleteAction, choiceAction, createAction, draftAction, filesAction, knownFiles, marksAction, newId, restoreAction, textAction, type Action } from '../vault/ops.ts';
 import { changeRecord, type TextChange } from '../vault/text.ts';
 import { logPath, type LogItem } from '../lib/pomodoro.ts';
 import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle, waitingCount, waitingOf } from '../vault/outbox.ts';
 import { pushAction, pushAll, type Pushed } from '../vault/push.ts';
+import { replyAction } from '../team/reply.ts';
 import { Shell } from './Shell.tsx';
 import { rewriteDone, rewriteProgress } from '../lib/rewrite.ts';
 import { barTitle, folderOf, pageOf, tellingOf } from '../app/pages.ts';
@@ -96,15 +97,7 @@ export function App() {
   const planned = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
     const cur = snapRef.current;
     if (!cur) throw new Error('Press Sync first.');
-    // The files the app knows of: the saved copy's notes, each book's archived scenes and saved drafts (their numbers
-    // count when the next free one is worked out), and the new notes still waiting.
-    const paths = Object.keys(cur.index.notes);
-    cur.index.books.forEach((b) => {
-      (b.archive || []).forEach((f) => paths.push(f.path));
-      (b.drafts || []).forEach((d) => (d.files || []).forEach((f) => paths.push(f.path)));
-    });
-    outboxRef.current.forEach((a) => a.ops.forEach((op) => { if (op.kind === 'create') paths.push(op.path); }));
-    return createAction(name, payload, paths.map((path) => ({ path, sha: '' })));
+    return createAction(name, payload, knownFiles(cur.index, outboxRef.current));
   }, []);
   /** Put a new note in the outbox: it shows at once and is saved when the connection allows. */
   const create = useCallback(<K extends MakerName>(name: K, payload: Payloads[K] | Payloads[K][]): Action => {
@@ -668,22 +661,16 @@ export function App() {
    * line under the card and the ask for a new card from it, as one save. One ask a chapter answers every reply in it,
    * so a reply sent while the chapter's ask still waits for the team needs no second ask. */
   const onReply = useCallback((path: string, id: string, words: string, book: string, chapter: number): string | null => {
-    const said = words.trim();
-    if (!said) return 'Write your reply first.';
     const cur = snapRef.current;
-    const target = 'Chapter ' + chapter;
-    const open = cur ? openAsk(jobNotes(overlayActions(cur.index, outboxRef.current, schemaRef.current)), { kind: 'reply', target, book }) : null;
-    const waits = open && String(open.data.status || 'requested') === 'requested';
+    if (!cur) return 'Press Sync first.';
     try {
-      const at = new Date();
-      const also = waits ? [] : planned('job', { j: { title: defaultJobTitle('reply', target), kind: 'reply', target, book, ask: jobAsk('reply', target, id + ': "' + said.replace(/\s+/g, ' ') + '"') }, at: at.toISOString() }).ops;
-      setOutbox(add(outboxRef.current, textAction([{ path, change: { what: 'change-reply', id, words: said } }], also, at)));
+      setOutbox(add(outboxRef.current, replyAction(cur.index, outboxRef.current, schemaRef.current, path, id, words, book, chapter)));
       runFlush();
       return null;
     } catch (e) {
       return (e as Error).message;
     }
-  }, [planned, setOutbox, runFlush]);
+  }, [setOutbox, runFlush]);
 
   /** Move a chapter to another number; the chapters between close up (Kyle, 2026-10-22). Then sync so the list shows it. */
   const onMoveChapter = useCallback(async (book: BookEntry, from: number, to: number): Promise<string | null> => {

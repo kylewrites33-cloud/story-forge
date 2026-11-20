@@ -2,14 +2,15 @@
  * GitHub API calls pass straight through; the vault's offline copy lives in IndexedDB, not here.
  * Pages (navigations) are network first, so a new deploy shows up on the next open; built files have hashed names,
  * so they are cache first. Bump VERSION to drop every old cache. */
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = 'story-forge-shell-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/apple-touch-icon.png', './icons/icon-192.png',
-  './crow/index.html', './crow/manifest.webmanifest', './crow/icons/icon.svg', './crow/icons/apple-touch-icon.png', './crow/icons/icon-192.png'];
-/** The two apps' pages (Sparrow, and Crow since 2026-10-26), each kept offline under its own name. */
-const PAGES = ['./index.html', './crow/index.html'];
+  './crow/index.html', './crow/manifest.webmanifest', './crow/icons/icon.svg', './crow/icons/apple-touch-icon.png', './crow/icons/icon-192.png',
+  './pocket/index.html', './pocket/manifest.webmanifest'];
+/** The apps' pages (Sparrow, Crow since 2026-10-26, Sparrow Pocket since 2026-11-20), each kept offline under its own name. */
+const PAGES = ['./index.html', './crow/index.html', './pocket/index.html'];
 function pageFor(url) {
-  return /\/crow(\/|$)/.test(url.pathname) ? './crow/index.html' : './index.html';
+  return /\/crow(\/|$)/.test(url.pathname) ? './crow/index.html' : /\/pocket(\/|$)/.test(url.pathname) ? './pocket/index.html' : './index.html';
 }
 
 self.addEventListener('install', (event) => {

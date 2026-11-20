@@ -5,7 +5,7 @@
 import type { Change, ChangeStatus } from '../lib/changes.ts';
 import type { BookEntry } from '../lib/types.ts';
 import { answersTo, KIND_LABEL, shortLabel, swapsOf, wordDiff } from '../lib/changes.ts';
-import { styledHtml } from '../lib/styled.ts';
+import { quoteHtml } from '../lib/cardtext.ts';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon.tsx';
 import { href } from '../app/route.ts';
@@ -51,36 +51,9 @@ export function ChangesBar({ view, onView, open, total, place, onPrev, onNext }:
 // Accept and Reject, as in Word (Kyle, 2026-10-28: "keep this change is throwing me off. why not the language accept this change").
 const STATUS_SAID: Record<ChangeStatus, string> = { open: '', kept: 'Accepted', other: 'Used version 2', no: 'Rejected', mine: 'Your own words', rewrite: 'In the rewrite', replaced: 'Replaced' };
 
-// The page as a Kindle shows it (Kyle, 2026-10-28: "when we're in editing mode, the document automatically converts to
-// the form that it's going to show up as in Kindle"): paragraphs indented with no blank lines between them, System
-// screens (format C1) indented with their "> " marks hidden, a lone ">" a small gap, the bold title in small caps.
-const QUOTE = /^\s*> ?/;
-const TITLE = /^\*\*[^*].*\*\*$/;
-function bookHtml(text: string): string {
-  return text.split('\n').map((line) => {
-    if (!line.trim()) return '';
-    if (!QUOTE.test(line)) return '<div class="bk-p">' + styledHtml(line, {}) + '</div>';
-    const rest = line.replace(QUOTE, '');
-    if (!rest.trim()) return '<div class="bk-gap"></div>';
-    return '<div class="bk-q' + (TITLE.test(rest.trim()) ? ' bk-qt' : '') + '">' + styledHtml(rest, {}) + '</div>';
-  }).join('');
-}
-
-// Kyle's own words in the team's version show a little greyer than the team's new words, so he can tell them apart
-// (Kyle, 2026-10-30: "anything that's my original text to be slightly grayer than your proposed text"). The new words
-// are marked with two private characters before the page look is worked out, then turned into spans.
-const NEW_ON = '\uE000', NEW_OFF = '\uE001';
-function markNew(was: string, now: string): string {
-  return wordDiff(was, now).filter((d) => d.kind !== 'del')
-    .map((d) => d.kind === 'ins' ? d.text.split('\n').map((t) => t ? NEW_ON + t + NEW_OFF : t).join('\n') : d.text).join('')
-    // A mark must not sit in front of a System screen's "> ", or the line would lose its look.
-    .split('\n').map((line) => line.replace(/^([\uE000\uE001]+)(\s*> ?)/, '$2$1')).join('\n');
-}
-
 export function Quote({ text, cls, was }: { text: string; cls: string; /** Draft 1's words, to show which words are new. */ was?: string }) {
   if (!text) return <p class={'chg-quote empty ' + cls}>(cut)</p>;
-  const html = was == null ? bookHtml(text) : bookHtml(markNew(was, text)).replace(/\uE000/g, '<span class="chg-new">').replace(/\uE001/g, '</span>');
-  return <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <blockquote class={'chg-quote book ' + cls} dangerouslySetInnerHTML={{ __html: quoteHtml(text, was) }} />;
 }
 
 /** The edit box Kyle last pressed, and until when a lost cursor is put back in it (see TweakBox). */
