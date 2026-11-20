@@ -935,6 +935,11 @@ draft 2; the cards, changes and proofreads from draft 2 on stay as they are ("th
   rewritten chapters" and its link opens the next chapter not yet through. When the last rewritten chapter is
   through, the app saves the next draft by itself (the `Drafts/Draft N/` copies, as Book details' Save a draft does)
   and says so.
+- **A coloured line for each kind of change (2026-11-20).** Kyle: "maybe there can be a little colored line on the card
+  to signify if its a story change, a line edit, or a spelling/grammar change." Every change card has a thin line down
+  its left edge: one colour for story changes and new passages, one for line edits (sentences), one for spelling and
+  grammar fixes. A key above the cards names the three. Colours are the variables `--kind-story`, `--kind-line` and
+  `--kind-small`.
 - **Two versions stay open (2026-11-20).** Kyle, after the Doctor's Orders rewrite gave his { } notes only one version
   each: "why arent there 2 versions? did you forget your rules? ... update the app if necessary so this mistake never
   happens again". A change card with two versions is never closed by Bring over, Take it out or Done with this
