@@ -322,6 +322,7 @@ export function ChangesPanel({ echo, changes, placedIds, current, onAcceptAll, o
             {elsewhere > 0 && <button type="button" class="chg-all" onClick={() => onElsewhere && onElsewhere()}>{elsewhere + (elsewhere === 1 ? ' more change' : ' more changes') + ' in this chapter\'s other ' + (elsewhere === 1 ? 'scene' : 'scenes')}: show</button>}
             {placedIds.length > 1 && <button type="button" class="chg-all" onClick={onAcceptAll}><Icon name="check" size={18} />Accept all ({placedIds.length})</button>}
           </div>
+          <p class="chg-kinds" aria-label="What the coloured lines mean"><span class="k-story">Story</span><span class="k-line">Sentence (line edit)</span><span class="k-small">Fix (spelling, grammar)</span></p>
           {open.map(card)}
           {decided.length > 0 && (
             <details class="chg-decided">

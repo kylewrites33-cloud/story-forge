@@ -1034,6 +1034,17 @@ button, .button { border-radius: 12px; }
 .chg-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .chg-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .chg-card.decided { opacity: 0.8; }
+/* A coloured line down each card's left edge says what kind of change it is (Kyle, 2026-11-20: "maybe there can be a
+ * little colored line on the card to signify if its a story change, a line edit, or a spelling/grammar change"). */
+:root { --kind-story: var(--voice-6); --kind-line: var(--voice-2); --kind-small: var(--voice-4); }
+.chg-card { position: relative; padding-left: 18px; }
+.chg-card::before { content: ''; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 4px; border-radius: 2px; background: var(--kind-line); }
+.chg-card.chg-story::before, .chg-card.chg-new::before { background: var(--kind-story); }
+.chg-card.chg-small::before { background: var(--kind-small); }
+.chg-kinds { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 8px; font-size: 0.86rem; color: var(--muted); }
+.chg-kinds span::before { content: ''; display: inline-block; width: 4px; height: 0.95em; margin-right: 6px; border-radius: 2px; vertical-align: -0.1em; background: var(--kind-line); }
+.chg-kinds .k-story::before { background: var(--kind-story); }
+.chg-kinds .k-small::before { background: var(--kind-small); }
 .chg-mine { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-weight: 600; color: var(--accent); }
 .chg-head { display: flex; justify-content: space-between; gap: 8px; margin: 0; }
 .chg-why { margin: 0; font-size: 0.94rem; }

@@ -319,7 +319,14 @@ export interface Placed { change: Change; at: number; end: number }
 /** The open changes whose words lie in these characters of the page: the ones a paragraph brought over from the rewrite
  * stands in for (Kyle, 2026-11-05: the rewrite already carries the cards, so one place for draft 1 to 2). */
 export function changesIn(placed: Placed[], at: number, end: number): Change[] {
-  return placed.filter((p) => p.at < end && at < p.end).map((p) => p.change);
+  return placed.filter((p) => p.at < end && at < p.end).map((p) => p.change).filter((c) => !twoVersions(c));
+}
+
+/** A change that offers Kyle two versions. Bringing over a paragraph or Done with this chapter never closes it, so the
+ * second version is always in front of him in Changes (Kyle, 2026-11-20, Doctor's Orders: "why arent there 2 versions?
+ * did you forget your rules? ... update the app if necessary so this mistake never happens again"). */
+export function twoVersions(c: Change): boolean {
+  return c.status === 'open' && c.other != null && c.other.trim() !== '' && c.other.trim() !== c.now.trim();
 }
 
 /** The open changes of one scene placed on its text, in reading order, none overlapping. `lost` are open changes whose
