@@ -5,7 +5,7 @@
 import type { ChangeStatus } from '../lib/changes.ts';
 import type { Choice } from './choice.ts';
 import type { DraftWords } from '../lib/drafts.ts';
-import type { DeviceFile, FileEntry } from '../lib/types.ts';
+import type { DeviceFile, FileEntry, VaultIndex } from '../lib/types.ts';
 import { make, type MakerName, type Payloads } from './makers.ts';
 import type { TextChange } from './text.ts';
 
@@ -161,3 +161,15 @@ export function createAction<K extends MakerName>(name: K, payload: Payloads[K] 
   return { id: newId(now), at: now.toISOString(), ops };
 }
 
+
+/** The files the device knows of, for working out a new note's next free ID: the saved copy's notes, each book's
+ * archived scenes and saved drafts (their numbers count too), and the new notes still waiting in the outbox. */
+export function knownFiles(index: VaultIndex, waiting: Action[]): FileEntry[] {
+  const paths = Object.keys(index.notes);
+  index.books.forEach((b) => {
+    (b.archive || []).forEach((f) => paths.push(f.path));
+    (b.drafts || []).forEach((d) => (d.files || []).forEach((f) => paths.push(f.path)));
+  });
+  waiting.forEach((a) => a.ops.forEach((op) => { if (op.kind === 'create') paths.push(op.path); }));
+  return paths.map((path) => ({ path, sha: '' }));
+}
