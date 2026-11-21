@@ -1,0 +1,43 @@
+# Sparrow Pocket's Android app file (Kyle, 2026-11-21: "just make the app file"). Builds android/ and puts the file
+# on the release "pocket-android", so Kyle downloads it from one fixed link. Separate from Test and deploy: the web
+# app never waits on it and it never touches the Pages site.
+name: Pocket Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/pocket-android.yml']
+  pull_request:
+    paths: ['android/**', '.github/workflows/pocket-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build the app file
+        working-directory: android
+        run: gradle --no-daemon assembleDebug
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk sparrow-pocket.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-pocket
+          path: sparrow-pocket.apk
+      - name: Put it on the release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view pocket-android >/dev/null 2>&1 || gh release create pocket-android --title "Sparrow Pocket for Android" --notes "The Pocket app for Kyle's phone. Download sparrow-pocket.apk and open it to install."
+          gh release upload pocket-android sparrow-pocket.apk --clobber
