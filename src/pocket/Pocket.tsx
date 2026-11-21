@@ -1,25 +1,25 @@
 // Sparrow Pocket's screens (2026-11-20): the chapters with cards waiting, one card at a time (use a version, Reject,
 // tweak a version, tell the Writer, Undo), and the chapter as a reading page where any paragraph can be rewritten.
-// Every press saves exactly what the Edit room saves for it: the answers on the changes note with the to-dos they tick
-// (marksAction), the words in the scene through the writing page's own save (PocketVault.saveBody), and a reply as the
-// Edit room's reply (replyAction). The button words are the Edit room's (src/ui/Changes.tsx).
+// Since 2026-11-21 (Kyle: "im a little worried about messing up the main app with this pocket app ... let the phone
+// record my choices, and the ipad apply it when i next open it"; "no send button necessary if its automatic") every
+// press only records a choice on the phone (src/pocket/vault.ts). The choices go up by themselves to the book's phone
+// note, and Sparrow on the iPad puts them in with its own buttons. The pages show the chapter as it will be then.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { applyChange, answersTo, KIND_LABEL, parseChanges, revertChange, shortLabel, todoEdits, tweakStatus, type Change, type ChangeStatus } from '../lib/changes.ts';
+import { applyChange, answersTo, KIND_LABEL, parseChanges, shortLabel, type Change } from '../lib/changes.ts';
 import { bookHtml, quoteHtml } from '../lib/cardtext.ts';
 import { DemoSource } from '../lib/demo-source.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { jobNotes } from '../lib/jobs.ts';
-import { bookChapters, cardBooks, chapterKey, deck, pageText, paragraphs, readPlace, replaceParagraph, withPageText, type DeckCard, type Paragraph, type PocketChapter } from '../lib/pocket.ts';
+import { bookChapters, cardBooks, chapterKey, decidedOnPhone, deck, inChapter, pageText, paragraphs, phonePage, readPlace, replaceParagraph, waitingInVault, withPageText, type DeckCard, type Paragraph, type PocketChapter, type Waiting } from '../lib/pocket.ts';
+import { cleanParagraph, type PhoneKind } from '../lib/phone-choices.ts';
 import { PREF, readJson, readPref, writeJson, writePref } from '../lib/prefs.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
-import { bookTodos } from '../lib/todos.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
+import { propText } from '../lib/props.ts';
 import { askFor, openAsk, recentProblem } from '../team/asks.ts';
-import { replyAction, replyTarget } from '../team/reply.ts';
-import { marksAction } from '../vault/ops.ts';
-import { PocketVault } from './vault.ts';
+import { PocketVault, type Kept } from './vault.ts';
 
 // ---- Addresses: #/ the chapters, #/c/CH-020/C-03 a card, #/r/CH-020 the chapter, #/key the key ----
 type Route = { page: 'home' } | { page: 'key' } | { page: 'cards'; ch: string; card: string } | { page: 'read'; ch: string; card: string };
@@ -71,6 +71,10 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
     return () => { off(); vault.stop(); };
   }, [vault]);
   const route = useRoute();
+  // Leaving a chapter (for the chapters or another chapter) sends what was chosen in it.
+  const inCh = route.page === 'cards' || route.page === 'read' ? route.ch : '';
+  const [wasIn, setWasIn] = useState(inCh);
+  if (wasIn !== inCh) { if (wasIn && vault) void vault.send(); setWasIn(inCh); }
 
   if (!vault || route.page === 'key' || (linkSaid && !linkSaid.ok)) {
     return <KeyScreen settings={settings} said={linkSaid} connected={connected} demo={demo}
@@ -84,7 +88,6 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
       <main class="pk">
         <Banners vault={vault} said={linkSaid} onSaid={() => setLinkSaid(null)} />
         <p class="pk-quiet">{s.loaded && !navigator.onLine ? 'This phone has no copy of your vault yet. Connect to the internet once to read it.' : s.error ? '' : 'Reading your vault…'}</p>
-        {s.error && <p class="pk-error" role="alert">{s.error}</p>}
       </main>
     );
   }
@@ -92,32 +95,82 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
   const want = readPref(PREF.pocketBook);
   const act = activeBook(view);
   const book = books.find((b) => b.folder === want) || books.find((b) => act && b.folder === act.folder) || books[0] || null;
-  const chapters = book ? bookChapters(view, book) : [];
-  const chapter = (key: string) => chapters.find((c) => chapterKey(c) === key) || null;
   const banners = <Banners vault={vault} said={linkSaid} onSaid={() => setLinkSaid(null)} />;
+  const here = book ? hereFor(vault, view, book, banners, demo) : null;
 
-  if (route.page === 'cards' && book) {
-    const ch = chapter(route.ch);
-    if (ch && ch.note) return <CardsScreen key={route.ch} vault={vault} view={view} book={book} ch={ch} cardId={route.card} banners={banners} demo={demo} />;
+  if (route.page === 'cards' && here) {
+    const ch = here.chapter(route.ch);
+    if (ch && ch.note) return <CardsScreen key={route.ch} here={here} ch={ch} cardId={route.card} />;
   }
-  if (route.page === 'read' && book) {
-    const ch = chapter(route.ch);
-    if (ch) return <ReadScreen key={route.ch} vault={vault} book={book} ch={ch} cardId={route.card} banners={banners} />;
+  if (route.page === 'read' && here) {
+    const ch = here.chapter(route.ch);
+    if (ch) return <ReadScreen key={route.ch} here={here} ch={ch} cardId={route.card} />;
   }
-  return <HomeScreen vault={vault} book={book} books={books} chapters={chapters} banners={banners} demo={demo}
+  return <HomeScreen vault={vault} here={here} books={books} banners={banners} demo={demo}
     onBook={(folder) => { writePref(PREF.pocketBook, folder); bump((n) => n + 1); }} />;
 }
 
-/** What went wrong or what happened elsewhere, at the top of every screen until Kyle closes it. */
+/** One book as the phone shows it: its chapters, and every choice made on the phone that the iPad has not put in yet
+ * (on the vault's phone notes, then the ones still on the phone), with the pages as they will be once it has. */
+interface Here {
+  vault: PocketVault;
+  view: VaultIndex;
+  book: BookEntry;
+  chapters: PocketChapter[];
+  waiting: Waiting[];
+  chapter: (key: string) => PocketChapter | null;
+  /** A scene's body with the phone's choices in. */
+  textOf: (n: NoteRecord) => string;
+  decided: (ch: PocketChapter) => Map<string, Waiting>;
+  /** Cards still to decide in a chapter. */
+  left: (ch: PocketChapter) => number;
+  banners: ComponentChildren;
+  demo: boolean;
+}
+
+function hereFor(vault: PocketVault, view: VaultIndex, book: BookEntry, banners: ComponentChildren, demo: boolean): Here {
+  const chapters = bookChapters(view, book);
+  const kept = vault.state.kept.filter((k) => k.book === book.folder).map((k): Waiting => ({ ...k, note: '' }));
+  const waiting = waitingInVault(view, book.folder).concat(kept);
+  const texts = new Map<string, string>();
+  const textOf = (n: NoteRecord) => {
+    if (!texts.has(n.path)) texts.set(n.path, withPageText(n.body, phonePage(pageText(n.body), n, chapters, waiting)));
+    return texts.get(n.path)!;
+  };
+  const decided = (ch: PocketChapter) => decidedOnPhone(waiting, ch);
+  return {
+    vault, view, book, chapters, waiting, textOf, decided, banners, demo,
+    chapter: (key) => chapters.find((c) => chapterKey(c) === key) || null,
+    left: (ch) => { const d = decided(ch); return ch.note ? parseChanges(ch.note.body).changes.filter((c) => c.status === 'open' && !d.has(c.id)).length : 0; }
+  };
+}
+
+/** What went wrong, at the top of every screen until Kyle closes it. */
 function Banners({ vault, said, onSaid }: { vault: PocketVault; said: { ok: boolean; text: string } | null; onSaid: () => void }) {
   const s = vault.state;
   return (
     <>
       {said && <p class="pk-note" role="status">{said.text} <button type="button" class="pk-link" onClick={onSaid}>Close</button></p>}
       {s.error && <p class="pk-error" role="alert">{s.error} <button type="button" class="pk-link" onClick={() => vault.clearError()}>Close</button></p>}
-      {s.notice && <p class="pk-note" role="status">{s.notice} <button type="button" class="pk-link" onClick={() => vault.clearNotice()}>Close</button></p>}
     </>
   );
+}
+
+const plural = (n: number, one: string, many: string) => n + ' ' + (n === 1 ? one : many);
+
+/** Where the phone's choices stand, in one small line: waiting to go, going, or sent and waiting for the iPad. */
+function SendLine({ here, vault }: { here: Here | null; vault: PocketVault }) {
+  const s = vault.state;
+  const kept = s.kept.length;
+  const inVault = here ? here.waiting.filter((w) => w.note).length : 0;
+  let line: string;
+  if (!vault.canSend) line = kept ? plural(kept, 'choice', 'choices') + ' in this sample. Nothing here is sent.' : 'This is a sample. Nothing here is sent.';
+  else if (kept && !navigator.onLine) line = plural(kept, 'choice waits', 'choices wait') + ' on this phone until it is online.';
+  else if (kept && s.sending) line = 'Sending ' + plural(kept, 'choice', 'choices') + '…';
+  else if (kept) line = plural(kept, 'choice', 'choices') + ' waiting to go.';
+  else if (inVault) line = 'All sent. ' + plural(inVault, 'choice waits', 'choices wait') + ' for your iPad to put ' + (inVault === 1 ? 'it' : 'them') + ' in.';
+  else line = 'All sent.';
+  return <p class="pk-sendline" role="status">{line}</p>;
 }
 
 // ---- The key ----
@@ -175,26 +228,28 @@ function KeyScreen({ settings, said, connected, demo, onSaved, onDemo }: {
   );
 }
 
+
 // ---- The chapters ----
 
-function HomeScreen({ vault, book, books, chapters, banners, demo, onBook }: { vault: PocketVault; book: BookEntry | null; onBook: (folder: string) => void; books: BookEntry[]; chapters: PocketChapter[]; banners: ComponentChildren; demo: boolean }) {
+function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: PocketVault; here: Here | null; books: BookEntry[]; banners: ComponentChildren; demo: boolean; onBook: (folder: string) => void }) {
   const [picking, setPicking] = useState(false);
   const s = vault.state;
-  const listed = chapters.filter((c) => c.note);
-  const waiting = listed.reduce((t, c) => t + c.open, 0);
+  const book = here ? here.book : null;
+  const listed = here ? here.chapters.filter((c) => c.note) : [];
+  const leftOf = new Map(listed.map((c) => [c, here!.left(c)] as [PocketChapter, number]));
+  const waiting = listed.reduce((t, c) => t + (leftOf.get(c) || 0), 0);
   const place = readPlace(readJson(PREF.pocketPlace));
-  const carry = book && place && place.book === book.folder ? listed.find((c) => chapterKey(c) === place.chapter && c.open > 0) : null;
-  const carryAt = carry && place ? deck(carry, (n) => vault.bodyOf(n)).findIndex((d) => d.change.id === place.card) : -1;
-  const sending = s.outbox.length + vault.waitingWords();
+  const carry = here && book && place && place.book === book.folder ? listed.find((c) => chapterKey(c) === place.chapter && (leftOf.get(c) || 0) > 0) : null;
+  const carryAt = carry && place && here ? deck(carry, here.textOf, new Set(here.decided(carry).keys())).findIndex((d) => d.change.id === place.card) : -1;
   return (
     <main class="pk">
       {banners}
-      {demo && <p class="pk-note">This is a made-up sample. Nothing you do here is saved. <a class="pk-link" href={to.key}>Add your key</a></p>}
+      {demo && <p class="pk-note">This is a made-up sample. Nothing you do here is sent. <a class="pk-link" href={to.key}>Add your key</a></p>}
       <header class="pk-bookhead">
         {books.length > 1
           ? <button type="button" class="pk-bookpick" aria-expanded={picking} onClick={() => setPicking(!picking)}>{book ? book.title : 'Choose a book'} <span aria-hidden="true">▾</span></button>
           : <h1 class="pk-bookpick">{book ? book.title : 'No cards yet'}</h1>}
-        <p class="pk-sub">{book ? (waiting ? waiting + (waiting === 1 ? ' card' : ' cards') + ' waiting in this book' : 'No cards waiting in this book') : 'The team has not written change cards for any book yet.'}</p>
+        <p class="pk-sub">{book ? (waiting ? plural(waiting, 'card', 'cards') + ' waiting in this book' : 'No cards waiting in this book') : 'The team has not written change cards for any book yet.'}</p>
       </header>
       {picking && (
         <ul class="pk-list" aria-label="Books">
@@ -210,23 +265,27 @@ function HomeScreen({ vault, book, books, chapters, banners, demo, onBook }: { v
         <a class="pk-carry" href={to.cards(chapterKey(carry), carryAt >= 0 && place ? place.card : '')}>
           <span class="pk-kicker">Carry on</span>
           <span class="pk-carry-title">{carry.chapter}{carry.title ? ' · ' + carry.title : ''}</span>
-          <span>{carry.open + (carry.open === 1 ? ' card' : ' cards') + ' waiting.' + (carryAt >= 0 ? ' You stopped at card ' + (carryAt + 1) + '.' : '')}</span>
+          <span>{plural(leftOf.get(carry) || 0, 'card', 'cards') + ' waiting.' + (carryAt >= 0 ? ' You stopped at card ' + (carryAt + 1) + '.' : '')}</span>
         </a>
       )}
       {listed.length > 0 && <h2 class="pk-kicker">Chapters</h2>}
       <ul class="pk-list">
-        {listed.map((c) => (
-          <li key={chapterKey(c)}>
-            <a class={'pk-row' + (carry && c === carry ? ' on' : '')} href={c.open ? to.cards(chapterKey(c)) : to.read(chapterKey(c))}>
-              <span class="pk-row-num">{c.chapter}</span>
-              <span class="pk-row-title">{c.title || 'Chapter ' + c.chapter}</span>
-              <span class={'pk-row-end' + (c.open ? ' pk-count' : '')}>{c.open ? c.open + (c.open === 1 ? ' card' : ' cards') : '✓ done'}</span>
-            </a>
-          </li>
-        ))}
+        {listed.map((c) => {
+          const left = leftOf.get(c) || 0;
+          return (
+            <li key={chapterKey(c)}>
+              <a class={'pk-row' + (carry && c === carry ? ' on' : '')} href={left ? to.cards(chapterKey(c)) : to.read(chapterKey(c))}>
+                <span class="pk-row-num">{c.chapter}</span>
+                <span class="pk-row-title">{c.title || 'Chapter ' + c.chapter}</span>
+                <span class={'pk-row-end' + (left ? ' pk-count' : '')}>{left ? plural(left, 'card', 'cards') : '✓ done'}</span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
       <footer class="pk-foot">
-        <p class="pk-quiet">{s.syncing ? 'Reading your vault…' : sending ? sending + (sending === 1 ? ' change waits' : ' changes wait') + ' on this phone' + (navigator.onLine ? '.' : ' until it is online.') : s.snap ? 'Up to date' + (s.snap.lastSync ? ' as of ' + new Date(s.snap.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '') + '.' : ''}</p>
+        <SendLine here={here} vault={vault} />
+        <p class="pk-quiet">{s.syncing ? 'Reading your vault…' : s.snap && s.snap.lastSync ? 'Read from your vault at ' + new Date(s.snap.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.' : ''}</p>
         <p class="pk-buttons">
           <button type="button" onClick={() => void vault.sync()} disabled={s.syncing}>Sync</button>
           <a class="pk-button" href={to.key}>Your key</a>
@@ -239,10 +298,8 @@ function HomeScreen({ vault, book, books, chapters, banners, demo, onBook }: { v
 
 // ---- One card at a time ----
 
-const STATUS_SAID: Record<ChangeStatus, string> = { open: 'Opened again', kept: 'Accepted', other: 'Used version 2', no: 'Rejected', mine: 'Your own words', rewrite: 'In the rewrite', replaced: 'Replaced' };
-
-/** The last choice, for Undo: which card, what it did, and the words it put in. */
-interface Last { ch: string; id: string; status: ChangeStatus; scene: string | null; put: string | null; two: boolean }
+/** The last choice, for Undo: which card and what it was. */
+interface Last { ch: string; id: string; card: string; said: string }
 let lastChoice: Last | null = null;
 
 function Quote({ text, cls, was, label }: { text: string; cls: string; was?: string; label: string }) {
@@ -254,13 +311,14 @@ function Quote({ text, cls, was, label }: { text: string; cls: string; was?: str
   );
 }
 
-function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: PocketVault; view: VaultIndex; book: BookEntry; ch: PocketChapter; cardId: string; banners: ComponentChildren; demo: boolean }) {
+function CardsScreen({ here, ch, cardId }: { here: Here; ch: PocketChapter; cardId: string }) {
+  const { vault, view, book, banners, demo } = here;
   const [sheet, setSheet] = useState<null | { kind: 'which' } | { kind: 'tweak'; which: 'now' | 'other'; words: string } | { kind: 'tell'; words: string }>(null);
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
   const [last, setLast] = useState<Last | null>(lastChoice && lastChoice.ch === chapterKey(ch) ? lastChoice : null);
   const ck = chapterKey(ch);
-  const textOf = (n: NoteRecord) => vault.bodyOf(n);
-  const cards = deck(ch, textOf);
+  const decided = here.decided(ch);
+  const cards = deck(ch, here.textOf, new Set(decided.keys()));
   const all = parseChanges(ch.note!.body).changes;
   let i = cards.findIndex((d) => d.change.id === cardId);
   if (i < 0) i = 0;
@@ -268,66 +326,58 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
   useEffect(() => { if (dc) writeJson(PREF.pocketPlace, { book: book.folder, chapter: ck, card: dc.change.id }); setSheet(null); }, [dc && dc.change.id]);
   const title = 'Chapter ' + ch.chapter + (ch.title ? ' · ' + ch.title : '');
   const remember = (l: Last | null) => { lastChoice = l; setLast(l); };
+  const base = { book: book.folder, chapter: ch.chapter, chapterId: ch.id, scene: '', was: '', now: '', words: '', made: new Date().toISOString() };
 
-  /** Answers on the changes note, with the to-dos they tick off or open again: one save, as the Edit room makes it. */
-  const record = (c: Change, status: ChangeStatus) => {
-    const after = all.map((x) => (x.id === c.id ? { ...x, status } : x));
-    const at = new Date().toISOString();
-    const ticks = todoEdits(after, [c.id], bookTodos(view, book));
-    vault.act(marksAction(ch.note!.path, { [c.id]: status }, ticks.map((t) => ({ path: t.path, decision: 'edit' as const, reason: '', at, fields: t.fields }))));
+  /** Keep the choice on the phone; the card shows as decided, and the next one comes up. */
+  const keep = (c: Change, kind: PhoneKind, version: number, words: string, saidText: string, move: boolean) => {
+    const k: Kept = vault.record({ ...base, kind, version, card: c.id, words });
+    remember({ ch: ck, id: k.id, card: c.id, said: saidText });
+    setSaid(null);
+    if (move) { const n = cards[i + 1] || cards[i - 1] || null; go(to.cards(ck, n ? n.change.id : ''), true); }
   };
-  /** Put words into the scene where the card's old words are (the writing page's own save). */
-  const putIn = (d: DeckCard, c: Change, which: 'now' | 'other'): string | null => {
-    if (!d.scene) return 'The words this card quotes are not on the page any more, so it cannot put anything there.';
-    const body = vault.bodyOf(d.scene);
-    const r = applyChange(pageText(body), c, which);
-    if (!r) return 'Those words changed after the team wrote ' + c.id + ', so it could not go in. Rewrite the paragraph yourself from In the chapter.';
-    void vault.saveBody(d.scene, withPageText(body, r.text));
-    return null;
+  /** Words a card would put in must fit the page as the phone has it, as they must on the iPad. */
+  const fits = (d: DeckCard, c: Change, words: string): boolean => {
+    if (!d.scene || !applyChange(pageText(here.textOf(d.scene)), { ...c, now: words }, 'now')) {
+      setSaid({ ok: false, text: 'Those words changed after the team wrote ' + c.id + ', so it cannot go in. Rewrite the paragraph yourself from In the chapter.' });
+      return false;
+    }
+    return true;
   };
-  const next = () => { const n = cards[i + 1] || cards[i - 1] || null; go(to.cards(ck, n ? n.change.id : ''), true); };
-  const choose = (status: ChangeStatus, words?: string) => {
+  const use = (which: 'now' | 'other') => {
     if (!dc) return;
     const c = dc.change;
-    let put: string | null = null;
-    if (words != null) {
-      const err = putIn(dc, { ...c, now: words }, 'now');
-      if (err) { setSaid({ ok: false, text: err }); return; }
-      put = words;
-    } else if (status === 'kept' || status === 'other') {
-      const err = putIn(dc, c, status === 'other' ? 'other' : 'now');
-      if (err) { setSaid({ ok: false, text: err }); return; }
-      put = status === 'other' ? c.other : c.now;
-    }
-    record(c, status);
-    remember({ ch: ck, id: c.id, status, scene: dc.scene ? dc.scene.path : null, put, two: c.other != null });
-    setSaid(null);
-    next();
+    const words = which === 'other' ? c.other || '' : c.now;
+    if (!fits(dc, c, words)) return;
+    keep(c, 'use', c.other == null ? 0 : which === 'other' ? 2 : 1, words, c.other == null ? 'Accepted' : 'Used version ' + (which === 'other' ? 2 : 1), true);
   };
-  const undo = () => {
+  const tweak = (which: 'now' | 'other', words: string) => {
+    if (!dc) return;
+    const c = dc.change;
+    if (!fits(dc, c, words)) return;
+    keep(c, 'tweak', c.other == null ? 0 : which === 'other' ? 2 : 1, words, 'Your tweak kept', true);
+  };
+  const reject = () => { if (dc) keep(dc.change, 'reject', 0, '', 'Rejected', true); };
+  const tell = (words: string) => {
+    if (!dc || !words.trim()) return;
+    keep(dc.change, 'tell', 0, words.trim(), 'Told the Writer', false);
+    setSheet(null);
+  };
+  const undo = async () => {
     const l = last;
     if (!l) return;
-    const c = all.find((x) => x.id === l.id);
-    if (!c) { remember(null); return; }
-    const scene = l.scene ? view.notes[l.scene] : null;
-    if (l.put != null && scene) {
-      const body = vault.bodyOf(scene);
-      const t = revertChange(pageText(body), { ...c, now: l.put }, 'now');
-      if (t == null) { setSaid({ ok: false, text: 'The words ' + c.id + ' put in have changed since, so it cannot be taken back out. Your page stays as it is.' }); return; }
-      void vault.saveBody(scene, withPageText(body, t));
-    }
-    record(c, 'open');
+    const err = await vault.undo(l.id);
+    if (err) { setSaid({ ok: false, text: err }); return; }
     remember(null);
     setSaid(null);
-    go(to.cards(ck, c.id), true);
+    go(to.cards(ck, l.card), true);
   };
-  const lastLine = last ? (last.status === 'kept' && last.two ? 'Used version 1' : last.status === 'mine' ? 'Your own words went in' : STATUS_SAID[last.status]) + ' on ' + last.id + '.' : '';
+  const lastLine = last ? last.said + ' on ' + last.card + '.' : '';
 
   const head = (
     <header class="pk-cardhead">
       <p class="pk-topline">
         <a class="pk-link" href={to.home}>‹ Chapters</a>
-        {last && <span class="pk-undo">{lastLine} <button type="button" class="pk-link" onClick={undo}>Undo</button></span>}
+        {last && <span class="pk-undo">{lastLine} <button type="button" class="pk-link" onClick={() => void undo()}>Undo</button></span>}
       </p>
       <div class="pk-nav">
         <button type="button" class="pk-navbtn" disabled={!dc || i === 0} onClick={() => cards[i - 1] && go(to.cards(ck, cards[i - 1].change.id), true)}>‹ Back</button>
@@ -343,35 +393,26 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
       <main class="pk">
         {banners}
         {head}
+        {said && <p class={said.ok ? 'pk-note' : 'pk-error'} role="status">{said.text}</p>}
         <section class="pk-done">
           <h1>All decided in chapter {ch.chapter}</h1>
-          <p>No cards wait in this chapter.</p>
+          <p>No cards wait in this chapter. Your iPad puts your choices in when you next open the book there.</p>
+          <SendLine here={here} vault={vault} />
           <p class="pk-buttons"><a class="pk-button pk-primary" href={to.home}>Back to the chapters</a><a class="pk-button" href={to.read(ck)}>Read the chapter</a></p>
         </section>
       </main>
     );
   }
   const c = dc.change;
-  const here = Boolean(dc.scene);
+  const onPage = Boolean(dc.scene);
   const two = c.other != null;
-  // Reply to the Writer, as the Edit room shows it (src/ui/Changes.tsx).
+  // What was already said to the Writer on this card: in the vault, and from this phone, waiting for the iPad.
+  const told = here.waiting.filter((w) => w.kind === 'tell' && w.card === c.id && inChapter(w, ch));
   const jobs = jobNotes(view);
-  const target = replyTarget(ch.chapter);
+  const target = 'Chapter ' + ch.chapter;
   const replying = Boolean(openAsk(jobs, { kind: 'reply', target, book: book.folder }));
   const replyProblem = recentProblem(askFor(jobs, { kind: 'reply', target, book: book.folder }));
   const made = answersTo(all, c.id);
-  const send = (words: string) => {
-    if (!vault.source.commit) { setSaid({ ok: false, text: 'Replies need your own vault, not the demo.' }); return; }
-    const snap = vault.state.snap;
-    if (!snap) { setSaid({ ok: false, text: 'Press Sync first.' }); return; }
-    try {
-      vault.act(replyAction(snap.index, vault.state.outbox, vault.schema(), ch.note!.path, c.id, words, book.folder, ch.chapter));
-      setSheet(null);
-      setSaid(null);
-    } catch (e) {
-      setSaid({ ok: false, text: (e as Error).message });
-    }
-  };
 
   return (
     <main class={'pk pk-cards' + (sheet ? ' pk-sheeted' : '')}>
@@ -384,34 +425,36 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
         {c.does ? <p class="pk-why"><span class="pk-kicker">The change</span>{c.does}</p> : null}
         {!c.asked && !c.does && c.why ? <p class="pk-why">{c.why}</p> : null}
         {sheet && sheet.kind === 'tell' ? null : <Quote text={c.was} cls="pk-yours" label="Yours" />}
-        {sheet && sheet.kind === 'tweak' ? null : !here ? (
+        {sheet && sheet.kind === 'tweak' ? null : !onPage ? (
           <section class="pk-box">
-            <p>The words this card quotes are not on the page as it quotes them (you have probably changed them yourself), so it cannot put anything there. I wrote my own keeps your words.</p>
-            <p class="pk-buttons"><button type="button" class="pk-primary" onClick={() => choose('mine')}>I wrote my own</button><button type="button" onClick={() => choose('no')}>Reject</button></p>
+            <p>The words this card quotes are not on the page as it quotes them (you have probably changed them yourself), so it cannot put anything there. Decide it on the iPad, or Reject it here.</p>
+            <p class="pk-buttons"><button type="button" onClick={reject}>Reject</button></p>
           </section>
         ) : (
           <>
             <section class="pk-box">
               <p class="pk-kicker">{two ? 'Version 1' : 'The new words'}</p>
               <div class="pk-prose" dangerouslySetInnerHTML={{ __html: c.now ? quoteHtml(c.now, c.was) : '<p>(cut)</p>' }} />
-              {!sheet && <button type="button" class="pk-primary pk-wide" onClick={() => choose('kept')}>{two ? 'Use version 1' : 'Accept'}</button>}
+              {!sheet && <button type="button" class="pk-primary pk-wide" onClick={() => use('now')}>{two ? 'Use version 1' : 'Accept'}</button>}
             </section>
             {two && (
               <section class="pk-box">
                 <p class="pk-kicker">Version 2</p>
                 <div class="pk-prose" dangerouslySetInnerHTML={{ __html: c.other ? quoteHtml(c.other, c.was) : '<p>(cut)</p>' }} />
-                {!sheet && <button type="button" class="pk-primary pk-wide" onClick={() => choose('other')}>Use version 2</button>}
+                {!sheet && <button type="button" class="pk-primary pk-wide" onClick={() => use('other')}>Use version 2</button>}
               </section>
             )}
           </>
         )}
-        {(c.replies || []).length > 0 && (
+        {((c.replies || []).length > 0 || told.length > 0) && (
           <section class="pk-replies">
-            {(c.replies || []).map((r, k) => <p key={k}><span class="pk-kicker">You told the Writer</span>{r}</p>)}
+            {(c.replies || []).map((r, k) => <p key={'v' + k}><span class="pk-kicker">You told the Writer</span>{r}</p>)}
+            {told.map((w, k) => <p key={'p' + k}><span class="pk-kicker">You told the Writer, from this phone</span>{w.words}</p>)}
+            {told.length > 0 && <p class="pk-waiting">Your iPad sends this to the Writer when you next open the book there.</p>}
             {made.length
               ? <p>{made.map((m) => <a key={m.id} class="pk-link" href={to.cards(ck, m.id)}>{'New card ' + m.id + (m.status === 'open' ? ': see it' : ': decided')}</a>)}</p>
-              : replying ? <p class="pk-waiting">The Writer is making a new card from your reply. It shows here in a few minutes.</p>
-                : replyProblem ? <p class="pk-error">{replyProblem}</p> : null}
+              : !told.length && replying ? <p class="pk-waiting">The Writer is making a new card from your reply. It shows here in a few minutes.</p>
+                : !told.length && replyProblem ? <p class="pk-error">{replyProblem}</p> : null}
           </section>
         )}
       </article>
@@ -430,7 +473,7 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
           <p class="pk-sheethead">
             <button type="button" class="pk-link" onClick={() => setSheet(null)}>Cancel</button>
             <span>{two ? (sheet.which === 'other' ? 'Tweaking version 2' : 'Tweaking version 1') : 'Tweaking the new words'}</span>
-            <button type="button" class="pk-primary" disabled={!sheet.words.trim()} onClick={() => choose(tweakStatus(c, sheet.words), sheet.words)}>Save and use</button>
+            <button type="button" class="pk-primary" disabled={!sheet.words.trim()} onClick={() => tweak(sheet.which, sheet.words)}>Save and use</button>
           </p>
           <textarea class="pk-box-text" rows={Math.min(12, Math.max(4, Math.ceil(sheet.words.length / 30)))} value={sheet.words} aria-label="Your edit"
             onInput={(e) => setSheet({ ...sheet, words: (e.currentTarget as HTMLTextAreaElement).value })} />
@@ -441,18 +484,18 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
         <div class="pk-sheet" role="dialog" aria-label="Tell the Writer">
           <p class="pk-sheethead">
             <button type="button" class="pk-link" onClick={() => setSheet(null)}>Cancel</button>
-            <button type="button" class="pk-primary" disabled={!sheet.words.trim()} onClick={() => send(sheet.words)}>Send to the Writer</button>
+            <button type="button" class="pk-primary" disabled={!sheet.words.trim()} onClick={() => tell(sheet.words)}>Send to the Writer</button>
           </p>
           <label class="pk-label" for="pk-tell">Tell the Writer why</label>
           <textarea id="pk-tell" class="pk-box-text" rows={4} value={sheet.words} placeholder="Why you chose this, or what you want instead"
             onInput={(e) => setSheet({ ...sheet, words: (e.currentTarget as HTMLTextAreaElement).value })} />
-          <p class="pk-quiet">The Writer reads your reply and makes a new card from it, here in this chapter. A paid team job; the Jobs page in Sparrow shows what it cost.{demo ? ' (In the sample nothing is sent.)' : ''}</p>
+          <p class="pk-quiet">Your iPad sends it to the Writer when you next open the book there, and the Writer makes a new card from it in this chapter. A paid team job; the Jobs page in Sparrow shows what it cost.{demo ? ' (In the sample nothing is sent.)' : ''}</p>
         </div>
       )}
       {!sheet && (
         <nav class="pk-bar" aria-label="This card">
-          <button type="button" onClick={() => choose('no')}>Reject</button>
-          <button type="button" disabled={!here} onClick={() => setSheet(two ? { kind: 'which' } : { kind: 'tweak', which: 'now', words: c.now })}>Tweak</button>
+          <button type="button" onClick={reject}>Reject</button>
+          <button type="button" disabled={!onPage} onClick={() => setSheet(two ? { kind: 'which' } : { kind: 'tweak', which: 'now', words: c.now })}>Tweak</button>
           <button type="button" onClick={() => setSheet({ kind: 'tell', words: '' })}>Tell the Writer</button>
           <a href={to.read(ck, c.id)}>In the chapter</a>
         </nav>
@@ -463,48 +506,57 @@ function CardsScreen({ vault, view, book, ch, cardId, banners, demo }: { vault: 
 
 // ---- The chapter as a page ----
 
-function ReadScreen({ vault, book, ch, cardId, banners }: { vault: PocketVault; book: BookEntry; ch: PocketChapter; cardId: string; banners: ComponentChildren }) {
+function ReadScreen({ here, ch, cardId }: { here: Here; ch: PocketChapter; cardId: string }) {
+  const { vault, book, banners } = here;
   const [pick, setPick] = useState<{ scene: string; p: Paragraph } | null>(null);
   const [edit, setEdit] = useState<{ scene: string; p: Paragraph; words: string } | null>(null);
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState<string | null>(null);
   const ck = chapterKey(ch);
-  const textOf = (n: NoteRecord) => vault.bodyOf(n);
-  const cards = ch.note ? deck(ch, textOf) : [];
+  const cards = ch.note ? deck(ch, here.textOf, new Set(here.decided(ch).keys())) : [];
+  const left = here.left(ch);
   useEffect(() => {
     if (!cardId) return;
     const el = document.querySelector('[data-cards~="' + cardId.replace(/"/g, '') + '"]');
     if (el) el.scrollIntoView({ block: 'center' });
   }, [cardId]);
-  const save = async () => {
+  const save = () => {
     if (!edit) return;
     const scene = ch.scenes.find((s) => s.path === edit.scene);
     if (!scene) return;
-    const body = vault.bodyOf(scene);
-    let text: string;
-    try { text = replaceParagraph(pageText(body), edit.p, edit.words); } catch (e) { setSaid({ ok: false, text: (e as Error).message }); return; }
-    setBusy(true);
-    const err = await vault.saveBody(scene, withPageText(body, text));
-    setBusy(false);
-    if (err) { setSaid({ ok: false, text: err }); return; }
+    const text = pageText(here.textOf(scene));
+    try { replaceParagraph(text, edit.p, edit.words); } catch (e) { setSaid({ ok: false, text: (e as Error).message }); return; }
+    // The iPad finds the paragraph by its words, so they must stand in the scene once.
+    if (text.indexOf(edit.p.text) !== text.lastIndexOf(edit.p.text)) {
+      setSaid({ ok: false, text: 'This paragraph is in the scene twice, so your iPad could not tell which one you mean. Rewrite it on the iPad.' });
+      return;
+    }
+    const k = vault.record({ book: book.folder, kind: 'rewrite', version: 0, card: '', chapter: ch.chapter, chapterId: ch.id, scene: propText(scene, 'id'), words: '', was: edit.p.text, now: cleanParagraph(edit.words), made: new Date().toISOString() });
+    setLast(k.id);
     setEdit(null);
     setPick(null);
-    setSaid({ ok: true, text: navigator.onLine ? 'Saved.' : 'Saved on this phone. It goes to the vault when the phone is online.' });
+    setSaid({ ok: true, text: 'Kept on this phone. Your iPad puts it in when you next open the book there.' });
+  };
+  const undo = async () => {
+    if (!last) return;
+    const err = await vault.undo(last);
+    setLast(null);
+    setSaid(err ? { ok: false, text: err } : { ok: true, text: 'Taken back.' });
   };
   return (
     <main class={'pk pk-read' + (pick || edit ? ' pk-sheeted' : '')}>
       {banners}
       <header class="pk-nav pk-readhead">
-        <a class="pk-navbtn" href={ch.note && ch.open ? to.cards(ck, cardId) : to.home}>{ch.note && ch.open ? '‹ Cards' : '‹ Chapters'}</a>
+        <a class="pk-navbtn" href={ch.note && left ? to.cards(ck, cardId) : to.home}>{ch.note && left ? '‹ Cards' : '‹ Chapters'}</a>
         <div class="pk-navtitle"><b>{'Chapter ' + ch.chapter + (ch.title ? ' · ' + ch.title : '')}</b><span>{cards.length ? 'Bars show where cards are' : 'Press a paragraph to change it'}</span></div>
         <span class="pk-navbtn" aria-hidden="true" />
       </header>
-      {said && <p class={said.ok ? 'pk-note' : 'pk-error'} role="status">{said.text} <button type="button" class="pk-link" onClick={() => setSaid(null)}>Close</button></p>}
+      {said && <p class={said.ok ? 'pk-note' : 'pk-error'} role="status">{said.text} {last && said.ok && <button type="button" class="pk-link" onClick={() => void undo()}>Undo</button>} <button type="button" class="pk-link" onClick={() => setSaid(null)}>Close</button></p>}
       {ch.scenes.map((s) => {
         const mine = cards.filter((d) => d.scene === s);
         return (
           <section key={s.path} class="pk-scene">
-            {paragraphs(pageText(textOf(s)), mine).map((p) => {
+            {paragraphs(pageText(here.textOf(s)), mine).map((p) => {
               const on = (pick && pick.scene === s.path && pick.p.at === p.at) || (edit && edit.scene === s.path && edit.p.at === p.at);
               return (
                 <div key={p.at} class={'pk-para' + (p.cards.length ? ' has-card' : '') + (on ? ' on' : '')} data-cards={p.cards.map((c) => c.id).join(' ')}>
@@ -536,11 +588,11 @@ function ReadScreen({ vault, book, ch, cardId, banners }: { vault: PocketVault; 
           <p class="pk-sheethead">
             <button type="button" class="pk-link" onClick={() => setEdit(null)}>Cancel</button>
             <span>Your paragraph</span>
-            <button type="button" class="pk-primary" disabled={busy || edit.words === edit.p.text} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
+            <button type="button" class="pk-primary" disabled={edit.words === edit.p.text} onClick={save}>Save</button>
           </p>
           <textarea class="pk-box-text" rows={Math.min(14, Math.max(5, Math.ceil(edit.words.length / 30)))} value={edit.words} aria-label="Your paragraph"
             onInput={(e) => setEdit({ ...edit, words: (e.currentTarget as HTMLTextAreaElement).value })} />
-          <p class="pk-quiet">Shown as it is stored: words between *stars* are in italics, and a line starting with &gt; is a System screen. Save changes only this paragraph of {book.title}.</p>
+          <p class="pk-quiet">Shown as it is stored: words between *stars* are in italics, and a line starting with &gt; is a System screen. Save keeps it on this phone; your iPad puts it into {book.title} when you next open the book there.</p>
         </div>
       )}
     </main>

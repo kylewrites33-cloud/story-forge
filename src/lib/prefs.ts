@@ -107,5 +107,9 @@ export const PREF = {
   studyLens: 'character-study.lens',
   // ---- Sparrow Pocket (the phone page, src/pocket/; 2026-11-20)
   pocketBook: 'sparrow-pocket.book', // the book last used on this phone
-  pocketPlace: 'sparrow-pocket.place' // where Kyle left off: book, chapter and card
+  pocketPlace: 'sparrow-pocket.place', // where Kyle left off: book, chapter and card
+  // Since 2026-11-21 the phone only records: its own names, never the app's outbox, drafts or saved copy.
+  pocketChoices: 'sparrow-pocket.choices.', // choices made on the phone and not sent yet, per vault
+  pocketNotes: 'sparrow-pocket.notes.', // the phone note it adds to for each book, and where each sent choice went, per vault
+  phoneReport: 'sparrow.phone-report.' // the app's: what it did with the phone's choices, shown until Kyle presses OK, per vault
 } as const;

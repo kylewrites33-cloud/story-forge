@@ -1,6 +1,7 @@
 // Sparrow Pocket (2026-11-20): what the phone page works out from the vault (src/lib/pocket.ts), the address the square
-// code carries (src/lib/settings.ts), and that each press saves what the Edit room saves for it: the same answers, the
-// same to-dos ticked, the same scene words through the writing page's save, the same reply and ask.
+// code carries (src/lib/settings.ts), and the Edit room's own actions that put the phone's choices in on the iPad (since
+// 2026-11-21 the phone only records them; tests/phone-choices.test.ts holds the rest): the same answers, the same
+// to-dos ticked, the same scene words through the writing page's save, the same reply and ask.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { applyChange, parseChanges, revertChange, todoEdits, tweakStatus, type Change } from '../src/lib/changes.ts';

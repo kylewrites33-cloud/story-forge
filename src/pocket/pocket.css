@@ -145,3 +145,7 @@ button:disabled:active { background: var(--paper); color: var(--ink); }
 
 /* Picked-out text is black with white words: the browser's own blue reads as a grey smear on E Ink. */
 ::selection { background: #000; color: #fff; }
+
+/* Where the phone's choices stand (2026-11-21): waiting to go, going, or sent and waiting for the iPad. */
+.pk-sendline { font-weight: 700; margin: 8px 0; }
+.pk-sendline::before { content: '● '; }
