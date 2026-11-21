@@ -1,0 +1,11 @@
+// Sparrow Pocket as an Android app (Kyle, 2026-11-21: "I want a real icon and app" ... "just make the app file").
+// A Trusted Web Activity: the app opens the live Pocket page in Chrome, so it shares Chrome's saved key and updates
+// with the site. Built only by .github/workflows/pocket-android.yml; no part of the web app depends on it.
+pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'sparrow-pocket'
+include ':app'
