@@ -5,7 +5,7 @@
 import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
-  BEATS_TYPE, addBeatAfter, addBeatAtEnd, beatDefs, beatsBody, beatsPath, beatsTitle, deleteBeat, deletedBeatPath, deletedBeatText, layoutChapter,
+  BEATS_TYPE, addBeatAfter, introOf, addBeatAtEnd, beatDefs, beatsBody, beatsPath, beatsTitle, deleteBeat, deletedBeatPath, deletedBeatText, layoutChapter,
   moveBeat, nameLoose, parseBeats, removeBeat, sceneBody,
   type BeatView, type SceneShape
 } from '../lib/beats.ts';
@@ -38,11 +38,6 @@ interface State {
   intro: string;
   shapes: SceneShape[];
   beats: BeatView[];
-}
-
-function introOf(body: string): string {
-  const m = /(^|\n)## /.exec(body);
-  return (m ? body.slice(0, m.index) : body).trim();
 }
 
 function start(source: VaultSource, group: ChapterGroup, bookFolder: string, beatsNote: NoteRecord | null): State {

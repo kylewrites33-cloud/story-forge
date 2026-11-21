@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { applyChange, parseChanges, todoEdits, tweakStatus, type ChangeStatus } from '../src/lib/changes.ts';
 import { openDraft } from '../src/lib/drafts.ts';
-import { appendChoices, labelOf, newNoteText, readChoices, readNote, removeChoice, rewriteInto, setProps, setResult, type PhoneChoice } from '../src/lib/phone-choices.ts';
+import { appendChoices, labelOf, resultSaid, newNoteText, readChoices, readNote, removeChoice, rewriteInto, setProps, setResult, type PhoneChoice } from '../src/lib/phone-choices.ts';
 import { parseSchema } from '../src/lib/schema.ts';
 import { sync } from '../src/lib/sync.ts';
 import { bookTodos } from '../src/lib/todos.ts';
@@ -148,13 +148,16 @@ test('the iPad puts the phone\'s choices in exactly as the Edit room does for th
   const sent = await sendChoices(phone, BOOK, 'Ash Bell', '', list, NOW);
   const { rep } = await putIn(phone);
   assert.ok(rep);
-  assert.deepEqual(rep!.results.map((r) => r.what + ': ' + r.result), [
+  // The rewrite changed the first words of chapter 1's second beat, so its new beat ID is written after its result
+  // (Write mode finds the beat again by it); Kyle's notice reads the result without it.
+  assert.match(rep!.results[1].result, /^applied · beats now S-001-[0-9a-f]{6} → S-001-[0-9a-f]{6}$/);
+  assert.deepEqual(rep!.results.map((r) => r.what + ': ' + resultSaid(r.result)), [
     'Accept on C-01: applied', 'Rewrite a paragraph in S-001: applied', 'Use version 2 on C-03: applied',
     'Tweak on C-02: applied', 'Tell the Writer on C-03: applied', 'Reject on C-04: applied']);
   assert.equal(reportLine(rep!.results), '6 choices from your phone applied.');
   const note = readNote(phone.files.get(sent.path)!);
   assert.equal(note.status, 'applied');
-  assert.ok(note.choices.every((c) => c.result === 'applied'));
+  assert.ok(note.choices.every((c) => resultSaid(c.result) === 'applied'));
 
   // The Edit room: the same presses on a fresh copy of the vault, through its own actions.
   const room = await vault();

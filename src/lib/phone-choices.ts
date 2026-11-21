@@ -13,7 +13,13 @@ export const PHONE_FOLDER = 'Phone';
 /** Another device leaves a note it sees being put in alone for this long, then takes over (an iPad closed halfway). */
 export const CLAIM_MS = 10 * 60 * 1000;
 
-export type PhoneKind = 'use' | 'reject' | 'tweak' | 'tell' | 'rewrite';
+export type PhoneKind = 'use' | 'reject' | 'tweak' | 'tell' | 'rewrite' | BeatKind;
+/** Write mode's choices on a chapter's beats (2026-11-21; Kyle: "can you make a writing mode, too? ... i can open each
+ * beat and write in it, rewrite beat titles, and add, delete, or move beats arond"). src/lib/phone-beats.ts lays the
+ * chapter out by its beats and puts each one in, the same way on both ends. */
+export type BeatKind = 'beat-write' | 'beat-rename' | 'beat-add' | 'beat-delete' | 'beat-move';
+export const BEAT_KINDS: readonly BeatKind[] = ['beat-write', 'beat-rename', 'beat-add', 'beat-delete', 'beat-move'];
+export const isBeatKind = (k: string): k is BeatKind => (BEAT_KINDS as readonly string[]).indexOf(k) >= 0;
 export type PhoneStatus = 'sent' | 'applying' | 'applied';
 
 /** One choice as the note holds it. */
@@ -32,9 +38,16 @@ export interface PhoneChoice {
   scene: string;
   /** use: the version's words as the phone showed them; tweak: his words; tell: his reply. */
   words: string;
-  /** rewrite: the paragraph exactly as it stood, and his paragraph ('' cuts it). */
+  /** rewrite: the paragraph exactly as it stood, and his paragraph ('' cuts it). A beat: write, its words before and
+   * after; rename, its name before and after; add, its name (now); delete, its words as they stood (was). */
   was: string;
   now: string;
+  /** A beat choice: the beat, by its ID in phone-beats.ts ("S-001-3fa9c2", or "new-..." for a beat added on the phone). */
+  beat?: string;
+  /** A beat choice: how the phone showed the beat, for the notes and the notice ("beat 3, Reed's theory"). */
+  beatName?: string;
+  /** add: "after <ID>" or "end"; move: "before <ID>" or "end". */
+  place?: string;
   /** When he made it (UTC). */
   made: string;
   /** What the iPad did with it: '' while it waits, "applied", or "skipped. <why>". */
@@ -47,6 +60,11 @@ export function labelOf(c: PhoneChoice): string {
   if (c.kind === 'reject') return 'Reject';
   if (c.kind === 'tweak') return c.version === 0 ? 'Tweak' : 'Tweak version ' + c.version;
   if (c.kind === 'tell') return 'Tell the Writer';
+  if (c.kind === 'beat-write') return 'Write in a beat';
+  if (c.kind === 'beat-rename') return 'Rename a beat';
+  if (c.kind === 'beat-add') return 'Add a beat';
+  if (c.kind === 'beat-delete') return 'Delete a beat';
+  if (c.kind === 'beat-move') return 'Move a beat';
   return 'Rewrite a paragraph';
 }
 
@@ -61,8 +79,12 @@ function kindOf(label: string): { kind: PhoneKind; version: number } | null {
   if (m) return { kind: 'tweak', version: Number(m[1]) };
   if (l === 'Tell the Writer') return { kind: 'tell', version: 0 };
   if (l === 'Rewrite a paragraph') return { kind: 'rewrite', version: 0 };
+  const beat = (['beat-write', 'beat-rename', 'beat-add', 'beat-delete', 'beat-move'] as BeatKind[]).find((k) => labelOf({ kind: k, version: 0 } as PhoneChoice) === l);
+  if (beat) return { kind: beat, version: 0 };
   return null;
 }
+
+const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 /** Words as `> ` lines, as the changes note quotes them; an empty line is a lone `>`. */
 export function quoteBlock(text: string): string[] {
@@ -80,9 +102,19 @@ export function choiceSection(c: PhoneChoice): string {
   out.push('Chapter: ' + c.chapter);
   if (c.chapterId) out.push('Chapter ID: ' + c.chapterId);
   if (c.scene) out.push('Scene: ' + c.scene);
+  if (c.beat) out.push('Beat: ' + c.beat + (c.beatName ? ' (' + oneLine(c.beatName) + ')' : ''));
+  if (c.place) out.push('Where: ' + c.place);
   out.push('Made: ' + c.made);
   if (c.result) out.push('Result: ' + c.result);
-  if (c.kind === 'rewrite') {
+  if (c.kind === 'beat-write' || c.kind === 'beat-rename') {
+    out.push('', 'Was:', ...quoteBlock(c.was), '', 'Now:', ...quoteBlock(c.now));
+  } else if (c.kind === 'beat-add') {
+    out.push('', 'Now:', ...quoteBlock(c.now));
+  } else if (c.kind === 'beat-delete') {
+    out.push('', 'Was:', ...quoteBlock(c.was));
+  } else if (c.kind === 'beat-move') {
+    // Nothing more: the beat and where it went say it all.
+  } else if (c.kind === 'rewrite') {
     out.push('', 'Was:', ...quoteBlock(c.was), '', 'Now:', ...quoteBlock(c.now));
   } else if (c.kind !== 'reject') {
     out.push('', 'Words:', ...quoteBlock(c.words));
@@ -157,13 +189,15 @@ export function readChoices(body: string): PhoneChoice[] {
     if (!cur) return;
     if (into && line.startsWith('>')) { quote.push(line); return; }
     endQuote();
-    const m = /^(Card|Chapter|Chapter ID|Scene|Made|Result): ?(.*)$/.exec(line);
+    const m = /^(Card|Chapter|Chapter ID|Scene|Beat|Where|Made|Result): ?(.*)$/.exec(line);
     if (m) {
       const v = m[2].trim();
       if (m[1] === 'Card') cur.card = v;
       else if (m[1] === 'Chapter') cur.chapter = Number(v) || 0;
       else if (m[1] === 'Chapter ID') cur.chapterId = v;
       else if (m[1] === 'Scene') cur.scene = v;
+      else if (m[1] === 'Beat') { const b = /^(\S+)(?:\s+\((.*)\))?$/.exec(v); cur.beat = b ? b[1] : v; cur.beatName = b && b[2] ? b[2] : ''; }
+      else if (m[1] === 'Where') cur.place = v;
       else if (m[1] === 'Made') cur.made = v;
       else cur.result = v;
       return;
@@ -257,3 +291,29 @@ export function rewriteInto(text: string, was: string, now: string): string | nu
   if (!was || at < 0 || text.indexOf(was, at + 1) >= 0) return null;
   return replaceParagraph(text, { at, end: at + was.length, text: was }, now);
 }
+
+// ---- Beats found again after a choice changed them ----
+// A beat is known by an ID made from its scene, name and first words (src/lib/phone-beats.ts), so a choice that renames
+// a beat, moves it or changes its first words gives it a new ID. The iPad writes each change of ID after the result
+// ("applied · beats now S-001-3fa9c2 → S-001-77b0e1"), and both ends follow them, so a later choice made on the phone
+// still finds its beat.
+
+const NOW = ' · beats now ';
+
+/** A result with the beats whose IDs it changed. */
+export function withAliases(result: string, pairs: [string, string][]): string {
+  return pairs.length ? result + NOW + pairs.map((p) => p[0] + ' → ' + p[1]).join(', ') : result;
+}
+
+/** The ID changes written after a result. */
+export function aliasesIn(result: string): [string, string][] {
+  const i = result.indexOf(NOW);
+  if (i < 0) return [];
+  return result.slice(i + NOW.length).split(',').map((x) => x.trim().split(/\s*→\s*/)).filter((p) => p.length === 2 && p[0] && p[1]) as [string, string][];
+}
+
+/** A result as Kyle reads it: without the ID changes. */
+export const resultSaid = (result: string): string => {
+  const i = result.indexOf(NOW);
+  return i < 0 ? result : result.slice(0, i);
+};

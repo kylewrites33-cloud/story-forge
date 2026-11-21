@@ -12,7 +12,7 @@
 //
 // A beat with a scene and no words has no prose yet (planned). A beat with no Starts line goes in the chapter's last scene.
 import { Frontmatter } from './frontmatter.js';
-import { splitLead } from './drafts.ts';
+import { splitLead } from './lead.ts';
 import type { NoteRecord } from './types.ts';
 
 export const BEATS_FOLDER = 'Chapter Beats';
@@ -66,6 +66,12 @@ export function beatsBody(beats: BeatDef[]): string {
 /** The whole note for a chapter that has none yet. */
 export function newBeatsText(chapter: number, beats: BeatDef[]): string {
   return Frontmatter.join({ type: BEATS_TYPE, title: beatsTitle(chapter), chapter }, beatsBody(beats).replace(/^\n/, ''));
+}
+
+/** Text above the first beat in a beats note, kept as it is when the beats are written again. */
+export function introOf(body: string): string {
+  const m = /(^|\n)## /.exec(body);
+  return (m ? body.slice(0, m.index) : body).trim();
 }
 
 export const beatsTitle = (chapter: number) => 'Chapter ' + chapter + ' beats';

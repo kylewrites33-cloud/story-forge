@@ -120,12 +120,8 @@ export function sceneWords(status: unknown, body: string): number {
   return status === 'planned' ? 0 : bodyWords(body);
 }
 
-/** The editor shows the body without the blank line that follows the properties; this puts it back. */
-export function splitLead(body: string): { lead: string; text: string } {
-  const m = /^(\r?\n)+/.exec(body);
-  const lead = m ? m[0] : '';
-  return { lead, text: body.slice(lead.length) };
-}
+// The blank line after the properties: its one function lives in lead.ts (Beats mode and Sparrow Pocket use it too).
+export { splitLead } from './lead.ts';
 
 /** Start editing a note, or carry on with the draft already on this device. A draft with no unsaved words is
  * dropped when the note has changed since, so Kyle always starts from the newest version. */

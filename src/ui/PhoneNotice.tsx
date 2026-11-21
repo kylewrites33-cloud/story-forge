@@ -3,7 +3,7 @@
 // with each choice and, for one skipped, why.
 import { useState } from 'preact/hooks';
 import { readJson, writeJson, PREF } from '../lib/prefs.ts';
-import { isApplied, reportLine, type PhoneResult } from '../vault/phone.ts';
+import { isApplied, reportLine, resultLine, type PhoneResult } from '../vault/phone.ts';
 
 export function loadPhoneReport(sourceKey: string): PhoneResult[] | null {
   const v = readJson(PREF.phoneReport + sourceKey);
@@ -12,6 +12,13 @@ export function loadPhoneReport(sourceKey: string): PhoneResult[] | null {
 
 export function savePhoneReport(sourceKey: string, results: PhoneResult[] | null): void {
   writeJson(PREF.phoneReport + sourceKey, results && results.length ? results : null);
+}
+
+/** One choice's result in Kyle's words (the beats' new IDs left out). */
+function said(r: PhoneResult): string {
+  const t = resultLine(r);
+  if (isApplied(r)) return t === 'applied' ? 'applied.' : 'applied; it was already so.';
+  return t;
 }
 
 export function PhoneNotice({ results, onOk }: { results: PhoneResult[]; onOk: () => void }) {
@@ -29,7 +36,7 @@ export function PhoneNotice({ results, onOk }: { results: PhoneResult[]; onOk: (
         <ol class="phone-notice-list">
           {results.map((r) => (
             <li key={r.note + '#' + r.n} class={isApplied(r) ? 'applied' : 'skipped'}>
-              <b>{r.what}</b>{r.chapter ? ' (chapter ' + r.chapter + ')' : ''}: {isApplied(r) ? (r.result === 'applied' ? 'applied.' : 'applied; it was already so.') : 'skipped. ' + r.result.replace(/^skipped\.\s*/, '')}
+              <b>{r.what}</b>{r.chapter ? ' (chapter ' + r.chapter + ')' : ''}: {said(r)}
             </li>
           ))}
         </ol>

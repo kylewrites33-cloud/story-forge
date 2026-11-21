@@ -2060,3 +2060,30 @@ halfway), a choice that is already so counts as applied and is not made again, a
 waits for the next run. Checked against a pretend GitHub: the same choices made on the phone and put in here, and made
 directly in the Edit room, left the changes note, the to-do, the reply ask and the scene the same, byte for byte.
 Not put in on the writing screen, so it never changes a scene under Kyle's cursor.
+
+**Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe
+we can use the beat mode. and i can open each beat and write in it, rewrite beat titles, and add, delete, or move beats
+arond". Pocket has one switch, Write | Edit, on the chapters list and at the top of every chapter, remembered on the
+phone (`sparrow-pocket.mode`). Edit is the cards and the page, as before. Write is the chapter by its beats, laid out as
+Beats mode lays it out (`src/lib/beats.ts`): a box per beat with its number, name and first line, and its words; a
+scene's opening words are a beat with no name yet. Press a beat to open it: its name in a box (renaming it), its words in
+a plain text box as they are stored (stars for italics, `>` for a System screen; the styled editor is the main app's and
+stays behind the wall), Move up and Move down (no drag on E Ink), Add a beat after this (it opens with its name ready to
+type; the list has Add a beat at the end), and Delete this beat, which asks once, "Delete beat 2 and its 43 words? A copy
+goes to the book's Archive." The chapters list shows both: cards waiting, and beats and words. Every press is a recorded
+choice on the phone note, sent by itself like the cards; typing is kept as one choice per beat and sitting, changed as he
+types, not one per key. The phone shows the chapter with its own choices in (kept or sent, after a reload, offline too).
+On the iPad each goes in as Beats mode makes the same press (`src/lib/phone-beats.ts`, shared by both ends): the scenes
+and the beats note saved as Beats mode saves them, a deleted beat's words to `Archive/Deleted beats/` first, in the order
+made, so a beat added on the phone can be named, written in and moved. A beat is found by an ID from its scene, name and
+first words; when a choice changes that ID, the iPad writes the new one after the result ("applied · beats now ..."), so a
+choice the phone made before the iPad put the last ones in still finds its beat. Words whose beat changed on the iPad too
+are merged line by line, as offline words are; where both changed the same lines the iPad's words stay, the phone's are
+saved as a copy of the scene named "from your phone", and the notice says so ("1 kept as a copy"). A choice that no
+longer fits (renamed here, its words changed before a delete, the beat gone) is skipped with the reason.
+Words written on the phone are not counted in the day's typed words (the Writing Log counts what is typed in the app).
+**The writing screen's bar.** The page, Beats and Whole chapter never put the phone's choices in by themselves. When the
+open chapter has words waiting from the phone, a bar at the foot says "Your phone has writing for this chapter." with
+Put it in: it saves the page's own words, puts the book's phone notes in, and reloads the page, which then shows what was
+done until OK. Checked against a pretend GitHub: the same five presses on the phone and in Beats mode left the scene, the
+beats note and the Archive copy the same, byte for byte.

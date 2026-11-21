@@ -5,21 +5,29 @@
 // order Kyle made them, as if he had pressed them here: Accept or a version (the card's words into the scene, the
 // answer on the changes note with the to-dos it ticks), Reject, a tweak (Edit, then accept), Reply to the Writer, and a
 // paragraph rewritten (the writing page's scene save). A choice that no longer fits is skipped, never forced.
+// Write mode's choices on beats (2026-11-21; Kyle: "can you make a writing mode, too? ... i can open each beat and write
+// in it, rewrite beat titles, and add, delete, or move beats arond") go in as Beats mode makes them
+// (src/lib/phone-beats.ts): the scenes saved as the writing page saves them, the beats note likewise, a deleted beat's
+// words to the book's Archive first, and a beat whose same lines changed here too kept as it is here, with the phone's
+// words saved as a copy of the scene.
 //
 // Safe twice over: a note is claimed first (one save; another device leaves it for ten minutes), each choice that is
 // already so counts as put in rather than being made again, and the result of each choice is written on the note by
 // its number, so nothing is put in twice and a choice the phone added meanwhile waits for the next run.
 import { applyChange, CHANGES_TYPE, changesNoteFor, parseChanges, todoEdits, tweakStatus, type Change, type ChangeStatus } from '../lib/changes.ts';
-import { loadDrafts, mergeNotice, openDraft, putDraft, splitLead } from '../lib/drafts.ts';
-import { byStart, cleanParagraph, labelOf, PHONE_FOLDER, PHONE_TYPE, readChoices, rewriteInto, type PhoneChoice } from '../lib/phone-choices.ts';
+import { BEATS_TYPE, beatsNoteFor, beatsPath, beatsTitle } from '../lib/beats.ts';
+import { loadDrafts, mergeNotice, openDraft, putDraft, splitLead, type Draft } from '../lib/drafts.ts';
+import { Frontmatter } from '../lib/frontmatter.js';
+import { aliasMap, beatStep, idChangesBetween, type ChapterText } from '../lib/phone-beats.ts';
+import { byStart, cleanParagraph, isBeatKind, labelOf, PHONE_FOLDER, PHONE_TYPE, readChoices, resultSaid, rewriteInto, withAliases, type PhoneChoice } from '../lib/phone-choices.ts';
 import { propNum, propText } from '../lib/props.ts';
 import { bookTodos } from '../lib/todos.ts';
-import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
+import type { BookEntry, DeviceFile, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
 import { replyAction } from '../team/reply.ts';
 import { overlayActions } from './apply.ts';
-import { marksAction, textAction, type Action } from './ops.ts';
+import { filesAction, marksAction, textAction, type Action } from './ops.ts';
 import { pushAction } from './push.ts';
-import { saveDraft } from './words.ts';
+import { saveDraft, saveSnapshot } from './words.ts';
 
 /** What happened to one choice, as the notice lists it. */
 export interface PhoneResult {
@@ -28,11 +36,13 @@ export interface PhoneResult {
   /** What he chose, with the card or scene: "Use version 2 on C-03". */
   what: string;
   chapter: number;
-  /** "applied", "applied (it was already so)" or "skipped. <why>". */
+  /** "applied", "applied (it was already so)", "kept as a copy. <why>" or "skipped. <why>", and after it the beats
+   * whose IDs it changed (phone-choices.ts, withAliases), which the notice leaves out. */
   result: string;
 }
 
 export const isApplied = (r: { result: string }): boolean => /^applied/.test(r.result);
+export const isCopied = (r: { result: string }): boolean => /^kept as a copy/.test(r.result);
 
 /** The book's phone notes that still have choices to put in (or none left at all), oldest first. */
 export function waitingPhoneNotes(index: VaultIndex, bookFolder: string): NoteRecord[] {
@@ -45,15 +55,49 @@ export function waitingPhoneNotes(index: VaultIndex, bookFolder: string): NoteRe
 const SAID: Record<ChangeStatus, string> = { open: 'open', kept: 'accepted', other: 'version 2 used', no: 'rejected', mine: 'your own words', rewrite: 'handled in the rewrite', replaced: 'replaced' };
 
 export function whatOf(c: PhoneChoice): string {
+  if (isBeatKind(c.kind)) return labelOf(c) + (c.beatName ? ', ' + c.beatName : '');
   return labelOf(c) + (c.card ? ' on ' + c.card : c.scene ? ' in ' + c.scene : '');
+}
+
+/** Every ID change the iPad has written on the book's phone notes, oldest first. */
+function bookAliases(index: VaultIndex, bookFolder: string): Map<string, string> {
+  const dir = bookFolder + '/' + PHONE_FOLDER + '/';
+  const notes = Object.values(index.notes).filter((n) => n.type === PHONE_TYPE && n.path.startsWith(dir)).sort((a, b) => byStart(a.path, b.path));
+  return aliasMap(notes.flatMap((n) => readChoices(n.body).map((c) => c.result)));
+}
+
+/** A chapter's scenes and beats note as this device has them: by the chapter's own ID, else its number. */
+export function chapterText(index: VaultIndex, book: BookEntry, ref: { chapter: number; chapterId: string }, bodyOf: (n: NoteRecord) => string,
+  made: Record<string, string> = {}): ChapterText | null {
+  const scenes = book.scenes.map((p) => index.notes[p]).filter((n) => n && (ref.chapterId ? propText(n, 'chapter_id') === ref.chapterId : propNum(n, 'chapter') === ref.chapter));
+  if (!scenes.length) return null;
+  const num = propNum(scenes[0], 'chapter') || ref.chapter;
+  const note = beatsNoteFor(index.notes, book.folder, num);
+  const path = note ? note.path : beatsPath(book.folder, num);
+  return {
+    chapter: num, beatsPath: path,
+    beatsBody: note ? bodyOf(note) : path in made ? made[path] : null,
+    scenes: scenes.map((n) => ({ path: n.path, id: propText(n, 'id'), body: bodyOf(n) }))
+  };
+}
+
+/** The chapters a choice can change the words of. */
+function chapterOfChoice(c: PhoneChoice): { chapter: number; chapterId: string } {
+  return { chapter: c.chapter, chapterId: c.chapterId };
 }
 
 export interface PhonePlan {
   results: PhoneResult[];
   /** The answers and replies, one action per press, in order, as the Edit room makes them. */
   actions: Action[];
-  /** The scenes whose words change: path to the new body. */
+  /** The scenes (and beats notes) whose words change: path to the new body. */
   bodies: Record<string, string>;
+  /** Beats notes the chapter did not have yet: path to the properties they start with (as Beats mode starts one). */
+  creates: Record<string, string>;
+  /** Deleted beats' words, for the book's Archive, saved before anything else. */
+  files: DeviceFile[];
+  /** The phone's words where the same lines changed here too: a copy of the scene with them in. */
+  copies: { path: string; scene: string; body: string }[];
 }
 
 /** Work out each choice in order against the vault as this device has it. `index` is the saved copy, `waiting` the
@@ -62,16 +106,49 @@ export function planPhone(index: VaultIndex, waiting: Action[], schema: Schema |
   choices: (PhoneChoice & { note: string })[], bodyOf: (n: NoteRecord) => string, now: Date): PhonePlan {
   const actions: Action[] = [];
   const bodies: Record<string, string> = {};
+  const creates: Record<string, string> = {};
+  const files: DeviceFile[] = [];
+  const copies: PhonePlan['copies'] = [];
   const results: PhoneResult[] = [];
+  const alias = bookAliases(index, book.folder);
   const view = () => overlayActions(index, waiting.concat(actions), schema);
   const scenes = (v: VaultIndex) => book.scenes.map((p) => v.notes[p]).filter(Boolean);
   const body = (n: NoteRecord) => (n.path in bodies ? bodies[n.path] : bodyOf(n));
   const page = (n: NoteRecord) => splitLead(body(n)).text;
   const setPage = (n: NoteRecord, text: string) => { bodies[n.path] = splitLead(body(n)).lead + text; };
 
+  const anyBody = (n: NoteRecord) => (n.path in bodies ? bodies[n.path] : bodyOf(n));
+
   choices.forEach((c) => {
-    const said = (result: string) => results.push({ note: c.note, n: c.n, what: whatOf(c), chapter: c.chapter, result });
+    const before = { ...bodies };
+    const ref = chapterOfChoice(c);
+    const was = chapterText(index, book, ref, (n) => (n.path in before ? before[n.path] : bodyOf(n)), before);
+    let pairs: [string, string][] = [];
+    const said = (result: string) => {
+      // A card or a paragraph that changed a beat's first words gives it a new ID: written after the result.
+      if (!isBeatKind(c.kind) && was && /^applied/.test(result)) {
+        const now = chapterText(index, book, ref, anyBody, bodies);
+        if (now) pairs = idChangesBetween(was, now);
+      }
+      pairs.forEach(([a, b]) => alias.set(a, b));
+      results.push({ note: c.note, n: c.n, what: whatOf(c), chapter: c.chapter, result: withAliases(result, pairs) });
+    };
     const skip = (why: string) => said('skipped. ' + why);
+    if (isBeatKind(c.kind)) {
+      if (!was) return skip('Chapter ' + c.chapter + ' has no scenes any more.');
+      const st = beatStep(was, c, alias, book.folder, now);
+      if (/^applied/.test(st.result) && st.result !== 'applied (it was already so)') {
+        st.ch.scenes.forEach((x, i) => { if (x.body !== was.scenes[i].body) bodies[x.path] = x.body; });
+        if (st.beatsChanged && st.ch.beatsBody != null) {
+          if (was.beatsBody == null && !(st.ch.beatsPath in creates)) creates[st.ch.beatsPath] = Frontmatter.join({ type: BEATS_TYPE, title: beatsTitle(st.ch.chapter), chapter: st.ch.chapter }, '');
+          bodies[st.ch.beatsPath] = st.ch.beatsBody;
+        }
+        if (st.archive) files.push({ path: st.archive.path, taken: 'next', text: st.archive.text, message: st.archive.message });
+      }
+      if (st.copy) copies.push(st.copy);
+      pairs = st.aliases;
+      return said(st.result);
+    }
     const v = view();
     if (c.kind === 'rewrite') {
       const s = scenes(v).find((n) => propText(n, 'id') === c.scene);
@@ -131,7 +208,7 @@ export function planPhone(index: VaultIndex, waiting: Action[], schema: Schema |
     actions.push(marksAction(note.path, { [card.id]: status }, ticks.map((t) => ({ path: t.path, decision: 'edit' as const, reason: '', at, fields: t.fields })), now));
     said('applied');
   });
-  return { results, actions, bodies };
+  return { results, actions, bodies, creates, files, copies };
 }
 
 /** What the app hands over to put phone notes in. */
@@ -175,19 +252,32 @@ export async function applyPhoneNotes(run: PhoneRun): Promise<PhoneReport | null
   const choices = mine.flatMap((n) => readChoices(n.body).filter((c) => !c.result).map((c) => ({ ...c, note: n.path })));
   const drafts = loadDrafts(run.sourceKey);
   const plan = planPhone(run.index(), run.waiting(), run.schema, run.book, choices, (n) => openDraft(n, drafts[n.path], now()).body, now());
-  // The scenes' words: kept on this device first, then saved as the writing page saves them.
-  const merged: string[] = [], clashed: string[] = [];
-  for (const path of Object.keys(plan.bodies)) {
-    const note = run.index().notes[path];
+  // A deleted beat's words go to the book's Archive first, as Beats mode sends them.
+  if (plan.files.length) await run.send([filesAction(plan.files, [], now())]);
+  // The phone's words that met the same lines changed here: a copy of the scene, as the writing page keeps one.
+  const copied: string[] = [];
+  for (const cp of plan.copies) {
+    const note = run.index().notes[cp.path];
     if (!note) continue;
-    const d = { ...openDraft(note, loadDrafts(run.sourceKey)[path], now()), body: plan.bodies[path], updatedAt: now().toISOString(), pending: true };
+    try { await saveSnapshot(run.source, note, cp.body, 'from your phone', now()); copied.push(cp.scene); } catch { /* the result says where they were meant to go; the phone note keeps them */ }
+  }
+  // The scenes' words, then the beats notes: kept on this device first, then saved as the writing page saves them.
+  const merged: string[] = [], clashed: string[] = [];
+  const paths = Object.keys(plan.bodies).sort((a, b) => Number(a in plan.creates || isBeats(run.index(), a)) - Number(b in plan.creates || isBeats(run.index(), b)));
+  for (const path of paths) {
+    const note = run.index().notes[path];
+    let d: Draft;
+    if (note) d = { ...openDraft(note, loadDrafts(run.sourceKey)[path], now()), body: plan.bodies[path], updatedAt: now().toISOString(), pending: true };
+    else if (path in plan.creates) d = { path, baseSha: '', baseBody: '', body: plan.bodies[path], target: null, startWords: 0, updatedAt: now().toISOString(), pending: true, create: plan.creates[path] };
+    else continue;
     putDraft(run.sourceKey, path, d);
     try {
       const r = await saveDraft(run.source, d, now());
       const still = loadDrafts(run.sourceKey)[path];
       if (still && still.body === d.body) putDraft(run.sourceKey, path, null);
       await run.fold([r.note]);
-      if (r.clash) clashed.push(propText(note, 'id')); else if (r.merged) merged.push(propText(note, 'id'));
+      const name = propText(r.note, 'id') || propText(r.note, 'title');
+      if (r.clash) clashed.push(name); else if (r.merged) merged.push(name);
     } catch { /* the words wait on this device and go up with the next sync, as the writing page's do */ }
   }
   // The answers and replies, through the outbox, in order.
@@ -198,12 +288,27 @@ export async function applyPhoneNotes(run: PhoneRun): Promise<PhoneReport | null
     const res = await pushAction(run.source, textAction([{ path: n.path, change: { what: 'phone-results', results, at: now().toISOString() } }], [], now()));
     await run.fold(res.saved);
   }
-  return { results: plan.results, notice: mergeNotice(merged, clashed) };
+  const copyLine = copied.length ? 'Your phone wrote in ' + copied.join(', ') + ' on the same lines as this iPad. These words are kept; your phone\'s are in the scene\'s Copies, named “from your phone”.' : '';
+  return { results: plan.results, notice: [mergeNotice(merged, clashed), copyLine].filter(Boolean).join(' ') || null };
 }
+
+const isBeats = (index: VaultIndex, path: string) => Boolean(index.notes[path] && index.notes[path].type === BEATS_TYPE);
 
 /** The notice for Kyle: "12 choices from your phone applied. 2 skipped." */
 export function reportLine(results: PhoneResult[]): string {
   const put = results.filter(isApplied).length;
-  const skipped = results.length - put;
-  return put + (put === 1 ? ' choice' : ' choices') + ' from your phone applied.' + (skipped ? ' ' + skipped + ' skipped.' : '');
+  const copies = results.filter(isCopied).length;
+  const skipped = results.length - put - copies;
+  return put + (put === 1 ? ' choice' : ' choices') + ' from your phone applied.' + (copies ? ' ' + copies + ' kept as a copy.' : '') + (skipped ? ' ' + skipped + ' skipped.' : '');
+}
+
+/** A result as the notice shows it. */
+export const resultLine = (r: PhoneResult): string => resultSaid(r.result);
+
+/** How many of the phone's choices that change words wait for this chapter (the writing screen's bar). */
+export function phoneWritingFor(index: VaultIndex, bookFolder: string, scene: NoteRecord): number {
+  const id = propText(scene, 'chapter_id'), num = propNum(scene, 'chapter');
+  return waitingPhoneNotes(index, bookFolder).flatMap((n) => readChoices(n.body).filter((c) => !c.result))
+    .filter((c) => (id && c.chapterId ? c.chapterId === id : c.chapter === num))
+    .filter((c) => isBeatKind(c.kind) || c.kind === 'rewrite' || c.kind === 'use' || c.kind === 'tweak').length;
 }

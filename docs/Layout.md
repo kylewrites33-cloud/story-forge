@@ -133,14 +133,16 @@ tests/golden/            what a save must leave in the vault, file for file, one
 src/lib/study.ts         Crow, the character and plot study app: Studies/ notes (studies, character cards, scenes read for character and plot, lenses), tallies of the best lens
 src/study/               Crow's page (crow/index.html): main.tsx, StudyApp.tsx (its screens and Settings), study.css
 public/crow/             Crow's manifest and icons (its own home-screen app); public/character-study/ sends the old address to crow/
-src/lib/pocket.ts        Sparrow Pocket (2026-11-20): a book's chapters with their waiting cards, one chapter's cards in page order (deck), a scene's paragraphs with their cards, where Kyle left off; since 2026-11-21 the choices waiting for the iPad and the pages as they will be once they are in
-src/lib/phone-choices.ts the phone note's one format (2026-11-21), shared by Pocket and the main app: writing, reading, the line edits each end makes, a paragraph rewrite
+src/lib/pocket.ts        Sparrow Pocket (2026-11-20): a book's chapters with their waiting cards, one chapter's cards in page order (deck), a scene's paragraphs with their cards, where Kyle left off; since 2026-11-21 the choices waiting for the iPad and the pages as they will be once they are in, and each chapter replayed with every phone choice in (replayChapter) for Write mode
+src/lib/phone-choices.ts the phone note's one format (2026-11-21), shared by Pocket and the main app: writing, reading, the line edits each end makes, a paragraph rewrite, Write mode's beat choices and the beat IDs the iPad writes after a result
+src/lib/phone-beats.ts   Write mode's beats (2026-11-21), shared by Pocket and the main app: a chapter laid out by its beats with an ID for each, and one beat choice put in exactly as Beats mode makes the press
+src/lib/lead.ts          the blank line after a note's properties (splitLead), shared by the writing page, Beats mode and Pocket
 src/pocket/              Sparrow Pocket's page (pocket/index.html): main.tsx (takes the key from the address), Pocket.tsx (its screens), vault.ts (its own saved copy, the choices kept on the phone, sending them by themselves; 2026-11-21), send.ts (its one save: its own phone note), pocket.css (its own black-on-white stylesheet). Walled off from the main app: tests/pocket-wall.test.ts
 public/pocket/           Pocket's manifest (the Sparrow icons)
 src/lib/qr.ts            the square code (QR) for Settings' Add my phone, drawn on the device
 src/lib/cardtext.ts      how a change card's words read (Kindle-style paragraphs, the team's new words marked), for the Edit room and Pocket
 src/team/reply.ts        Reply to the Writer as one action: the Reply line and the chapter's reply ask (the Edit room, and the phone's Tell the Writer put in)
-src/vault/phone.ts       the phone's choices put in when a book is opened (2026-11-21): claim the note, each choice through the Edit room's own actions, results on the note
+src/vault/phone.ts       the phone's choices put in when a book is opened (2026-11-21): claim the note, each choice through the Edit room's own actions, results on the note; Write mode's beat choices as Beats mode saves them (Archive copy, scenes, beats note, a copy on a clash); the writing screen's count of waiting phone writing
 src/ui/PhoneNotice.tsx   the notice of what was done with the phone's choices, with each one and why it was skipped, until OK
 ```
 src/lib/types.ts         shapes shared by the vault reader, the cache and the screens

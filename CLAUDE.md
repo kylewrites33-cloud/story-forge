@@ -87,7 +87,9 @@ off, and `tests/pocket-wall.test.ts` fails if the wall is broken:
   from `src/vault/`, `src/ui/` or `src/app/`, has no outbox or waiting words, and keeps its own saved copy.
 - The main app puts the choices in (`src/vault/phone.ts`) through its own actions, skips what no longer fits, and writes
   each result on the note. A new kind of choice is a new line in the note format, a recorded choice in Pocket, and a
-  step in `planPhone` that uses an action the Edit room already has.
+  step in `planPhone` that uses an action the Edit room already has. Write mode's beat choices (write, rename, add,
+  delete, move) go through `src/lib/phone-beats.ts`, shared by both ends, and are saved as Beats mode saves them. The
+  writing screen never puts them in by itself: it shows a bar, and only Put it in does.
 
 ## Run, test, deploy
 
