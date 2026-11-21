@@ -19,7 +19,7 @@ import { cleanParagraph, type PhoneKind } from '../lib/phone-choices.ts';
 import { beatWords, findBeat, moveTarget } from '../lib/phone-beats.ts';
 import type { BeatView } from '../lib/beats.ts';
 import { PREF, readJson, readPref, writeJson, writePref } from '../lib/prefs.ts';
-import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
+import { isConnected, loadSettings, phoneLink, saveSettings, type Settings } from '../lib/settings.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
 import { activeBook } from '../lib/vault-index.ts';
 import { propText } from '../lib/props.ts';
@@ -201,6 +201,17 @@ function SendLine({ here, vault }: { here: Here | null; vault: PocketVault }) {
   return <p class="pk-sendline" role="status">{line}</p>;
 }
 
+// ---- The Android app (2026-11-21) ----
+// Kyle: "Can we ditch address strip". The app file (android/) shows Pocket in its own window with no address bar, so it
+// keeps its own key, apart from Chrome's. In Chrome on an Android phone with a key, one press hands that key to the app
+// through its own address (sparrowpocket://open?key=...), which only the app answers.
+
+const inPocketApp = typeof navigator !== 'undefined' && /SparrowPocketApp/.test(navigator.userAgent);
+const inAndroidChrome = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent) && !inPocketApp && !/; wv\)/.test(navigator.userAgent);
+function appLink(s: Settings): string {
+  return 'sparrowpocket://open?' + phoneLink(s, '').replace(/^[^#]*#/, '');
+}
+
 // ---- The key ----
 
 function KeyScreen({ settings, said, connected, demo, onSaved, onDemo }: {
@@ -232,12 +243,17 @@ function KeyScreen({ settings, said, connected, demo, onSaved, onDemo }: {
     <main class="pk pk-key">
       <h1>Sparrow Pocket</h1>
       {connected || demo ? <p><a class="pk-link" href={to.home}>‹ Back to your chapters</a></p> : null}
-      <p>One time only. On your iPad, open Sparrow, Settings, “Add my phone”, and point this phone's camera at the square it shows.</p>
-      <ol class="pk-steps">
-        <li>Point the camera at the iPad and open the address it finds.</li>
-        <li>In Chrome's menu, press “Add to Home screen”.</li>
-        <li>Done. Your books are here.</li>
-      </ol>
+      {inPocketApp
+        ? <p>One time only. Open Sparrow Pocket in Chrome on this phone, where it already has your key, and press “Give my key to the Pocket app” at the bottom of its first page. Or paste your key below.</p>
+        : <>
+          <p>One time only. On your iPad, open Sparrow, Settings, “Add my phone”, and point this phone's camera at the square it shows.</p>
+          <ol class="pk-steps">
+            <li>Point the camera at the iPad and open the address it finds.</li>
+            <li>In Chrome's menu, press “Add to Home screen”.</li>
+            <li>Done. Your books are here.</li>
+          </ol>
+        </>}
+      {connected && inAndroidChrome && <p><a class="pk-button" href={appLink(settings)}>Give my key to the Pocket app</a></p>}
       {connected && <p class="pk-note">A key is saved on this phone. Paste a new one below to change it.</p>}
       <h2>Or paste your key</h2>
       <form onSubmit={save}>
@@ -327,6 +343,7 @@ function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: Pock
           <a class="pk-button" href={to.key}>Your key</a>
           <a class="pk-button" href="../">Open Sparrow</a>
         </p>
+        {vault.canSend && inAndroidChrome && <p class="pk-buttons"><a class="pk-button" href={appLink(loadSettings())}>Give my key to the Pocket app</a></p>}
       </footer>
     </main>
   );

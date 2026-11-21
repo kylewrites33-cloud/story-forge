@@ -1991,11 +1991,13 @@ lands right after the scene, never refused.
 
 - **The Android app** (2026-11-21, Kyle: "I want a real icon and app" ... "just make the app file"). Chrome on his
   Bigme offers no Add to Home screen (his own home screen does not take added icons), so Pocket is also an app file:
-  `android/`, a Trusted Web Activity that opens the live Pocket page in Chrome. It shares Chrome's saved key and
-  updates with the site, so the file is installed once. GitHub builds it (`.github/workflows/pocket-android.yml`) and
-  puts `sparrow-pocket.apk` on the release "pocket-android". It is signed with GitHub's build key, so a new build
-  installs only after the old one is removed; it seldom needs one. Without a site check file at the address's root
-  Chrome shows a thin address strip at the top.
+  `android/`, one full-screen window (a WebView) showing the live Pocket page, so it updates with the site and the
+  file is installed once. GitHub builds it (`.github/workflows/pocket-android.yml`) and puts `sparrow-pocket.apk` on the
+  release "pocket-android". It is signed with GitHub's build key, so a new build installs only after the old one is
+  removed; it seldom needs one. Version 2 (2026-11-21, Kyle: "Can we ditch address strip"): no address bar at all. The
+  first version opened Pocket in Chrome, which shows a strip unless the site's root carries a check file this
+  repository cannot hold. The window keeps its own key, apart from Chrome's: Pocket in Chrome on an Android phone shows
+  "Give my key to the Pocket app" (first page and Your key), which opens the app with the key once; or paste it.
 
 Kyle: "an easy way for me to make changes to chapters on the phone ... really simplified and probably a totally
 different approach", then "I was more thinking of going through the cards and suggesting new cards or tweaks, and maybe
