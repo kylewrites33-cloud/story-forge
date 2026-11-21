@@ -1,6 +1,7 @@
 // Sparrow Pocket (2026-11-20): what the phone page works out from the vault (src/lib/pocket.ts), the address the square
-// code carries (src/lib/settings.ts), and that each press saves what the Edit room saves for it: the same answers, the
-// same to-dos ticked, the same scene words through the writing page's save, the same reply and ask.
+// code carries (src/lib/settings.ts), and the Edit room's own actions that put the phone's choices in on the iPad (since
+// 2026-11-21 the phone only records them; tests/phone-choices.test.ts holds the rest): the same answers, the same
+// to-dos ticked, the same scene words through the writing page's save, the same reply and ask.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { applyChange, parseChanges, revertChange, todoEdits, tweakStatus, type Change } from '../src/lib/changes.ts';
@@ -35,7 +36,7 @@ const indexOf = async (src: MemSource): Promise<VaultIndex> => (await sync(src, 
 
 test('the chapters with cards, their counts, and the cards in page order', async () => {
   const index = await indexOf(await vault());
-  assert.deepEqual(cardBooks(index).map((b) => b.folder), [BOOK]);
+  assert.deepEqual(cardBooks(index).map((b) => b.folder), [BOOK, 'Series/Willow Lane/Books/1 Cinder Gate']);
   const book = index.books.find((b) => b.folder === BOOK)!;
   const all = bookChapters(index, book);
   assert.deepEqual(all.map((c) => [c.chapter, c.id, c.title, c.scenes.length, c.open]), [[1, 'CH-001', 'Frost', 2, 4], [2, 'CH-002', 'Thaw', 2, 0], [3, 'CH-003', 'Ledger', 2, 0], [4, 'CH-004', '', 1, 0]]);

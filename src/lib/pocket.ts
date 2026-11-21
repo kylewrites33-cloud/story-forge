@@ -2,10 +2,11 @@
 // and probably a totally different approach", then "I was more thinking of going through the cards and suggesting new
 // cards or tweaks, and maybe rewriting the text"): what the phone page works out from the vault. Its chapters with
 // their waiting cards, one chapter's cards in page order, a chapter's text as paragraphs with the cards beside them,
-// and one paragraph rewritten. Pure, tested with Node (tests/pocket.test.ts). Reading the cards is src/lib/changes.ts;
-// saving is src/vault/; Pocket adds no parsing or saving of its own.
-import { changesNoteFor, CHANGES_TYPE, parseChanges, placeChanges, type Change } from './changes.ts';
-import { splitLead } from './drafts.ts';
+// and one paragraph rewritten. Pure, tested with Node (tests/pocket.test.ts). Reading the cards is src/lib/changes.ts.
+// Since 2026-11-21 the phone only records Kyle's choices (src/lib/phone-choices.ts); what is worked out here shows the
+// chapter as it will be once the iPad has put them in.
+import { applyChange, changesNoteFor, CHANGES_TYPE, parseChanges, placeChanges, type Change } from './changes.ts';
+import { byStart, PHONE_FOLDER, PHONE_TYPE, readChoices, readNote, rewriteInto, type PhoneChoice } from './phone-choices.ts';
 import { propNum, propText } from './props.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 
@@ -69,15 +70,23 @@ export interface DeckCard {
   end: number;
 }
 
+/** A body's blank lines after the properties, and its text (the writing page's own split, src/lib/drafts.ts; written out
+ * here so the phone page does not load the main app's waiting-words module). */
+function splitLead(body: string): { lead: string; text: string } {
+  const m = /^(\r?\n)+/.exec(body);
+  const lead = m ? m[0] : '';
+  return { lead, text: body.slice(lead.length) };
+}
+
 /** A scene's text as the page shows it: its body without the blank line after the properties. */
 export const pageText = (body: string): string => splitLead(body).text;
 
 /** The chapter's open cards in page order, as the Edit room lists them: scene by scene, each scene's cards where their
  * words stand, then the cards whose words are no longer on the page. `textOf` gives a scene's body as Kyle has it now
  * (with words still waiting on the device). */
-export function deck(ch: PocketChapter, textOf: (n: NoteRecord) => string): DeckCard[] {
+export function deck(ch: PocketChapter, textOf: (n: NoteRecord) => string, decided: Set<string> = new Set()): DeckCard[] {
   if (!ch.note) return [];
-  const open = openCards(ch.note);
+  const open = openCards(ch.note).filter((c) => !decided.has(c.id));
   const placedCards: DeckCard[] = [];
   const done = new Set<string>();
   ch.scenes.forEach((s) => {
@@ -117,18 +126,8 @@ export function paragraphs(text: string, cards: DeckCard[] = []): Paragraph[] {
   return out;
 }
 
-/** The page text with one paragraph's words replaced by `words`. Empty words take the paragraph out with the blank
- * line after it (or before it, at the end), so no double gap is left. Throws a plain sentence when the paragraph is not
- * where it was (the scene changed while Kyle typed). */
-export function replaceParagraph(text: string, p: { at: number; end: number; text: string }, words: string): string {
-  if (text.slice(p.at, p.end) !== p.text) throw new Error('This paragraph changed while you were typing. Your words are still in the box: copy them, go back and open the paragraph again.');
-  const put = words.replace(/\r\n?/g, '\n').replace(/^(?:[ \t]*\n)+/, '').trimEnd();
-  if (put.trim()) return text.slice(0, p.at) + put + text.slice(p.end);
-  const after = /^\n[ \t]*\n+/.exec(text.slice(p.end));
-  if (after) return text.slice(0, p.at) + text.slice(p.end + after[0].length);
-  const before = /\n[ \t]*\n+$/.exec(text.slice(0, p.at));
-  return before ? text.slice(0, p.at - before[0].length) + text.slice(p.end) : text.slice(0, p.at) + text.slice(p.end);
-}
+// The paragraph rewrite is in the phone-choices format's own file, because the iPad puts it in the same way.
+export { replaceParagraph } from './phone-choices.ts';
 
 /** The body with a new page text: the blank line after the properties kept as it was. */
 export function withPageText(body: string, text: string): string {
@@ -148,4 +147,60 @@ export interface Place { book: string; chapter: string; card: string }
 export function readPlace(v: unknown): Place | null {
   const o = v as Place | null;
   return o && typeof o.book === 'string' && typeof o.chapter === 'string' && typeof o.card === 'string' ? o : null;
+}
+
+// ---- Choices made on the phone, waiting for the iPad (2026-11-21) ----
+
+/** A choice the vault has not had put in yet: still only on the phone (`id` set), or on a phone note waiting for the
+ * iPad (`note` set). */
+export interface Waiting extends PhoneChoice {
+  book: string;
+  id: string;
+  note: string;
+}
+
+/** The choices on a book's phone notes that the iPad has not put in yet, oldest note first, in the order made. */
+export function waitingInVault(index: VaultIndex, bookFolder: string): Waiting[] {
+  const dir = bookFolder + '/' + PHONE_FOLDER + '/';
+  return Object.values(index.notes)
+    .filter((n) => n.type === PHONE_TYPE && n.path.startsWith(dir) && propText(n, 'status') !== 'applied')
+    .sort((a, b) => byStart(a.path, b.path))
+    .flatMap((n) => readChoices(n.body).filter((c) => !c.result).map((c): Waiting => ({ ...c, book: bookFolder, id: '', note: n.path })));
+}
+
+/** A phone note's status read from its whole text (for a note the phone just wrote). */
+export const phoneNoteStatus = (text: string) => readNote(text).status;
+
+/** Whether a choice belongs to this chapter: by the chapter's ID when it has one, else by its number. */
+export const inChapter = (w: { chapter: number; chapterId: string }, ch: { chapter: number; id: string }): boolean =>
+  ch.id ? w.chapterId === ch.id : w.chapter === ch.chapter;
+
+/** The cards of a chapter decided on the phone (used, rejected or tweaked), by card. */
+export function decidedOnPhone(list: Waiting[], ch: { chapter: number; id: string }): Map<string, Waiting> {
+  const out = new Map<string, Waiting>();
+  list.forEach((w) => { if (w.card && w.kind !== 'tell' && inChapter(w, ch)) out.set(w.card, w); });
+  return out;
+}
+
+/** A scene's page text with the phone's choices put in, in order, as the iPad will put them in: the words of each
+ * card used or tweaked, and each paragraph rewritten. A choice that does not fit is left out, as the iPad skips it. */
+export function phonePage(text: string, scene: NoteRecord, chapters: PocketChapter[], list: Waiting[]): string {
+  const sceneId = propText(scene, 'id');
+  let t = text;
+  list.forEach((w) => {
+    if (w.kind === 'rewrite') {
+      if (w.scene !== sceneId) return;
+      const r = rewriteInto(t, w.was, w.now);
+      if (r != null) t = r;
+      return;
+    }
+    if (w.kind !== 'use' && w.kind !== 'tweak') return;
+    const ch = chapters.find((c) => inChapter(w, c));
+    if (!ch || !ch.note || !ch.scenes.some((s) => s.path === scene.path)) return;
+    const card = parseChanges(ch.note.body).changes.find((c) => c.id === w.card);
+    if (!card || card.status !== 'open' || (card.scene && card.scene !== sceneId)) return;
+    const r = applyChange(t, { ...card, now: w.words }, 'now');
+    if (r) t = r.text;
+  });
+  return t;
 }

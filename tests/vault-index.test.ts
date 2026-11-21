@@ -19,8 +19,9 @@ async function demoIndex() {
 
 test('finds the series, the book and its scenes in reading order', async () => {
   const { index } = await demoIndex();
-  assert.deepEqual(index.series.map((s) => s.name), ['Ember Road']);
-  assert.equal(index.books.length, 1);
+  assert.deepEqual(index.series.map((s) => s.name), ['Ember Road', 'Willow Lane']);
+  // Willow Lane's one short book is there so the app and Sparrow Pocket have two books with cards (2026-11-21).
+  assert.deepEqual(index.books.map((b) => b.title), ['Ash Bell', 'Cinder Gate']);
   const book = index.books[0];
   assert.equal(book.folder, BOOK);
   assert.equal(book.title, 'Ash Bell');

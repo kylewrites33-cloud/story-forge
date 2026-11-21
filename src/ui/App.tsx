@@ -39,6 +39,8 @@ import { href, useRoute } from '../app/route.ts';
 import { coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { PomodoroTimer } from './Pomodoro.tsx';
+import { loadPhoneReport, PhoneNotice, savePhoneReport } from './PhoneNotice.tsx';
+import { applyPhoneNotes, waitingPhoneNotes, type PhoneResult } from '../vault/phone.ts';
 import { type ChangeStatus } from '../lib/changes.ts';
 import { chatJob, isThread, nextChatThread } from '../lib/chat.ts';
 import { pageContext } from '../lib/context.ts';
@@ -68,6 +70,10 @@ export function App() {
   // even across a reload, because it may come while he is on a writing screen.
   const [notice, setNoticeState] = useState<string | null>(() => loadNotice(source.key));
   const setNotice = useCallback((n: string | null) => { setNoticeState(n); saveNotice(source.key, n); }, [source]);
+  // What was done with Kyle's choices from his phone (src/vault/phone.ts): it stays until he presses OK, like the notice.
+  const [phoneReport, setPhoneReportState] = useState<PhoneResult[] | null>(() => loadPhoneReport(source.key));
+  const setPhoneReport = useCallback((r: PhoneResult[] | null) => { setPhoneReportState(r); savePhoneReport(source.key, r); }, [source]);
+  useEffect(() => { setPhoneReportState(loadPhoneReport(source.key)); }, [source]);
   const [online, setOnline] = useState(navigator.onLine);
   const [, tick] = useState(0);
   const snapRef = useRef<Snapshot | null>(null);
@@ -233,6 +239,27 @@ export function App() {
     }
   }, [runFlush]);
 
+  /** Kyle's choices from his phone (Sparrow Pocket, 2026-11-21; Kyle: "let the phone record my choices, and the ipad
+   * apply it when i next open it"; "no send button necessary if its automatic"): with a book's page open, its waiting
+   * phone notes are put in through the Edit room's own actions after each sync (src/vault/phone.ts). Runs inside the
+   * sync's turn of the lane, so it never crosses a save or a read. */
+  const putInPhone = useCallback(async (): Promise<void> => {
+    const cur = snapRef.current;
+    const folder = folderOf(routeRef.current);
+    const book = cur && folder ? cur.index.books.find((b) => b.folder === folder) : null;
+    if (!cur || !book || !source.commit || !waitingPhoneNotes(cur.index, book.folder).length) return;
+    const rep = await applyPhoneNotes({
+      source, sourceKey: source.key, schema: schemaRef.current, book,
+      index: () => (snapRef.current || cur).index,
+      waiting: () => outboxRef.current,
+      send: async (actions) => { setOutbox(actions.reduce((list, a) => add(list, a), outboxRef.current)); await pushNow(); },
+      fold: (saved) => foldNotes(saved)
+    });
+    if (!rep) return;
+    if (rep.notice) setNotice(rep.notice);
+    if (rep.results.length) setPhoneReport((loadPhoneReport(source.key) || []).concat(rep.results));
+  }, [source, setOutbox, pushNow, foldNotes, setNotice, setPhoneReport]);
+
   const runSync = useCallback((): Promise<void> => inLane('sync', async () => {
     if (!navigator.onLine) return;
     setSyncing(true);
@@ -250,12 +277,13 @@ export function App() {
       clearTimeout(snapTimer.current);
       snapTimer.current = 0;
       await persist(next);
+      await putInPhone();
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setSyncing(false);
     }
-  }), [source, inLane, pushNow, foldNotes, setNotice]);
+  }), [source, inLane, pushNow, foldNotes, setNotice, putInPhone]);
 
   /** The book's scenes in reading order as Kyle sees them, new ones that still wait included. */
   const scenesShown = useCallback((book: BookEntry): NoteRecord[] => {
@@ -776,6 +804,13 @@ export function App() {
     };
   }, [runSync, source]);
 
+  // Opening a book whose phone notes wait reads the vault and puts them in.
+  const openFolder = folderOf(route);
+  useEffect(() => {
+    const cur = snapRef.current;
+    if (openFolder && cur && waitingPhoneNotes(cur.index, openFolder).length) runSync();
+  }, [openFolder, Boolean(snap)]);
+
   const schema = useMemo<Schema | null>(() => {
     if (!snap) return null;
     try { return parseSchema(snap.schemaText); } catch { return null; }
@@ -864,8 +899,9 @@ export function App() {
     <Shell source={source} schema={schema} index={view} book={navBook} page={pg} route={route} demo={source instanceof DemoSource} title={pageTitle} side={side}
       timer={(where) => <PomodoroTimer source={source} index={view} variant={where} onLog={onLog} />}
       sync={{ label: chip, title: syncLine + (waitingText ? ' ' + waitingText : ''), good: syncGood, warn: !online || drafts > 0, busy: syncing || !online, onSync: runSync }}>
-      {(error || notice || (!online && (waitingN > 0 || drafts > 0))) && (
+      {(error || notice || phoneReport || (!online && (waitingN > 0 || drafts > 0))) && (
         <div class="banner" role="status">
+          {phoneReport && <PhoneNotice results={phoneReport} onOk={() => setPhoneReport(null)} />}
           {notice && <p class="notice"><span>{notice}</span> <button type="button" onClick={() => setNotice(null)}>OK</button></p>}
           {!online && waitingText && <p class="waiting">{waitingText}</p>}
           {error && <p class="error">{error}</p>}

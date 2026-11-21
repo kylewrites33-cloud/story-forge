@@ -1,36 +1,53 @@
-// Sparrow Pocket's hold on the vault: the saved copy on the device, what waits to go up, and the saves. It is the main
-// app's way of keeping the vault (src/ui/App.tsx), cut down to what Pocket does, and built from the same parts: the
-// same saved copy (src/lib/cache.ts), the same outbox (src/vault/outbox.ts, the same names on the device, so what one
-// page leaves waiting the other sends), the same saves (src/vault/push.ts pushAll; src/vault/words.ts saveDraft for a
-// scene's words, kept on the device by src/lib/drafts.ts until they are in) and the same sync (src/lib/sync.ts). It
-// writes nothing the main app would not write for the same press.
+// Sparrow Pocket's hold on the vault (2026-11-21). Kyle: "im a little worried about messing up the main app with this
+// pocket app ... let the phone record my choices, and the ipad apply it when i next open it", then "no send button
+// necessary if its automatic". So the phone reads the vault and changes nothing in it but its own phone note: each choice
+// Kyle makes is kept on the phone (src/lib/prefs.ts, its own names), and goes up by itself, a few at a time, to the
+// book's phone note (src/pocket/send.ts). Sparrow on the iPad puts them in.
+//
+// Kept apart from the main app on the same device: its own saved copy (under "pocket:" and the vault's name), its own
+// waiting list and no drafts or outbox at all, so neither page ever sends the other's waiting work. What it shares is
+// the reading: the same sync (src/lib/sync.ts) and the key in Settings.
 import { readSnapshot, writeSnapshot } from '../lib/cache.ts';
-import { builtInSchemaText } from '../lib/demo-source.ts';
-import { flushDrafts, isUnsaved, loadDrafts, mergeNotice, openDraft, putDraft } from '../lib/drafts.ts';
-import { jobNotes } from '../lib/jobs.ts';
 import { parseSchema } from '../lib/schema.ts';
 import { sync } from '../lib/sync.ts';
-import type { NoteRecord, Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
+import { PREF, readJson, writeJson } from '../lib/prefs.ts';
 import { propText } from '../lib/props.ts';
-import { kindsFrom } from '../team/kinds.ts';
-import { NO_WATCH, watchStep } from '../team/asks.ts';
-import { foldSaved, overlayActions } from '../vault/apply.ts';
-import type { Action } from '../vault/ops.ts';
-import { add, landedOf, loadLanded, loadOutbox, saveLanded, saveOutbox, settle } from '../vault/outbox.ts';
-import { pushAll } from '../vault/push.ts';
-import { saveDraft } from '../vault/words.ts';
+import type { PhoneChoice } from '../lib/phone-choices.ts';
+import type { Schema, Snapshot, VaultIndex, VaultSource } from '../lib/types.ts';
+import { makeNote } from '../lib/vault-index.ts';
+import { sendChoices, withdrawChoice } from './send.ts';
+
+/** A choice kept on the phone until it is sent. */
+export interface Kept extends PhoneChoice {
+  /** Its own name on the phone, for Undo. */
+  id: string;
+  book: string;
+}
+
+/** Where a sent choice went: its phone note and its number there. */
+export interface SentAs { note: string; n: number }
+
+interface NotesKept {
+  /** The phone note each book adds to while it is waiting. */
+  own: Record<string, string>;
+  /** Where each sent choice went, by its id on the phone (for Undo). */
+  sent: Record<string, SentAs>;
+}
 
 export interface PocketState {
   snap: Snapshot | null;
-  outbox: Action[];
-  /** The saved copy has been looked for (there may be none yet). */
+  /** Choices on the phone, not sent yet. */
+  kept: Kept[];
   loaded: boolean;
   syncing: boolean;
-  /** A plain sentence when something did not load or save. */
+  sending: boolean;
+  /** A plain sentence when something did not load or send. */
   error: string | null;
-  /** A plain sentence about words that met changes made elsewhere. */
-  notice: string | null;
 }
+
+const SNAP = 'pocket:';
+/** A quiet minute after the last choice, and the choices go up. */
+const QUIET_MS = 60 * 1000;
 
 export class PocketVault {
   readonly source: VaultSource;
@@ -39,15 +56,13 @@ export class PocketVault {
   private chain: Promise<unknown> = Promise.resolve();
   private schemaText = '';
   private schemaParsed: Schema | null = null;
-  private viewOf: { snap: Snapshot | null; outbox: Action[]; view: VaultIndex | null } = { snap: null, outbox: [], view: null };
-  private snapTimer = 0;
+  private quiet = 0;
   private timers: number[] = [];
-  private watch = NO_WATCH;
+  private offs: (() => void)[] = [];
 
   constructor(source: VaultSource) {
     this.source = source;
-    this.state = { snap: null, outbox: loadOutbox(source.key), loaded: false, syncing: false, error: null, notice: null };
-    try { kindsFrom(parseSchema(builtInSchemaText())); } catch { /* the vault's own, once read */ }
+    this.state = { snap: null, kept: this.loadKept(), loaded: false, syncing: false, sending: false, error: null };
   }
 
   subscribe(fn: () => void): () => void {
@@ -66,102 +81,103 @@ export class PocketVault {
     if (s.schemaText !== this.schemaText) {
       this.schemaText = s.schemaText;
       try { this.schemaParsed = parseSchema(s.schemaText); } catch { this.schemaParsed = null; }
-      kindsFrom(this.schemaParsed);
     }
     return this.schemaParsed;
   }
 
-  /** The vault as Kyle should see it: the saved copy with everything waiting on the device applied. */
   view(): VaultIndex | null {
-    const { snap, outbox } = this.state;
-    if (this.viewOf.snap !== snap || this.viewOf.outbox !== outbox) {
-      this.viewOf = { snap, outbox, view: snap ? overlayActions(snap.index, outbox, this.schema()) : null };
-    }
-    return this.viewOf.view;
+    return this.state.snap ? this.state.snap.index : null;
   }
 
-  /** A scene's body as Kyle has it now: words still waiting on this device win over the saved copy's. */
-  bodyOf(note: NoteRecord): string {
-    return openDraft(note, loadDrafts(this.source.key)[note.path], new Date()).body;
+  /** Whether the phone can send: the demo cannot, and nothing is sent from it. */
+  get canSend(): boolean { return Boolean(this.source.commit); }
+
+  // ---- What the phone keeps ----
+
+  private loadKept(): Kept[] {
+    const v = readJson(PREF.pocketChoices + this.source.key);
+    return Array.isArray(v) ? (v as Kept[]) : [];
+  }
+  private saveKept(list: Kept[]) {
+    writeJson(PREF.pocketChoices + this.source.key, list.length ? list : null);
+    this.set({ kept: list });
+  }
+  notes(): NotesKept {
+    const v = readJson(PREF.pocketNotes + this.source.key) as NotesKept | null;
+    return v && typeof v === 'object' && v.own && v.sent ? v : { own: {}, sent: {} };
+  }
+  private saveNotes(n: NotesKept) { writeJson(PREF.pocketNotes + this.source.key, n); }
+
+  /** Keep one more choice on the phone. It goes up after a quiet minute, or sooner (leaving the chapter, putting the
+   * phone away, coming back online). */
+  record(c: Omit<Kept, 'id' | 'n' | 'result'>): Kept {
+    const k: Kept = { ...c, n: 0, result: '', id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) };
+    this.saveKept(this.state.kept.concat(k));
+    clearTimeout(this.quiet);
+    this.quiet = window.setTimeout(() => { void this.send(); }, QUIET_MS);
+    return k;
   }
 
-  /** Words of this vault's scenes still waiting on this device. */
-  waitingWords(): number {
-    return Object.values(loadDrafts(this.source.key)).filter((d) => d.pending || isUnsaved(d)).length;
+  /** Take a choice back. Still on the phone: it is simply dropped. Sent: it is taken off the phone note while no iPad
+   * has started putting that note in; after that it cannot be, and the answer says so in a plain sentence. */
+  async undo(id: string): Promise<string | null> {
+    if (this.state.kept.some((k) => k.id === id)) { this.saveKept(this.state.kept.filter((k) => k.id !== id)); return null; }
+    const at = this.notes().sent[id];
+    if (!at) return null;
+    if (!navigator.onLine) return 'This choice has gone to your iPad already. Connect to the internet to take it back.';
+    return this.lane(async () => {
+      try {
+        const ok = await withdrawChoice(this.source, at.note, at.n);
+        if (!ok) return 'Your iPad has already put this choice in. Change it in Sparrow on the iPad.';
+        const n = this.notes();
+        delete n.sent[id];
+        this.saveNotes(n);
+        await this.read();
+        return null;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    });
   }
 
-  /** One thing at a time on the connection: saves and reads never cross. */
+  // ---- Reading and sending ----
+
   private lane<T>(job: () => Promise<T>): Promise<T> {
     const run = this.chain.then(job, job);
     this.chain = run.catch(() => undefined);
     return run;
   }
 
-  private writeSoon() {
-    clearTimeout(this.snapTimer);
-    this.snapTimer = window.setTimeout(() => this.writeNow(), 1500);
-  }
-
-  writeNow() {
-    if (!this.snapTimer) return;
-    clearTimeout(this.snapTimer);
-    this.snapTimer = 0;
-    const s = this.state.snap;
-    if (!s) return;
-    const ids = loadLanded(s.key).map((a) => a.id);
-    void writeSnapshot(s).then(() => { if (ids.length) saveLanded(s.key, loadLanded(s.key).filter((a) => ids.indexOf(a.id) < 0)); });
-  }
-
-  private fold(saved: NoteRecord[], removed: string[] = [], texts: Record<string, { sha: string; text: string }> = {}) {
-    const cur = this.state.snap;
-    if (!cur || (!saved.length && !removed.length && !Object.keys(texts).length)) return;
-    this.set({ snap: { ...cur, index: foldSaved(cur.index, saved, this.schema(), removed, texts) } });
-    this.writeSoon();
-  }
-
-  /** Show the saved copy at once, then read the vault again; and keep reading it while the team has an ask open. */
+  /** Show the phone's own saved copy at once, then send what waits and read the vault again. */
   async start(): Promise<void> {
-    const read = await readSnapshot(this.source.key);
-    const landed = read ? loadLanded(this.source.key) : [];
-    let schema: Schema | null = null;
-    try { if (read && landed.length) schema = parseSchema(read.schemaText); } catch { schema = null; }
-    this.set({ snap: read && landed.length ? { ...read, index: overlayActions(read.index, landed, schema) } : read, loaded: true });
+    const read = await readSnapshot(SNAP + this.source.key);
+    this.set({ snap: read ? { ...read, key: this.source.key } : null, loaded: true });
     const again = () => { void this.sync(); };
+    const away = () => { void this.send(); };
+    const visible = () => { if (document.visibilityState === 'visible') again(); else away(); };
     window.addEventListener('online', again);
-    const visible = () => { if (document.visibilityState === 'visible') again(); else this.writeNow(); };
     document.addEventListener('visibilitychange', visible);
-    window.addEventListener('pagehide', () => this.writeNow());
-    // The main app's one watcher (src/team/asks.ts): every 15 seconds while the team has an ask open.
-    this.timers.push(window.setInterval(() => {
-      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
-      const cur = this.state.snap;
-      const step = watchStep(this.watch, cur ? jobNotes(cur.index) : [], Date.now());
-      this.watch = step.watch;
-      if (step.read) again();
-    }, 15000));
+    window.addEventListener('pagehide', away);
+    this.offs.push(() => window.removeEventListener('online', again), () => document.removeEventListener('visibilitychange', visible), () => window.removeEventListener('pagehide', away));
+    // Every two minutes while it is on screen, so cards the iPad has put in show as decided.
+    this.timers.push(window.setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) again(); }, 120000));
     await this.sync();
   }
 
   stop() {
     this.timers.forEach((t) => clearInterval(t));
-    this.writeNow();
+    this.offs.forEach((f) => f());
+    clearTimeout(this.quiet);
   }
 
-  /** Send what waits, then read the vault again (the main app's Sync, in the same order). */
+  /** Send what waits, then read the vault. */
   sync(): Promise<void> {
     return this.lane(async () => {
       if (!navigator.onLine) return;
       this.set({ syncing: true });
       try {
-        const pushError = await this.pushNow();
-        const written = await flushDrafts(this.source, this.source.key, new Date(), undefined, saveDraft);
-        this.fold(written.saved);
-        const cur = this.state.snap;
-        const next = await sync(this.source, cur && cur.key === this.source.key ? cur : null);
-        this.set({ snap: next, error: pushError || written.error, notice: written.notice || this.state.notice });
-        clearTimeout(this.snapTimer);
-        this.snapTimer = 0;
-        await writeSnapshot(next);
+        await this.sendNow();
+        await this.read();
       } catch (e) {
         this.set({ error: (e as Error).message });
       } finally {
@@ -170,56 +186,63 @@ export class PocketVault {
     });
   }
 
-  private async pushNow(): Promise<string | null> {
-    const sent = this.state.outbox;
-    if (!sent.length || !navigator.onLine || !this.source.commit) return null;
+  private async read(): Promise<void> {
     const cur = this.state.snap;
-    const res = await pushAll(this.source, sent, { known: cur && cur.key === this.source.key ? cur.index.notes : undefined });
-    const left = settle(this.state.outbox, res.done, res.failed, res.renames);
-    const landed = landedOf(sent, res.done, res.renames);
-    if (landed.length) saveLanded(this.source.key, loadLanded(this.source.key).concat(landed));
-    saveOutbox(this.source.key, left);
-    this.set({ outbox: left, error: res.error });
-    this.fold(res.saved, res.removed, res.texts);
-    return res.error;
+    const next = await sync(this.source, cur && cur.key === this.source.key ? cur : null);
+    this.set({ snap: next });
+    await writeSnapshot({ ...next, key: SNAP + this.source.key });
+    // Choices the iPad has put in can no longer be taken back from here: forget where they went.
+    const n = this.notes();
+    const gone = Object.keys(n.sent).filter((id) => { const x = next.index.notes[n.sent[id].note]; return !x || propText(x, 'status') === 'applied'; });
+    if (gone.length) { gone.forEach((id) => delete n.sent[id]); this.saveNotes(n); }
   }
 
-  /** Put an action in the outbox (it shows at once and waits on the device) and send it when the connection allows. */
-  act(action: Action): void {
-    const list = add(this.state.outbox, action);
-    saveOutbox(this.source.key, list);
-    this.set({ outbox: list });
-    void this.lane(() => this.pushNow()).catch((e: Error) => this.set({ error: e.message }));
-  }
-
-  /** Save a scene's body as the writing page saves it: kept on the device first, then one save that changes only the
-   * body and the computed words line, merging what changed elsewhere and keeping a clashing version as a copy. Offline,
-   * the words wait on the device and the next sync sends them. Answers a plain sentence when it did not save. */
-  saveBody(note: NoteRecord, body: string): Promise<string | null> {
-    const key = this.source.key;
-    const d = { ...openDraft(note, loadDrafts(key)[note.path], new Date()), body, updatedAt: new Date().toISOString(), pending: true };
-    if (!putDraft(key, note.path, d)) return Promise.resolve('This phone would not keep your words, so nothing changed. Check that the browser is not in private mode.');
-    this.set({});
-    if (!navigator.onLine || !this.source.commit) return Promise.resolve(null);
+  /** Send the choices kept on the phone now (when it is online), then read the vault so they show as sent. */
+  send(): Promise<void> {
+    clearTimeout(this.quiet);
+    if (!this.state.kept.length || !navigator.onLine || !this.canSend) return Promise.resolve();
     return this.lane(async () => {
       try {
-        const r = await saveDraft(this.source, d, new Date());
-        const still = loadDrafts(key)[note.path];
-        if (still && still.body === d.body) putDraft(key, note.path, null);
-        this.fold([r.note]);
-        const said = mergeNotice(r.merged && !r.clash ? [propText(note, 'id')] : [], r.clash ? [propText(note, 'id')] : []);
-        if (said) this.set({ notice: said });
-        return null;
+        if (await this.sendNow()) await this.read();
       } catch (e) {
-        const err = e as Error & { status?: number };
-        if (err.status === 0 || !navigator.onLine) { this.set({}); return null; }
-        putDraft(key, note.path, { ...d, error: err.message });
-        this.set({ error: err.message });
-        return err.message;
+        this.set({ error: (e as Error).message });
       }
     });
   }
 
-  clearNotice() { this.set({ notice: null }); }
+  /** One save per book with choices waiting: they go on the book's phone note. Answers whether anything went. */
+  private async sendNow(): Promise<boolean> {
+    const kept = this.state.kept;
+    if (!kept.length || !navigator.onLine || !this.canSend) return false;
+    this.set({ sending: true });
+    let went = false;
+    try {
+      const books = [...new Set(kept.map((k) => k.book))];
+      for (const book of books) {
+        const these = kept.filter((k) => k.book === book);
+        const notes = this.notes();
+        const title = (this.state.snap && (this.state.snap.index.books.find((b) => b.folder === book) || { title: '' }).title) || '';
+        const r = await sendChoices(this.source, book, title, notes.own[book] || '', these, new Date());
+        const n = this.notes();
+        n.own[book] = r.path;
+        these.forEach((k, i) => { n.sent[k.id] = { note: r.path, n: r.numbers[i] }; });
+        this.saveNotes(n);
+        // The note goes into the phone's copy at once, so the cards stay decided until the vault is read again.
+        const cur = this.state.snap;
+        if (cur) this.set({ snap: { ...cur, index: { ...cur.index, notes: { ...cur.index.notes, [r.path]: makeNote(r.path, '', r.text) } } } });
+        // Only the ones that went leave the phone: a choice made while this was sending waits for the next send.
+        this.saveKept(this.state.kept.filter((k) => these.indexOf(k) < 0));
+        went = true;
+      }
+      this.set({ error: null });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status !== 0 && navigator.onLine) this.set({ error: 'Your choices are kept on this phone; sending them did not work yet: ' + err.message });
+    } finally {
+      this.set({ sending: false });
+    }
+    return went;
+  }
+
   clearError() { this.set({ error: null }); }
 }

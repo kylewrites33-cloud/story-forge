@@ -133,12 +133,15 @@ tests/golden/            what a save must leave in the vault, file for file, one
 src/lib/study.ts         Crow, the character and plot study app: Studies/ notes (studies, character cards, scenes read for character and plot, lenses), tallies of the best lens
 src/study/               Crow's page (crow/index.html): main.tsx, StudyApp.tsx (its screens and Settings), study.css
 public/crow/             Crow's manifest and icons (its own home-screen app); public/character-study/ sends the old address to crow/
-src/lib/pocket.ts        Sparrow Pocket (2026-11-20): a book's chapters with their waiting cards, one chapter's cards in page order (deck), a scene's paragraphs with their cards, one paragraph rewritten, where Kyle left off
-src/pocket/              Sparrow Pocket's page (pocket/index.html): main.tsx (takes the key from the address), Pocket.tsx (its screens), vault.ts (the saved copy, outbox, saves and sync, from the main app's parts), pocket.css (its own black-on-white stylesheet)
+src/lib/pocket.ts        Sparrow Pocket (2026-11-20): a book's chapters with their waiting cards, one chapter's cards in page order (deck), a scene's paragraphs with their cards, where Kyle left off; since 2026-11-21 the choices waiting for the iPad and the pages as they will be once they are in
+src/lib/phone-choices.ts the phone note's one format (2026-11-21), shared by Pocket and the main app: writing, reading, the line edits each end makes, a paragraph rewrite
+src/pocket/              Sparrow Pocket's page (pocket/index.html): main.tsx (takes the key from the address), Pocket.tsx (its screens), vault.ts (its own saved copy, the choices kept on the phone, sending them by themselves; 2026-11-21), send.ts (its one save: its own phone note), pocket.css (its own black-on-white stylesheet). Walled off from the main app: tests/pocket-wall.test.ts
 public/pocket/           Pocket's manifest (the Sparrow icons)
 src/lib/qr.ts            the square code (QR) for Settings' Add my phone, drawn on the device
 src/lib/cardtext.ts      how a change card's words read (Kindle-style paragraphs, the team's new words marked), for the Edit room and Pocket
-src/team/reply.ts        Reply to the Writer as one action: the Reply line and the chapter's reply ask (the Edit room and Pocket)
+src/team/reply.ts        Reply to the Writer as one action: the Reply line and the chapter's reply ask (the Edit room, and the phone's Tell the Writer put in)
+src/vault/phone.ts       the phone's choices put in when a book is opened (2026-11-21): claim the note, each choice through the Edit room's own actions, results on the note
+src/ui/PhoneNotice.tsx   the notice of what was done with the phone's choices, with each one and why it was skipped, until OK
 ```
 src/lib/types.ts         shapes shared by the vault reader, the cache and the screens
 src/lib/settings.ts      connection settings, kept in this browser only; the address the Add my phone code carries (phoneLink, fromPhoneLink)

@@ -74,6 +74,21 @@ docs/              Features.md and Layout.md
 - `demo-vault/System/schema.json` is a copy of the vault's schema. Refresh it when the schema changes, and keep the demo
   vault passing `sf validate` (a test runs it when the vault is beside this repository).
 
+## Sparrow Pocket (the phone page, `pocket/`)
+
+Kyle, 2026-11-21: "im a little worried about messing up the main app with this pocket app ... i feel comfident in the
+integrity of the main app, and just dont want to mess things up with a buggy entry point into it". So Pocket is walled
+off, and `tests/pocket-wall.test.ts` fails if the wall is broken:
+
+- Pocket's code is `src/pocket/` and `src/lib/pocket*.ts`. Nothing else imports it, and the main app's page loads none
+  of it. What both ends need lives in a shared module that is neither (`src/lib/phone-choices.ts`, the note format).
+- Pocket only records. It changes no note: Kyle's choices are kept on the phone (its own names in `PREF`) and go up by
+  themselves to the book's `phone-choices` note in `Phone/`, from `src/pocket/send.ts`, its only save. It loads nothing
+  from `src/vault/`, `src/ui/` or `src/app/`, has no outbox or waiting words, and keeps its own saved copy.
+- The main app puts the choices in (`src/vault/phone.ts`) through its own actions, skips what no longer fits, and writes
+  each result on the note. A new kind of choice is a new line in the note format, a recorded choice in Pocket, and a
+  step in `planPhone` that uses an action the Edit room already has.
+
 ## Run, test, deploy
 
 ```

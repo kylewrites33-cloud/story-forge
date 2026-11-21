@@ -2002,32 +2002,61 @@ are in the project files' `app/phone-editor/cards first/`, and screenshots of wh
   scroll from 360 to 430 px wide. It works the same on an ordinary phone.
 - **Opening.** The book last used on this phone (a button over the title changes it when there is more than one), a
   Carry on block for the chapter and card he stopped at ("9 cards waiting. You stopped at card 3."), then each chapter
-  that has a changes note with its waiting cards, or "done". Sync, Your key and Open Sparrow at the foot.
+  that has a changes note with its waiting cards, or "done". Sync, Your key and Open Sparrow at the foot, with one line
+  on where his choices stand (2026-11-21): "3 choices waiting to go", "Sending 3 choices…", "All sent. 6 choices wait
+  for your iPad to put them in.", or offline "1 choice waits on this phone until it is online." Choosing another book
+  shows it at once (2026-11-21; before, the list closed and the page stayed on the first book).
 - **One card at a time.** The card's few words and kind, its Why (or You asked and The change), Yours (the Was), then
   Version 1 and Version 2 with Use version 1 and Use version 2, or the new words with Accept for a card with one version,
   in the Edit room's page order. "Card 3 of 9" with Back and Next; Reject, Tweak, Tell the Writer and In the chapter at
   the foot. After a choice the next waiting card shows, with "Used version 2 on C-03. Undo" at the top until the next
-  choice. A card whose words are no longer on the page offers I wrote my own and Reject.
+  choice. A card whose words are no longer on the page offers Reject only (decide it on the iPad otherwise).
 - **Tweak** opens the version's words in a plain box (shown as they are stored, *stars* and all); Save and use is the
   Edit room's Edit, then accept: the words go in and the answer is the version's when unchanged, else his own words.
-- **Tell the Writer** is the Edit room's Reply to the Writer: the `Reply:` line on the card and one reply ask a chapter,
-  as one save (`replyAction` in `src/team/reply.ts`, which the Edit room now uses too). The card then says "The Writer
-  is making a new card from your reply" until the new card comes, then links to it.
+- **Tell the Writer** is recorded on the phone and becomes the Edit room's Reply to the Writer when the iPad puts it in
+  (the `Reply:` line and one reply ask a chapter, `replyAction` in `src/team/reply.ts`). The card says "Your iPad sends
+  this to the Writer when you next open the book there"; once the Writer's card comes, it links to it.
 - **In the chapter.** The chapter as a clean reading page, a black bar in the left margin beside each paragraph with a
   waiting card (pressing the bar opens its card). Pressing a paragraph offers See its card and Rewrite it myself, which
-  opens only that paragraph in a box, as stored; Save changes only that paragraph of the scene, through the writing
-  page's own save (the body and the computed words line; changes made elsewhere merged, a clash kept as a copy).
+  opens only that paragraph in a box, as stored; Save records the paragraph as it stood and his words, and the iPad
+  puts them in with the writing page's own save. The page shows the chapter as it will be once the iPad has put every
+  waiting choice in. A paragraph that stands twice in a scene cannot be rewritten here (the iPad could not tell which).
 - **Not yet: Ask for a card.** The design's second choice on a paragraph (his words as a { } note and a Writer card from
   it) has no job kind to use today: `revise` stops when the chapter has undecided cards, and `fill` answers braces into
   the page, not as cards. It needs a kind in the vault's schema first, so the button is left out.
-- **Saves.** Every press saves what the Edit room saves for it, through the same parts: answers and the to-dos they tick
-  through the outbox (`marksAction`), scene words through `saveDraft` and kept on the phone until they land (offline,
-  they wait and go up at the next sync), the same saved copy of the vault on the device. Checked against a pretend
-  GitHub: the same choices in Pocket and in the Edit room left the changes note, the to-do, the reply ask and the scene
-  the same, byte for byte. One difference: Pocket saves the scene after each card, the writing page after a pause.
+- **The phone only records (2026-11-21).** Kyle: "im a little worried about messing up the main app with this pocket
+  app ... i feel comfident in the integrity of the main app, and just dont want to mess things up with a buggy entry
+  point into it"; "let the phone record my choices, and the ipad apply it when i next open it"; then "no send button
+  necessary if its automatic". Pocket changes no note of the vault. Each press (Accept or a version, Reject, a tweak with
+  his words, Tell the Writer with his words, a paragraph rewritten with its exact old words and his new ones) is kept on
+  the phone under Pocket's own names, and the card shows as decided at once. The choices go up by themselves after a
+  quiet minute, on leaving a chapter, when the phone is put away or the page closed, and when it comes back online:
+  one note of the vault's `phone-choices` type in the book's `Phone/` folder, which Pocket keeps adding to until an iPad
+  starts on it, then starts a new one (`src/pocket/send.ts`, the only file of Pocket's that saves). Undo takes back the
+  last choice: still on the phone, it is dropped; sent, it is taken off the note while no iPad has started on it, and
+  after that the phone says to change it on the iPad. Pocket keeps its own saved copy of the vault and no outbox or
+  waiting words, so on one device neither page sends the other's work; it shares only the reading and the key.
 - **The key, and Add my phone.** On a new phone Pocket asks for the key, with Test and save (Settings' own connection
   test), kept through `src/lib/prefs.ts` like Settings. The easy way: Sparrow's Settings, Your phone, Add my phone shows
   a square code (QR) drawn on the device (`src/lib/qr.ts`, no new dependency) holding Pocket's address with the key
   after `#`, which is never sent to a server. Pocket takes it on open, keeps it, and wipes it from the address bar at
   once. The code was proved to scan with two decoders (zxing-cpp and OpenCV), at several key lengths, from the Settings
   page itself.
+
+## Choices from the phone, put in by Sparrow (2026-11-21)
+
+Kyle: "let the phone record my choices, and the ipad apply it when i next open it", then "no send button necessary if
+its automatic". When a book's page is open (the Chapter Grid, Edit > Changes or any page of the book), Sparrow reads the
+vault and puts in the book's waiting phone notes by itself, and again on each sync while the book is open
+(`src/vault/phone.ts`). Each choice goes in through the Edit room's own actions, in the order he made it: Accept or a
+version (the card's words into the scene and the answer with the to-dos it ticks), Reject, a tweak (Edit, then accept),
+Reply to the Writer, and a paragraph rewritten (the writing page's scene save). A choice that no longer fits is
+skipped, never forced: the card was decided here already, its words changed, it is gone, or the paragraph is not in the
+scene exactly as the phone saw it. Then a notice in the style of the save notices, "12 choices from your phone applied.
+2 skipped.", with See each one (each choice and, for a skipped one, why) and OK; it stays until OK, across reloads.
+Each result is written under its choice on the phone note, and the note says `applied` once every choice has one.
+Never twice: the note is claimed first (another device leaves it for ten minutes, then takes over if the first stopped
+halfway), a choice that is already so counts as applied and is not made again, and a choice the phone added meanwhile
+waits for the next run. Checked against a pretend GitHub: the same choices made on the phone and put in here, and made
+directly in the Edit room, left the changes note, the to-do, the reply ask and the scene the same, byte for byte.
+Not put in on the writing screen, so it never changes a scene under Kyle's cursor.
