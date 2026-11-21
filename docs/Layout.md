@@ -139,7 +139,7 @@ src/lib/phone-beats.ts   Write mode's beats (2026-11-21), shared by Pocket and t
 src/lib/lead.ts          the blank line after a note's properties (splitLead), shared by the writing page, Beats mode and Pocket
 src/pocket/              Sparrow Pocket's page (pocket/index.html): main.tsx (takes the key from the address), Pocket.tsx (its screens), vault.ts (its own saved copy, the choices kept on the phone, sending them by themselves; 2026-11-21), send.ts (its one save: its own phone note), pocket.css (its own black-on-white stylesheet). Walled off from the main app: tests/pocket-wall.test.ts
 public/pocket/           Pocket's manifest (the Sparrow icons)
-android/                 Sparrow Pocket as an Android app (2026-11-21): a Trusted Web Activity that opens the live pocket/ page in Chrome, with the Sparrow icon. Built by .github/workflows/pocket-android.yml onto the release "pocket-android"; nothing in the web app uses it
+android/                 Sparrow Pocket as an Android app (2026-11-21): one full-screen window (src/main/java/.../MainActivity.java, a WebView) showing the live pocket/ page with no address bar, with the Sparrow icon; it takes a key from Pocket in Chrome through sparrowpocket://open. Built by .github/workflows/pocket-android.yml onto the release "pocket-android"; nothing in the web app uses it
 src/lib/qr.ts            the square code (QR) for Settings' Add my phone, drawn on the device
 src/lib/cardtext.ts      how a change card's words read (Kindle-style paragraphs, the team's new words marked), for the Edit room and Pocket
 src/team/reply.ts        Reply to the Writer as one action: the Reply line and the chapter's reply ask (the Edit room, and the phone's Tell the Writer put in)
