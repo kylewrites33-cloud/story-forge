@@ -84,6 +84,8 @@ EXTRA_TYPES.push('chapter-titles');
 EXTRA_TYPES.push('book-matter');
 // A series' look for its Kindle files (2026-11-14).
 EXTRA_TYPES.push('book-look');
+// Kyle's choices from his phone, put in when the book is opened (Sparrow Pocket, 2026-11-21; src/vault/phone.ts).
+EXTRA_TYPES.push('phone-choices');
 
 /** Everything the app indexes: the boards' types and the writing screen's extra ones. */
 export function appTypes(schema: Schema, phase: number): string[] {

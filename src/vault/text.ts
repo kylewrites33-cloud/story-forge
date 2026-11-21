@@ -14,6 +14,7 @@ import { addWorkflowNote } from '../lib/workflow.ts';
 import { takenRecord, withTaken } from '../team/asks.ts';
 import type { NoteRecord } from '../lib/types.ts';
 import { makeNote } from '../lib/vault-index.ts';
+import { CLAIM_MS, readNote, setProps, setResult } from '../lib/phone-choices.ts';
 
 export type TextChange =
   /** The Chapter titles page: a title option ticked or unticked for a chapter (`title` can be "None of these"). */
@@ -45,7 +46,14 @@ export type TextChange =
   | { what: 'change-reply'; id: string; words: string }
   /** Book details, Book look (2026-11-14): a series' look for its Kindle files, one property line per choice. `start` is
    * the note's text when the vault does not have it yet; `name` is the series, for the history. */
-  | { what: 'look'; values: Record<string, string>; start: string; name: string };
+  | { what: 'look'; values: Record<string, string>; start: string; name: string }
+  /** Kyle's choices from his phone (2026-11-21, src/vault/phone.ts): this device starts putting a phone note in. The
+   * note says `applying` and when; nothing changes when it is applied already, or another device started on it less
+   * than ten minutes before `at`. */
+  | { what: 'phone-claim'; at: string }
+  /** The same: what happened to each choice put in, under it, by its number. The note is `applied` once every choice
+   * on it has its result, else `sent` again (the phone then starts a new note for what comes next). */
+  | { what: 'phone-results'; results: { n: number; result: string }[]; at: string };
 
 /** Does this change start its note when the vault does not have it yet? The Writing Log's do (the first Pomodoro or
  * the first words of a day make that day's note), and so do the first words of a book's front and back matter or its
@@ -69,9 +77,30 @@ function withWords(text: string, c: Extract<TextChange, { what: 'words' }>): str
   return withBody(text, lay(merge3(plain(c.was), plain(c.body), plain(s.hasFm ? s.body : text)).text));
 }
 
+/** A time as a phone note's properties hold it: to the second, in UTC. */
+const stamp = (iso: string): string => iso.slice(0, 19) + 'Z';
+
+/** A phone note's text claimed by this device, or unchanged. */
+function claimText(text: string, at: string): string {
+  const n = readNote(text);
+  if (n.status === 'applied') return text;
+  const since = Date.parse(at) - Date.parse(n.claimed);
+  if (n.status === 'applying' && isFinite(since) && since < CLAIM_MS) return text;
+  return setProps(text, { status: 'applying', claimed: stamp(at) });
+}
+
+/** A phone note's text with results written under their choices. */
+function resultsText(text: string, results: { n: number; result: string }[], at: string): string {
+  const t = results.reduce((x, r) => setResult(x, r.n, r.result), text);
+  const all = readNote(t).choices.every((c) => c.result);
+  return setProps(t, all ? { status: 'applied', claimed: '', applied: stamp(at) } : { status: 'sent', claimed: '' });
+}
+
 export function validChange(c: unknown): c is TextChange {
   const x = c as TextChange;
   if (!x || typeof x !== 'object') return false;
+  if (x.what === 'phone-claim') return typeof x.at === 'string';
+  if (x.what === 'phone-results') return Array.isArray(x.results) && x.results.every((r) => r && Number.isInteger(r.n) && typeof r.result === 'string') && typeof x.at === 'string';
   if (x.what === 'title-pick') return Number.isInteger(x.chapter) && typeof x.title === 'string' && typeof x.on === 'boolean';
   if (x.what === 'title-own') return Number.isInteger(x.chapter) && typeof x.title === 'string';
   if (x.what === 'through') return Number.isInteger(x.chapter) && typeof x.done === 'boolean';
@@ -102,6 +131,8 @@ export function changeText(text: string, c: TextChange): string {
   if (c.what === 'words') return withWords(text, c);
   if (c.what === 'look') return Object.keys(c.values).reduce((t, k) => Frontmatter.setScalar(t, k, c.values[k]) as string, text || c.start);
   if (c.what === 'change-reply') return addReply(text, c.id, c.words);
+  if (c.what === 'phone-claim') return claimText(text, c.at);
+  if (c.what === 'phone-results') return resultsText(text, c.results, c.at);
   return editRecipeText(text, c.use_for, c.body);
 }
 
@@ -114,7 +145,7 @@ export function changeRecord(note: NoteRecord, c: TextChange): NoteRecord {
   if (c.what === 'workflow-note') return { ...note, body: addWorkflowNote(note.body, c.note, c.day) };
   // A day of the Writing Log, and a note whose words Kyle wrote in a box, are made again from their properties and
   // words, exactly as their text is.
-  if (startsNote(c)) return makeNote(note.path, note.sha, changeText(Frontmatter.join(note.data, note.body), c));
+  if (startsNote(c) || c.what === 'phone-claim' || c.what === 'phone-results') return makeNote(note.path, note.sha, changeText(Frontmatter.join(note.data, note.body), c));
   if (c.what === 'taken') return takenRecord(note, c.names);
   if (c.what === 'through') {
     const now = rewriteDone(note);
@@ -141,6 +172,11 @@ export function changeMessage(text: string, c: TextChange, path: string): string
   if (c.what === 'log-typing') return 'log: ' + c.minutes + (c.minutes === 1 ? ' minute' : ' minutes') + ' typing on ' + c.date + '\n\nKept by the Sparrow app.';
   if (c.what === 'change-reply') return 'changes: Kyle replied on ' + c.id.toUpperCase() + ' in ' + path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '') + '\n\nWritten in the Sparrow app.';
   if (c.what === 'look') return 'book look: ' + c.name + '\n\nChosen in the Sparrow app.';
+  if (c.what === 'phone-claim') return 'phone: putting in Kyle\'s choices from his phone\n\nSparrow puts them in with its own buttons and writes each result on the note.';
+  if (c.what === 'phone-results') {
+    const put = c.results.filter((r) => /^applied/.test(r.result)).length;
+    return 'phone: ' + put + (put === 1 ? ' choice' : ' choices') + ' from Kyle\'s phone put in, ' + (c.results.length - put) + ' skipped\n\nPut in by the Sparrow app with its own buttons.';
+  }
   if (c.what === 'words') {
     if (c.of === 'braindump') return 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.';
     return 'book matter: ' + (text ? '' : 'start for ') + c.name;
