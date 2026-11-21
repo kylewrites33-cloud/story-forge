@@ -40,7 +40,7 @@ import { coverFiles, coverProblem } from '../lib/covers.ts';
 import { noteRecent } from '../lib/home.ts';
 import { PomodoroTimer } from './Pomodoro.tsx';
 import { loadPhoneReport, PhoneNotice, savePhoneReport } from './PhoneNotice.tsx';
-import { applyPhoneNotes, waitingPhoneNotes, type PhoneResult } from '../vault/phone.ts';
+import { applyPhoneNotes, phoneWritingFor, waitingPhoneNotes, type PhoneResult } from '../vault/phone.ts';
 import { type ChangeStatus } from '../lib/changes.ts';
 import { chatJob, isThread, nextChatThread } from '../lib/chat.ts';
 import { pageContext } from '../lib/context.ts';
@@ -243,9 +243,11 @@ export function App() {
    * apply it when i next open it"; "no send button necessary if its automatic"): with a book's page open, its waiting
    * phone notes are put in through the Edit room's own actions after each sync (src/vault/phone.ts). Runs inside the
    * sync's turn of the lane, so it never crosses a save or a read. */
+  // The writing screen's "Put it in" names its book here: phone writing goes in on a writing screen only when Kyle asks.
+  const phoneFolder = useRef('');
   const putInPhone = useCallback(async (): Promise<void> => {
     const cur = snapRef.current;
-    const folder = folderOf(routeRef.current);
+    const folder = folderOf(routeRef.current) || phoneFolder.current;
     const book = cur && folder ? cur.index.books.find((b) => b.folder === folder) : null;
     if (!cur || !book || !source.commit || !waitingPhoneNotes(cur.index, book.folder).length) return;
     const rep = await applyPhoneNotes({
@@ -847,7 +849,31 @@ export function App() {
   // The writing screen fills the page with its own bars: no menu or sync bar.
   if (pg && pg.of === 'write' && app) {
     const full = WRITE_SCREENS[pg.id as keyof typeof WRITE_SCREENS](app, route);
-    if (full) return full;
+    // Writing from the phone for this chapter waits until Kyle says, never going in under his cursor (2026-11-21).
+    const path = 'path' in route ? route.path : '';
+    const scene = path ? app.index.notes[path] : null;
+    const wbook = scene ? app.index.books.find((b) => path.startsWith(b.folder + '/')) : null;
+    const fromPhone = scene && wbook && source.commit ? phoneWritingFor(app.index, wbook.folder, scene) : 0;
+    const putIn = async () => {
+      if (!wbook) return;
+      phoneFolder.current = wbook.folder;
+      try { await runSync(); } finally { phoneFolder.current = ''; }
+      location.reload();
+    };
+    if (full) {
+      return (
+        <>
+          {full}
+          {(fromPhone > 0 || phoneReport) && (
+            <div class="phone-writing banner" role="status">
+              {phoneReport ? <PhoneNotice results={phoneReport} onOk={() => { setPhoneReport(null); setNotice(null); }} /> : null}
+              {phoneReport && notice ? <p class="phone-writing-said">{notice}</p> : null}
+              {fromPhone > 0 && !phoneReport && <PhoneWritingBar online={online} busy={syncing} onPut={putIn} />}
+            </div>
+          )}
+        </>
+      );
+    }
   }
 
   const drafts = pendingCount(source.key);
@@ -909,5 +935,16 @@ export function App() {
       )}
       <main>{body}</main>
     </Shell>
+  );
+}
+
+/** "Your phone has writing for this chapter", on the writing screen (2026-11-21). */
+function PhoneWritingBar({ online, busy, onPut }: { online: boolean; busy: boolean; onPut: () => Promise<void> }) {
+  const [going, setGoing] = useState(false);
+  return (
+    <div class="notice phone-writing-bar">
+      <span>Your phone has writing for this chapter.{online ? '' : ' Connect to the internet to put it in.'}</span>
+      <button type="button" class="primary" disabled={!online || busy || going} onClick={() => { setGoing(true); void onPut().finally(() => setGoing(false)); }}>{going ? 'Putting it in…' : 'Put it in'}</button>
+    </div>
   );
 }

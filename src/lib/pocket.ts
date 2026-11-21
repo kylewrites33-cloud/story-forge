@@ -6,8 +6,11 @@
 // Since 2026-11-21 the phone only records Kyle's choices (src/lib/phone-choices.ts); what is worked out here shows the
 // chapter as it will be once the iPad has put them in.
 import { applyChange, changesNoteFor, CHANGES_TYPE, parseChanges, placeChanges, type Change } from './changes.ts';
-import { byStart, PHONE_FOLDER, PHONE_TYPE, readChoices, readNote, rewriteInto, type PhoneChoice } from './phone-choices.ts';
+import { beatsNoteFor, beatsPath } from './beats.ts';
+import { aliasMap, beatStep, idChangesBetween, layOut, type ChapterText, type Laid } from './phone-beats.ts';
+import { byStart, isBeatKind, PHONE_FOLDER, PHONE_TYPE, readChoices, readNote, rewriteInto, type PhoneChoice } from './phone-choices.ts';
 import { propNum, propText } from './props.ts';
+import { splitLead } from './lead.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from './types.ts';
 
 export interface PocketChapter {
@@ -52,6 +55,12 @@ export function cardChapters(index: VaultIndex, book: BookEntry): PocketChapter[
   return bookChapters(index, book).filter((c) => c.note);
 }
 
+/** The books Pocket lists: every book with a chapter (Write mode works in any; Edit mode shows the cards), in the
+ * order the vault lists them. */
+export function pocketBooks(index: VaultIndex): BookEntry[] {
+  return index.books.filter((b) => b.scenes.some((p) => index.notes[p] && propNum(index.notes[p], 'chapter') > 0));
+}
+
 /** The books that have any changes note, in the order the vault lists them. */
 export function cardBooks(index: VaultIndex): BookEntry[] {
   return index.books.filter((b) => Object.values(index.notes).some((n) => n.type === CHANGES_TYPE && n.path.startsWith(b.folder + '/')));
@@ -68,14 +77,6 @@ export interface DeckCard {
   scene: NoteRecord | null;
   at: number;
   end: number;
-}
-
-/** A body's blank lines after the properties, and its text (the writing page's own split, src/lib/drafts.ts; written out
- * here so the phone page does not load the main app's waiting-words module). */
-function splitLead(body: string): { lead: string; text: string } {
-  const m = /^(\r?\n)+/.exec(body);
-  const lead = m ? m[0] : '';
-  return { lead, text: body.slice(lead.length) };
 }
 
 /** A scene's text as the page shows it: its body without the blank line after the properties. */
@@ -182,25 +183,74 @@ export function decidedOnPhone(list: Waiting[], ch: { chapter: number; id: strin
   return out;
 }
 
-/** A scene's page text with the phone's choices put in, in order, as the iPad will put them in: the words of each
- * card used or tweaked, and each paragraph rewritten. A choice that does not fit is left out, as the iPad skips it. */
-export function phonePage(text: string, scene: NoteRecord, chapters: PocketChapter[], list: Waiting[]): string {
+/** A scene's page text with one of the phone's choices put in, as the iPad will put it in: the words of a card used or
+ * tweaked, or a paragraph rewritten. A choice that does not fit leaves the text as it was, as the iPad skips it. */
+export function choiceOnPage(text: string, scene: NoteRecord, chapters: PocketChapter[], w: PhoneChoice): string {
   const sceneId = propText(scene, 'id');
-  let t = text;
-  list.forEach((w) => {
-    if (w.kind === 'rewrite') {
-      if (w.scene !== sceneId) return;
-      const r = rewriteInto(t, w.was, w.now);
-      if (r != null) t = r;
+  if (w.kind === 'rewrite') {
+    if (w.scene !== sceneId) return text;
+    const r = rewriteInto(text, w.was, w.now);
+    return r == null ? text : r;
+  }
+  if (w.kind !== 'use' && w.kind !== 'tweak') return text;
+  const ch = chapters.find((c) => inChapter(w, c));
+  if (!ch || !ch.note || !ch.scenes.some((s) => s.path === scene.path)) return text;
+  const card = parseChanges(ch.note.body).changes.find((c) => c.id === w.card);
+  if (!card || card.status !== 'open' || (card.scene && card.scene !== sceneId)) return text;
+  const r = applyChange(text, { ...card, now: w.words }, 'now');
+  return r ? r.text : text;
+}
+
+/** A scene's page text with the phone's card and paragraph choices put in, in order. */
+export function phonePage(text: string, scene: NoteRecord, chapters: PocketChapter[], list: Waiting[]): string {
+  return list.reduce((t, w) => choiceOnPage(t, scene, chapters, w), text);
+}
+
+// ---- Write mode: the chapter by its beats, with the phone's choices in (2026-11-21) ----
+
+/** The beat IDs the iPad changed, from every phone note of the book (phone-choices.ts, withAliases). */
+export function phoneAliases(index: VaultIndex, bookFolder: string): Map<string, string> {
+  const dir = bookFolder + '/' + PHONE_FOLDER + '/';
+  const notes = Object.values(index.notes).filter((n) => n.type === PHONE_TYPE && n.path.startsWith(dir)).sort((a, b) => byStart(a.path, b.path));
+  return aliasMap(notes.flatMap((n) => readChoices(n.body).map((c) => c.result)));
+}
+
+export interface Replayed {
+  /** The chapter's scenes and beats note as they will be once the iPad has put the phone's choices in. */
+  text: ChapterText;
+  laid: Laid;
+  /** Every beat ID change on the way, so a beat is found by an ID it had before. */
+  alias: Map<string, string>;
+}
+
+/** A chapter as the vault has it, with every phone choice for it put in, in the order made, as the iPad will put them
+ * in: cards and paragraphs into the page, and each beat choice as Beats mode makes it (src/lib/phone-beats.ts). */
+export function replayChapter(index: VaultIndex, book: BookEntry, ch: PocketChapter, chapters: PocketChapter[], list: PhoneChoice[], alias: Map<string, string>, now: Date): Replayed {
+  const note = beatsNoteFor(index.notes, book.folder, ch.chapter);
+  let cur: ChapterText = {
+    chapter: ch.chapter, beatsPath: note ? note.path : beatsPath(book.folder, ch.chapter), beatsBody: note ? note.body : null,
+    scenes: ch.scenes.map((s) => ({ path: s.path, id: propText(s, 'id'), body: s.body }))
+  };
+  const al = new Map(alias);
+  list.filter((w) => inChapter(w, ch)).forEach((w) => {
+    if (isBeatKind(w.kind)) {
+      const st = beatStep(cur, w, al, book.folder, now);
+      st.aliases.forEach(([a, b]) => al.set(a, b));
+      if (/^applied/.test(st.result)) cur = st.ch;
       return;
     }
-    if (w.kind !== 'use' && w.kind !== 'tweak') return;
-    const ch = chapters.find((c) => inChapter(w, c));
-    if (!ch || !ch.note || !ch.scenes.some((s) => s.path === scene.path)) return;
-    const card = parseChanges(ch.note.body).changes.find((c) => c.id === w.card);
-    if (!card || card.status !== 'open' || (card.scene && card.scene !== sceneId)) return;
-    const r = applyChange(t, { ...card, now: w.words }, 'now');
-    if (r) t = r.text;
+    let done = false;
+    const next: ChapterText = {
+      ...cur, scenes: cur.scenes.map((s) => {
+        const n = ch.scenes.find((x) => x.path === s.path);
+        if (!n || done) return s;
+        const t = choiceOnPage(pageText(s.body), n, chapters, w);
+        if (t === pageText(s.body)) return s;
+        if (w.kind === 'use' || w.kind === 'tweak') done = true;
+        return { ...s, body: withPageText(s.body, t) };
+      })
+    };
+    if (next.scenes.some((s, i) => s !== cur.scenes[i])) { idChangesBetween(cur, next).forEach(([a, b]) => al.set(a, b)); cur = next; }
   });
-  return t;
+  return { text: cur, laid: layOut(cur), alias: al };
 }

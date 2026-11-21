@@ -1336,3 +1336,10 @@ button.link.inline { min-height: 0; display: inline; align-self: auto; font-size
 .banner .phone-notice-buttons button { min-height: 44px; min-width: 44px; padding: 4px 14px; }
 .banner .phone-notice-list { margin: 8px 0 4px; padding-left: 1.4em; }
 .banner .phone-notice-list li { margin: 4px 0; }
+
+/* The writing screen's bar for writing from the phone (2026-11-21): at the foot, over the page, until Kyle acts. */
+.phone-writing.banner { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 40; max-width: 720px; margin: 0 auto; padding: 0; }
+.phone-writing .notice { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18); border: 1px solid var(--accent); }
+.phone-writing-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.phone-writing-bar button { min-height: 44px; padding: 4px 16px; }
+.phone-writing-said { margin: 8px 0 0; background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 8px 12px; }

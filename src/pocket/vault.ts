@@ -118,6 +118,21 @@ export class PocketVault {
     return k;
   }
 
+  /** Change a choice still on the phone (Write mode: the words of a beat as Kyle types, one choice per beat and
+   * sitting). Answers false when it has gone up already, so the caller records a new one. */
+  update(id: string, part: Partial<Pick<Kept, 'now' | 'was' | 'beatName'>>): boolean {
+    const i = this.state.kept.findIndex((k) => k.id === id);
+    if (i < 0) return false;
+    const list = this.state.kept.slice();
+    list[i] = { ...list[i], ...part, made: new Date().toISOString() };
+    this.saveKept(list);
+    clearTimeout(this.quiet);
+    this.quiet = window.setTimeout(() => { void this.send(); }, QUIET_MS);
+    return true;
+  }
+
+  isKept(id: string): boolean { return this.state.kept.some((k) => k.id === id); }
+
   /** Take a choice back. Still on the phone: it is simply dropped. Sent: it is taken off the phone note while no iPad
    * has started putting that note in; after that it cannot be, and the answer says so in a plain sentence. */
   async undo(id: string): Promise<string | null> {
@@ -229,9 +244,22 @@ export class PocketVault {
         this.saveNotes(n);
         // The note goes into the phone's copy at once, so the cards stay decided until the vault is read again.
         const cur = this.state.snap;
-        if (cur) this.set({ snap: { ...cur, index: { ...cur.index, notes: { ...cur.index.notes, [r.path]: makeNote(r.path, '', r.text) } } } });
-        // Only the ones that went leave the phone: a choice made while this was sending waits for the next send.
-        this.saveKept(this.state.kept.filter((k) => these.indexOf(k) < 0));
+        // Kept in the phone's saved copy too, so a reload with no signal still shows what went up.
+        if (cur) {
+          const snap = { ...cur, index: { ...cur.index, notes: { ...cur.index.notes, [r.path]: makeNote(r.path, '', r.text) } } };
+          this.set({ snap });
+          try { await writeSnapshot({ ...snap, key: SNAP + this.source.key }); } catch { /* the next read writes it */ }
+        }
+        // Only the ones that went leave the phone: a choice made while this was sending waits for the next send. A beat's
+        // words typed on while they were going up stay as the next choice, from the words that went.
+        const sent = new Map(these.map((k) => [k.id, k] as [string, Kept]));
+        this.saveKept(this.state.kept.flatMap((k) => {
+          const went = sent.get(k.id);
+          if (!went) return [k];
+          if (went === k || (went.now === k.now && went.was === k.was)) return [];
+          // A beat's name typed on after its Add went up is a rename of the name that went.
+          return [went.kind === 'beat-add' ? { ...k, kind: 'beat-rename' as const, was: went.now, place: '' } : { ...k, was: went.now }];
+        }));
         went = true;
       }
       this.set({ error: null });

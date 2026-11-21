@@ -4,15 +4,20 @@
 // record my choices, and the ipad apply it when i next open it"; "no send button necessary if its automatic") every
 // press only records a choice on the phone (src/pocket/vault.ts). The choices go up by themselves to the book's phone
 // note, and Sparrow on the iPad puts them in with its own buttons. The pages show the chapter as it will be then.
+// Write mode (2026-11-21; Kyle: "can you make a writing mode, too? so theres writing and editing? maybe we can use the
+// beat mode. and i can open each beat and write in it, rewrite beat titles, and add, delete, or move beats arond"): the
+// chapter by its beats, as Sparrow's Beats mode lays it out. Each press is recorded the same way.
 import type { ComponentChildren } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { applyChange, answersTo, KIND_LABEL, parseChanges, shortLabel, type Change } from '../lib/changes.ts';
 import { bookHtml, quoteHtml } from '../lib/cardtext.ts';
 import { DemoSource } from '../lib/demo-source.ts';
 import { GitHubSource } from '../lib/github.ts';
 import { jobNotes } from '../lib/jobs.ts';
-import { bookChapters, cardBooks, chapterKey, decidedOnPhone, deck, inChapter, pageText, paragraphs, phonePage, readPlace, replaceParagraph, waitingInVault, withPageText, type DeckCard, type Paragraph, type PocketChapter, type Waiting } from '../lib/pocket.ts';
+import { bookChapters, chapterKey, decidedOnPhone, deck, inChapter, pageText, paragraphs, phoneAliases, pocketBooks, readPlace, replaceParagraph, replayChapter, waitingInVault, type DeckCard, type Paragraph, type PocketChapter, type Replayed, type Waiting } from '../lib/pocket.ts';
 import { cleanParagraph, type PhoneKind } from '../lib/phone-choices.ts';
+import { beatWords, findBeat, moveTarget } from '../lib/phone-beats.ts';
+import type { BeatView } from '../lib/beats.ts';
 import { PREF, readJson, readPref, writeJson, writePref } from '../lib/prefs.ts';
 import { isConnected, loadSettings, saveSettings, type Settings } from '../lib/settings.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
@@ -21,16 +26,24 @@ import { propText } from '../lib/props.ts';
 import { askFor, openAsk, recentProblem } from '../team/asks.ts';
 import { PocketVault, type Kept } from './vault.ts';
 
-// ---- Addresses: #/ the chapters, #/c/CH-020/C-03 a card, #/r/CH-020 the chapter, #/key the key ----
-type Route = { page: 'home' } | { page: 'key' } | { page: 'cards'; ch: string; card: string } | { page: 'read'; ch: string; card: string };
+// ---- Addresses: #/ the chapters, #/c/CH-020/C-03 a card, #/r/CH-020 the chapter, #/w/CH-020 its beats,
+// #/w/CH-020/S-001-3fa9c2 one beat open, #/key the key ----
+type Route = { page: 'home' } | { page: 'key' } | { page: 'cards'; ch: string; card: string } | { page: 'read'; ch: string; card: string }
+  | { page: 'write'; ch: string; beat: string };
 function parseRoute(hash: string): Route {
   const p = hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x));
   if (p[0] === 'key') return { page: 'key' };
   if (p[0] === 'c' && p[1]) return { page: 'cards', ch: p[1], card: p[2] || '' };
   if (p[0] === 'r' && p[1]) return { page: 'read', ch: p[1], card: p[2] || '' };
+  if (p[0] === 'w' && p[1]) return { page: 'write', ch: p[1], beat: p[2] || '' };
   return { page: 'home' };
 }
-const to = { home: '#/', key: '#/key', cards: (ch: string, card = '') => '#/c/' + encodeURIComponent(ch) + (card ? '/' + card : ''), read: (ch: string, card = '') => '#/r/' + encodeURIComponent(ch) + (card ? '/' + card : '') };
+const to = { home: '#/', key: '#/key', cards: (ch: string, card = '') => '#/c/' + encodeURIComponent(ch) + (card ? '/' + card : ''), read: (ch: string, card = '') => '#/r/' + encodeURIComponent(ch) + (card ? '/' + card : ''),
+  write: (ch: string, beat = '') => '#/w/' + encodeURIComponent(ch) + (beat ? '/' + encodeURIComponent(beat) : '') };
+
+/** Write or Edit, remembered on this phone (Kyle, 2026-11-21: "so theres writing and editing"). */
+type Mode = 'write' | 'edit';
+const readMode = (): Mode => (readPref(PREF.pocketMode) === 'write' ? 'write' : 'edit');
 function go(hash: string, replace = false) {
   if (replace) { history.replaceState(null, '', location.pathname + location.search + hash); window.dispatchEvent(new HashChangeEvent('hashchange')); }
   else location.hash = hash;
@@ -72,7 +85,7 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
   }, [vault]);
   const route = useRoute();
   // Leaving a chapter (for the chapters or another chapter) sends what was chosen in it.
-  const inCh = route.page === 'cards' || route.page === 'read' ? route.ch : '';
+  const inCh = route.page === 'cards' || route.page === 'read' || route.page === 'write' ? route.ch : '';
   const [wasIn, setWasIn] = useState(inCh);
   if (wasIn !== inCh) { if (wasIn && vault) void vault.send(); setWasIn(inCh); }
 
@@ -91,7 +104,7 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
       </main>
     );
   }
-  const books = cardBooks(view);
+  const books = pocketBooks(view);
   const want = readPref(PREF.pocketBook);
   const act = activeBook(view);
   const book = books.find((b) => b.folder === want) || books.find((b) => act && b.folder === act.folder) || books[0] || null;
@@ -105,6 +118,11 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
   if (route.page === 'read' && here) {
     const ch = here.chapter(route.ch);
     if (ch) return <ReadScreen key={route.ch} here={here} ch={ch} cardId={route.card} />;
+  }
+  if (route.page === 'write' && here) {
+    const ch = here.chapter(route.ch);
+    if (ch && route.beat) return <BeatScreen key={route.ch + '/' + route.beat} here={here} ch={ch} beatId={route.beat} />;
+    if (ch) return <WriteScreen key={route.ch} here={here} ch={ch} />;
   }
   return <HomeScreen vault={vault} here={here} books={books} banners={banners} demo={demo}
     onBook={(folder) => { writePref(PREF.pocketBook, folder); bump((n) => n + 1); }} />;
@@ -124,6 +142,8 @@ interface Here {
   decided: (ch: PocketChapter) => Map<string, Waiting>;
   /** Cards still to decide in a chapter. */
   left: (ch: PocketChapter) => number;
+  /** The chapter with every phone choice in, laid out by its beats. */
+  replay: (ch: PocketChapter) => Replayed;
   banners: ComponentChildren;
   demo: boolean;
 }
@@ -132,14 +152,22 @@ function hereFor(vault: PocketVault, view: VaultIndex, book: BookEntry, banners:
   const chapters = bookChapters(view, book);
   const kept = vault.state.kept.filter((k) => k.book === book.folder).map((k): Waiting => ({ ...k, note: '' }));
   const waiting = waitingInVault(view, book.folder).concat(kept);
-  const texts = new Map<string, string>();
+  const alias = phoneAliases(view, book.folder);
+  const replays = new Map<string, Replayed>();
+  const now = new Date();
+  const replay = (ch: PocketChapter) => {
+    const k = chapterKey(ch);
+    if (!replays.has(k)) replays.set(k, replayChapter(view, book, ch, chapters, waiting, alias, now));
+    return replays.get(k)!;
+  };
   const textOf = (n: NoteRecord) => {
-    if (!texts.has(n.path)) texts.set(n.path, withPageText(n.body, phonePage(pageText(n.body), n, chapters, waiting)));
-    return texts.get(n.path)!;
+    const ch = chapters.find((c) => c.scenes.some((x) => x.path === n.path));
+    const s = ch ? replay(ch).text.scenes.find((x) => x.path === n.path) : null;
+    return s ? s.body : n.body;
   };
   const decided = (ch: PocketChapter) => decidedOnPhone(waiting, ch);
   return {
-    vault, view, book, chapters, waiting, textOf, decided, banners, demo,
+    vault, view, book, chapters, waiting, textOf, decided, banners, demo, replay,
     chapter: (key) => chapters.find((c) => chapterKey(c) === key) || null,
     left: (ch) => { const d = decided(ch); return ch.note ? parseChanges(ch.note.body).changes.filter((c) => c.status === 'open' && !d.has(c.id)).length : 0; }
   };
@@ -233,9 +261,11 @@ function KeyScreen({ settings, said, connected, demo, onSaved, onDemo }: {
 
 function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: PocketVault; here: Here | null; books: BookEntry[]; banners: ComponentChildren; demo: boolean; onBook: (folder: string) => void }) {
   const [picking, setPicking] = useState(false);
+  const [, setMode] = useState<Mode>(readMode);
   const s = vault.state;
   const book = here ? here.book : null;
-  const listed = here ? here.chapters.filter((c) => c.note) : [];
+  const listed = here ? here.chapters : [];
+  const mode = readMode();
   const leftOf = new Map(listed.map((c) => [c, here!.left(c)] as [PocketChapter, number]));
   const waiting = listed.reduce((t, c) => t + (leftOf.get(c) || 0), 0);
   const place = readPlace(readJson(PREF.pocketPlace));
@@ -249,7 +279,8 @@ function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: Pock
         {books.length > 1
           ? <button type="button" class="pk-bookpick" aria-expanded={picking} onClick={() => setPicking(!picking)}>{book ? book.title : 'Choose a book'} <span aria-hidden="true">▾</span></button>
           : <h1 class="pk-bookpick">{book ? book.title : 'No cards yet'}</h1>}
-        <p class="pk-sub">{book ? (waiting ? plural(waiting, 'card', 'cards') + ' waiting in this book' : 'No cards waiting in this book') : 'The team has not written change cards for any book yet.'}</p>
+        <p class="pk-sub">{book ? (waiting ? plural(waiting, 'card', 'cards') + ' waiting in this book' : 'No cards waiting in this book') : 'No book has chapters yet.'}</p>
+        {book && <ModeSwitch mode={mode} onMode={(m) => { writePref(PREF.pocketMode, m); setPicking(false); setMode(m); }} />}
       </header>
       {picking && (
         <ul class="pk-list" aria-label="Books">
@@ -261,7 +292,7 @@ function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: Pock
           ))}
         </ul>
       )}
-      {carry && (
+      {carry && mode === 'edit' && (
         <a class="pk-carry" href={to.cards(chapterKey(carry), carryAt >= 0 && place ? place.card : '')}>
           <span class="pk-kicker">Carry on</span>
           <span class="pk-carry-title">{carry.chapter}{carry.title ? ' · ' + carry.title : ''}</span>
@@ -272,12 +303,17 @@ function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: Pock
       <ul class="pk-list">
         {listed.map((c) => {
           const left = leftOf.get(c) || 0;
+          const laid = here!.replay(c).laid;
+          const words = laid.beats.reduce((t, b) => t + beatWords(b.prose), 0);
+          const href = mode === 'write' ? to.write(chapterKey(c)) : left ? to.cards(chapterKey(c)) : to.read(chapterKey(c));
           return (
             <li key={chapterKey(c)}>
-              <a class={'pk-row' + (carry && c === carry ? ' on' : '')} href={left ? to.cards(chapterKey(c)) : to.read(chapterKey(c))}>
+              <a class={'pk-row' + (carry && c === carry && mode === 'edit' ? ' on' : '')} href={href}>
                 <span class="pk-row-num">{c.chapter}</span>
-                <span class="pk-row-title">{c.title || 'Chapter ' + c.chapter}</span>
-                <span class={'pk-row-end' + (left ? ' pk-count' : '')}>{left ? plural(left, 'card', 'cards') : '✓ done'}</span>
+                <span class="pk-row-title">{c.title || 'Chapter ' + c.chapter}
+                  <span class="pk-row-sub">{plural(laid.beats.length, 'beat', 'beats') + ' · ' + plural(words, 'word', 'words').replace(/^\d+/, (d) => Number(d).toLocaleString('en-US'))}</span>
+                </span>
+                <span class={'pk-row-end' + (left ? ' pk-count' : '')}>{left ? plural(left, 'card', 'cards') : c.note ? '✓ done' : 'no cards'}</span>
               </a>
             </li>
           );
@@ -379,6 +415,7 @@ function CardsScreen({ here, ch, cardId }: { here: Here; ch: PocketChapter; card
         <a class="pk-link" href={to.home}>‹ Chapters</a>
         {last && <span class="pk-undo">{lastLine} <button type="button" class="pk-link" onClick={() => void undo()}>Undo</button></span>}
       </p>
+      <ChapterSwitch here={here} ch={ch} mode="edit" />
       <div class="pk-nav">
         <button type="button" class="pk-navbtn" disabled={!dc || i === 0} onClick={() => cards[i - 1] && go(to.cards(ck, cards[i - 1].change.id), true)}>‹ Back</button>
         <div class="pk-navtitle"><b>{title}</b><span>{cards.length ? 'Card ' + (i + 1) + ' of ' + cards.length : 'All decided'}</span></div>
@@ -551,6 +588,7 @@ function ReadScreen({ here, ch, cardId }: { here: Here; ch: PocketChapter; cardI
         <div class="pk-navtitle"><b>{'Chapter ' + ch.chapter + (ch.title ? ' · ' + ch.title : '')}</b><span>{cards.length ? 'Bars show where cards are' : 'Press a paragraph to change it'}</span></div>
         <span class="pk-navbtn" aria-hidden="true" />
       </header>
+      <ChapterSwitch here={here} ch={ch} mode="edit" />
       {said && <p class={said.ok ? 'pk-note' : 'pk-error'} role="status">{said.text} {last && said.ok && <button type="button" class="pk-link" onClick={() => void undo()}>Undo</button>} <button type="button" class="pk-link" onClick={() => setSaid(null)}>Close</button></p>}
       {ch.scenes.map((s) => {
         const mine = cards.filter((d) => d.scene === s);
@@ -593,6 +631,224 @@ function ReadScreen({ here, ch, cardId }: { here: Here; ch: PocketChapter; cardI
           <textarea class="pk-box-text" rows={Math.min(14, Math.max(5, Math.ceil(edit.words.length / 30)))} value={edit.words} aria-label="Your paragraph"
             onInput={(e) => setEdit({ ...edit, words: (e.currentTarget as HTMLTextAreaElement).value })} />
           <p class="pk-quiet">Shown as it is stored: words between *stars* are in italics, and a line starting with &gt; is a System screen. Save keeps it on this phone; your iPad puts it into {book.title} when you next open the book there.</p>
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ---- Write or Edit ----
+
+function ModeSwitch({ mode, onMode }: { mode: Mode; onMode: (m: Mode) => void }) {
+  return (
+    <div class="pk-mode" role="group" aria-label="Write or edit">
+      <button type="button" class={mode === 'write' ? 'on' : ''} aria-pressed={mode === 'write'} onClick={() => onMode('write')}>Write</button>
+      <button type="button" class={mode === 'edit' ? 'on' : ''} aria-pressed={mode === 'edit'} onClick={() => onMode('edit')}>Edit</button>
+    </div>
+  );
+}
+
+/** The switch at the top of a chapter: Write shows its beats, Edit its cards (or the page when none wait). */
+function ChapterSwitch({ here, ch, mode }: { here: Here; ch: PocketChapter; mode: Mode }) {
+  const ck = chapterKey(ch);
+  return <ModeSwitch mode={mode} onMode={(m) => {
+    writePref(PREF.pocketMode, m);
+    if (m === mode) return;
+    go(m === 'write' ? to.write(ck) : here.left(ch) ? to.cards(ck) : to.read(ck), true);
+  }} />;
+}
+
+// ---- Write: the chapter by its beats (2026-11-21) ----
+
+/** A new beat's ID on the phone, until the iPad saves it and gives it its own. */
+const newBeatId = () => 'new-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+/** The beat just added, so it opens with its name ready to type (as Beats mode's Add a beat does). */
+let justAdded = '';
+
+const beatLabel = (b: BeatView, i: number) => 'beat ' + (i + 1) + (b.title ? ', ' + b.title : '');
+const nameOf = (b: BeatView) => b.title || (b.loose ? 'Opening words, no name yet' : 'No name yet');
+function firstLine(prose: string): string {
+  const line = prose.split('\n').map((l) => l.replace(/^\s*>\s?/, '').replace(/[*_=`]/g, '').trim()).find(Boolean) || '';
+  return line.length > 90 ? line.slice(0, 88).replace(/\s+\S*$/, '') + '…' : line;
+}
+const wordsSaid = (n: number) => n.toLocaleString('en-US') + (n === 1 ? ' word' : ' words');
+
+/** What every beat choice carries. */
+const beatBase = (here: Here, ch: PocketChapter) => ({ book: here.book.folder, version: 0, card: '', chapter: ch.chapter, chapterId: ch.id, scene: '', words: '', was: '', now: '', made: new Date().toISOString() });
+
+function WriteHead({ here, ch, sub, back }: { here: Here; ch: PocketChapter; sub: string; back?: ComponentChildren }) {
+  return (
+    <header class="pk-cardhead">
+      <p class="pk-topline">{back || <a class="pk-link" href={to.home}>‹ Chapters</a>}</p>
+      <ChapterSwitch here={here} ch={ch} mode="write" />
+      <div class="pk-navtitle pk-writetitle"><b>{'Chapter ' + ch.chapter + (ch.title ? ' · ' + ch.title : '')}</b><span>{sub}</span></div>
+    </header>
+  );
+}
+
+function WriteScreen({ here, ch }: { here: Here; ch: PocketChapter }) {
+  const { vault, banners } = here;
+  const ck = chapterKey(ch);
+  const { laid } = here.replay(ch);
+  const beats = laid.beats;
+  const total = beats.reduce((t, b) => t + beatWords(b.prose), 0);
+  const add = () => {
+    const id = newBeatId();
+    vault.record({ ...beatBase(here, ch), kind: 'beat-add', beat: id, beatName: 'beat ' + (beats.length + 1), place: 'end', now: '' });
+    justAdded = id;
+    go(to.write(ck, id));
+  };
+  return (
+    <main class="pk pk-write">
+      {banners}
+      <WriteHead here={here} ch={ch} sub={plural(beats.length, 'beat', 'beats') + ' · ' + wordsSaid(total)} />
+      <p class="pk-quiet">Press a beat to write in it, name it, move it or delete it.</p>
+      <ol class="pk-beats">
+        {beats.map((b, i) => {
+          const newScene = i === 0 || beats[i - 1].path !== b.path;
+          const n = beatWords(b.prose);
+          return (
+            <li key={b.key}>
+              {newScene && i > 0 && <p class="pk-beatscene" aria-hidden="true">~ {b.scene}</p>}
+              <a class={'pk-beat' + (b.loose ? ' loose' : '')} href={to.write(ck, b.key)} data-beat={b.key}>
+                <span class="pk-beat-num">{i + 1}</span>
+                <span class="pk-beat-main">
+                  <b>{nameOf(b)}</b>
+                  <span>{b.lost ? 'Its first words changed, so its words sit in the beat above.' : firstLine(b.prose) || 'No words yet.'}</span>
+                </span>
+                <span class="pk-beat-words">{n ? wordsSaid(n) : ''}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+      {!beats.length && <p class="pk-quiet">This chapter has no scenes yet.</p>}
+      <p class="pk-buttons"><button type="button" class="pk-wide" disabled={!ch.scenes.length} onClick={add}>Add a beat at the end</button></p>
+      <footer class="pk-foot"><SendLine here={here} vault={vault} /></footer>
+    </main>
+  );
+}
+
+/** A quiet moment after typing before the words are kept as a choice (they are kept at once on leaving). */
+const TYPE_MS = 700;
+
+function BeatScreen({ here, ch, beatId }: { here: Here; ch: PocketChapter; beatId: string }) {
+  const { vault, banners } = here;
+  const ck = chapterKey(ch);
+  const r = here.replay(ch);
+  const beats = r.laid.beats;
+  const b = findBeat(beats, beatId, r.alias);
+  const i = b ? beats.indexOf(b) : -1;
+  const [words, setWords] = useState(b ? b.prose : '');
+  const [title, setTitle] = useState(b ? b.title : '');
+  const [asking, setAsking] = useState(false);
+  // One choice per beat and sitting, changed as he types while it is still on the phone.
+  const sit = useRef<{ write: string; rename: string; timer: number; dirty: { words?: string; title?: string } }>({ write: '', rename: '', timer: 0, dirty: {} });
+  const cur = useRef({ b, i, words, title });
+  cur.current = { b, i, words, title };
+  const titleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (justAdded && justAdded === beatId && titleRef.current) { justAdded = ''; titleRef.current.focus(); }
+  }, []);
+
+  const flush = () => {
+    const st = sit.current;
+    clearTimeout(st.timer);
+    const d = st.dirty;
+    st.dirty = {};
+    const c = cur.current;
+    if (!c.b) return;
+    const name = beatLabel({ ...c.b, title: c.title }, c.i);
+    if (d.words != null) {
+      if (!(st.write && vault.update(st.write, { now: d.words, beatName: name }))) {
+        if (d.words !== c.b.prose) st.write = vault.record({ ...beatBase(here, ch), kind: 'beat-write', beat: c.b.key, beatName: name, was: c.b.prose, now: d.words }).id;
+      }
+    }
+    if (d.title != null) {
+      // A beat added on this phone and not sent yet takes its name in the same choice.
+      const added = vault.state.kept.find((k) => k.kind === 'beat-add' && (k.beat === beatId || k.beat === c.b!.key));
+      if (added) vault.update(added.id, { now: d.title, beatName: name });
+      else if (!(st.rename && vault.update(st.rename, { now: d.title, beatName: name }))) {
+        if (d.title !== c.b.title) st.rename = vault.record({ ...beatBase(here, ch), kind: 'beat-rename', beat: c.b.key, beatName: name, was: c.b.title, now: d.title }).id;
+      }
+    }
+  };
+  const later = (part: { words?: string; title?: string }) => {
+    const st = sit.current;
+    st.dirty = { ...st.dirty, ...part };
+    clearTimeout(st.timer);
+    st.timer = window.setTimeout(flush, TYPE_MS);
+  };
+  useEffect(() => () => flush(), []);
+
+  if (!b) {
+    return (
+      <main class="pk pk-write">
+        {banners}
+        <WriteHead here={here} ch={ch} sub="" back={<a class="pk-link" href={to.write(ck)}>‹ Beats</a>} />
+        <p class="pk-note">This beat is not in the chapter any more.</p>
+        <p class="pk-buttons"><a class="pk-button pk-primary" href={to.write(ck)}>See the beats</a></p>
+      </main>
+    );
+  }
+  const up = moveTarget(beats, b.key, 'up');
+  const down = moveTarget(beats, b.key, 'down');
+  const move = (dir: 'up' | 'down') => {
+    flush();
+    const t = dir === 'up' ? up : down;
+    if (t === undefined) return;
+    vault.record({ ...beatBase(here, ch), kind: 'beat-move', beat: b.key, beatName: beatLabel({ ...b, title }, i), place: t == null ? 'end' : 'before ' + t });
+  };
+  const addAfter = () => {
+    flush();
+    const id = newBeatId();
+    vault.record({ ...beatBase(here, ch), kind: 'beat-add', beat: id, beatName: 'beat ' + (i + 2), place: 'after ' + b.key, now: '' });
+    justAdded = id;
+    go(to.write(ck, id));
+  };
+  const remove = () => {
+    flush();
+    vault.record({ ...beatBase(here, ch), kind: 'beat-delete', beat: b.key, beatName: beatLabel({ ...b, title }, i), was: words });
+    setAsking(false);
+    go(to.write(ck), true);
+  };
+  const n = beatWords(words);
+  const prev = beats[i - 1], next = beats[i + 1];
+  return (
+    <main class="pk pk-write pk-beatopen">
+      {banners}
+      <WriteHead here={here} ch={ch} sub={'Beat ' + (i + 1) + ' of ' + beats.length + ' · ' + b.scene} back={
+        <>
+          <a class="pk-link" href={to.write(ck)} onClick={flush}>‹ Beats</a>
+          <span class="pk-beatnav">
+            {prev ? <a class="pk-link" href={to.write(ck, prev.key)} onClick={flush}>‹ Beat {i}</a> : null}
+            {next ? <a class="pk-link" href={to.write(ck, next.key)} onClick={flush}>Beat {i + 2} ›</a> : null}
+          </span>
+        </>
+      } />
+      <label class="pk-label" for="pk-beat-title">Name</label>
+      <input id="pk-beat-title" ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off"
+        onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
+        onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
+      {b.loose && !b.title && <p class="pk-quiet">The scene's opening words. Give them a name to make them a beat of their own.</p>}
+      <label class="pk-label" for="pk-beat-words">Words <span class="pk-quiet">({wordsSaid(n)})</span></label>
+      <textarea id="pk-beat-words" class="pk-box-text pk-beat-text" rows={Math.min(22, Math.max(8, Math.ceil(words.length / 34) + words.split('\n').length))} value={words}
+        placeholder="Write this beat" onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />
+      <p class="pk-quiet">Shown as it is stored: words between *stars* are in italics, and a line starting with &gt; is a System screen. A blank line starts a new paragraph. Your iPad puts it in when you next open the book there.</p>
+      <SendLine here={here} vault={vault} />
+      <div class="pk-beattools">
+        <button type="button" disabled={up === undefined} onClick={() => move('up')}>Move up</button>
+        <button type="button" disabled={down === undefined} onClick={() => move('down')}>Move down</button>
+        <button type="button" onClick={addAfter}>Add a beat after this</button>
+        <button type="button" onClick={() => { flush(); setAsking(true); }}>Delete this beat</button>
+      </div>
+      {asking && (
+        <div class="pk-sheet" role="dialog" aria-label="Delete this beat">
+          <p class="pk-ask">{words.trim() ? 'Delete beat ' + (i + 1) + ' and its ' + n.toLocaleString('en-US') + ' words? A copy goes to the book\'s Archive.' : 'Delete beat ' + (i + 1) + '?'}</p>
+          <p class="pk-buttons">
+            <button type="button" class="pk-primary" onClick={remove}>Yes, delete it</button>
+            <button type="button" onClick={() => setAsking(false)}>Cancel</button>
+          </p>
         </div>
       )}
     </main>

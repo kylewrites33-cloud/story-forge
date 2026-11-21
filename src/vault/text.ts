@@ -175,7 +175,8 @@ export function changeMessage(text: string, c: TextChange, path: string): string
   if (c.what === 'phone-claim') return 'phone: putting in Kyle\'s choices from his phone\n\nSparrow puts them in with its own buttons and writes each result on the note.';
   if (c.what === 'phone-results') {
     const put = c.results.filter((r) => /^applied/.test(r.result)).length;
-    return 'phone: ' + put + (put === 1 ? ' choice' : ' choices') + ' from Kyle\'s phone put in, ' + (c.results.length - put) + ' skipped\n\nPut in by the Sparrow app with its own buttons.';
+    const copies = c.results.filter((r) => /^kept as a copy/.test(r.result)).length;
+    return 'phone: ' + put + (put === 1 ? ' choice' : ' choices') + ' from Kyle\'s phone put in, ' + (copies ? copies + ' kept as a copy, ' : '') + (c.results.length - put - copies) + ' skipped\n\nPut in by the Sparrow app with its own buttons.';
   }
   if (c.what === 'words') {
     if (c.of === 'braindump') return 'braindump: notes from the writing screen\n\nWritten in the Sparrow app.';
