@@ -104,7 +104,8 @@ export function PocketApp({ fromLink }: { fromLink: Settings | null }) {
     const ch = chapter(route.ch);
     if (ch) return <ReadScreen key={route.ch} vault={vault} book={book} ch={ch} cardId={route.card} banners={banners} />;
   }
-  return <HomeScreen vault={vault} book={book} books={books} chapters={chapters} banners={banners} demo={demo} />;
+  return <HomeScreen vault={vault} book={book} books={books} chapters={chapters} banners={banners} demo={demo}
+    onBook={(folder) => { writePref(PREF.pocketBook, folder); bump((n) => n + 1); }} />;
 }
 
 /** What went wrong or what happened elsewhere, at the top of every screen until Kyle closes it. */
@@ -176,7 +177,7 @@ function KeyScreen({ settings, said, connected, demo, onSaved, onDemo }: {
 
 // ---- The chapters ----
 
-function HomeScreen({ vault, book, books, chapters, banners, demo }: { vault: PocketVault; book: BookEntry | null; books: BookEntry[]; chapters: PocketChapter[]; banners: ComponentChildren; demo: boolean }) {
+function HomeScreen({ vault, book, books, chapters, banners, demo, onBook }: { vault: PocketVault; book: BookEntry | null; onBook: (folder: string) => void; books: BookEntry[]; chapters: PocketChapter[]; banners: ComponentChildren; demo: boolean }) {
   const [picking, setPicking] = useState(false);
   const s = vault.state;
   const listed = chapters.filter((c) => c.note);
@@ -199,7 +200,7 @@ function HomeScreen({ vault, book, books, chapters, banners, demo }: { vault: Po
         <ul class="pk-list" aria-label="Books">
           {books.map((b) => (
             <li key={b.folder}><button type="button" class={'pk-row' + (book && b.folder === book.folder ? ' on' : '')} aria-pressed={Boolean(book && b.folder === book.folder)}
-              onClick={() => { writePref(PREF.pocketBook, b.folder); setPicking(false); }}>
+              onClick={() => { onBook(b.folder); setPicking(false); }}>
               <span class="pk-row-title">{b.title}</span><span class="pk-row-end">{book && b.folder === book.folder ? 'chosen' : ''}</span>
             </button></li>
           ))}
