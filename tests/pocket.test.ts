@@ -35,7 +35,7 @@ const indexOf = async (src: MemSource): Promise<VaultIndex> => (await sync(src, 
 
 test('the chapters with cards, their counts, and the cards in page order', async () => {
   const index = await indexOf(await vault());
-  assert.deepEqual(cardBooks(index).map((b) => b.folder), [BOOK]);
+  assert.deepEqual(cardBooks(index).map((b) => b.folder), [BOOK, 'Series/Willow Lane/Books/1 Cinder Gate']);
   const book = index.books.find((b) => b.folder === BOOK)!;
   const all = bookChapters(index, book);
   assert.deepEqual(all.map((c) => [c.chapter, c.id, c.title, c.scenes.length, c.open]), [[1, 'CH-001', 'Frost', 2, 4], [2, 'CH-002', 'Thaw', 2, 0], [3, 'CH-003', 'Ledger', 2, 0], [4, 'CH-004', '', 1, 0]]);
