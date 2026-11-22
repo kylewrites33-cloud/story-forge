@@ -2085,11 +2085,16 @@ waits for the next run. Checked against a pretend GitHub: the same choices made 
 directly in the Edit room, left the changes note, the to-do, the reply ask and the scene the same, byte for byte.
 Not put in on the writing screen, so it never changes a scene under Kyle's cursor.
 
-**Write mode on the phone holds planning notes (2026-11-22).** As in Beats mode, a beat's words are Kyle's notes and
-never go into the chapter: the box is "Your notes", the list shows each beat's first line of notes (else its summary),
-the chapters list counts "words of notes", and every choice changes the beats note only. Notes changed on the same lines
-on both ends keep both, the phone's under the iPad's after "From your phone:". A beat is found by its scene, name and
-Starts words, so a change to the prose never moves its ID. The paragraph below describes the first version.
+**Write mode on the phone: plan and writing on each beat (2026-11-22).** Kyle: "for pocket let's have the beats in write
+mode have a 3rd section--one for writing too. So both the beat planning and the writing field can expand for each
+"card". Also right on the main screen I should be able to add a beat, and push a button to move beats around". The
+chapter's beats are cards on one screen: press a card to open it in place (several can be open) with Name, Plan (its
+notes, kept in the beats note under `### Notes`, never in the chapter; choice `beat-notes`) and Writing (its prose,
+which goes into the scene as before; choice `beat-write`), then Add a beat after this, Delete this beat and Close. Every
+card has Move up and Move down buttons on the list itself, and Add a beat sits at the top and the foot. Notes changed on
+the same lines on both ends keep both, the phone's under the iPad's after "From your phone:". A deleted beat's Archive
+copy has its summary, notes and prose. The iPad's Beats mode shows the same notes (planning only there, see Beats).
+The paragraph below describes the first version, opened one beat per screen.
 
 **Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe
 we can use the beat mode. and i can open each beat and write in it, rewrite beat titles, and add, delete, or move beats

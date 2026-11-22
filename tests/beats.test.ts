@@ -103,6 +103,6 @@ test('a deleted beat\'s archived copy keeps its summary and notes', () => {
   const now = new Date(2026, 9, 22, 9, 5, 7);
   assert.equal(deletedBeatPath('B', 3, 2, 'Reed\'s theory: part #1', now), 'B/Archive/Deleted beats/Chapter 3 beat 2 Reed\'s theory part 1 2026-10-22 090507.md');
   const text = deletedBeatText(b, 3, 2, now);
-  assert.match(text, /deleted with its notes in the Sparrow app/);
+  assert.match(text, /deleted in the Sparrow app/);
   assert.match(text, /## Reed's theory\nReed says the first minute is a promise\.\n\n### Notes\nMaybe the tuxedo is borrowed\.\n\nOpen on the table/);
 });

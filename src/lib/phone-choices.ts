@@ -17,8 +17,8 @@ export type PhoneKind = 'use' | 'reject' | 'tweak' | 'tell' | 'rewrite' | BeatKi
 /** Write mode's choices on a chapter's beats (2026-11-21; Kyle: "can you make a writing mode, too? ... i can open each
  * beat and write in it, rewrite beat titles, and add, delete, or move beats arond"). src/lib/phone-beats.ts lays the
  * chapter out by its beats and puts each one in, the same way on both ends. */
-export type BeatKind = 'beat-write' | 'beat-rename' | 'beat-add' | 'beat-delete' | 'beat-move';
-export const BEAT_KINDS: readonly BeatKind[] = ['beat-write', 'beat-rename', 'beat-add', 'beat-delete', 'beat-move'];
+export type BeatKind = 'beat-write' | 'beat-notes' | 'beat-rename' | 'beat-add' | 'beat-delete' | 'beat-move';
+export const BEAT_KINDS: readonly BeatKind[] = ['beat-write', 'beat-notes', 'beat-rename', 'beat-add', 'beat-delete', 'beat-move'];
 export const isBeatKind = (k: string): k is BeatKind => (BEAT_KINDS as readonly string[]).indexOf(k) >= 0;
 export type PhoneStatus = 'sent' | 'applying' | 'applied';
 
@@ -61,6 +61,7 @@ export function labelOf(c: PhoneChoice): string {
   if (c.kind === 'tweak') return c.version === 0 ? 'Tweak' : 'Tweak version ' + c.version;
   if (c.kind === 'tell') return 'Tell the Writer';
   if (c.kind === 'beat-write') return 'Write in a beat';
+  if (c.kind === 'beat-notes') return 'Notes in a beat';
   if (c.kind === 'beat-rename') return 'Rename a beat';
   if (c.kind === 'beat-add') return 'Add a beat';
   if (c.kind === 'beat-delete') return 'Delete a beat';
@@ -79,7 +80,7 @@ function kindOf(label: string): { kind: PhoneKind; version: number } | null {
   if (m) return { kind: 'tweak', version: Number(m[1]) };
   if (l === 'Tell the Writer') return { kind: 'tell', version: 0 };
   if (l === 'Rewrite a paragraph') return { kind: 'rewrite', version: 0 };
-  const beat = (['beat-write', 'beat-rename', 'beat-add', 'beat-delete', 'beat-move'] as BeatKind[]).find((k) => labelOf({ kind: k, version: 0 } as PhoneChoice) === l);
+  const beat = BEAT_KINDS.find((k) => labelOf({ kind: k, version: 0 } as PhoneChoice) === l);
   if (beat) return { kind: beat, version: 0 };
   return null;
 }
@@ -106,7 +107,7 @@ export function choiceSection(c: PhoneChoice): string {
   if (c.place) out.push('Where: ' + c.place);
   out.push('Made: ' + c.made);
   if (c.result) out.push('Result: ' + c.result);
-  if (c.kind === 'beat-write' || c.kind === 'beat-rename') {
+  if (c.kind === 'beat-write' || c.kind === 'beat-notes' || c.kind === 'beat-rename') {
     out.push('', 'Was:', ...quoteBlock(c.was), '', 'Now:', ...quoteBlock(c.now));
   } else if (c.kind === 'beat-add') {
     out.push('', 'Now:', ...quoteBlock(c.now));
