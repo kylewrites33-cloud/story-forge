@@ -518,6 +518,7 @@ button.side-add { border: none; background: none; color: var(--muted); display: 
 .beat-list { margin: 4px 0 0; padding-left: 1.6em; }
 .beat-list li { min-height: 44px; padding: 6px 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 .beat-list li .hint { margin: 0; }
+.beat-list-notes { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.4; color: var(--text); border-left: 2px solid var(--line); padding-left: 8px; margin-top: 2px; }
 /* Beat titles a little larger, for scanning (Kyle, 2026-10-22). */
 .beat-list strong { font-size: 1.1rem; line-height: 1.3; }
 .beat-list button.link { min-height: 44px; padding: 0; text-align: left; }
@@ -1058,7 +1059,8 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .beat-summary { color: var(--muted); font-size: 0.95rem; line-height: 1.45; resize: none; overflow: hidden; display: block; }
 .beat-title:focus, .beat-summary:focus { outline: none; background: var(--bg); }
 .beat-lost { margin: 0 6px 6px; font-size: 0.94rem; color: var(--muted); }
-.beat-body { padding: 0 0 4px 6px; }
+.beat-body { padding: 0 0 4px 10px; margin-left: 6px; border-left: 2px solid var(--line); }
+.beat-notes-label { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
 .beat-body .writer-text { min-height: 3em; padding: 4px 0 8px; max-width: none; }
 /* A beat's left edge: its number, and the Move handle under it (Kyle, 2026-10-22). */
 .beat-left { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; align-self: start; }

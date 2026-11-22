@@ -1,18 +1,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  addBeatAfter, anchorOf, beatStart, beatDefs, beatsBody, blocks, layoutChapter, moveBeat, newBeatsText, parseBeats, removeBeat, sceneBody, type BeatDef
+  addPlanBeat, beatStart, beatsBody, blocks, deletedBeatPath, deletedBeatText, deletePlanBeat, movePlanBeat, newBeatsText, parseBeats, planBeats, planDefs,
+  type BeatDef
 } from '../src/lib/beats.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 
 const A = '\nReed had a theory about videos.\n\n"Nobody watches the first minute," he said.\n\n"Drama!"\n\nGrey had offered to help.\n\nReed zoomed in on his nose.\n';
-const B = '\n"Okay," Reed said. "The real thing."\n\n> **[Inspect: Soil]**\n> Condition: Blighted\n\n"Is that an ad?"\n';
-const scenes = [{ path: 'S/S-052 A.md', id: 'S-052', body: A }, { path: 'S/S-053 B.md', id: 'S-053', body: B }];
 
 const NOTE = `## Reed's theory
 Reed says the first minute is a promise.
 
 Starts: S-052 · Reed had a theory about videos.
+
+### Notes
+Maybe the tuxedo is borrowed.
+
+Open on the table, not the field.
 
 ## Regrets
 Grey regrets offering to help.
@@ -28,86 +32,61 @@ Starts: S-053 · "Okay," Reed said. "The real thing."
 Starts: S-053
 `;
 
-test('a beats note reads back as titles, summaries, scenes and first words', () => {
+test('a beats note reads back as titles, summaries, scenes, first words and Kyle\'s notes', () => {
   const d = parseBeats(NOTE);
   assert.equal(d.length, 4);
-  assert.deepEqual(d[0], { title: "Reed's theory", summary: 'Reed says the first minute is a promise.', scene: 'S-052', words: 'Reed had a theory about videos.' });
+  assert.deepEqual(d[0], { title: "Reed's theory", summary: 'Reed says the first minute is a promise.', scene: 'S-052', words: 'Reed had a theory about videos.', notes: 'Maybe the tuxedo is borrowed.\n\nOpen on the table, not the field.' });
+  assert.equal(d[1].notes, '');
   assert.equal(d[2].words, '"Okay," Reed said. "The real thing."');
-  assert.deepEqual(d[3], { title: 'The wait', summary: '', scene: 'S-053', words: '' });
+  assert.deepEqual(d[3], { title: 'The wait', summary: '', scene: 'S-053', words: '', notes: '' });
   assert.deepEqual(parseBeats(beatsBody(d)), d);
 });
 
-test('the chapter lays out under its beats and every paragraph lands once, in order', () => {
-  const { beats, scenes: shapes } = layoutChapter(scenes, parseBeats(NOTE));
-  assert.deepEqual(beats.map((b) => b.title), ["Reed's theory", 'Regrets', 'Blighted, with an ad', 'The wait']);
-  assert.equal(beats[0].prose, 'Reed had a theory about videos.\n\n"Nobody watches the first minute," he said.\n\n"Drama!"');
-  assert.equal(beats[1].prose, 'Grey had offered to help.\n\nReed zoomed in on his nose.');
-  assert.ok(beats[2].prose.endsWith('"Is that an ad?"'));
-  assert.equal(beats[3].prose, '');
-  // Nothing changed: each scene goes back together exactly.
-  assert.equal(sceneBody(shapes[0], beats), A);
-  assert.equal(sceneBody(shapes[1], beats), B);
+test('notes that look like headings or Starts lines stay notes (Kyle, 2026-11-22: beats are for planning)', () => {
+  const d: BeatDef[] = [{ title: 'One', summary: 'S.', scene: 'S-001', words: '', notes: '## not a beat\n### Notes\nStarts: S-009 · nope\n\\# kept' }, { title: 'Two', summary: '', scene: 'S-001', words: '', notes: '' }];
+  const body = beatsBody(d);
+  const back = parseBeats(body);
+  assert.equal(back.length, 2);
+  assert.deepEqual(back, d);
+  assert.match(body, /### Notes\n\\## not a beat\n\\### Notes\nStarts: S-009 · nope\n\\\\# kept/);
 });
 
-test('prose before a scene\'s first beat shows without a heading, and a chapter with no beats is one piece per scene', () => {
-  const none = layoutChapter(scenes, []);
-  assert.equal(none.beats.length, 2);
-  assert.ok(none.beats.every((b) => b.loose));
-  const late = layoutChapter(scenes, [{ title: 'Regrets', summary: '', scene: 'S-052', words: 'Grey had offered' }]);
-  assert.equal(late.beats[0].loose, true);
-  assert.ok(late.beats[0].prose.endsWith('"Drama!"'));
-  assert.equal(late.beats[1].title, 'Regrets');
-  assert.equal(beatDefs(late.beats).length, 1);
+test('notes are kept tidy: no blank lines at the ends, no spaces at line ends', () => {
+  const body = beatsBody([{ title: 'T', summary: '', scene: 'S-001', words: '', notes: '\n\n  first  \n\nsecond\n\n' }]);
+  assert.equal(parseBeats(body)[0].notes, '  first\n\nsecond');
+  assert.equal(beatsBody([{ title: 'T', summary: '', scene: 'S-001', words: '', notes: '  \n ' }]), '\n## T\n\nStarts: S-001\n');
 });
 
-test('editing a beat\'s first words moves its anchor; the scene is rebuilt from the beats', () => {
-  const { beats, scenes: shapes } = layoutChapter(scenes, parseBeats(NOTE));
-  const edited = beats.map((b, i) => (i === 1 ? { ...b, prose: 'Grey regretted it at once.\n\nReed zoomed in on his nose.' } : b));
-  const body = sceneBody(shapes[0], edited);
-  assert.ok(body.includes('"Drama!"\n\nGrey regretted it at once.\n\nReed zoomed'));
-  const defs = beatDefs(edited);
-  assert.equal(defs[1].words, 'Grey regretted it at once.');
-  // Laid out again from the new body and anchors, the beats come out the same.
-  const again = layoutChapter([{ ...scenes[0], body }, scenes[1]], defs);
-  assert.equal(again.beats[1].prose, 'Grey regretted it at once.\n\nReed zoomed in on his nose.');
-});
-
-test('a beat whose first words changed elsewhere is lost, and its prose stays in the beat above', () => {
-  const changed = A.replace('Grey had offered to help.', 'Grey wished he had not offered.');
-  const { beats, scenes: shapes } = layoutChapter([{ ...scenes[0], body: changed }, scenes[1]], parseBeats(NOTE));
-  assert.equal(beats[1].lost, true);
-  assert.equal(beats[1].prose, '');
-  assert.ok(beats[0].prose.includes('Grey wished'));
-  assert.equal(sceneBody(shapes[0], beats), changed);
-  assert.equal(beatDefs(beats)[1].words, 'Grey had offered to help.');
-});
-
-test('typing into an empty beat puts its prose there; removing a heading joins the beat above', () => {
-  const { beats, scenes: shapes } = layoutChapter(scenes, parseBeats(NOTE));
-  const typed = beats.map((b, i) => (i === 3 ? { ...b, prose: 'They waited.' } : b));
-  assert.ok(sceneBody(shapes[1], typed).endsWith('"Is that an ad?"\n\nThey waited.\n'));
-  const joined = removeBeat(beats, beats[1].key);
-  assert.equal(joined.length, 3);
-  assert.ok(joined[0].prose.endsWith('Reed zoomed in on his nose.'));
-  assert.equal(sceneBody(shapes[0], joined), A);
-  const first = removeBeat(beats, beats[2].key);
-  assert.equal(first[2].loose, true);
-  const added = addBeatAfter(beats, beats[0].key, 'New beat');
+test('adding, moving and deleting beats changes only the list, never a scene', () => {
+  const beats = planBeats(parseBeats(NOTE));
+  const [theory, regrets, blighted, wait] = beats.map((b) => b.key);
+  const added = addPlanBeat(beats, theory, 'New beat', 'S-099');
   assert.equal(added[1].title, 'New beat');
   assert.equal(added[1].scene, 'S-052');
+  const end = addPlanBeat(beats, null, '', 'S-099');
+  assert.equal(end.at(-1)!.scene, 'S-053');
+  assert.equal(addPlanBeat([], null, '', 'S-099')[0].scene, 'S-099');
+  // Up within its scene: keeps its Starts words.
+  const up = movePlanBeat(beats, regrets, theory);
+  assert.deepEqual(up.map((b) => b.title), ['Regrets', "Reed's theory", 'Blighted, with an ad', 'The wait']);
+  assert.equal(up[0].words, 'Grey had offered to help.');
+  // Down into the next scene: takes that scene, and its Starts words go (they name the other scene's prose).
+  const down = movePlanBeat(beats, regrets, wait);
+  assert.equal(down[2].title, 'Regrets');
+  assert.equal(down[2].scene, 'S-053');
+  assert.equal(down[2].words, '');
+  assert.equal(movePlanBeat(beats, theory, null).at(-1)!.key, theory);
+  assert.equal(movePlanBeat(beats, blighted, wait), beats);
+  assert.equal(deletePlanBeat(beats, regrets).length, 3);
+  // The notes go with the beat wherever it moves.
+  assert.equal(parseBeats(beatsBody(planDefs(movePlanBeat(beats, theory, null)))).at(-1)!.notes, 'Maybe the tuxedo is borrowed.\n\nOpen on the table, not the field.');
 });
 
-test('a planned scene with no prose takes a beat\'s first words', () => {
-  const shapes = layoutChapter([{ path: 'p.md', id: 'S-060', body: '' }], [{ title: 'Open', summary: 'x', scene: 'S-060', words: '' }]);
-  const typed = shapes.beats.map((b) => ({ ...b, prose: 'First line.' }));
-  assert.equal(sceneBody(shapes.scenes[0], typed), '\nFirst line.\n');
-});
-
-test('anchors skip Markdown marks and match curly or straight quotes', () => {
-  assert.equal(anchorOf('> **[Inspect: Soil]**\n> It\'s dirt.'), "[Inspect: Soil] It's dirt.");
-  const d: BeatDef[] = [{ title: 'x', summary: '', scene: 'S-001', words: '“Hello,” she said' }];
-  const r = layoutChapter([{ path: 'a', id: 'S-001', body: '\nFirst.\n\n"Hello," she *said*.\n' }], d);
-  assert.equal(r.beats[1].prose, '"Hello," she *said*.');
+test('beatStart finds the paragraph a beat opens, and -1 when its words are gone', () => {
+  const at = beatStart(A, '“Nobody watches the first minute,” he said.');
+  assert.equal(A.slice(at, at + 8), '"Nobody ');
+  assert.equal(beatStart(A, 'Words that are not here'), -1);
+  assert.equal(beatStart(A, ''), -1);
   assert.equal(blocks('\n\na\nb\n\n\nc').length, 2);
 });
 
@@ -119,66 +98,11 @@ test('a new beats note follows the schema', () => {
   assert.equal(parseBeats(n.body).length, 4);
 });
 
-test('a beat dragged up or down takes its prose with it, into the scene it lands in, and lays out the same again', () => {
-  const { beats, scenes: shapes } = layoutChapter(scenes, parseBeats(NOTE));
-  const [theory, regrets, blighted, wait] = beats.map((b) => b.key);
-  // Up, within its scene.
-  const up = moveBeat(beats, regrets, theory);
-  assert.deepEqual(up.touched, ['S/S-052 A.md']);
-  const a = sceneBody(shapes[0], up.beats);
-  assert.ok(a.startsWith('\nGrey had offered to help.\n\nReed zoomed in on his nose.\n\nReed had a theory'));
-  assert.deepEqual(layoutChapter([{ ...scenes[0], body: a }, scenes[1]], beatDefs(up.beats)).beats.map((b) => b.title), ['Regrets', "Reed's theory", 'Blighted, with an ad', 'The wait']);
-  // Down, into the next scene.
-  const down = moveBeat(beats, regrets, wait);
-  assert.deepEqual(down.touched, ['S/S-052 A.md', 'S/S-053 B.md']);
-  const b0 = sceneBody(shapes[0], down.beats), b1 = sceneBody(shapes[1], down.beats);
-  assert.ok(!b0.includes('Grey had offered'));
-  assert.ok(b1.trimEnd().endsWith('Reed zoomed in on his nose.'));
-  const again = layoutChapter([{ ...scenes[0], body: b0 }, { ...scenes[1], body: b1 }], beatDefs(down.beats)).beats;
-  assert.deepEqual(again.map((b) => b.title), ["Reed's theory", 'Blighted, with an ad', 'Regrets', 'The wait']);
-  assert.equal(again[2].prose, 'Grey had offered to help.\n\nReed zoomed in on his nose.');
-  // To the end, and nowhere.
-  assert.equal(moveBeat(beats, theory, null).beats.at(-1)!.key, theory);
-  assert.deepEqual(moveBeat(beats, blighted, wait).touched, []);
-  // A scene's opening words are a beat too: they move, and once not first they are saved as an unnamed beat.
-  const late = layoutChapter(scenes, [{ title: 'Regrets', summary: '', scene: 'S-052', words: 'Grey had offered' }, { title: 'Ad', summary: '', scene: 'S-053', words: '"Is that an ad?"' }]).beats;
-  const m = moveBeat(late, late[3].key, late[0].key);
-  assert.equal(m.beats[0].title, 'Ad');
-  assert.equal(m.beats[0].scene, 'S-052');
-  assert.equal(m.beats[1].loose, false);
-  const shapes2 = layoutChapter(scenes, []).scenes;
-  const a2 = sceneBody(shapes2[0], m.beats);
-  assert.ok(a2.startsWith('\n"Is that an ad?"\n\nReed had a theory'));
-  const defs = parseBeats(beatsBody(beatDefs(m.beats)));
-  assert.deepEqual(defs.map((d) => d.title), ['Ad', '', 'Regrets']);
-  const re = layoutChapter([{ ...scenes[0], body: a2 }, { ...scenes[1], body: sceneBody(shapes2[1], m.beats) }], defs).beats;
-  assert.deepEqual(re.map((x) => x.prose.slice(0, 12)), m.beats.map((x) => x.prose.slice(0, 12)));
-  // The opening words themselves can move down.
-  const o = moveBeat(late, late[0].key, late[2].key);
-  assert.deepEqual(o.beats.map((x) => x.key), [late[1].key, late[0].key, late[2].key, late[3].key]);
-  assert.ok(o.beats.every((x) => !x.loose || x === o.beats[2]));
-});
-
-test('beatStart finds the paragraph a beat opens, and -1 when its words are gone', () => {
-  const at = beatStart(A, anchorOf('"Nobody watches the first minute," he said.'));
-  assert.equal(A.slice(at, at + 8), '"Nobody ');
-  assert.equal(beatStart(A, 'Words that are not here'), -1);
-  assert.equal(beatStart(A, ''), -1);
-});
-
-test('a beat is deleted with its words, and its archived copy keeps them', async () => {
-  const { addBeatAtEnd, deleteBeat, deletedBeatPath, deletedBeatText } = await import('../src/lib/beats.ts');
-  const { beats } = layoutChapter([{ path: 'a.md', id: 'S-001', body: '\nOpening words here.\n\nReed had a theory about videos.\n' }],
-    [{ title: 'Reed\'s theory', summary: 'Reed explains.', scene: 'S-001', words: 'Reed had a theory about videos.' }]);
-  const left = deleteBeat(beats, beats[1].key);
-  assert.equal(left.length, 1);
-  assert.equal(sceneBody({ path: 'a.md', id: 'S-001', lead: '\n', tail: '\n' }, left), '\nOpening words here.\n');
+test('a deleted beat\'s archived copy keeps its summary and notes', () => {
+  const b = parseBeats(NOTE)[0];
   const now = new Date(2026, 9, 22, 9, 5, 7);
   assert.equal(deletedBeatPath('B', 3, 2, 'Reed\'s theory: part #1', now), 'B/Archive/Deleted beats/Chapter 3 beat 2 Reed\'s theory part 1 2026-10-22 090507.md');
-  const text = deletedBeatText(beats[1], 3, 2, now);
-  assert.match(text, /## Reed's theory\nReed explains\.\n\nReed had a theory about videos\./);
-  const added = addBeatAtEnd([], { path: 'a.md', id: 'S-001' });
-  assert.equal(added.length, 1);
-  assert.equal(added[0].scene, 'S-001');
-  assert.equal(addBeatAtEnd(beats, null).length, 3);
+  const text = deletedBeatText(b, 3, 2, now);
+  assert.match(text, /deleted with its notes in the Sparrow app/);
+  assert.match(text, /## Reed's theory\nReed says the first minute is a promise\.\n\n### Notes\nMaybe the tuxedo is borrowed\.\n\nOpen on the table/);
 });
