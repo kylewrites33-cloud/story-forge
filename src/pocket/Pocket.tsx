@@ -749,21 +749,21 @@ function WriteScreen({ here, ch, openAt }: { here: Here; ch: PocketChapter; open
           return (
             <li key={id || b.key} data-beat={id || b.key} class={'pk-beatcard' + (id ? ' open' : '') + (b.loose ? ' loose' : '')}>
               {newScene && i > 0 && <p class="pk-beatscene" aria-hidden="true">~ {b.scene}</p>}
-              <div class="pk-beatrow">
-                <button type="button" class="pk-beat" aria-expanded={Boolean(id)} onClick={() => toggle(b)}>
-                  <span class="pk-beat-num">{i + 1}</span>
-                  <span class="pk-beat-main">
-                    <b>{nameOf(b)}</b>
-                    {!id && <span>{firstLine(b.notes) || firstLine(b.prose) || b.summary || 'Nothing yet.'}</span>}
-                    {!id && <span class="pk-beat-words">{[n ? wordsSaid(n) : '', b.notes ? 'notes' : ''].filter(Boolean).join(' · ')}</span>}
-                  </span>
-                </button>
-                <span class="pk-movebtns">
-                  <button type="button" disabled={up === undefined} aria-label={'Move beat ' + (i + 1) + ' up'} onClick={() => move(b, i, 'up')}>▲</button>
-                  <button type="button" disabled={down === undefined} aria-label={'Move beat ' + (i + 1) + ' down'} onClick={() => move(b, i, 'down')}>▼</button>
-                </span>
-              </div>
-              {id && <BeatEditor key={id} here={here} ch={ch} beatId={id} onAdd={(x, k) => add(x, k)} onClose={() => setOpen(open.filter((x) => x !== id))} />}
+              {!id && (
+                <div class="pk-beatrow">
+                  <button type="button" class="pk-beat" aria-expanded={false} onClick={() => toggle(b)}>
+                    <span class="pk-beat-num">{i + 1}</span>
+                    <span class="pk-beat-main">
+                      <b>{nameOf(b)}</b>
+                      <span>{firstLine(b.notes) || firstLine(b.prose) || 'Nothing yet.'}</span>
+                      <span class="pk-beat-words">{[n ? wordsSaid(n) : '', b.notes ? 'notes' : ''].filter(Boolean).join(' · ')}</span>
+                    </span>
+                  </button>
+                  <MoveButtons i={i} up={up} down={down} onMove={(dir) => move(b, i, dir)} />
+                </div>
+              )}
+              {id && <BeatEditor key={id} here={here} ch={ch} beatId={id} moves={<MoveButtons i={i} up={up} down={down} onMove={(dir) => move(b, i, dir)} />}
+                onAdd={(x, k) => add(x, k)} onClose={() => setOpen(open.filter((x) => x !== id))} />}
             </li>
           );
         })}
@@ -775,11 +775,30 @@ function WriteScreen({ here, ch, openAt }: { here: Here; ch: PocketChapter; open
   );
 }
 
+function MoveButtons({ i, up, down, onMove }: { i: number; up: string | null | undefined; down: string | null | undefined; onMove: (dir: 'up' | 'down') => void }) {
+  return (
+    <span class="pk-movebtns">
+      <button type="button" disabled={up === undefined} aria-label={'Move beat ' + (i + 1) + ' up'} onClick={() => onMove('up')}>▲</button>
+      <button type="button" disabled={down === undefined} aria-label={'Move beat ' + (i + 1) + ' down'} onClick={() => onMove('down')}>▼</button>
+    </span>
+  );
+}
+
+/** The parts of an open beat Kyle has folded up, the same for every beat on this phone (Kyle, 2026-11-22: "How do I
+ * minimize each section within a card?"). The summary starts folded. */
+type Part = 'summary' | 'plan' | 'writing';
+function readFolds(): Part[] {
+  try { const v = JSON.parse(readPref(PREF.pocketFolds) || '["summary"]'); return Array.isArray(v) ? v : ['summary']; } catch { return ['summary']; }
+}
+
 /** A quiet moment after typing before the words are kept as a choice (they are kept at once on leaving). */
 const TYPE_MS = 700;
 
 /** One open beat: its name, its planning notes and its writing, each kept as one choice per sitting. */
-function BeatEditor({ here, ch, beatId, onAdd, onClose }: { here: Here; ch: PocketChapter; beatId: string; onAdd: (after: BeatView, i: number) => void; onClose: () => void }) {
+function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; ch: PocketChapter; beatId: string; moves: ComponentChildren; onAdd: (after: BeatView, i: number) => void; onClose: () => void }) {
+  const [folds, setFolds] = useState<Part[]>(readFolds);
+  const fold = (p: Part) => { const next = folds.indexOf(p) >= 0 ? folds.filter((x) => x !== p) : folds.concat(p); setFolds(next); writePref(PREF.pocketFolds, JSON.stringify(next)); };
+  const shut = (p: Part) => folds.indexOf(p) >= 0;
   const { vault } = here;
   const r = here.replay(ch);
   const beats = r.laid.beats;
@@ -842,24 +861,33 @@ function BeatEditor({ here, ch, beatId, onAdd, onClose }: { here: Here; ch: Pock
   };
   const n = beatWords(words), nn = beatWords(notes);
   const id = 'pk-b-' + beatId;
+  const Head = ({ p, label, sub }: { p: Part; label: string; sub: string }) => (
+    <button type="button" class="pk-part" aria-expanded={!shut(p)} onClick={() => { flush(); fold(p); }}>
+      <span class="pk-part-arrow" aria-hidden="true">{shut(p) ? '▸' : '▾'}</span><b>{label}</b><span class="pk-quiet">{sub}</span>
+    </button>
+  );
   return (
     <div class="pk-beatbody">
-      <label class="pk-label" for={id + '-t'}>Name</label>
-      <input id={id + '-t'} ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off"
-        onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
-        onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
-      {b.summary && <p class="pk-quiet">{b.summary}</p>}
-      <label class="pk-label" for={id + '-n'}>Plan <span class="pk-quiet">({wordsSaid(nn)}, never in the chapter)</span></label>
-      <textarea id={id + '-n'} class="pk-box-text pk-beat-notes" rows={rowsFor(notes, 3)} value={notes} placeholder="Your thoughts for this beat"
-        onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setNotes(v); later({ notes: v }); }} onBlur={flush} />
-      <label class="pk-label" for={id + '-w'}>Writing <span class="pk-quiet">({wordsSaid(n)})</span></label>
-      <textarea id={id + '-w'} class="pk-box-text pk-beat-text" rows={rowsFor(words, 6)} value={words} placeholder="Write this beat"
-        onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />
-      <p class="pk-quiet">Writing goes into the chapter when you next open the book on your iPad. Words between *stars* are in italics, a line starting with &gt; is a System screen, and a blank line starts a new paragraph.</p>
+      <div class="pk-beattop">
+        <span class="pk-beat-num">{i + 1}</span>
+        <input id={id + '-t'} ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off" aria-label={'Beat ' + (i + 1) + ' name'}
+          onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
+          onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
+        {moves}
+      </div>
+      {b.summary && <Head p="summary" label="Summary" sub={shut('summary') ? firstLine(b.summary) : ''} />}
+      {b.summary && !shut('summary') && <p class="pk-part-text">{b.summary}</p>}
+      <Head p="plan" label="Plan" sub={wordsSaid(nn) + ', never in the chapter'} />
+      {!shut('plan') && <textarea id={id + '-n'} class="pk-box-text pk-beat-notes" rows={rowsFor(notes, 3)} value={notes} placeholder="Your thoughts for this beat" aria-label="Plan"
+        onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setNotes(v); later({ notes: v }); }} onBlur={flush} />}
+      <Head p="writing" label="Writing" sub={wordsSaid(n)} />
+      {!shut('writing') && <textarea id={id + '-w'} class="pk-box-text pk-beat-text" rows={rowsFor(words, 6)} value={words} placeholder="Write this beat" aria-label="Writing"
+        onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />}
+      {!shut('writing') && <p class="pk-quiet pk-small">Goes into the chapter when you next open the book on your iPad. *Stars* make italics; a line starting with &gt; is a System screen.</p>}
       <div class="pk-beattools">
         <button type="button" onClick={() => { flush(); onAdd(b, i); }}>Add a beat after this</button>
         <button type="button" onClick={() => { flush(); setAsking(true); }}>Delete this beat</button>
-        <button type="button" class="pk-wide" onClick={() => { flush(); onClose(); }}>Close</button>
+        <button type="button" class="pk-wide pk-primary" onClick={() => { flush(); onClose(); }}>Close this beat</button>
       </div>
       {asking && (
         <div class="pk-sheet" role="dialog" aria-label="Delete this beat">
