@@ -112,5 +112,6 @@ export const PREF = {
   pocketChoices: 'sparrow-pocket.choices.', // choices made on the phone and not sent yet, per vault
   pocketNotes: 'sparrow-pocket.notes.', // the phone note it adds to for each book, and where each sent choice went, per vault
   pocketMode: 'sparrow-pocket.mode', // Write or Edit, the switch at the top of a chapter (2026-11-21)
+  pocketFolds: 'sparrow-pocket.folds', // which parts of an open beat are folded up: summary, plan, writing (2026-11-22)
   phoneReport: 'sparrow.phone-report.' // the app's: what it did with the phone's choices, shown until Kyle presses OK, per vault
 } as const;

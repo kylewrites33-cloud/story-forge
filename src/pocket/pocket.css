@@ -183,3 +183,15 @@ button:disabled:active { background: var(--paper); color: var(--ink); }
 .pk-beat-text { min-height: 30vh; }
 .pk-beattools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
 .pk-ask { font-size: 20px; font-weight: 700; margin: 8px 0; }
+
+/* An open beat (2026-11-22): the name in the card's top row, then Summary, Plan and Writing, each folding up. */
+.pk-beattop { display: flex; gap: 8px; align-items: flex-start; }
+.pk-beattop .pk-movebtns { flex-direction: row; }
+.pk-beattop .pk-beat-num { padding-top: 10px; }
+.pk-beattop .pk-beat-title { flex: 1; min-width: 0; }
+.pk-part { display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 48px; margin: 6px 0 0; padding: 6px 4px; border: none; border-top: var(--line); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; text-align: left; }
+.pk-part b { font-size: 18px; }
+.pk-part .pk-quiet { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-part-arrow { font-size: 16px; min-width: 1.2em; }
+.pk-part-text { margin: 0 0 6px; font-size: 16px; line-height: 1.4; }
+.pk-small { font-size: 14px; }

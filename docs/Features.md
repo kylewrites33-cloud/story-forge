@@ -2094,6 +2094,12 @@ which goes into the scene as before; choice `beat-write`), then Add a beat after
 card has Move up and Move down buttons on the list itself, and Add a beat sits at the top and the foot. Notes changed on
 the same lines on both ends keep both, the phone's under the iPad's after "From your phone:". A deleted beat's Archive
 copy has its summary, notes and prose. The iPad's Beats mode shows the same notes (planning only there, see Beats).
+**Since later on 2026-11-22 an open card folds up** (Kyle: "There's 2 name sections" and "Also the UI sucks. How do I
+minimize each section within a card?"). An open card's top row is its number, its name (once, as the box to rename it)
+and the move buttons side by side. Below it, Summary, Plan and Writing are each a heading you press to fold or unfold,
+showing a short line while folded (the summary's first words, the plan's and writing's word counts). The summary starts
+folded, Plan and Writing open; the phone remembers what you folded (`PREF.pocketFolds`). A closed card shows its number,
+name, first line and words.
 The paragraph below describes the first version, opened one beat per screen.
 
 **Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe
