@@ -763,7 +763,7 @@ function WriteScreen({ here, ch, openAt }: { here: Here; ch: PocketChapter; open
                 </div>
               )}
               {id && <BeatEditor key={id} here={here} ch={ch} beatId={id} moves={<MoveButtons i={i} up={up} down={down} onMove={(dir) => move(b, i, dir)} />}
-                onAdd={(x, k) => add(x, k)} onClose={() => setOpen(open.filter((x) => x !== id))} />}
+                onClose={() => setOpen(open.filter((x) => x !== id))} />}
             </li>
           );
         })}
@@ -784,20 +784,18 @@ function MoveButtons({ i, up, down, onMove }: { i: number; up: string | null | u
   );
 }
 
-/** The parts of an open beat Kyle has folded up, the same for every beat on this phone (Kyle, 2026-11-22: "How do I
- * minimize each section within a card?"). The summary starts folded. */
+/** The parts of an open beat, each folded until Kyle opens it (Kyle, 2026-11-22: "Plan and write sections in cards
+ * should be closed by default"). */
 type Part = 'summary' | 'plan' | 'writing';
-function readFolds(): Part[] {
-  try { const v = JSON.parse(readPref(PREF.pocketFolds) || '["summary"]'); return Array.isArray(v) ? v : ['summary']; } catch { return ['summary']; }
-}
+const ALL_SHUT: Part[] = ['summary', 'plan', 'writing'];
 
 /** A quiet moment after typing before the words are kept as a choice (they are kept at once on leaving). */
 const TYPE_MS = 700;
 
 /** One open beat: its name, its planning notes and its writing, each kept as one choice per sitting. */
-function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; ch: PocketChapter; beatId: string; moves: ComponentChildren; onAdd: (after: BeatView, i: number) => void; onClose: () => void }) {
-  const [folds, setFolds] = useState<Part[]>(readFolds);
-  const fold = (p: Part) => { const next = folds.indexOf(p) >= 0 ? folds.filter((x) => x !== p) : folds.concat(p); setFolds(next); writePref(PREF.pocketFolds, JSON.stringify(next)); };
+function BeatEditor({ here, ch, beatId, moves, onClose }: { here: Here; ch: PocketChapter; beatId: string; moves: ComponentChildren; onClose: () => void }) {
+  const [folds, setFolds] = useState<Part[]>(ALL_SHUT);
+  const fold = (p: Part) => setFolds(folds.indexOf(p) >= 0 ? folds.filter((x) => x !== p) : folds.concat(p));
   const shut = (p: Part) => folds.indexOf(p) >= 0;
   const { vault } = here;
   const r = here.replay(ch);
@@ -807,7 +805,6 @@ function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; c
   const [words, setWords] = useState(b ? b.prose : '');
   const [notes, setNotes] = useState(b ? b.notes : '');
   const [title, setTitle] = useState(b ? b.title : '');
-  const [asking, setAsking] = useState(false);
   type Dirty = { words?: string; notes?: string; title?: string };
   const sit = useRef<{ write: string; notes: string; rename: string; timer: number; dirty: Dirty }>({ write: '', notes: '', rename: '', timer: 0, dirty: {} });
   const cur = useRef({ b, i, title });
@@ -853,12 +850,6 @@ function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; c
   useEffect(() => () => flush(), []);
 
   if (!b) return <p class="pk-note">This beat is not in the chapter any more.</p>;
-  const remove = () => {
-    flush();
-    vault.record({ ...beatBase(here, ch), kind: 'beat-delete', beat: b.key, beatName: beatLabel({ ...b, title }, i), was: words });
-    setAsking(false);
-    onClose();
-  };
   const n = beatWords(words), nn = beatWords(notes);
   const id = 'pk-b-' + beatId;
   const Head = ({ p, label, sub }: { p: Part; label: string; sub: string }) => (
@@ -869,7 +860,7 @@ function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; c
   return (
     <div class="pk-beatbody">
       <div class="pk-beattop">
-        <span class="pk-beat-num">{i + 1}</span>
+        <button type="button" class="pk-beat-num pk-numbtn" aria-expanded={true} aria-label={'Close beat ' + (i + 1)} onClick={() => { flush(); onClose(); }}>{i + 1}</button>
         <input id={id + '-t'} ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off" aria-label={'Beat ' + (i + 1) + ' name'}
           onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
           onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
@@ -884,20 +875,6 @@ function BeatEditor({ here, ch, beatId, moves, onAdd, onClose }: { here: Here; c
       {!shut('writing') && <textarea id={id + '-w'} class="pk-box-text pk-beat-text" rows={rowsFor(words, 6)} value={words} placeholder="Write this beat" aria-label="Writing"
         onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />}
       {!shut('writing') && <p class="pk-quiet pk-small">Goes into the chapter when you next open the book on your iPad. *Stars* make italics; a line starting with &gt; is a System screen.</p>}
-      <div class="pk-beattools">
-        <button type="button" onClick={() => { flush(); onAdd(b, i); }}>Add a beat after this</button>
-        <button type="button" onClick={() => { flush(); setAsking(true); }}>Delete this beat</button>
-        <button type="button" class="pk-wide pk-primary" onClick={() => { flush(); onClose(); }}>Close this beat</button>
-      </div>
-      {asking && (
-        <div class="pk-sheet" role="dialog" aria-label="Delete this beat">
-          <p class="pk-ask">{'Delete beat ' + (i + 1) + (words.trim() || notes.trim() ? ', its ' + [words.trim() ? wordsSaid(n) : '', notes.trim() ? wordsSaid(nn) + ' of notes' : ''].filter(Boolean).join(' and ') + '? A copy goes to the book\'s Archive.' : '?')}</p>
-          <p class="pk-buttons">
-            <button type="button" class="pk-primary" onClick={remove}>Yes, delete it</button>
-            <button type="button" onClick={() => setAsking(false)}>Cancel</button>
-          </p>
-        </div>
-      )}
     </div>
   );
 }

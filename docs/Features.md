@@ -2100,6 +2100,12 @@ and the move buttons side by side. Below it, Summary, Plan and Writing are each 
 showing a short line while folded (the summary's first words, the plan's and writing's word counts). The summary starts
 folded, Plan and Writing open; the phone remembers what you folded (`PREF.pocketFolds`). A closed card shows its number,
 name, first line and words.
+**Since 1 PM Eastern on 2026-11-22** (Kyle: "Plan and write sections in cards should be closed by default. Remove the
+buttons at the bottom of the card. Open and close by tapping the number at the top left of each card"): every part of
+an open card starts folded each time (no longer remembered; `PREF.pocketFolds` is kept as a name but unused), the open
+card's number is a button that closes it (a closed card opens from anywhere on it, number included), and Add a beat
+after this, Delete this beat and Close this beat are gone. New beats come from Add a beat at the top and foot; the
+phone no longer deletes beats (Beats mode on the iPad does).
 The paragraph below describes the first version, opened one beat per screen.
 
 **Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe
