@@ -195,3 +195,5 @@ button:disabled:active { background: var(--paper); color: var(--ink); }
 .pk-part-arrow { font-size: 16px; min-width: 1.2em; }
 .pk-part-text { margin: 0 0 6px; font-size: 16px; line-height: 1.4; }
 .pk-small { font-size: 14px; }
+.pk-numbtn { min-width: 48px; min-height: 48px; padding: 0 8px; border: var(--line); border-radius: 8px; background: var(--ink); color: var(--paper); font: inherit; font-weight: 800; font-size: 20px; }
+.pk-beattop .pk-numbtn { padding-top: 0; }
