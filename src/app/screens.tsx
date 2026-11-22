@@ -5,7 +5,7 @@
 import type { ComponentChildren } from 'preact';
 import { beatsNoteFor } from '../lib/beats.ts';
 import { chapterGroups, sceneLabel } from '../lib/board.ts';
-import { copyFor } from '../lib/bookdrafts.ts';
+import { copyFor, draftsFinal } from '../lib/bookdrafts.ts';
 import { fillJobsFor } from '../lib/brackets.ts';
 import { changesNoteFor, chapterChanges, countLike, isStoryCall, type ChangeStatus } from '../lib/changes.ts';
 import { conversation } from '../lib/chat.ts';
@@ -319,6 +319,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
       rewrite={book ? { files: book.rewrite || [], done: rewriteDone(view.notes[book.path]), onThrough: source.commit ? (ch, done) => act.onRewriteThrough(book, ch, done) : undefined } : null}
       drafts={book ? {
         saved: book.drafts || [],
+        final: draftsFinal(view.notes[book.path] ? view.notes[book.path].data.stage : book.stage),
         onSave: async () => {
           if (!source.commit) return 'Saving a draft needs your own vault, not the demo.';
           if (!navigator.onLine) return 'Connect to the internet to save a draft.';

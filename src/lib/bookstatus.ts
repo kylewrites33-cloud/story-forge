@@ -52,6 +52,13 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
     return { phase: 'published', stage: 'Published', percent: 100, detail: '', active: false, go: null, goLabel: 'Open the book', at };
   }
 
+  // Editing is over once the book moves to publishing (Kyle, 2026-11-22, on Doctor's Orders: "there is no draft 5.
+  // doctors orders editing is commplete"): a Writer's rewrite he never marked through, or the saved drafts, no longer
+  // make the book look as though another draft is under way.
+  if (/^publish$/i.test(stageName)) {
+    return { phase: 'publishing', stage: 'Getting it published', percent: null, detail: '', active: true, go: null, goLabel: 'Open the book', at };
+  }
+
   const working = workingNumber(book.drafts || []);
 
   // Draft 2: Kyle's pass through the Writer's rewrite, chapter by chapter ("Done with this chapter").
@@ -91,10 +98,6 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
       percent: pct(all - open - from, all - from), detail: open + (open === 1 ? ' change' : ' changes') + ' waiting in ' + waiting.length + (waiting.length === 1 ? ' chapter' : ' chapters'),
       active: true, go: here || waiting[0].path, goLabel: 'Keep editing', at
     };
-  }
-
-  if (/^publish$/i.test(stageName)) {
-    return { phase: 'publishing', stage: 'Getting it published', percent: null, detail: '', active: true, go: null, goLabel: 'Open the book', at };
   }
 
   // Writing: progress counts only chapters Kyle marked done (Kyle, 2026-10-22).

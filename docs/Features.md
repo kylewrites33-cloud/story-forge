@@ -727,6 +727,9 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   save; the copies never change and the scene files become Draft 2. Picking a saved draft shows that scene's copy, read
   only, with a line to go back. Export Draft N to Word works for any draft (file name ends `_Draft N`). Saving again
   makes Draft 2's copies and starts Draft 3. The index and `sf` skip `Drafts/`, like Snapshots.
+  Once a book is in publishing or published, the button says "Final draft" (no new draft number, no Save Draft), and
+  the Books page and Overview say "Getting it published" even if a Writer's rewrite was never marked through (Kyle,
+  2026-11-22, on Doctor's Orders: "there is no draft 5. doctors orders editing is commplete").
 - **Changes on the page.** The Writer revises a chapter as a `chapter-changes` note in `Changes/` (one per chapter), never
   by rewriting the scene. When the open scene has changes, a bar over the page has Word's four views: All changes (old
   words struck in red, new words underlined; a new passage dashed), Simple (the page as it would read, a bar beside each

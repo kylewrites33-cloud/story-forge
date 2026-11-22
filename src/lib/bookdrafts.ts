@@ -38,6 +38,12 @@ export function workingNumber(drafts: SavedDraft[]): number {
   return drafts.reduce((m, d) => Math.max(m, d.number), 0) + 1;
 }
 
+/** Whether the book's editing is over, so its last saved draft is the final one and no new draft is being written:
+ * the book is in publishing or published (Kyle, 2026-11-22: "there is no draft 5"). */
+export function draftsFinal(stage: unknown): boolean {
+  return /^(publish|done|published|live)$/i.test(String(stage || '').trim());
+}
+
 const fileName = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
 /** A scene's copy in a saved draft: the file of the same name, or else the one that starts with its ID. */

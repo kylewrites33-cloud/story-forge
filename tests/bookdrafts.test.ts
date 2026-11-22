@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { copyFor, readDraft, savedDrafts, workingNumber } from '../src/lib/bookdrafts.ts';
+import { copyFor, draftsFinal, readDraft, savedDrafts, workingNumber } from '../src/lib/bookdrafts.ts';
 import { makeNote } from '../src/lib/vault-index.ts';
 import { Frontmatter } from '../src/lib/frontmatter.js';
 import { draftAction } from '../src/vault/ops.ts';
@@ -48,4 +48,11 @@ test('saving a draft copies every scene exactly, in one save, with its note', as
   const d = savedDrafts((await source.tree()).files, B).find((x) => x.number === 2)!;
   const back = await readDraft(source, d, scenes, makeNote);
   assert.deepEqual(back.map((n) => n.body), scenes.map((n) => n.body));
+});
+
+test('drafts are final once the book is in publishing or published (Kyle, 2026-11-22)', () => {
+  assert.equal(draftsFinal('publish'), true);
+  assert.equal(draftsFinal('done'), true);
+  assert.equal(draftsFinal('revise'), false);
+  assert.equal(draftsFinal(''), false);
 });
