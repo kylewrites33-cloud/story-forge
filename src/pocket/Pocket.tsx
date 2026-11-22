@@ -759,7 +759,6 @@ function WriteScreen({ here, ch, openAt }: { here: Here; ch: PocketChapter; open
                       <span class="pk-beat-words">{[n ? wordsSaid(n) : '', b.notes ? 'notes' : ''].filter(Boolean).join(' · ')}</span>
                     </span>
                   </button>
-                  <MoveButtons i={i} up={up} down={down} onMove={(dir) => move(b, i, dir)} />
                 </div>
               )}
               {id && <BeatEditor key={id} here={here} ch={ch} beatId={id} moves={<MoveButtons i={i} up={up} down={down} onMove={(dir) => move(b, i, dir)} />}
@@ -809,7 +808,7 @@ function BeatEditor({ here, ch, beatId, moves, onClose }: { here: Here; ch: Pock
   const sit = useRef<{ write: string; notes: string; rename: string; timer: number; dirty: Dirty }>({ write: '', notes: '', rename: '', timer: 0, dirty: {} });
   const cur = useRef({ b, i, title });
   cur.current = { b, i, title };
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (justAdded && justAdded === beatId && titleRef.current) { justAdded = ''; titleRef.current.focus(); }
   }, []);
@@ -861,11 +860,12 @@ function BeatEditor({ here, ch, beatId, moves, onClose }: { here: Here; ch: Pock
     <div class="pk-beatbody">
       <div class="pk-beattop">
         <button type="button" class="pk-beat-num pk-numbtn" aria-expanded={true} aria-label={'Close beat ' + (i + 1)} onClick={() => { flush(); onClose(); }}>{i + 1}</button>
-        <input id={id + '-t'} ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off" aria-label={'Beat ' + (i + 1) + ' name'}
-          onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
-          onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
         {moves}
       </div>
+      {/* The name has its own row and wraps, so a long one shows in full (Kyle, 2026-11-22: "making this title section fully visible"). */}
+      <textarea id={id + '-t'} ref={titleRef} class="pk-beat-title" rows={Math.max(1, Math.ceil(title.length / 22))} value={title} placeholder="Name this beat" autocomplete="off" aria-label={'Beat ' + (i + 1) + ' name'}
+        onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value.replace(/\n/g, ' '); setTitle(v); later({ title: v }); }}
+        onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
       {b.summary && <Head p="summary" label="Summary" sub={shut('summary') ? firstLine(b.summary) : ''} />}
       {b.summary && !shut('summary') && <p class="pk-part-text">{b.summary}</p>}
       <Head p="plan" label="Plan" sub={wordsSaid(nn) + ', never in the chapter'} />
