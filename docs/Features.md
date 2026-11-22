@@ -2106,6 +2106,10 @@ an open card starts folded each time (no longer remembered; `PREF.pocketFolds` i
 card's number is a button that closes it (a closed card opens from anywhere on it, number included), and Add a beat
 after this, Delete this beat and Close this beat are gone. New beats come from Add a beat at the top and foot; the
 phone no longer deletes beats (Beats mode on the iPad does).
+**Since 2 PM Eastern on 2026-11-22** (Kyle: "What's your ui suggestion for making this title section fully visible?
+And does every card need an up.dowm arrow?"): an open card's top row is the number and the ▲▼ buttons; the name is a
+full-width box below that wraps onto more lines, so a long name shows whole (Enter still ends it). Only an open card has
+the move buttons; closed cards are full width without them.
 The paragraph below describes the first version, opened one beat per screen.
 
 **Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe

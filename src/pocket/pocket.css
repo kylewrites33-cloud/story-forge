@@ -188,7 +188,8 @@ button:disabled:active { background: var(--paper); color: var(--ink); }
 .pk-beattop { display: flex; gap: 8px; align-items: flex-start; }
 .pk-beattop .pk-movebtns { flex-direction: row; }
 .pk-beattop .pk-beat-num { padding-top: 10px; }
-.pk-beattop .pk-beat-title { flex: 1; min-width: 0; }
+.pk-beattop { justify-content: space-between; align-items: center; }
+.pk-beatbody > .pk-beat-title { display: block; margin-top: 8px; resize: none; overflow: hidden; line-height: 1.3; font-family: inherit; field-sizing: content; }
 .pk-part { display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 48px; margin: 6px 0 0; padding: 6px 4px; border: none; border-top: var(--line); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; text-align: left; }
 .pk-part b { font-size: 18px; }
 .pk-part .pk-quiet { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
