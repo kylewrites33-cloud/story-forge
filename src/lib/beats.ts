@@ -18,6 +18,7 @@
 //
 // A beat with a scene and no words has no prose yet (planned). A beat with no Starts line goes in the chapter's last scene.
 import { Frontmatter } from './frontmatter.js';
+import { splitLead } from './lead.ts';
 import type { NoteRecord } from './types.ts';
 
 export const BEATS_FOLDER = 'Chapter Beats';
@@ -123,6 +124,11 @@ function plain(s: string): string {
 }
 const norm = (s: string) => plain(s).toLowerCase().replace(/”/g, '"');
 
+function startsWith(para: string, words: string): boolean {
+  const w = norm(words);
+  return Boolean(w) && norm(para).startsWith(w);
+}
+
 /** Where a beat starts in a scene's text: the paragraph its first words open, or -1 when they are not there. */
 export function beatStart(text: string, words: string): number {
   const w = norm(words);
@@ -130,6 +136,165 @@ export function beatStart(text: string, words: string): number {
   const b = blocks(text).find((k) => norm(text.slice(k.start, k.end)).startsWith(w));
   return b ? b.start : -1;
 }
+
+/** The words a beat is found by: the first ten words of its first paragraph. */
+export function anchorOf(prose: string): string {
+  const b = blocks(prose)[0];
+  if (!b) return '';
+  return plain(prose.slice(b.start, b.end)).split(' ').slice(0, 10).join(' ').replace(/"/g, '”');
+}
+
+
+// ---- Laying a chapter out under its beats, with their prose (Sparrow Pocket's Write mode) ----
+// Kyle, 2026-11-22: "for pocket let's have the beats in write mode have a 3rd section--one for writing too". On the
+// phone each beat has its notes and its prose; the prose lives in the scenes, found by each beat's first words.
+
+export interface ChapterScene { path: string; id: string; body: string }
+
+export interface BeatView {
+  /** Stable while the page is open. */
+  key: string;
+  title: string;
+  summary: string;
+  /** The scene's path and ID. */
+  path: string;
+  scene: string;
+  /** The beat's prose, exactly as it stands in the scene. */
+  prose: string;
+  /** Prose at the start of a scene that comes before its first beat: shown without a heading, never saved as a beat. */
+  loose: boolean;
+  /** The beat's first words are no longer in its scene, so it shows no prose (its words sit in the beat above). */
+  lost: boolean;
+  /** The words it was found by, kept for a lost beat until Kyle gives it prose again. */
+  words: string;
+  /** Kyle's planning notes for the beat. */
+  notes: string;
+}
+
+export interface SceneShape { path: string; id: string; lead: string; tail: string }
+
+
+/** Lay a chapter's scenes out under its beats. Every paragraph lands in exactly one beat, in reading order. */
+export function layoutChapter(scenes: ChapterScene[], defs: BeatDef[]): { beats: BeatView[]; scenes: SceneShape[] } {
+  const ids = scenes.map((s) => s.id.toUpperCase());
+  const last = ids[ids.length - 1] || '';
+  const home = (d: BeatDef) => (d.scene && ids.indexOf(d.scene.toUpperCase()) >= 0 ? d.scene.toUpperCase() : last);
+  const beats: BeatView[] = [];
+  const shapes: SceneShape[] = [];
+  scenes.forEach((s) => {
+    const { lead, text } = splitLead(s.body);
+    const bl = blocks(text);
+    const tail = bl.length ? text.slice(bl[bl.length - 1].end) : text;
+    shapes.push({ path: s.path, id: s.id, lead, tail });
+    const mine = defs.filter((d) => home(d) === s.id.toUpperCase());
+    let pos = 0;
+    const found = mine.map((d) => {
+      if (!d.words) return { d, at: -1, lost: false };
+      for (let i = pos; i < bl.length; i++) {
+        if (startsWith(text.slice(bl[i].start, bl[i].end), d.words)) { pos = i + 1; return { d, at: i, lost: false }; }
+      }
+      return { d, at: -1, lost: true };
+    });
+    const starts = found.filter((f) => f.at >= 0).map((f) => f.at);
+    const slice = (from: number) => {
+      const to = starts.find((x) => x > from);
+      const end = to == null ? bl.length : to;
+      return end > from ? text.slice(bl[from].start, bl[end - 1].end) : '';
+    };
+    const first = starts.length ? starts[0] : bl.length;
+    if (first > 0) {
+      beats.push({ key: nextKey(), title: '', summary: '', path: s.path, scene: s.id, prose: text.slice(bl[0].start, bl[first - 1].end), loose: true, lost: false, words: '', notes: '' });
+    }
+    found.forEach((f) => {
+      beats.push({ key: nextKey(), title: f.d.title, summary: f.d.summary, path: s.path, scene: s.id, prose: f.at >= 0 ? slice(f.at) : '', loose: false, lost: f.lost, words: f.d.words, notes: f.d.notes || '' });
+    });
+  });
+  return { beats, scenes: shapes };
+}
+
+/** A scene's body put back together from its beats, in order. */
+export function sceneBody(shape: SceneShape, beats: BeatView[]): string {
+  const parts = beats.filter((b) => b.path === shape.path).map((b) => b.prose.replace(/^\s+|\s+$/g, '')).filter(Boolean);
+  const text = parts.join('\n\n');
+  const tail = parts.length ? (shape.tail || '\n') : '';
+  return (shape.lead || (text ? '\n' : '')) + text + tail;
+}
+
+/** The beats to save in the chapter's note: every beat with a heading, found again by its first words. */
+export function beatDefs(beats: BeatView[]): BeatDef[] {
+  return beats.filter((b) => !b.loose).map((b) => ({
+    title: b.title, summary: b.summary, scene: b.scene,
+    words: b.prose.trim() ? anchorOf(b.prose) : b.lost ? b.words : '', notes: b.notes
+  }));
+}
+
+/** Take a beat's heading off: its prose joins the beat above in the same scene, or stays as the scene's opening words. */
+export function removeBeat(beats: BeatView[], key: string): BeatView[] {
+  const i = beats.findIndex((b) => b.key === key);
+  if (i < 0) return beats;
+  const b = beats[i];
+  const out = beats.slice();
+  if (!b.prose.trim()) { out.splice(i, 1); return out; }
+  const above = out[i - 1];
+  if (above && above.path === b.path) {
+    out[i - 1] = { ...above, prose: [above.prose.trim(), b.prose.trim()].filter(Boolean).join('\n\n') };
+    out.splice(i, 1);
+  } else {
+    out[i] = { ...b, title: '', summary: '', loose: true, lost: false };
+  }
+  return out;
+}
+
+/** A new, empty beat right after this one, in the same scene. */
+export function addBeatAfter(beats: BeatView[], key: string, title: string): BeatView[] {
+  const i = beats.findIndex((b) => b.key === key);
+  const at = beats[i];
+  if (!at) return beats;
+  const out = beats.slice();
+  out.splice(i + 1, 0, { key: nextKey(), title, summary: '', path: at.path, scene: at.scene, prose: '', loose: false, lost: false, words: '', notes: '' });
+  return out;
+}
+
+/** Give a scene's opening words (the part before its first beat) a heading of their own. */
+export function nameLoose(beats: BeatView[], key: string, title: string): BeatView[] {
+  return beats.map((b) => (b.key === key ? { ...b, title, loose: false } : b));
+}
+
+/** Move a beat (and its prose) to just before another beat, or to the chapter's end when `before` is null.
+ * Every part of a scene is a beat (Kyle, 2026-10-19), so a scene's opening words move too: once moved, or once
+ * something lands in front of them, they become a beat of their own (no name yet) so the app can find them again.
+ * The beat joins the scene of the beat it lands next to (keeping its own scene at a scene break, else the one above).
+ * Returns the beats and the scenes whose words change. */
+export function moveBeat(beats: BeatView[], key: string, before: string | null): { beats: BeatView[]; touched: string[] } {
+  const b = beats.find((x) => x.key === key);
+  if (!b || before === key) return { beats, touched: [] };
+  const rest = beats.filter((x) => x.key !== key);
+  const at = before == null ? rest.length : rest.findIndex((x) => x.key === before);
+  if (at < 0) return { beats, touched: [] };
+  const above = rest[at - 1];
+  const below = rest[at];
+  const home = [above, below].find((x) => x && x.path === b.path) || above || below;
+  if (!home) return { beats, touched: [] };
+  const out = rest.slice();
+  out.splice(at, 0, { ...b, path: home.path, scene: home.scene, loose: false });
+  if (out.map((x) => x.key).join() === beats.map((x) => x.key).join() && home.path === b.path) return { beats, touched: [] };
+  // Only the first part of a scene may go without a saved heading.
+  const fixed = out.map((x, i) => (x.loose && i > 0 && out[i - 1].path === x.path ? { ...x, loose: false } : x));
+  return { beats: fixed, touched: b.path === home.path ? [b.path] : [b.path, home.path] };
+}
+
+/** A new, empty beat at the chapter's end: after its last beat, or as the first beat of its last scene when it has none. */
+export function addBeatAtEnd(beats: BeatView[], last: { path: string; id: string } | null): BeatView[] {
+  if (beats.length) return addBeatAfter(beats, beats[beats.length - 1].key, '');
+  if (!last) return beats;
+  return [{ key: nextKey(), title: '', summary: '', path: last.path, scene: last.id, prose: '', loose: false, lost: false, words: '', notes: '' }];
+}
+
+/** Take a beat out with its words and notes. They are saved to the Archive first (`deletedBeatText`). */
+export function deleteBeat(beats: BeatView[], key: string): BeatView[] {
+  return beats.filter((b) => b.key !== key);
+}
+
 
 // ---- Beats mode: the chapter's beats as a planning list (Kyle, 2026-11-22) ----
 // Each beat is its name, summary and notes. Adding, moving and deleting beats changes the beats note only; the scenes
@@ -188,11 +353,14 @@ export function deletedBeatPath(bookFolder: string, chapter: number, n: number, 
   return bookFolder + '/Archive/Deleted beats/Chapter ' + chapter + ' beat ' + n + (name ? ' ' + name : '') + ' ' + stamp + '.md';
 }
 
-/** The archived copy of a deleted beat: a line saying why, its heading and summary, then its notes as they stood. */
-export function deletedBeatText(b: BeatDef, chapter: number, n: number, now: Date): string {
-  const L = ['> [!note] Archived', '> Beat ' + n + ' of chapter ' + chapter + (b.scene ? ' (in ' + b.scene + ')' : '') + ', deleted with its notes in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.', ''];
+/** The archived copy of a deleted beat: a line saying why, its heading and summary, its notes, and its prose when it
+ * had any (Sparrow Pocket's beats carry both), as they stood. */
+export function deletedBeatText(b: BeatDef & { prose?: string }, chapter: number, n: number, now: Date): string {
+  const prose = (b.prose || '').replace(/^\s+|\s+$/g, '');
+  const L = ['> [!note] Archived', '> Beat ' + n + ' of chapter ' + chapter + (b.scene ? ' (in ' + b.scene + ')' : '') + ', deleted in the Sparrow app on ' + now.toISOString().slice(0, 10) + '.', ''];
   L.push('## ' + (oneLine(b.title) || UNTITLED));
   if (oneLine(b.summary)) L.push(oneLine(b.summary));
   L.push('', '### Notes', tidyNotes(b.notes) || '(No notes.)', '');
+  if (prose) L.push('### Its prose', prose, '');
   return L.join('\n');
 }
