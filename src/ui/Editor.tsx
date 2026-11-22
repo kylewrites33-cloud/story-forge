@@ -202,7 +202,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
      * failure, and the reply itself, which answers a plain sentence when it cannot be sent. */
     replying?: boolean; replyProblem?: string; onReply?: (path: string, id: string, words: string) => string | null };
   /** The book's saved drafts, saving the next one and exporting any of them to Word. */
-  drafts?: { saved: SavedDraft[]; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
+  drafts?: { saved: SavedDraft[]; final?: boolean; onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null> };
   /** The Writer's rewrite of the book (the copies in `Drafts/Rewrite/`), shown beside the page (2026-11-04); the chapters
    * Kyle is through; and Done with this chapter, which marks one (2026-11-05). */
   rewrite?: { files: FileEntry[]; done: number[]; onThrough?: (chapter: number, done: boolean) => Promise<string | null> } | null;
@@ -1730,7 +1730,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                 </div>
               )}
               {drafts && !beatsMode && (
-                <DraftMenu working={working} saved={savedList.map((d) => d.number)} viewing={shownDraft} onView={setDraftView} canSave={canSave}
+                <DraftMenu working={working} final={!!drafts.final && savedList.length > 0} saved={savedList.map((d) => d.number)} viewing={shownDraft} onView={setDraftView} canSave={canSave}
                   onExport={drafts.onExport}
                   onSave={async () => {
                     if (quiet.current) clearTimeout(quiet.current);
@@ -1795,7 +1795,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           ) : <>
           {pageHead}
           {shownDraft != null && (
-            <p class="draft-banner" role="status">Draft {shownDraft}, saved and read only. <button type="button" class="link" onClick={() => setDraftView(null)}>Back to Draft {working}</button></p>
+            <p class="draft-banner" role="status">Draft {shownDraft}, saved and read only. <button type="button" class="link" onClick={() => setDraftView(null)}>{drafts && drafts.final && savedList.length ? 'Back to the final draft' : 'Back to Draft ' + working}</button></p>
           )}
           {shownDraft == null && chNote && chCards.length > 0 && (
             <ChangesBar view={chView} onView={setChView} open={chOpenHere} total={chBookOpen}

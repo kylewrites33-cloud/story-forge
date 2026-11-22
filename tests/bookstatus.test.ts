@@ -82,3 +82,12 @@ test('a changes pass counts only its own changes, not the ones decided in earlie
   // A count kept for another pass is not used.
   assert.equal(make({ editing_pass: 'Draft 2: the rewrite', editing_pass_base: 2 }).percent, 50);
 });
+
+test('a book in publishing shows as done editing, even with a rewrite never marked through (Kyle, 2026-11-22: "there is no draft 5")', () => {
+  const { book, notes } = setup('B6', 'publish', 1, {}, { editing_end: '2026-11-21' });
+  book.drafts = [1, 2, 3, 4].map((number) => ({ number, note: null, files: [{ path: 'B6/Drafts/Draft ' + number + '/S-001 C1.md', sha: 'a' } as FileEntry] }));
+  book.rewrite = [{ path: 'B6/Drafts/Rewrite/S-001 C1.md', sha: 'r' } as FileEntry];
+  const st = bookStatus({ books: [book], notes } as unknown as VaultIndex, book, []);
+  assert.equal(st.phase, 'publishing');
+  assert.equal(st.stage, 'Getting it published');
+});

@@ -312,8 +312,11 @@ export function ChangesPanel({ echo, changes, placedIds, current, onAcceptAll, o
 
 /** Which draft the page shows (Kyle, 2026-10-24: draft 1 labelled and kept accessible): the working draft, or a saved
  * one read only. The menu also exports any draft to Word and saves the working draft to start the next. */
-export function DraftMenu({ working, saved, viewing, onView, onSave, onExport, canSave }: {
-  working: number; saved: number[]; viewing: number | null; onView: (n: number | null) => void;
+export function DraftMenu({ working, final = false, saved, viewing, onView, onSave, onExport, canSave }: {
+  working: number;
+  /** Editing is over: the scenes are the final draft, not a new draft being written (Kyle, 2026-11-22). */
+  final?: boolean;
+  saved: number[]; viewing: number | null; onView: (n: number | null) => void;
   onSave: () => Promise<string | null>; onExport: (n: number | null) => Promise<string | null>; canSave: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -327,18 +330,20 @@ export function DraftMenu({ working, saved, viewing, onView, onSave, onExport, c
     setSaid(err ? { error: true, text: err } : { error: false, text: ok });
   };
   const shown = viewing == null ? working : viewing;
+  // The draft he writes in: "Final draft" once editing is over, never a draft number one past the last saved one.
+  const label = (n: number | null) => (n == null && final ? 'Final draft' : 'Draft ' + (n == null ? working : n));
   return (
     <div class="more-wrap draft-wrap">
       <button type="button" class={'draft-button' + (viewing != null ? ' old' : '')} aria-expanded={open} onClick={() => { setOpen(!open); setSaid(null); }}
         title="Which draft you are looking at">
-        Draft {shown}{viewing != null ? ' · read only' : ''}<Icon name={open ? 'up' : 'down'} size={16} />
+        {label(viewing)}{viewing != null ? ' · read only' : ''}<Icon name={open ? 'up' : 'down'} size={16} />
       </button>
       {open && (
         <>
           <button type="button" class="more-backdrop" aria-label="Close" tabIndex={-1} onClick={() => setOpen(false)} />
           <div class="more-menu draft-menu" role="menu">
             <button type="button" role="menuitemradio" aria-checked={viewing == null} onClick={() => { onView(null); setOpen(false); }}>
-              <Icon name={viewing == null ? 'check' : 'pen'} size={18} /><span>Draft {working} <span class="meta">· the one you write in</span></span>
+              <Icon name={viewing == null ? 'check' : 'pen'} size={18} /><span>{label(null)} <span class="meta">· the one you write in</span></span>
             </button>
             {saved.slice().reverse().map((n) => (
               <button key={n} type="button" role="menuitemradio" aria-checked={viewing === n} onClick={() => { onView(n); setOpen(false); }}>
@@ -346,10 +351,10 @@ export function DraftMenu({ working, saved, viewing, onView, onSave, onExport, c
               </button>
             ))}
             <span class="menu-sep" aria-hidden="true" />
-            <button type="button" role="menuitem" disabled={busy} onClick={() => run(() => onExport(viewing), 'Made the Word file of Draft ' + shown + '. Look for it in your downloads.')}>
-              <Icon name="download" size={18} /><span>Export Draft {shown} to Word</span>
+            <button type="button" role="menuitem" disabled={busy} onClick={() => run(() => onExport(viewing), 'Made the Word file of the ' + (viewing == null && final ? 'final draft' : 'Draft ' + shown) + '. Look for it in your downloads.')}>
+              <Icon name="download" size={18} /><span>Export {viewing == null && final ? 'the final draft' : 'Draft ' + shown} to Word</span>
             </button>
-            {canSave && !asking && (
+            {canSave && !final && !asking && (
               <button type="button" role="menuitem" disabled={busy} onClick={() => setAsking(true)}>
                 <Icon name="plus" size={18} /><span>{working === 1 ? 'Save Draft 1 before editing' : 'Save Draft ' + working + ' and start Draft ' + (working + 1)}</span>
               </button>
