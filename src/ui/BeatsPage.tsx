@@ -1,13 +1,15 @@
-// A chapter by its beats: each beat is a closed row with its number, title and one-line summary; open one to read and
-// edit its prose right under a slim title row. The scenes keep only the story; the beats live in the book's
-// `Chapter Beats/` note for the chapter (see lib/beats.ts). Everything Kyle types is kept on the device at once and saves
-// the same way as the writing screen: Done, two quiet minutes, putting the iPad down, or back online.
+// A chapter by its beats: each beat is a closed row with its number, title and one-line summary; open one to write
+// planning notes under it. Since 2026-11-22 the words in a beat are Kyle's notes, never the chapter's prose (Kyle: "the
+// text inside each beat is room for my planning thoughts. So when I write on beat mode, the text doesn't go into the
+// word processor. It's just brainstorming for me as I prewrite the chapter"). The beats and their notes live in the
+// book's `Chapter Beats/` note for the chapter (see lib/beats.ts); the scenes are never changed here. Everything Kyle
+// types is kept on the device at once and saves the same way as the writing screen: two quiet minutes, putting the iPad
+// down, or back online.
 import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
-  BEATS_TYPE, addBeatAfter, introOf, addBeatAtEnd, beatDefs, beatsBody, beatsPath, beatsTitle, deleteBeat, deletedBeatPath, deletedBeatText, layoutChapter,
-  moveBeat, nameLoose, parseBeats, removeBeat, sceneBody,
-  type BeatView, type SceneShape
+  BEATS_TYPE, addPlanBeat, introOf, beatsBody, beatsPath, beatsTitle, deletePlanBeat, deletedBeatPath, deletedBeatText,
+  movePlanBeat, parseBeats, planBeats, planDefs, type PlanBeat
 } from '../lib/beats.ts';
 import { chapterHeading, type ChapterGroup } from '../lib/board.ts';
 import { matcher, type CodexEntry } from '../lib/codex.ts';
@@ -16,7 +18,6 @@ import { saveDraft } from '../vault/words.ts';
 import { sceneHeader } from '../lib/format.ts';
 import { Frontmatter } from '../lib/frontmatter.js';
 import { loadLook } from '../lib/page.ts';
-import { trackWords } from '../lib/pomodoro.ts';
 import type { StyleOptions } from '../lib/styled.ts';
 import type { DeviceFile, NoteRecord, VaultSource } from '../lib/types.ts';
 import { Icon } from './Icon.tsx';
@@ -32,19 +33,18 @@ const TYPING_SAVE_MS = 5 * 60 * 1000;
 const num = (n: number) => n.toLocaleString('en-US');
 
 interface State {
-  scenes: Record<string, Draft>;
   beatsDraft: Draft;
   /** Text above the first beat in the note, kept as it is. */
   intro: string;
-  shapes: SceneShape[];
-  beats: BeatView[];
+  beats: PlanBeat[];
 }
+
+/** The chapter's last scene: where a beat with no scene of its own sits (as Sparrow Pocket reads it, lib/phone-beats.ts). */
+const lastSceneId = (group: ChapterGroup) => { const l = group.scenes[group.scenes.length - 1]; return l ? propText(l, 'id').toUpperCase() : ''; };
 
 function start(source: VaultSource, group: ChapterGroup, bookFolder: string, beatsNote: NoteRecord | null): State {
   const now = new Date();
   const drafts = loadDrafts(source.key);
-  const scenes: Record<string, Draft> = {};
-  group.scenes.forEach((n) => { scenes[n.path] = openDraft(n, drafts[n.path], now); });
   const chapter = group.num as number;
   const path = beatsNote ? beatsNote.path : beatsPath(bookFolder, chapter);
   const kept = drafts[path];
@@ -52,8 +52,9 @@ function start(source: VaultSource, group: ChapterGroup, bookFolder: string, bea
     : kept && kept.create && isUnsaved(kept) ? kept
     : { path, baseSha: '', baseBody: '', body: '', target: null, startWords: 0, updatedAt: now.toISOString(), pending: false,
       create: Frontmatter.join({ type: BEATS_TYPE, title: beatsTitle(chapter), chapter }, '') };
-  const laid = layoutChapter(group.scenes.map((n) => ({ path: n.path, id: propText(n, 'id'), body: scenes[n.path].body })), parseBeats(beatsDraft.body));
-  return { scenes, beatsDraft, intro: introOf(beatsDraft.body), shapes: laid.scenes, beats: laid.beats };
+  const last = lastSceneId(group);
+  const beats = planBeats(parseBeats(beatsDraft.body).map((d) => ({ ...d, scene: d.scene || last })));
+  return { beatsDraft, intro: introOf(beatsDraft.body), beats };
 }
 
 const openKey = (bookFolder: string, chapter: number | null) => PREF.beatsOpen + bookFolder + '#' + chapter;
@@ -180,22 +181,22 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     return () => clearInterval(t);
   }, [drag && drag.key]);
   const move = (key: string, before: string | null) => {
-    const r = moveBeat(ref.current.beats, key, before);
-    if (!r.touched.length) return;
-    apply(r.beats, r.touched, false);
-    keepOpen(new Set(open), r.beats);
+    const next = movePlanBeat(ref.current.beats, key, before);
+    if (next === ref.current.beats) return;
+    apply(next);
+    keepOpen(new Set(open), next);
   };
   const keepOpen = (next: Set<string>, beats = ref.current.beats) => {
     setOpen(next);
     writePref(okey, JSON.stringify(beats.map((b, i) => (next.has(b.key) ? i : -1)).filter((i) => i >= 0)));
   };
 
-  const unsavedAll = (s: State) => Object.values(s.scenes).some(isUnsaved) || isUnsaved(s.beatsDraft);
+  const unsavedAll = (s: State) => isUnsaved(s.beatsDraft);
 
-  /** Save every scene with unsaved words, then the beats. */
+  /** Save the beats note. */
   const saveAll = useCallback(async (closing: boolean): Promise<boolean> => {
     const cur = ref.current;
-    const todo = Object.values(cur.scenes).filter(isUnsaved).concat(isUnsaved(cur.beatsDraft) ? [cur.beatsDraft] : []);
+    const todo = isUnsaved(cur.beatsDraft) ? [cur.beatsDraft] : [];
     if (!todo.length) return true;
     if (!canSave) { setState('device'); setMessage('The demo vault keeps your changes until the page reloads.'); return true; }
     if (!navigator.onLine) {
@@ -215,14 +216,11 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
         onSaved(r.note);
         if (r.clash) clashes.push(String(r.note.data.id || r.note.data.title || d.path));
         else if (r.merged) mergedIn.push(String(r.note.data.id || r.note.data.title || d.path));
-        const now = ref.current;
-        const isBeats = d.path === now.beatsDraft.path;
-        const latest = isBeats ? now.beatsDraft : now.scenes[d.path];
+        const latest = ref.current.beatsDraft;
         const next: Draft = { ...latest, baseSha: r.merged ? '' : r.note.sha, baseBody: d.body, pending: false, error: undefined, create: undefined };
         if (closing && !isUnsaved(next)) putDraft(source.key, d.path, null);
         else putDraft(source.key, d.path, next);
-        const s2 = ref.current;
-        ref.current = isBeats ? { ...s2, beatsDraft: next } : { ...s2, scenes: { ...s2.scenes, [d.path]: next } };
+        ref.current = { ...ref.current, beatsDraft: next };
         setSt(ref.current);
       } catch (e) {
         ok = false;
@@ -240,33 +238,19 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     return ok;
   }, [source, canSave, onSaved]);
 
-  /** New beats: the scenes they touch and the beats note follow, and everything is kept on the device. A beat moved
-   *  to another scene is not typed, so it counts in no words typed (`typed` false). */
-  const apply = (beats: BeatView[], touched: string[], typed = true) => {
+  /** New beats: the beats note follows, kept on the device at once. The scenes are never touched. */
+  const apply = (beats: PlanBeat[]) => {
     const cur = ref.current;
-    const scenes = { ...cur.scenes };
     const at = new Date().toISOString();
-    touched.forEach((path) => {
-      const shape = cur.shapes.find((s) => s.path === path);
-      const d = scenes[path];
-      if (!shape || !d) return;
-      const body = sceneBody(shape, beats);
-      if (body === d.body) return;
-      const note = group.scenes.find((n) => n.path === path);
-      if (typed) trackWords(path, String((note && note.data.id) || ''), bodyWords(d.body), bodyWords(body));
-      scenes[path] = { ...d, body, updatedAt: at };
-      putDraft(source.key, path, scenes[path]);
-    });
-    const defs = beatDefs(beats);
     let beatsDraft = cur.beatsDraft;
-    if (defs.length || beatsDraft.baseSha) {
-      const body = (cur.intro ? '\n' + cur.intro + '\n' : '') + beatsBody(defs);
+    if (beats.length || beatsDraft.baseSha) {
+      const body = (cur.intro ? '\n' + cur.intro + '\n' : '') + beatsBody(planDefs(beats));
       if (body !== beatsDraft.body) {
         beatsDraft = { ...beatsDraft, body, updatedAt: at };
         putDraft(source.key, beatsDraft.path, beatsDraft);
       }
     }
-    ref.current = { ...cur, scenes, beatsDraft, beats };
+    ref.current = { ...cur, beatsDraft, beats };
     setSt(ref.current);
     if (state !== 'error') setState('idle');
     if (quiet.current) clearTimeout(quiet.current);
@@ -275,14 +259,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     else if (Date.now() - typingSince.current >= TYPING_SAVE_MS) { typingSince.current = null; saveAll(false); }
   };
 
-  const edit = (key: string, change: Partial<BeatView>, structural = false) => {
-    const cur = ref.current;
-    const b = cur.beats.find((x) => x.key === key);
-    if (!b) return;
-    let beats = cur.beats.map((x) => (x.key === key ? { ...x, ...change } : x));
-    if (b.loose && (change.title || change.summary)) beats = nameLoose(beats, key, change.title ?? b.title).map((x) => (x.key === key ? { ...x, ...change } : x));
-    apply(beats, change.prose != null ? [b.path] : []);
-    if (structural) setRev((r) => r + 1);
+  const edit = (key: string, change: Partial<PlanBeat>) => {
+    apply(ref.current.beats.map((x) => (x.key === key ? { ...x, ...change } : x)));
   };
 
   // The team wrote new beats (a job finished) while nothing here waits to save: show them.
@@ -308,8 +286,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
       document.removeEventListener('visibilitychange', away);
       window.removeEventListener('keydown', key);
       if (quiet.current) clearTimeout(quiet.current);
-      const cur = ref.current;
-      Object.values(cur.scenes).concat([cur.beatsDraft]).forEach((d) => { if (isUnsaved(d)) putDraft(source.key, d.path, { ...d, pending: true }); });
+      const d = ref.current.beatsDraft;
+      if (isUnsaved(d)) putDraft(source.key, d.path, { ...d, pending: true });
     };
   }, [source, saveAll]);
 
@@ -325,24 +303,17 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
   }, []);
   const cmd = () => { const c = commands.current[focused]; return c ? c.current : null; };
-  const focusedProse = (beats.find((b) => b.key === focused) || { prose: '' }).prose;
+  const focusedNotes = (beats.find((b) => b.key === focused) || { notes: '' }).notes;
   if (api) api.current = { cmd };
-  useEffect(() => { if (onActive) onActive(focusedProse); }, [focused, focusedProse]);
-  useEffect(() => {
-    if (!onWords) return;
-    const w: Record<string, number> = {};
-    Object.values(st.scenes).forEach((d) => { w[d.path] = bodyWords(d.body); });
-    onWords(w);
-  }, [st.scenes]);
+  useEffect(() => { if (onActive) onActive(focusedNotes); }, [focused, focusedNotes]);
   // Add a beat: after the beat Kyle is in, else at the chapter's end; it opens with its name ready to type (Kyle, 2026-10-22).
   const addBeat = () => {
     const cur = ref.current.beats;
-    const last = group.scenes[group.scenes.length - 1];
-    const next = focused && cur.some((x) => x.key === focused) ? addBeatAfter(cur, focused, '')
-      : addBeatAtEnd(cur, last ? { path: last.path, id: propText(last, 'id') } : null);
+    if (!group.scenes.length) return;
+    const next = addPlanBeat(cur, focused && cur.some((x) => x.key === focused) ? focused : null, '', lastSceneId(group));
     const k = next.find((x) => !cur.some((y) => y.key === x.key));
     if (!k) return;
-    apply(next, []);
+    apply(next);
     keepOpen(new Set([...open, k.key]), next);
     setTimeout(() => {
       const el = document.querySelector<HTMLInputElement>('[data-beat="' + k.key + '"] .beat-title');
@@ -375,34 +346,35 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     onContextMenu: (e: MouseEvent) => { e.preventDefault(); if (Date.now() - hold.current.fired > 800) openMenu(key); },
     onFocus: (e: FocusEvent) => { if (Date.now() - hold.current.fired < 800) (e.target as HTMLElement).blur(); }
   });
-  /** Delete a beat and its words: the words go to the book's Archive first, so nothing of Kyle's is lost. */
-  const remove = async (b: BeatView, at: number) => {
+  /** Delete a beat and its notes: the beat goes to the book's Archive first, so nothing of Kyle's is lost. */
+  const remove = async (b: PlanBeat, at: number) => {
     const chapter = group.num as number;
-    if (b.prose.trim() && canSave) {
-      if (!navigator.onLine) { setMenu(null); setState('error'); setMessage('Deleting a beat needs the internet, so its words can go to the Archive first. Try again when you are online.'); return; }
+    const keepCopy = Boolean(b.notes || b.summary.trim());
+    if (keepCopy && canSave) {
+      if (!navigator.onLine) { setMenu(null); setState('error'); setMessage('Deleting a beat needs the internet, so its notes can go to the Archive first. Try again when you are online.'); return; }
       setDeleting(true);
       const now = new Date();
       try {
-        const why = 'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.';
+        const why = 'beats: archive chapter ' + chapter + ' beat ' + at + '\n\nDeleted with its notes in the Sparrow app; the beat as it stood is kept here.';
         const path = deletedBeatPath(bookFolder, chapter, at, b.title, now), words = deletedBeatText(b, chapter, at, now);
         await onFiles([{ path, taken: 'next', text: words, message: why }]);
       } catch (e) {
         setDeleting(false);
         setMenu(null);
         setState('error');
-        setMessage('The beat was not deleted, because its words could not be copied to the Archive: ' + (e as Error).message);
+        setMessage('The beat was not deleted, because its notes could not be copied to the Archive: ' + (e as Error).message);
         return;
       }
       setDeleting(false);
     }
     setMenu(null);
-    const next = deleteBeat(ref.current.beats, b.key);
+    const next = deletePlanBeat(ref.current.beats, b.key);
     const o = new Set(open); o.delete(b.key);
-    apply(next, [b.path], false);
+    apply(next);
     keepOpen(o, next);
     setRev((r) => r + 1);
     await saveAll(false);
-    setMessage(b.prose.trim() && canSave ? 'Beat ' + at + ' is deleted. Its words are in the book\'s Archive, in Deleted beats.' : 'Beat ' + at + ' is deleted.');
+    setMessage(keepCopy && canSave ? 'Beat ' + at + ' is deleted. A copy is in the book\'s Archive, in Deleted beats.' : 'Beat ' + at + ' is deleted.');
   };
 
   let n = 0;
@@ -411,7 +383,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
     <>
           <div class="page-head">
             {head || <h1>{chapterHeading(group)}</h1>}
-            <p class="meta">The chapter by its beats. Press a number to open or close a beat. Hold a beat's name to delete it. Change any words in place; they save like the page.</p>
+            <p class="meta">Your planning notes for the chapter, beat by beat. What you write in a beat stays with the beat and never goes into the chapter. Press a number to open or close a beat. Hold a beat's name to delete it.</p>
             {message && <p class={state === 'error' ? 'error' : 'note-line'}>{message}</p>}
             {asking ? <p class="tool-said ok" role="status"><span class="job-dot" aria-hidden="true" /> The team is working on this chapter's beats. They show here when it is done.</p>
               : problem && <p class="error" role="status">{problem}</p>}
@@ -424,9 +396,8 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
           <div class={'beats' + (drag && drag.moved && drag.before === null ? ' drop-end' : '')}>
             {beats.map((b, i) => {
               const isOpen = open.has(b.key);
-              const newScene = i === 0 || beats[i - 1].path !== b.path;
-              const note = group.scenes.find((s) => s.path === b.path);
-              // Every part of a scene is a beat, named or not (Kyle, 2026-10-19).
+              const newScene = i === 0 || beats[i - 1].scene !== b.scene;
+              const note = group.scenes.find((s) => propText(s, 'id').toUpperCase() === b.scene);
               const label = 'Beat ' + (n + 1);
               n++;
               const shown = n;
@@ -438,10 +409,10 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                   {newScene && (
                     <p class="beat-scene">
                       {i > 0 && <span class="beat-break" aria-hidden="true">~</span>}
-                      <a href={href.write(b.path)} data-beats-scene={b.path} onClick={(e) => { e.preventDefault(); onOpen(b.path); }}>{[b.scene, note ? sceneHeader(note.data) : ''].filter(Boolean).join(' ')}</a>
+                      {note ? <a href={href.write(note.path)} data-beats-scene={note.path} onClick={(e) => { e.preventDefault(); onOpen(note.path); }}>{[b.scene, sceneHeader(note.data)].filter(Boolean).join(' ')}</a> : b.scene}
                     </p>
                   )}
-                  <section class={'beat' + (isOpen ? ' open' : '') + (b.loose ? ' loose' : '') + (dragging ? ' dragging' : '') + (drag && drag.moved && drag.before === b.key ? ' drop-before' : '')}
+                  <section class={'beat' + (isOpen ? ' open' : '') + (dragging ? ' dragging' : '') + (drag && drag.moved && drag.before === b.key ? ' drop-before' : '')}
                     data-beat={b.key} style={dragging ? { transform: 'translateY(' + (drag!.y - drag!.startY + ((beatsScroller() || { scrollTop: 0 }).scrollTop - drag!.startScroll)) + 'px)' } : undefined}>
                     <div class="beat-row">
                       <div class="beat-left">
@@ -477,23 +448,21 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                           placeholder="Name this beat" {...holdProps(b.key)}
                           onInput={(e) => edit(b.key, { title: (e.target as HTMLInputElement).value })}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }} />
-                        {!isOpen && <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />}
-                        {!isOpen && b.lost && <p class="beat-lost">Its first words changed in the page, so its prose now sits in the beat above.</p>}
-                        {!isOpen && !b.prose.trim() && !b.lost && <p class="beat-lost">No prose yet.</p>}
+                        <Summary value={b.summary} label={label + ' summary'} onInput={(v) => edit(b.key, { summary: v })} />
+                        {!isOpen && b.notes && <p class="beat-lost">{num(bodyWords(b.notes))} words of notes</p>}
                       </div>
                     </div>
                     {menu && menu.key === b.key && (
                       <div class="side-menu beat-menu" role="menu" aria-label={label}>
                         {menu.confirm ? (
                           <>
-                            <p class="beat-menu-ask">{b.prose.trim() ? 'Delete ' + label.toLowerCase() + ' and its ' + num(bodyWords(b.prose)) + ' words? A copy goes to the book\'s Archive.' : 'Delete ' + label.toLowerCase() + '?'}</p>
+                            <p class="beat-menu-ask">{b.notes ? 'Delete ' + label.toLowerCase() + ' and its ' + num(bodyWords(b.notes)) + ' words of notes? A copy goes to the book\'s Archive.' : 'Delete ' + label.toLowerCase() + '?'}</p>
                             <button type="button" role="menuitem" class="beat-menu-delete" disabled={deleting} onClick={() => remove(b, shown)}><Icon name="archive" size={18} />{deleting ? 'Deleting…' : 'Yes, delete it'}</button>
                             <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setMenu(null)}>Cancel</button>
                           </>
                         ) : (
                           <>
-                            <button type="button" role="menuitem" class="beat-menu-delete" onClick={() => setMenu({ key: b.key, confirm: true })}><Icon name="archive" size={18} />Delete beat and its words</button>
-                            {!b.loose && <button type="button" role="menuitem" onClick={() => { setMenu(null); apply(removeBeat(ref.current.beats, b.key), [b.path]); setRev((r) => r + 1); }}><Icon name="close" size={18} />Take off the name, keep the words</button>}
+                            <button type="button" role="menuitem" class="beat-menu-delete" onClick={() => setMenu({ key: b.key, confirm: true })}><Icon name="archive" size={18} />Delete beat and its notes</button>
                             <button type="button" role="menuitem" class="side-menu-cancel" onClick={() => setMenu(null)}>Cancel</button>
                           </>
                         )}
@@ -501,8 +470,9 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
                     )}
                     {isOpen && (
                       <div class="beat-body" data-active={focused === b.key ? '' : undefined} onFocusCapture={() => setFocused(b.key)}>
-                        <ProseEditor key={b.key + ':' + rev} value={b.prose} onChange={(t) => edit(b.key, { prose: t, lost: false })} onCaret={() => {}}
-                          label={'Prose of ' + label} commands={c} options={opts} onName={onName} onLook={onLook} />
+                        <p class="beat-notes-label">Your notes{b.notes ? '' : ': type your thoughts for this beat. They stay here and never go into the chapter.'}</p>
+                        <ProseEditor key={b.key + ':' + rev} value={b.notes} onChange={(t) => edit(b.key, { notes: t })} onCaret={() => {}}
+                          label={'Notes for ' + label} commands={c} options={opts} onName={onName} onLook={onLook} />
                       </div>
                     )}
                   </section>
@@ -510,7 +480,7 @@ export function BeatsView({ source, group, bookFolder, beatsNote, codex, startAt
               );
             })}
           </div>
-          {!beats.length && <p class="empty">This chapter has no scenes yet.</p>}
+          {!beats.length && <p class="empty">{group.scenes.length ? 'No beats yet. Add a beat to start planning this chapter.' : 'This chapter has no scenes yet.'}</p>}
           <div class="writer-done">
             <span class="meta">{n === 1 ? '1 beat' : n + ' beats'}</span>
             <button type="button" onClick={() => onOpen(startAt)}><Icon name="page" size={18} />Back to the page</button>

@@ -317,7 +317,18 @@ add a dated line here when you add or change one.
   its page area showing the scene's chapter by its beats (chapter list, right column and top bar stay; the top bar's Beats
   button becomes Page to switch back, Kyle 2026-10-18), each a closed row (number, title, one-line summary); open one for a slim title row with its prose right under
   it (the summary hides while open); Open all, Close all; title, summary and prose are edited in place and save like the
-  writing screen. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
+  writing screen. **Since 2026-11-22 a beat holds planning notes, not prose** (Kyle: "Sparrow pocket has made me realize
+  we should reframe beat mode. Im not using it to write in, so I should use it to pre write. Let's make it so that the
+  text inside each beat is room for my planning thoughts. So when I write on beat mode, the text doesn't go into the
+  word processor. It's just brainstorming for me as I prewrite the chapter"): an open beat shows its summary and, under
+  "Your notes", a box for Kyle's thoughts, saved in the beats note under the beat after a `### Notes` line and never in a
+  scene. Beats mode no longer shows or changes the chapter's prose: adding, moving (it takes the scene of the beat it
+  lands by) and deleting beats change the beats note only, a chapter starts with no beats until Kyle adds one, Delete
+  beat archives the beat with its summary and notes (needs the internet when it has either), and Take off the name is
+  gone. Notes are not counted in the day's words. The side column's Beats tab shows each beat's notes under its summary,
+  to write from. The prose that was in beats before stays in the scenes, where it always lived. `sf packet` leaves the
+  notes out, and the team's beats job carries them over word for word. Older text below about a beat's prose describes
+  how it worked before. The scenes keep only the story: a chapter's beats live in the book's `Chapter Beats/Chapter N beats.md`
   (`chapter-beats`), each beat with `Starts: S-NNN · <first ten words>` so the app finds where its prose begins (see
   `src/lib/beats.ts`). Prose before a scene's first beat shows as an unnamed beat.
   Tidied 2026-10-22 (Kyle: "i dont like the 3 options taking up space in each beat box"): the beat boxes have no buttons
@@ -2073,6 +2084,12 @@ halfway), a choice that is already so counts as applied and is not made again, a
 waits for the next run. Checked against a pretend GitHub: the same choices made on the phone and put in here, and made
 directly in the Edit room, left the changes note, the to-do, the reply ask and the scene the same, byte for byte.
 Not put in on the writing screen, so it never changes a scene under Kyle's cursor.
+
+**Write mode on the phone holds planning notes (2026-11-22).** As in Beats mode, a beat's words are Kyle's notes and
+never go into the chapter: the box is "Your notes", the list shows each beat's first line of notes (else its summary),
+the chapters list counts "words of notes", and every choice changes the beats note only. Notes changed on the same lines
+on both ends keep both, the phone's under the iPad's after "From your phone:". A beat is found by its scene, name and
+Starts words, so a change to the prose never moves its ID. The paragraph below describes the first version.
 
 **Write mode on the phone (2026-11-21).** Kyle: "can you make a writing mode, too? so theres writing and editing? maybe
 we can use the beat mode. and i can open each beat and write in it, rewrite beat titles, and add, delete, or move beats

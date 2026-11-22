@@ -17,7 +17,7 @@ import { jobNotes } from '../lib/jobs.ts';
 import { bookChapters, chapterKey, decidedOnPhone, deck, inChapter, pageText, paragraphs, phoneAliases, pocketBooks, readPlace, replaceParagraph, replayChapter, waitingInVault, type DeckCard, type Paragraph, type PocketChapter, type Replayed, type Waiting } from '../lib/pocket.ts';
 import { cleanParagraph, type PhoneKind } from '../lib/phone-choices.ts';
 import { beatWords, findBeat, moveTarget } from '../lib/phone-beats.ts';
-import type { BeatView } from '../lib/beats.ts';
+import type { PlanBeat } from '../lib/beats.ts';
 import { PREF, readJson, readPref, writeJson, writePref } from '../lib/prefs.ts';
 import { isConnected, loadSettings, phoneLink, saveSettings, type Settings } from '../lib/settings.ts';
 import type { BookEntry, NoteRecord, VaultIndex } from '../lib/types.ts';
@@ -320,14 +320,14 @@ function HomeScreen({ vault, here, books, banners, demo, onBook }: { vault: Pock
         {listed.map((c) => {
           const left = leftOf.get(c) || 0;
           const laid = here!.replay(c).laid;
-          const words = laid.beats.reduce((t, b) => t + beatWords(b.prose), 0);
+          const words = laid.beats.reduce((t, b) => t + beatWords(b.notes), 0);
           const href = mode === 'write' ? to.write(chapterKey(c)) : left ? to.cards(chapterKey(c)) : to.read(chapterKey(c));
           return (
             <li key={chapterKey(c)}>
               <a class={'pk-row' + (carry && c === carry && mode === 'edit' ? ' on' : '')} href={href}>
                 <span class="pk-row-num">{c.chapter}</span>
                 <span class="pk-row-title">{c.title || 'Chapter ' + c.chapter}
-                  <span class="pk-row-sub">{plural(laid.beats.length, 'beat', 'beats') + ' · ' + plural(words, 'word', 'words').replace(/^\d+/, (d) => Number(d).toLocaleString('en-US'))}</span>
+                  <span class="pk-row-sub">{plural(laid.beats.length, 'beat', 'beats') + (words ? ' · ' + wordsSaid(words) + ' of notes' : '')}</span>
                 </span>
                 <span class={'pk-row-end' + (left ? ' pk-count' : '')}>{left ? plural(left, 'card', 'cards') : c.note ? '✓ done' : 'no cards'}</span>
               </a>
@@ -675,15 +675,18 @@ function ChapterSwitch({ here, ch, mode }: { here: Here; ch: PocketChapter; mode
   }} />;
 }
 
-// ---- Write: the chapter by its beats (2026-11-21) ----
+// ---- Write: the chapter by its beats (2026-11-21), for planning notes (2026-11-22) ----
+// Kyle, 2026-11-22: "the text inside each beat is room for my planning thoughts. So when I write on beat mode, the text
+// doesn't go into the word processor. It's just brainstorming for me as I prewrite the chapter". A beat's words here are
+// its notes in the beats note; the scenes are never changed from Write mode.
 
 /** A new beat's ID on the phone, until the iPad saves it and gives it its own. */
 const newBeatId = () => 'new-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 /** The beat just added, so it opens with its name ready to type (as Beats mode's Add a beat does). */
 let justAdded = '';
 
-const beatLabel = (b: BeatView, i: number) => 'beat ' + (i + 1) + (b.title ? ', ' + b.title : '');
-const nameOf = (b: BeatView) => b.title || (b.loose ? 'Opening words, no name yet' : 'No name yet');
+const beatLabel = (b: PlanBeat, i: number) => 'beat ' + (i + 1) + (b.title ? ', ' + b.title : '');
+const nameOf = (b: PlanBeat) => b.title || 'No name yet';
 function firstLine(prose: string): string {
   const line = prose.split('\n').map((l) => l.replace(/^\s*>\s?/, '').replace(/[*_=`]/g, '').trim()).find(Boolean) || '';
   return line.length > 90 ? line.slice(0, 88).replace(/\s+\S*$/, '') + '…' : line;
@@ -708,7 +711,7 @@ function WriteScreen({ here, ch }: { here: Here; ch: PocketChapter }) {
   const ck = chapterKey(ch);
   const { laid } = here.replay(ch);
   const beats = laid.beats;
-  const total = beats.reduce((t, b) => t + beatWords(b.prose), 0);
+  const total = beats.reduce((t, b) => t + beatWords(b.notes), 0);
   const add = () => {
     const id = newBeatId();
     vault.record({ ...beatBase(here, ch), kind: 'beat-add', beat: id, beatName: 'beat ' + (beats.length + 1), place: 'end', now: '' });
@@ -718,20 +721,20 @@ function WriteScreen({ here, ch }: { here: Here; ch: PocketChapter }) {
   return (
     <main class="pk pk-write">
       {banners}
-      <WriteHead here={here} ch={ch} sub={plural(beats.length, 'beat', 'beats') + ' · ' + wordsSaid(total)} />
-      <p class="pk-quiet">Press a beat to write in it, name it, move it or delete it.</p>
+      <WriteHead here={here} ch={ch} sub={plural(beats.length, 'beat', 'beats') + (total ? ' · ' + wordsSaid(total) + ' of notes' : '')} />
+      <p class="pk-quiet">Your planning notes for the chapter, beat by beat. They never go into the chapter's words. Press a beat to write notes in it, name it, move it or delete it.</p>
       <ol class="pk-beats">
         {beats.map((b, i) => {
-          const newScene = i === 0 || beats[i - 1].path !== b.path;
-          const n = beatWords(b.prose);
+          const newScene = i === 0 || beats[i - 1].scene !== b.scene;
+          const n = beatWords(b.notes);
           return (
             <li key={b.key}>
               {newScene && i > 0 && <p class="pk-beatscene" aria-hidden="true">~ {b.scene}</p>}
-              <a class={'pk-beat' + (b.loose ? ' loose' : '')} href={to.write(ck, b.key)} data-beat={b.key}>
+              <a class="pk-beat" href={to.write(ck, b.key)} data-beat={b.key}>
                 <span class="pk-beat-num">{i + 1}</span>
                 <span class="pk-beat-main">
                   <b>{nameOf(b)}</b>
-                  <span>{b.lost ? 'Its first words changed, so its words sit in the beat above.' : firstLine(b.prose) || 'No words yet.'}</span>
+                  <span>{firstLine(b.notes) || b.summary || 'No notes yet.'}</span>
                 </span>
                 <span class="pk-beat-words">{n ? wordsSaid(n) : ''}</span>
               </a>
@@ -739,7 +742,7 @@ function WriteScreen({ here, ch }: { here: Here; ch: PocketChapter }) {
           );
         })}
       </ol>
-      {!beats.length && <p class="pk-quiet">This chapter has no scenes yet.</p>}
+      {!beats.length && <p class="pk-quiet">{ch.scenes.length ? 'This chapter has no beats yet.' : 'This chapter has no scenes yet.'}</p>}
       <p class="pk-buttons"><button type="button" class="pk-wide" disabled={!ch.scenes.length} onClick={add}>Add a beat at the end</button></p>
       <footer class="pk-foot"><SendLine here={here} vault={vault} /></footer>
     </main>
@@ -756,7 +759,7 @@ function BeatScreen({ here, ch, beatId }: { here: Here; ch: PocketChapter; beatI
   const beats = r.laid.beats;
   const b = findBeat(beats, beatId, r.alias);
   const i = b ? beats.indexOf(b) : -1;
-  const [words, setWords] = useState(b ? b.prose : '');
+  const [words, setWords] = useState(b ? b.notes : '');
   const [title, setTitle] = useState(b ? b.title : '');
   const [asking, setAsking] = useState(false);
   // One choice per beat and sitting, changed as he types while it is still on the phone.
@@ -778,7 +781,7 @@ function BeatScreen({ here, ch, beatId }: { here: Here; ch: PocketChapter; beatI
     const name = beatLabel({ ...c.b, title: c.title }, c.i);
     if (d.words != null) {
       if (!(st.write && vault.update(st.write, { now: d.words, beatName: name }))) {
-        if (d.words !== c.b.prose) st.write = vault.record({ ...beatBase(here, ch), kind: 'beat-write', beat: c.b.key, beatName: name, was: c.b.prose, now: d.words }).id;
+        if (d.words !== c.b.notes) st.write = vault.record({ ...beatBase(here, ch), kind: 'beat-write', beat: c.b.key, beatName: name, was: c.b.notes, now: d.words }).id;
       }
     }
     if (d.title != null) {
@@ -847,11 +850,11 @@ function BeatScreen({ here, ch, beatId }: { here: Here; ch: PocketChapter; beatI
       <input id="pk-beat-title" ref={titleRef} class="pk-beat-title" type="text" value={title} placeholder="Name this beat" autocomplete="off"
         onInput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; setTitle(v); later({ title: v }); }}
         onBlur={flush} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); } }} />
-      {b.loose && !b.title && <p class="pk-quiet">The scene's opening words. Give them a name to make them a beat of their own.</p>}
-      <label class="pk-label" for="pk-beat-words">Words <span class="pk-quiet">({wordsSaid(n)})</span></label>
+      {b.summary && <p class="pk-quiet">{b.summary}</p>}
+      <label class="pk-label" for="pk-beat-words">Your notes <span class="pk-quiet">({wordsSaid(n)})</span></label>
       <textarea id="pk-beat-words" class="pk-box-text pk-beat-text" rows={Math.min(22, Math.max(8, Math.ceil(words.length / 34) + words.split('\n').length))} value={words}
-        placeholder="Write this beat" onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />
-      <p class="pk-quiet">Shown as it is stored: words between *stars* are in italics, and a line starting with &gt; is a System screen. A blank line starts a new paragraph. Your iPad puts it in when you next open the book there.</p>
+        placeholder="Your thoughts for this beat" onInput={(e) => { const v = (e.currentTarget as HTMLTextAreaElement).value; setWords(v); later({ words: v }); }} onBlur={flush} />
+      <p class="pk-quiet">Planning notes only: they stay with the beat and never go into the chapter. Your iPad saves them when you next open the book there.</p>
       <SendLine here={here} vault={vault} />
       <div class="pk-beattools">
         <button type="button" disabled={up === undefined} onClick={() => move('up')}>Move up</button>
@@ -861,7 +864,7 @@ function BeatScreen({ here, ch, beatId }: { here: Here; ch: PocketChapter; beatI
       </div>
       {asking && (
         <div class="pk-sheet" role="dialog" aria-label="Delete this beat">
-          <p class="pk-ask">{words.trim() ? 'Delete beat ' + (i + 1) + ' and its ' + n.toLocaleString('en-US') + ' words? A copy goes to the book\'s Archive.' : 'Delete beat ' + (i + 1) + '?'}</p>
+          <p class="pk-ask">{words.trim() ? 'Delete beat ' + (i + 1) + ' and its ' + n.toLocaleString('en-US') + ' words of notes? A copy goes to the book\'s Archive.' : 'Delete beat ' + (i + 1) + '?'}</p>
           <p class="pk-buttons">
             <button type="button" class="pk-primary" onClick={remove}>Yes, delete it</button>
             <button type="button" onClick={() => setAsking(false)}>Cancel</button>

@@ -7,9 +7,9 @@
 // paragraph rewritten (the writing page's scene save). A choice that no longer fits is skipped, never forced.
 // Write mode's choices on beats (2026-11-21; Kyle: "can you make a writing mode, too? ... i can open each beat and write
 // in it, rewrite beat titles, and add, delete, or move beats arond") go in as Beats mode makes them
-// (src/lib/phone-beats.ts): the scenes saved as the writing page saves them, the beats note likewise, a deleted beat's
-// words to the book's Archive first, and a beat whose same lines changed here too kept as it is here, with the phone's
-// words saved as a copy of the scene.
+// (src/lib/phone-beats.ts). Since 2026-11-22 a beat's words are Kyle's planning notes, never prose (Kyle: "when I write
+// on beat mode, the text doesn't go into the word processor"), so they change the beats note only: a deleted beat's
+// notes go to the book's Archive first, and notes whose same lines changed here too keep both, the phone's under these.
 //
 // Safe twice over: a note is claimed first (one save; another device leaves it for ten minutes), each choice that is
 // already so counts as put in rather than being made again, and the result of each choice is written on the note by

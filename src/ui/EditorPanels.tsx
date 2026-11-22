@@ -193,8 +193,8 @@ export function FindBar({ text, query, setQuery, repl, setRepl, hit, setHit, cmd
 }
 
 /** Highlighter marks in this scene, to jump to. */
-/** The chapter's beats as a plain list in the right column (Kyle, 2026-10-21): titles and summaries, no prose.
- * A beat in the open scene jumps the page to where it starts. */
+/** The chapter's beats as a plain list in the right column (Kyle, 2026-10-21): titles and summaries, no prose, and
+ * since 2026-11-22 Kyle's planning notes under each, to write from. A beat in the open scene jumps the page to where it starts. */
 export function BeatsList({ note, chapter, sceneId, text, lastId, onGo, beatsLink }: {
   note: NoteRecord | null; chapter: number | null; sceneId: string; text: string | null; lastId: string;
   onGo: (at: number) => void; beatsLink: Record<string, unknown>;
@@ -213,6 +213,7 @@ export function BeatsList({ note, chapter, sceneId, text, lastId, onGo, beatsLin
             <li key={i} class={here ? 'here' : undefined}>
               {at >= 0 ? <button type="button" class="link" onClick={() => onGo(at)}><strong>{name}</strong></button> : <strong>{name}</strong>}
               {b.summary && <span class="hint">{b.summary}</span>}
+              {b.notes && <span class="beat-list-notes">{b.notes}</span>}
             </li>
           );
         })}

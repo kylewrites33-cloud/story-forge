@@ -148,9 +148,9 @@ test('the iPad puts the phone\'s choices in exactly as the Edit room does for th
   const sent = await sendChoices(phone, BOOK, 'Ash Bell', '', list, NOW);
   const { rep } = await putIn(phone);
   assert.ok(rep);
-  // The rewrite changed the first words of chapter 1's second beat, so its new beat ID is written after its result
-  // (Write mode finds the beat again by it); Kyle's notice reads the result without it.
-  assert.match(rep!.results[1].result, /^applied · beats now S-001-[0-9a-f]{6} → S-001-[0-9a-f]{6}$/);
+  // The rewrite changed the first words of chapter 1's second beat. Beats hold planning notes, not prose, since
+  // 2026-11-22, so a beat is found by its beats note alone and its ID does not change.
+  assert.equal(rep!.results[1].result, 'applied');
   assert.deepEqual(rep!.results.map((r) => r.what + ': ' + resultSaid(r.result)), [
     'Accept on C-01: applied', 'Rewrite a paragraph in S-001: applied', 'Use version 2 on C-03: applied',
     'Tweak on C-02: applied', 'Tell the Writer on C-03: applied', 'Reject on C-04: applied']);

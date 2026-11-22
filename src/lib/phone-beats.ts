@@ -2,21 +2,27 @@
 // "can you make a writing mode, too? so theres writing and editing? maybe we can use the beat mode. and i can open each
 // beat and write in it, rewrite beat titles, and add, delete, or move beats arond").
 //
+// Since 2026-11-22 a beat's words are Kyle's planning notes, never the scene's prose (Kyle: "the text inside each beat
+// is room for my planning thoughts. So when I write on beat mode, the text doesn't go into the word processor"), so
+// every choice here changes the chapter's beats note only.
+//
 // Shared by both ends and by neither alone (the wall, tests/pocket-wall.test.ts): the phone shows the chapter with its
 // own choices in, and the iPad puts the same choices in, each with this one step, so the two can never disagree. The
-// step makes exactly the edits Beats mode makes for the same presses (src/ui/BeatsPage.tsx, with src/lib/beats.ts):
-// the scenes it touches put back together from their beats, and the beats note written again. It saves nothing; the
-// iPad saves what it returns through its own saves (src/vault/phone.ts).
+// step makes exactly the edits Beats mode makes for the same presses (src/ui/BeatsPage.tsx, with src/lib/beats.ts). It
+// saves nothing; the iPad saves what it returns through its own saves (src/vault/phone.ts).
 //
-// A beat is known by an ID made from its scene, its name and its first words, numbered when two are the same. The
-// layout's own keys change every time a page opens, so they cannot be sent between devices.
+// A beat is known by an ID made from its scene, its name and its Starts words, numbered when two are the same. The
+// page's own keys change every time a page opens, so they cannot be sent between devices.
 import {
-  addBeatAfter, addBeatAtEnd, anchorOf, beatDefs, beatsBody, deleteBeat, deletedBeatPath, deletedBeatText, introOf, layoutChapter, moveBeat,
-  nameLoose, parseBeats, sceneBody, type BeatView, type ChapterScene, type SceneShape
+  addPlanBeat, beatsBody, deletePlanBeat, deletedBeatPath, deletedBeatText, introOf, movePlanBeat, parseBeats, planDefs, tidyNotes,
+  type PlanBeat
 } from './beats.ts';
 import { merge3 } from './live.ts';
 import { Prose, wordCount } from './prose.js';
 import { aliasesIn, type PhoneChoice } from './phone-choices.ts';
+
+/** A scene of the chapter, as both ends read it. */
+export interface ChapterScene { path: string; id: string; body: string }
 
 /** One chapter's words: its scenes in reading order and its beats note's body (null while it has none). */
 export interface ChapterText {
@@ -28,8 +34,7 @@ export interface ChapterText {
 
 export interface Laid {
   /** Each beat's `key` is its ID. */
-  beats: BeatView[];
-  shapes: SceneShape[];
+  beats: PlanBeat[];
   intro: string;
 }
 
@@ -39,49 +44,41 @@ function fnv(s: string): string {
   return ('00000' + h.toString(16)).slice(-6);
 }
 
-/** The words a beat would be found by once saved: what Beats mode writes on its Starts line. */
-const wordsOf = (b: BeatView) => (b.prose.trim() ? anchorOf(b.prose) : b.lost ? b.words : '');
-
-/** Each beat's ID, in order. */
-export function beatIds(beats: BeatView[]): string[] {
+/** Each beat's ID, in order. (The empty part was a scene's opening words when beats held prose; IDs stay the same.) */
+export function beatIds(beats: { scene: string; title: string; words: string }[]): string[] {
   const seen: Record<string, number> = {};
   return beats.map((b) => {
-    const sig = [b.scene, b.loose ? 'opening' : '', b.title, wordsOf(b)].join('\u0001');
+    const sig = [b.scene, '', b.title, b.words].join('\u0001');
     const k = (seen[sig] = (seen[sig] || 0) + 1);
     return (b.scene || 'beat') + '-' + fnv(sig + '\u0001' + k);
   });
 }
 
-/** The chapter laid out by its beats, as Beats mode lays it out, each beat keyed by its ID. */
+/** The chapter's scene a beat with no scene of its own sits in: its last. */
+const lastScene = (ch: ChapterText) => (ch.scenes.length ? ch.scenes[ch.scenes.length - 1].id.toUpperCase() : '');
+
+/** The chapter's beats, as Beats mode shows them, each keyed by its ID. */
 export function layOut(ch: ChapterText): Laid {
   const body = ch.beatsBody || '';
-  const laid = layoutChapter(ch.scenes, parseBeats(body));
-  const ids = beatIds(laid.beats);
-  return { beats: laid.beats.map((b, i) => ({ ...b, key: ids[i] })), shapes: laid.scenes, intro: introOf(body) };
+  const last = lastScene(ch);
+  const defs = parseBeats(body).map((d) => ({ ...d, scene: d.scene || last }));
+  const ids = beatIds(defs);
+  return { beats: defs.map((d, i) => ({ ...d, key: ids[i] })), intro: introOf(body) };
 }
 
-/** A beat's words counted as the writing page counts them. */
-export const beatWords = (prose: string): number => wordCount(Prose.proseText(prose));
+/** A beat's notes counted as the writing page counts words. */
+export const beatWords = (notes: string): number => wordCount(Prose.proseText(notes));
 
-/** The chapter's words once its beats are `beats`: the scenes in `touched` put back together, and the beats note written
- * again, as Beats mode's apply() does. */
-export function chapterWith(ch: ChapterText, laid: Laid, beats: BeatView[], touched: string[]): ChapterText {
-  const scenes = ch.scenes.map((s) => {
-    const shape = laid.shapes.find((x) => x.path === s.path);
-    if (!shape || touched.indexOf(s.path) < 0) return s;
-    return { ...s, body: sceneBody(shape, beats) };
-  });
-  const defs = beatDefs(beats);
-  let beatsText = ch.beatsBody;
-  if (defs.length || ch.beatsBody != null) beatsText = (laid.intro ? '\n' + laid.intro + '\n' : '') + beatsBody(defs);
-  return { ...ch, scenes, beatsBody: beatsText };
+/** The chapter once its beats are `beats`: the beats note written again, as Beats mode does. */
+export function chapterWith(ch: ChapterText, laid: Laid, beats: PlanBeat[]): ChapterText {
+  return { ...ch, beatsBody: (laid.intro ? '\n' + laid.intro + '\n' : '') + beatsBody(planDefs(beats)) };
 }
 
 /** How beat IDs moved between two versions of a chapter that hold the same beats in the same order (a beat renamed,
- * its first words changed, a beat added on the phone that now has words). Nothing when they do not line up. */
-export function idChanges(was: { key: string; path: string }[], now: Laid): [string, string][] {
+ * or one added on the phone). Nothing when they do not line up. */
+export function idChanges(was: { key: string; scene: string }[], now: Laid): [string, string][] {
   if (was.length !== now.beats.length) return [];
-  if (was.some((b, i) => b.path !== now.beats[i].path)) return [];
+  if (was.some((b, i) => b.scene !== now.beats[i].scene)) return [];
   return was.map((b, i): [string, string] => [b.key, now.beats[i].key]).filter((p) => p[0] !== p[1]);
 }
 
@@ -93,7 +90,7 @@ export function aliasMap(results: string[]): Map<string, string> {
 }
 
 /** A beat by its ID, following the ID changes when it has moved on. */
-export function findBeat(beats: BeatView[], id: string, alias: Map<string, string>): BeatView | null {
+export function findBeat<B extends { key: string }>(beats: B[], id: string, alias: Map<string, string>): B | null {
   let x: string | undefined = id;
   for (let i = 0; x && i < 30; i++) {
     const hit = beats.find((b) => b.key === x);
@@ -104,15 +101,15 @@ export function findBeat(beats: BeatView[], id: string, alias: Map<string, strin
 }
 
 export interface Step {
-  /** "applied", "applied (it was already so)", "kept as a copy. <why>" or "skipped. <why>". */
+  /** "applied", "applied (it was already so)", "applied, both kept. <why>" or "skipped. <why>". */
   result: string;
   ch: ChapterText;
-  /** The scenes whose words changed. */
+  /** Scenes whose words changed: none, since beats hold notes only (kept for the callers). */
   touched: string[];
   beatsChanged: boolean;
-  /** A deleted beat's words, for the book's Archive (saved before the beat goes, as Beats mode does). */
+  /** A deleted beat's notes, for the book's Archive (saved before the beat goes, as Beats mode does). */
   archive: { path: string; text: string; message: string } | null;
-  /** The phone's words when they clashed with this device's: a copy of the scene with them in. */
+  /** Not used since beats hold notes only: a clash keeps both sets of notes in the beat. */
   copy: { path: string; scene: string; body: string } | null;
   /** IDs this step changed. */
   aliases: [string, string][];
@@ -123,6 +120,9 @@ function beatLabel(c: PhoneChoice): string {
   return n ? '“' + n + '”' : 'the beat';
 }
 
+/** The line that keeps the phone's notes under this device's when both changed the same lines. */
+export const FROM_PHONE = 'From your phone:';
+
 /** Put one of Write mode's choices into a chapter, the way Beats mode makes the same press. Pure. */
 export function beatStep(ch: ChapterText, c: PhoneChoice, alias: Map<string, string>, bookFolder: string, now: Date): Step {
   const laid = layOut(ch);
@@ -131,34 +131,28 @@ export function beatStep(ch: ChapterText, c: PhoneChoice, alias: Map<string, str
   const skip = (why: string): Step => ({ ...none, result: 'skipped. ' + why });
   const same = (): Step => ({ ...none, result: 'applied (it was already so)' });
   const gone = () => skip('In chapter ' + ch.chapter + ', ' + beatLabel(c) + ' is not as your phone saw it any more.');
-  const done = (next: BeatView[], touched: string[], extra: Partial<Step> = {}): Step => {
-    const out = chapterWith(ch, laid, next, touched);
-    const changed = out.scenes.filter((s, i) => s.body !== ch.scenes[i].body).map((s) => s.path);
-    const again = layOut(out);
-    return {
-      ...none, result: 'applied', ch: out, touched: changed, beatsChanged: out.beatsBody !== ch.beatsBody,
-      aliases: idChanges(next, again), ...extra
-    };
+  const done = (next: PlanBeat[], extra: Partial<Step> = {}): Step => {
+    const out = chapterWith(ch, laid, next);
+    return { ...none, result: 'applied', ch: out, beatsChanged: out.beatsBody !== ch.beatsBody, aliases: idChanges(next, layOut(out)), ...extra };
   };
 
   if (c.kind === 'beat-add') {
     if (findBeat(beats, c.beat || '', alias)) return same();
     const place = c.place || 'end';
-    let next: BeatView[];
+    let next: PlanBeat[];
     if (place === 'end') {
-      const last = ch.scenes[ch.scenes.length - 1];
-      next = addBeatAtEnd(beats, last ? { path: last.path, id: last.id } : null);
-      if (next.length && c.now) next = next.map((b) => (beats.some((x) => x.key === b.key) ? b : { ...b, title: c.now }));
+      if (!ch.scenes.length) return skip('Chapter ' + ch.chapter + ' has no scenes to put a beat in.');
+      next = addPlanBeat(beats, null, c.now, lastScene(ch));
     } else {
       const after = findBeat(beats, place.replace(/^after\s+/, ''), alias);
       if (!after) return skip('The beat it was added after is not in chapter ' + ch.chapter + ' any more.');
-      next = addBeatAfter(beats, after.key, c.now);
+      next = addPlanBeat(beats, after.key, c.now, after.scene);
     }
     const made = next.find((b) => !beats.some((x) => x.key === b.key));
     if (!made) return skip('Chapter ' + ch.chapter + ' has no scenes to put a beat in.');
     // The new beat keeps the phone's ID until it is saved; its saved ID follows it in the result.
     next = next.map((b) => (b === made ? { ...b, key: c.beat || b.key } : b));
-    return done(next, []);
+    return done(next);
   }
 
   const b = findBeat(beats, c.beat || '', alias);
@@ -166,48 +160,40 @@ export function beatStep(ch: ChapterText, c: PhoneChoice, alias: Map<string, str
   const i = beats.indexOf(b);
 
   if (c.kind === 'beat-write') {
-    const cur = b.prose;
-    if (cur === c.now || (cur.trim() === c.now.trim() && cur.trim() !== c.was.trim())) return same();
-    let words = c.now;
-    if (cur !== c.was && cur.trim() !== c.was.trim()) {
+    const cur = b.notes, was = tidyNotes(c.was), mine = tidyNotes(c.now);
+    if (cur === mine) return same();
+    let notes = mine;
+    let said = '';
+    if (cur !== was) {
       // Changed here too since the phone read it: merged line by line, as words written offline are.
-      const m = merge3(c.was, c.now, cur);
+      const m = merge3(was, mine, cur);
       if (m.clash) {
-        // Both changed the same lines: this device's words stay, the phone's go into a copy of the scene.
-        const theirs = beats.map((x) => (x === b ? { ...x, prose: c.now, lost: false } : x));
-        const shape = laid.shapes.find((s) => s.path === b.path);
-        return {
-          ...none,
-          result: 'kept as a copy. Beat ' + (i + 1) + ' was changed on the same lines here too, so these words stay; your phone\'s are in ' + b.scene + '\'s Copies, named “from your phone”.',
-          copy: shape ? { path: b.path, scene: b.scene, body: sceneBody(shape, theirs) } : null
-        };
-      }
-      words = m.text;
+        // Both changed the same lines: this device's notes stay, and the phone's go under them, so nothing is lost.
+        notes = cur + '\n\n' + FROM_PHONE + '\n' + mine;
+        said = ', both kept. Beat ' + (i + 1) + '\'s notes were changed on the same lines here too, so your phone\'s are under them, after “' + FROM_PHONE + '”';
+      } else notes = m.text;
     }
-    const next = beats.map((x) => (x === b ? { ...x, prose: words, lost: false } : x));
-    return done(next, [b.path]);
+    const out = done(beats.map((x) => (x === b ? { ...x, notes: tidyNotes(notes) } : x)));
+    return said ? { ...out, result: 'applied' + said } : out;
   }
 
   if (c.kind === 'beat-rename') {
     if (b.title === c.now) return same();
     if (b.title !== c.was) return skip('Beat ' + (i + 1) + ' was renamed here (“' + (b.title || 'no name') + '”), so your phone\'s name for it was not used.');
-    let next = beats.map((x) => (x === b ? { ...x, title: c.now } : x));
-    if (b.loose && c.now) next = nameLoose(next, b.key, c.now).map((x) => (x.key === b.key ? { ...x, title: c.now } : x));
-    return done(next, []);
+    return done(beats.map((x) => (x === b ? { ...x, title: c.now } : x)));
   }
 
   if (c.kind === 'beat-delete') {
-    if (b.prose.trim() !== c.was.trim()) return skip('Beat ' + (i + 1) + '\'s words changed after your phone showed them, so it was not deleted.');
-    const next = deleteBeat(beats, b.key);
+    if (b.notes !== tidyNotes(c.was)) return skip('Beat ' + (i + 1) + '\'s notes changed after your phone showed them, so it was not deleted.');
     let archive: Step['archive'] = null;
-    if (b.prose.trim()) {
+    if (b.notes || b.summary.trim()) {
       archive = {
         path: deletedBeatPath(bookFolder, ch.chapter, i + 1, b.title, now),
         text: deletedBeatText(b, ch.chapter, i + 1, now),
-        message: 'beats: archive chapter ' + ch.chapter + ' beat ' + (i + 1) + '\n\nDeleted with its words in the Sparrow app; the words as they stood are kept here.'
+        message: 'beats: archive chapter ' + ch.chapter + ' beat ' + (i + 1) + '\n\nDeleted with its notes in Sparrow Pocket; the beat as it stood is kept here.'
       };
     }
-    return done(next, [b.path], { archive });
+    return done(deletePlanBeat(beats, b.key), { archive });
   }
 
   if (c.kind === 'beat-move') {
@@ -218,21 +204,21 @@ export function beatStep(ch: ChapterText, c: PhoneChoice, alias: Map<string, str
       if (!t) return skip('The beat it was moved next to is not in chapter ' + ch.chapter + ' any more.');
       before = t.key;
     }
-    const r = moveBeat(beats, b.key, before);
-    if (!r.touched.length) return same();
-    return done(r.beats, r.touched);
+    const next = movePlanBeat(beats, b.key, before);
+    if (next === beats) return same();
+    return done(next);
   }
   return skip('Sparrow cannot read this choice.');
 }
 
-/** The ID changes a change to a chapter's words made (a card or a paragraph rewritten), so later beat choices still
- * find their beats. */
+/** The ID changes a change to a chapter's words made (a card or a paragraph rewritten). Beats no longer depend on the
+ * prose, so none; kept for the callers. */
 export function idChangesBetween(was: ChapterText, now: ChapterText): [string, string][] {
-  return idChanges(layOut(was).beats, layOut(now));
+  return was.beatsBody === now.beatsBody ? [] : idChanges(layOut(was).beats, layOut(now));
 }
 
 /** Where a move up or down lands, as Beats mode's drag would drop it: before the beat above, or after the one below. */
-export function moveTarget(beats: BeatView[], key: string, dir: 'up' | 'down'): string | null | undefined {
+export function moveTarget(beats: { key: string }[], key: string, dir: 'up' | 'down'): string | null | undefined {
   const i = beats.findIndex((b) => b.key === key);
   if (i < 0) return undefined;
   if (dir === 'up') return i > 0 ? beats[i - 1].key : undefined;
