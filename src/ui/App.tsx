@@ -653,8 +653,8 @@ export function App() {
     const now = new Date();
     const at = now.toISOString();
     const changes = items.map((i): { path: string; change: TextChange } => i.kind === 'pomodoro' ? { path: logPath(i.record.date), change: { what: 'log-pomodoro', record: i.record, at } }
-      : i.kind === 'typed' ? { path: logPath(i.date), change: { what: 'log-typed', date: i.date, words: i.words, at } }
-        : { path: logPath(i.date), change: { what: 'log-typing', date: i.date, minutes: i.minutes, at } });
+      : i.kind === 'typed' ? { path: logPath(i.date), change: { what: 'log-typed', date: i.date, words: i.words, at, ...(i.books ? { books: i.books } : {}) } }
+        : { path: logPath(i.date), change: { what: 'log-typing', date: i.date, minutes: i.minutes, at, ...(i.books ? { books: i.books } : {}) } });
     setOutbox(add(outboxRef.current, textAction(changes, [], now)));
     runFlush();
   }, [setOutbox, runFlush]);

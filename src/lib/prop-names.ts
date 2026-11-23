@@ -264,6 +264,8 @@ export type Prop =
   | 'turn'
   | 'type'
   | 'typed'
+  | 'typed_books'
+  | 'typing_books'
   | 'typing_minutes'
   | 'typography'
   | 'updated'

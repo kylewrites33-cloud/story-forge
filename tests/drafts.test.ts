@@ -207,3 +207,21 @@ test('typedWords counts the words in a planned scene, which sf writes as 0 (Kyle
   assert.equal(typedWords({ body: '\nOutside the community center, the air stood still.\n', data: { status: 'planned', words: 0 } }), 8);
   assert.equal(typedWords({ data: { words: 12 } }), 12);
 });
+
+test('a planned scene Kyle writes prose in becomes drafted, so its words count (2026-11-23)', async () => {
+  const src = new MemSource();
+  const planned = TEXT.replace('status: drafted', 'status: planned').replace('words: 3', 'words: 0').replace(/\nMara cut rope\.\n\n> \[!plan\] Team notes\n> Not counted\.\n/, '\n');
+  src.files.set(SCENE, planned);
+  const n = makeNote(SCENE, src.sha(planned), planned);
+  const d = { ...openDraft(n, undefined, new Date()), body: '\nBasil stepped out into the village.\n' };
+  await saveDraft(src, d, new Date());
+  const saved = src.files.get(SCENE)!;
+  assert.match(saved, /^status: drafted$/m);
+  assert.match(saved, /^words: 6$/m);
+  // A planned scene saved with nothing written stays planned.
+  const src2 = new MemSource();
+  src2.files.set(SCENE, planned);
+  const n2 = makeNote(SCENE, src2.sha(planned), planned);
+  await saveDraft(src2, { ...openDraft(n2, undefined, new Date()), body: '\n\n' }, new Date());
+  assert.match(src2.files.get(SCENE)!, /^status: planned$/m);
+});
