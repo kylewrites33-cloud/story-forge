@@ -2454,6 +2454,14 @@
           "type": "number",
           "description": "Minutes Kyle spent typing in the app that day, to one decimal place. The clock runs only while he types or changes the words on the page, and a gap of more than two minutes with nothing typed counts nothing, so time spent away or reading does not count (Kyle, 2026-10-29). Words an hour = typed / typing_minutes x 60."
         },
+        "typed_books": {
+          "type": "list",
+          "description": "The day's typed words per book, one line each, \"<book folder>: <words>\" (Kyle, 2026-11-23), so a book's Overview counts only what he typed in that book. Days before 2026-11-16 have none."
+        },
+        "typing_books": {
+          "type": "list",
+          "description": "The day's minutes typing per book, one line each, \"<book folder>: <minutes>\" to one decimal place (Kyle, 2026-11-23)."
+        },
         "updated": {
           "type": "datetime"
         }

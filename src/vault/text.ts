@@ -33,9 +33,9 @@ export type TextChange =
   /** The Writing Log: a finished (or stopped) Pomodoro added to its day's note. `at` is when it was logged. */
   | { what: 'log-pomodoro'; record: PomodoroRecord; at: string }
   /** The Writing Log: more words typed on a day. */
-  | { what: 'log-typed'; date: string; words: number; at: string }
+  | { what: 'log-typed'; date: string; words: number; at: string; books?: Record<string, number> }
   /** The Writing Log: more minutes of typing on a day, in tenths. */
-  | { what: 'log-typing'; date: string; minutes: number; at: string }
+  | { what: 'log-typing'; date: string; minutes: number; at: string; books?: Record<string, number> }
   /** A note's words as Kyle wrote them in a box of their own, its properties kept: the front and back matter (Book
    * details) and the book's Braindump (the writing page's Notes). `was` is the words as he opened them: what changed
    * somewhere else since comes in line by line, and where both changed the same lines his are kept. `start` is the
@@ -60,6 +60,11 @@ export type TextChange =
  * Braindump. Every other change is to a note that is already there. */
 export function startsNote(c: TextChange): c is Extract<TextChange, { what: 'log-pomodoro' | 'log-typed' | 'log-typing' | 'words' | 'look' }> {
   return c.what === 'log-pomodoro' || c.what === 'log-typed' || c.what === 'log-typing' || c.what === 'words' || c.what === 'look';
+}
+
+/** A day's words or minutes per book, when a change carries them: book folder names and numbers. */
+function perBook(v: unknown): boolean {
+  return v == null || (typeof v === 'object' && Object.values(v as Record<string, unknown>).every((n) => typeof n === 'number' && n >= 0));
 }
 
 /** The properties a book's Braindump starts with. */
@@ -110,8 +115,8 @@ export function validChange(c: unknown): c is TextChange {
     const r = x.record;
     return Boolean(r && typeof r.date === 'string' && typeof r.time === 'string' && typeof r.minutes === 'number' && typeof r.words === 'number' && Array.isArray(r.scenes)) && typeof x.at === 'string';
   }
-  if (x.what === 'log-typed') return typeof x.date === 'string' && typeof x.words === 'number' && x.words > 0 && typeof x.at === 'string';
-  if (x.what === 'log-typing') return typeof x.date === 'string' && typeof x.minutes === 'number' && x.minutes > 0 && typeof x.at === 'string';
+  if (x.what === 'log-typed') return typeof x.date === 'string' && typeof x.words === 'number' && x.words > 0 && typeof x.at === 'string' && perBook(x.books);
+  if (x.what === 'log-typing') return typeof x.date === 'string' && typeof x.minutes === 'number' && x.minutes > 0 && typeof x.at === 'string' && perBook(x.books);
   if (x.what === 'change-reply') return typeof x.id === 'string' && /^C-\d+$/i.test(x.id) && typeof x.words === 'string' && x.words.trim().length > 0;
   if (x.what === 'look') return Boolean(x.values) && typeof x.values === 'object' && Object.values(x.values).every((v) => typeof v === 'string') && typeof x.start === 'string' && typeof x.name === 'string';
   if (x.what === 'words') return (x.of === 'matter' || x.of === 'braindump') && typeof x.was === 'string' && typeof x.body === 'string' && typeof x.start === 'string' && typeof x.name === 'string';
@@ -126,8 +131,8 @@ export function changeText(text: string, c: TextChange): string {
   if (c.what === 'taken') return withTaken(text, c.names);
   if (c.what === 'workflow-note') return addWorkflowNote(text, c.note, c.day);
   if (c.what === 'log-pomodoro') return addToDay(text, c.record, new Date(c.at));
-  if (c.what === 'log-typed') return addTypedToDay(text, c.date, c.words, new Date(c.at));
-  if (c.what === 'log-typing') return addTypingToDay(text, c.date, c.minutes, new Date(c.at));
+  if (c.what === 'log-typed') return addTypedToDay(text, c.date, c.words, new Date(c.at), c.books);
+  if (c.what === 'log-typing') return addTypingToDay(text, c.date, c.minutes, new Date(c.at), c.books);
   if (c.what === 'words') return withWords(text, c);
   if (c.what === 'look') return Object.keys(c.values).reduce((t, k) => Frontmatter.setScalar(t, k, c.values[k]) as string, text || c.start);
   if (c.what === 'change-reply') return addReply(text, c.id, c.words);

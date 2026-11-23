@@ -15,7 +15,7 @@ import { useFlow } from './Flow.tsx';
 import { useBookStatuses } from './Home.tsx';
 import type { BookStatus } from '../lib/bookstatus.ts';
 import { draftMade, publishLine, sixStages, type SixStage, type StageKey } from '../lib/bookstages.ts';
-import { loadLog, loadTyped, loadTyping, today } from '../lib/pomodoro.ts';
+import { bookDay, bookOfPath, loadTyped, loadTyping } from '../lib/pomodoro.ts';
 import { href } from '../app/route.ts';
 import { afterDraft, datesToRecord, dayOf, daysBetween, estimate, localDay, shortDay, stageDates, type EditPass, type Estimate } from '../lib/stagetimes.ts';
 import { propText } from '../lib/props.ts';
@@ -143,12 +143,14 @@ function SixStages({ stages, folder, status, est }: { stages: SixStage[]; folder
   );
 }
 
-/** Words typed and minutes of typing over the last seven days, from the Writing Log (Kyle's own typing only). */
-function weekTyping(index: VaultIndex, sourceKey: string, now: Date): { typed: number; minutes: number } {
+/** Words typed and minutes of typing in this book over the last seven days, from the Writing Log's per-book lists
+ * (Kyle's own typing only; typing in other books never counts here, Kyle 2026-11-23). */
+function weekTyping(index: VaultIndex, book: BookEntry, now: Date): { typed: number; minutes: number } {
+  const name = bookOfPath(book.path);
   let typed = 0, minutes = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const day = today(index, i === 0 ? loadLog(sourceKey) : [], d, i === 0 ? loadTyped() : undefined, i === 0 ? loadTyping() : undefined);
+    const day = bookDay(index, name, d, i === 0 ? loadTyped() : undefined, i === 0 ? loadTyping() : undefined);
     typed += day.typed;
     minutes += day.typing;
   }
@@ -170,7 +172,7 @@ export function OverviewPage({ schema, index, book, sourceKey, onDecide, keepFor
   const note = bookNote(index, book);
   const save = note && onDecide && !note.error ? (key: string) => (v: string) => onDecide(note.path, 'edit', '', { [key]: v }) : null;
   const keep = status.go && keepFor ? keepFor(status.go) : null;
-  const week = weekTyping(index, sourceKey, new Date());
+  const week = weekTyping(index, book, new Date());
   const dates = stageDates(note ? note.data : null);
   const others = index.books.filter((b) => b.path !== book.path).map((b) => stageDates(index.notes[b.path] ? index.notes[b.path].data : null));
   const day = localDay(new Date());

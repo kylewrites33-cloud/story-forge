@@ -7,7 +7,7 @@ import path from 'node:path';
 import {
   addToDay, addTypedToDay, addTyping, addTypingToDay, loadTyping, markTyping, toMinutes, typingDue, wordsAnHour, TYPING_GAP_MS, advance, loadTyped, trackWords, wordsNotTyped, typedDue, saveTimer, loadTimer, clock, idleState, loadLog, msLeft, noteWords, pause, recordLine, resume, saveLog, startWork, pomodoroCount, stop, stoppedRecord, today, wordsSoFar
 } from '../src/lib/pomodoro.ts';
-import { logPath, takeTypingCounts, type LogItem } from '../src/lib/pomodoro.ts';
+import { bookDay, bookOfPath, logPath, readBookList, takeTypingCounts, type LogItem } from '../src/lib/pomodoro.ts';
 import { pushAction } from '../src/vault/push.ts';
 import { textAction } from '../src/vault/ops.ts';
 import type { TextChange } from '../src/vault/text.ts';
@@ -29,8 +29,8 @@ const T0 = new Date('2026-10-18T09:30:00').getTime();
 async function send(src: MemSource, items: LogItem[], now: Date): Promise<void> {
   const at = now.toISOString();
   const changes = items.map((i): { path: string; change: TextChange } => i.kind === 'pomodoro' ? { path: logPath(i.record.date), change: { what: 'log-pomodoro', record: i.record, at } }
-    : i.kind === 'typed' ? { path: logPath(i.date), change: { what: 'log-typed', date: i.date, words: i.words, at } }
-      : { path: logPath(i.date), change: { what: 'log-typing', date: i.date, minutes: i.minutes, at } });
+    : i.kind === 'typed' ? { path: logPath(i.date), change: { what: 'log-typed', date: i.date, words: i.words, at, ...(i.books ? { books: i.books } : {}) } }
+      : { path: logPath(i.date), change: { what: 'log-typing', date: i.date, minutes: i.minutes, at, ...(i.books ? { books: i.books } : {}) } });
   await pushAction(src, textAction(changes, [], now));
 }
 
@@ -213,4 +213,38 @@ test('a writing day the app wrote passes sf validate', { skip: !hasVault && 'the
   fs.writeFileSync(path.join(dir, 'Writing Log', '2026-10-20.md'), addTypingToDay('', '2026-10-20', 4.5, new Date()));
   const out = execFileSync(process.execPath, [path.join(VAULT, 'System', 'Tools', 'sf.js'), 'validate'], { cwd: dir, encoding: 'utf8' });
   assert.match(out, /no errors, no warnings/);
+});
+
+test('words and minutes typed are kept per book, so a book counts only what was typed in it (2026-11-23)', async () => {
+  store.clear();
+  const t = new Date('2026-11-23T09:00:00').getTime();
+  const qd3 = 'Series/Quest Declined/Books/3 Quest Declined 3/Scenes/S-001 Chapter 1.md';
+  const bonus = "Series/Quest Declined/Books/1.5 Doctor's Orders/Scenes/S-001 Chapter 1.md";
+  assert.equal(bookOfPath(qd3), '3 Quest Declined 3');
+  assert.equal(bookOfPath('Series/Quest Declined/Books/3 Quest Declined 3/Book.md'), '3 Quest Declined 3');
+  assert.equal(bookOfPath('Writing Log/2026-11-23.md'), '');
+  trackWords(bonus, 'S-001', 100, 140, t);
+  markTyping(t); markTyping(t + 60000);
+  trackWords(qd3, 'S-001', 0, 30, t + 61000);
+  markTyping(t + 62000); markTyping(t + 122000);
+  assert.deepEqual(loadTyped().books, { '2026-11-23': { "1.5 Doctor's Orders": 40, '3 Quest Declined 3': 30 } });
+  const items = takeTypingCounts(true, t + 10 * 60000);
+  assert.deepEqual(items, [
+    { kind: 'typed', date: '2026-11-23', words: 70, books: { "1.5 Doctor's Orders": 40, '3 Quest Declined 3': 30 } },
+    { kind: 'typing', date: '2026-11-23', minutes: 2, books: { "1.5 Doctor's Orders": 1, '3 Quest Declined 3': 1 } }
+  ]);
+  const src = new MemSource();
+  await send(src, items, new Date(t + 10 * 60000));
+  await send(src, [{ kind: 'typed', date: '2026-11-23', words: 5, books: { '3 Quest Declined 3': 5 } }], new Date(t + 11 * 60000));
+  const n = makeNote(logPath('2026-11-23'), 'x', src.files.get(logPath('2026-11-23')) as string);
+  assert.equal(n.data.typed, 75);
+  assert.deepEqual(readBookList(n.data.typed_books), { "1.5 Doctor's Orders": 40, '3 Quest Declined 3': 35 });
+  assert.deepEqual(readBookList(n.data.typing_books), { "1.5 Doctor's Orders": 1, '3 Quest Declined 3': 1 });
+  const index = { notes: { [n.path]: n } } as unknown as VaultIndex;
+  assert.deepEqual(bookDay(index, '3 Quest Declined 3', new Date(t)), { typed: 35, typing: 1 });
+  assert.deepEqual(bookDay(index, '2 Quest Declined 2', new Date(t)), { typed: 0, typing: 0 }, 'another book counts nothing');
+  // An old day with no per-book lists counts for no book.
+  const old = makeNote(logPath('2026-11-01'), 'x', addTypedToDay('', '2026-11-01', 900, new Date(t)));
+  assert.equal(bookDay({ notes: { [old.path]: old } } as unknown as VaultIndex, '3 Quest Declined 3', new Date('2026-11-01T12:00:00')).typed, 0);
+  store.clear();
 });

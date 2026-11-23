@@ -272,8 +272,11 @@ export function draftOnto(path: string, text: string | null, d: DraftWords): Lan
   }
   const set: Record<string, unknown> = {};
   if (d.status && cur.data.status !== d.status) set.status = d.status;
+  // A planned scene Kyle writes prose in is a drafted one: its words count from the first save (Kyle, 2026-11-23: "i
+  // wrote about 1000 pages for chapter 1. but progress has me at zero words"). Scene files hold only prose now.
+  if (cur.type === 'scene' && !d.status && String(cur.data.status || 'planned') === 'planned' && d.body !== d.baseBody && bodyWords(body) > 0) set.status = 'drafted';
   if (cur.type === 'scene') {
-    const w = sceneWords(d.status || cur.data.status, body);
+    const w = sceneWords(set.status || d.status || cur.data.status, body);
     if (cur.data.words !== w) set.words = w;
   }
   if (d.target != null && cur.data.target_words !== d.target) set.target_words = d.target;

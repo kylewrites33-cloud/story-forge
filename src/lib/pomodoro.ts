@@ -171,6 +171,8 @@ export function typedPart(rise: number, now = Date.now()): number {
 
 /** Call from the writing screens: records a word-count change in the stored timer and in today's words typed. */
 export function trackWords(path: string, id: string, before: number, after: number, now = Date.now()): void {
+  const book = bookOfPath(path);
+  if (book) typingBook = book;
   if (after === before) return;
   const typed = typedPart(after - before, now);
   // What was not typed moves the counts' starting point, so the Pomodoro and the day count only the typed part.
@@ -180,7 +182,41 @@ export function trackWords(path: string, id: string, before: number, after: numb
     const fixed = next.latest[path] != null ? { ...next, latest: { ...next.latest, [path]: after } } : next;
     writePref(STATE_KEY, JSON.stringify(fixed));
   }
-  if (typed > 0) addTyped(ymd(new Date(now)), typed, now);
+  if (typed > 0) addTyped(ymd(new Date(now)), typed, now, book);
+}
+
+// ------------------------------------------------------------------ which book
+
+// Each day's typing is also kept per book, so a book's Overview counts only what was typed in it (Kyle, 2026-11-23:
+// "it also has 4,503 words typed in the last 7 days, but that must have been related to the bonus chapter for book 1").
+
+/** The book a note belongs to: its folder name under Books/ ("3 Quest Declined 3"), or '' for a note in no book. */
+export function bookOfPath(path: string): string {
+  const m = /(?:^|\/)Books\/([^/]+)(?:\/|$)/.exec(path || '');
+  return m ? m[1] : '';
+}
+
+/** The book whose page Kyle last changed: minutes typing count for it. */
+let typingBook = '';
+
+/** A day's per-book list (`typed_books`, `typing_books`): lines "<book folder>: <number>". */
+export function readBookList(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  (Array.isArray(v) ? v : []).forEach((line) => {
+    const m = /^(.*):\s*([\d.]+)\s*$/.exec(String(line));
+    if (m && m[1].trim()) out[m[1].trim()] = (out[m[1].trim()] || 0) + Number(m[2]);
+  });
+  return out;
+}
+
+function writeBookList(map: Record<string, number>, tenths: boolean): string[] {
+  return Object.keys(map).sort().filter((k) => map[k] > 0).map((k) => k + ': ' + (tenths ? Math.round(map[k] * 10) / 10 : Math.round(map[k])));
+}
+
+function addInto(a: Record<string, number>, b: Record<string, number> | undefined): Record<string, number> {
+  const out = { ...a };
+  Object.keys(b || {}).forEach((k) => { out[k] = (out[k] || 0) + (b as Record<string, number>)[k]; });
+  return out;
 }
 
 // ------------------------------------------------------------------ words typed today
@@ -188,24 +224,31 @@ export function trackWords(path: string, id: string, before: number, after: numb
 const TYPED_KEY = PREF.typed;
 
 /** Words typed on this device and not yet in the vault, per day, with when the first and the last of them were typed. */
-export interface TypedWaiting { days: Record<string, number>; firstAt: number; typedAt: number }
+export interface TypedWaiting { days: Record<string, number>; firstAt: number; typedAt: number;
+  /** The same words per day and book (folder name); a word typed in no book is only in `days`. */
+  books?: Record<string, Record<string, number>> }
 
 export function loadTyped(): TypedWaiting {
   try {
     const t = JSON.parse(readPref(TYPED_KEY) || 'null') as TypedWaiting | null;
-    if (t && t.days) return { days: t.days, firstAt: t.firstAt || 0, typedAt: t.typedAt || 0 };
+    if (t && t.days) return { days: t.days, firstAt: t.firstAt || 0, typedAt: t.typedAt || 0, books: t.books || {} };
   } catch { /* start empty */ }
-  return { days: {}, firstAt: 0, typedAt: 0 };
+  return { days: {}, firstAt: 0, typedAt: 0, books: {} };
 }
 
 function saveTyped(t: TypedWaiting): void {
   writePref(TYPED_KEY, JSON.stringify(t));
 }
 
-function addTyped(date: string, n: number, now: number): void {
+function addTyped(date: string, n: number, now: number, book = ''): void {
   const t = loadTyped();
   if (!Object.keys(t.days).length) t.firstAt = now;
   t.days[date] = (t.days[date] || 0) + n;
+  if (book) {
+    const books = t.books || {};
+    books[date] = addInto(books[date] || {}, { [book]: n });
+    t.books = books;
+  }
   t.typedAt = now;
   saveTyped(t);
 }
@@ -217,13 +260,15 @@ export function typedDue(t: TypedWaiting, now: number): boolean {
 }
 
 /** The day's note with more words typed. A day written before `typed` existed starts from its Pomodoro words. */
-export function addTypedToDay(text: string, date: string, n: number, now: Date): string {
+export function addTypedToDay(text: string, date: string, n: number, now: Date, books?: Record<string, number>): string {
   const stamp = now.toISOString().slice(0, 19) + 'Z';
-  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: n, updated: stamp }, '');
+  const byBook = books && Object.keys(books).length ? { typed_books: writeBookList(books, false) } : {};
+  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: n, ...byBook, updated: stamp }, '');
   const p = Frontmatter.parse(text);
   const data = { ...((p.data || {}) as Record<string, unknown>) };
   const had = data.typed != null ? toNumber(data.typed) || 0 : toNumber(data.words) || 0;
   data.typed = had + n;
+  if (books && Object.keys(books).length) data.typed_books = writeBookList(addInto(readBookList(data.typed_books), books), false);
   data.updated = stamp;
   return Frontmatter.join(data, p.body || '');
 }
@@ -241,14 +286,16 @@ export const TYPING_GAP_MS = 2 * 60000;
 const ACTIVE_KEY = PREF.typing;
 
 /** Milliseconds of typing on this device and not yet in the vault, per day, and when Kyle last changed the page. */
-export interface TypingWaiting { days: Record<string, number>; lastAt: number; firstAt: number }
+export interface TypingWaiting { days: Record<string, number>; lastAt: number; firstAt: number;
+  /** The same milliseconds per day and book (folder name). */
+  books?: Record<string, Record<string, number>> }
 
 export function loadTyping(): TypingWaiting {
   try {
     const t = JSON.parse(readPref(ACTIVE_KEY) || 'null') as TypingWaiting | null;
-    if (t && t.days) return { days: t.days, lastAt: t.lastAt || 0, firstAt: t.firstAt || 0 };
+    if (t && t.days) return { days: t.days, lastAt: t.lastAt || 0, firstAt: t.firstAt || 0, books: t.books || {} };
   } catch { /* start empty */ }
-  return { days: {}, lastAt: 0, firstAt: 0 };
+  return { days: {}, lastAt: 0, firstAt: 0, books: {} };
 }
 
 function saveTyping(t: TypingWaiting): void {
@@ -257,13 +304,15 @@ function saveTyping(t: TypingWaiting): void {
 
 /** The typing time with one more change on the page at `now`: the gap since the last change counts if it is short enough.
  *  A gap that runs over midnight counts on the day it ends. */
-export function addTyping(t: TypingWaiting, now: number): TypingWaiting {
+export function addTyping(t: TypingWaiting, now: number, book = ''): TypingWaiting {
   const gap = now - t.lastAt;
   if (!(gap > 0)) return { ...t, lastAt: Math.max(t.lastAt, now) };
   if (gap > TYPING_GAP_MS) return { ...t, lastAt: now };
   const date = ymd(new Date(now));
   const days = { ...t.days, [date]: (t.days[date] || 0) + gap };
-  return { days, lastAt: now, firstAt: Object.keys(t.days).length ? t.firstAt : now };
+  const books = { ...(t.books || {}) };
+  if (book) books[date] = addInto(books[date] || {}, { [book]: gap });
+  return { days, lastAt: now, firstAt: Object.keys(t.days).length ? t.firstAt : now, books };
 }
 
 let lastMark = 0;
@@ -272,7 +321,7 @@ let lastMark = 0;
 export function markTyping(now = Date.now()): void {
   if (now - lastMark < 1000) return;
   lastMark = now;
-  saveTyping(addTyping(loadTyping(), now));
+  saveTyping(addTyping(loadTyping(), now, typingBook));
 }
 
 /** Minutes, to one decimal place: 90,000 ms is 1.5. */
@@ -288,18 +337,21 @@ export function typingDue(t: TypingWaiting, now: number): boolean {
 }
 
 /** The day's note with more minutes typing. */
-export function addTypingToDay(text: string, date: string, minutes: number, now: Date): string {
+export function addTypingToDay(text: string, date: string, minutes: number, now: Date, books?: Record<string, number>): string {
   const stamp = now.toISOString().slice(0, 19) + 'Z';
-  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: 0, typing_minutes: minutes, updated: stamp }, '');
+  const byBook = books && Object.keys(books).length ? { typing_books: writeBookList(books, true) } : {};
+  if (!text.trim()) return Frontmatter.join({ type: 'writing-day', date, pomodoros: 0, minutes: 0, words: 0, typed: 0, typing_minutes: minutes, ...byBook, updated: stamp }, '');
   const p = Frontmatter.parse(text);
   const data = { ...((p.data || {}) as Record<string, unknown>) };
   data.typing_minutes = Math.round(((toNumber(data.typing_minutes) || 0) + minutes) * 10) / 10;
+  if (books && Object.keys(books).length) data.typing_books = writeBookList(addInto(readBookList(data.typing_books), books), true);
   data.updated = stamp;
   return Frontmatter.join(data, p.body || '');
 }
 
 /** A piece of the Writing Log on its way to the vault: a Pomodoro, words typed on a day, or minutes of typing on a day. */
-export type LogItem = { kind: 'pomodoro'; record: PomodoroRecord } | { kind: 'typed'; date: string; words: number } | { kind: 'typing'; date: string; minutes: number };
+export type LogItem = { kind: 'pomodoro'; record: PomodoroRecord } | { kind: 'typed'; date: string; words: number; books?: Record<string, number> }
+  | { kind: 'typing'; date: string; minutes: number; books?: Record<string, number> };
 
 /** Take what is due out of the two meters (words typed, minutes typing), for the one saving system to carry to the
  *  vault: after a two-minute pause, every ten minutes while Kyle keeps typing, or all of it when `force` (the page is
@@ -310,20 +362,47 @@ export function takeTypingCounts(force: boolean, now = Date.now()): LogItem[] {
   const a = loadTyping();
   const out: LogItem[] = [];
   if (Object.keys(t.days).length > 0 && (force || typedDue(t, now))) {
-    Object.keys(t.days).sort().forEach((date) => { if (t.days[date] > 0) out.push({ kind: 'typed', date, words: t.days[date] }); });
-    saveTyped({ days: {}, firstAt: 0, typedAt: t.typedAt });
+    Object.keys(t.days).sort().forEach((date) => {
+      if (!(t.days[date] > 0)) return;
+      const books = (t.books || {})[date];
+      out.push(books && Object.keys(books).length ? { kind: 'typed', date, words: t.days[date], books } : { kind: 'typed', date, words: t.days[date] });
+    });
+    saveTyped({ days: {}, firstAt: 0, typedAt: t.typedAt, books: {} });
   }
   if (force ? Object.keys(a.days).length > 0 : typingDue(a, now)) {
     const days = { ...a.days };
+    const keep: Record<string, Record<string, number>> = {};
     Object.keys(a.days).sort().forEach((date) => {
       const minutes = toMinutes(a.days[date] || 0);
-      if (minutes > 0) out.push({ kind: 'typing', date, minutes });
+      const isToday = date === ymd(new Date(now));
+      // Each book's whole tenths go with the day's; the rest of a book's time waits, like the day's.
+      const per = (a.books || {})[date] || {};
+      const books: Record<string, number> = {};
+      Object.keys(per).forEach((b) => {
+        const m = toMinutes(per[b] || 0);
+        if (m > 0) books[b] = m;
+        const left = (per[b] || 0) - m * 60000;
+        if (left > 0 && isToday) keep[date] = { ...(keep[date] || {}), [b]: left };
+      });
+      if (minutes > 0) out.push(Object.keys(books).length ? { kind: 'typing', date, minutes, books } : { kind: 'typing', date, minutes });
       const left = (a.days[date] || 0) - minutes * 60000;
-      if (left > 0 && date === ymd(new Date(now))) days[date] = left; else delete days[date];
+      if (left > 0 && isToday) days[date] = left; else delete days[date];
     });
-    saveTyping({ ...a, days, firstAt: now });
+    saveTyping({ ...a, days, firstAt: now, books: keep });
   }
   return out;
+}
+
+/** One book's words typed and minutes typing on a day: the day's per-book lists in the vault plus what waits on this
+ *  device. A day logged before the lists existed counts for no book. */
+export function bookDay(index: VaultIndex | null, book: string, now: Date, typedWaiting?: TypedWaiting, typingWaiting?: TypingWaiting): { typed: number; typing: number } {
+  const date = ymd(now);
+  const n = index ? index.notes[logPath(date)] : undefined;
+  let typed = n ? readBookList(n.data.typed_books)[book] || 0 : 0;
+  let typing = n ? readBookList(n.data.typing_books)[book] || 0 : 0;
+  if (typedWaiting && typedWaiting.books && typedWaiting.books[date]) typed += typedWaiting.books[date][book] || 0;
+  if (typingWaiting && typingWaiting.books && typingWaiting.books[date]) typing += (typingWaiting.books[date][book] || 0) / 60000;
+  return { typed, typing: Math.round(typing * 10) / 10 };
 }
 
 /** Words an hour of typing, or null when there is too little typing time to say (under a minute). */
