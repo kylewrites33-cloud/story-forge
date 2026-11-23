@@ -4,6 +4,8 @@
 import { piles } from './ideas.ts';
 import { jobNotes } from './jobs.ts';
 import { idNumber, toNumber } from './links.ts';
+import { draftsFinal, workingNumber } from './bookdrafts.ts';
+import { Prose, wordCount } from './prose.js';
 import { bookTodos, isOpen } from './todos.ts';
 import { bookNotesToTeam } from './notes.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex } from './types.ts';
@@ -77,7 +79,7 @@ export function bookNumbers(schema: Schema, index: VaultIndex, book: BookEntry):
   const counts: Record<string, number> = {};
   scenes.forEach((s) => { const st = str(s.data.status) || 'planned'; counts[st] = (counts[st] || 0) + 1; });
   Object.keys(counts).forEach((k) => { if (order.indexOf(k) < 0) order.push(k); });
-  const ch = chaptersDone(scenes);
+  const ch = chaptersDone(scenes, inFirstDraft(book, note ? note.data.stage : book.stage));
   return {
     words, target, chapters: ch.chapters, chaptersDone: ch.done, doneWords: ch.words,
     percent: target ? Math.min(100, Math.round((ch.words / target) * 100)) : 0,
@@ -85,19 +87,34 @@ export function bookNumbers(schema: Schema, index: VaultIndex, book: BookEntry):
   };
 }
 
+/** A scene with prose typed in it, whatever its status. */
+function hasProse(s: NoteRecord): boolean {
+  return wordCount(Prose.proseText(s.body || '')) > 0;
+}
+
+/** The book is in its first draft: no draft saved yet and not yet in publishing. */
+export function inFirstDraft(book: BookEntry, stage?: unknown): boolean {
+  return workingNumber(book.drafts || []) === 1 && !draftsFinal(stage);
+}
+
 /** The book's progress in chapters (Kyle, 2026-10-22): a chapter is done when every scene in it is revised or final,
  * and only done chapters' words count toward the target, so a burst of text from the team moves nothing until Kyle has
  * edited the chapter and marked it done. */
-export function chaptersDone(scenes: NoteRecord[]): { chapters: number; done: number; words: number } {
+export function chaptersDone(scenes: NoteRecord[], firstDraft = false): { chapters: number; done: number; words: number } {
   const groups = new Map<string, NoteRecord[]>();
   scenes.forEach((s) => {
     const c = toNumber(s.data.chapter);
     const key = c != null ? 'c' + c : 'p' + s.path;
     groups.set(key, (groups.get(key) || []).concat(s));
   });
+  // In a first draft a chapter is also done once Kyle has started writing a later one (Kyle, 2026-11-23, asked "in a
+  // first draft, a chapter counts as done once you start writing the next chapter?": "yeah"). Marking by hand still works.
+  let lastWritten = -Infinity;
+  if (firstDraft) scenes.forEach((s) => { const c = toNumber(s.data.chapter); if (c != null && c > lastWritten && hasProse(s)) lastWritten = c; });
   let done = 0, words = 0;
   groups.forEach((list) => {
-    if (!list.every(isDoneScene)) return;
+    const c = toNumber(list[0].data.chapter);
+    if (!list.every(isDoneScene) && !(firstDraft && c != null && c < lastWritten)) return;
     done++;
     words += list.reduce((n, s) => n + (toNumber(s.data.words) || 0), 0);
   });

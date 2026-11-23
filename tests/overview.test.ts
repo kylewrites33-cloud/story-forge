@@ -89,3 +89,16 @@ test('book progress counts only chapters whose scenes are all revised or final, 
   ]);
   assert.deepEqual(r, { chapters: 5, done: 3, words: 4300 });
 });
+
+test('in a first draft a chapter is done once a later chapter has writing in it; marking by hand still counts (2026-11-23)', () => {
+  const sc = (path: string, chapter: number | null, status: string, words: number, body: string) =>
+    ({ path, type: 'scene', sha: '', body, data: { chapter, status, words } }) as unknown as Parameters<typeof chaptersDone>[0][number];
+  const scenes = [
+    sc('a', 1, 'drafted', 1000, '\nBasil stepped out.\n'), sc('b', 2, 'drafted', 800, '\nPoppy waited.\n'),
+    sc('c', 3, 'planned', 0, '\nThe road.\n'), sc('d', 4, 'planned', 0, ''), sc('e', 5, 'revised', 50, '\nMarked by hand.\n')
+  ];
+  assert.deepEqual(chaptersDone(scenes, true), { chapters: 5, done: 5, words: 1850 }, 'chapters 1 to 4 sit before chapter 5, which has writing and is marked done');
+  const early = scenes.slice(0, 4);
+  assert.deepEqual(chaptersDone(early, true), { chapters: 4, done: 2, words: 1800 }, 'chapter 3 is the one being written; 4 is empty');
+  assert.deepEqual(chaptersDone(early, false), { chapters: 4, done: 0, words: 0 }, 'later drafts count only chapters marked done');
+});

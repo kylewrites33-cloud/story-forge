@@ -103,7 +103,7 @@ export function bookStatus(index: VaultIndex, book: BookEntry, recent: Recent[],
   // Writing: progress counts only chapters Kyle marked done (Kyle, 2026-10-22).
   const prose = scenes.filter((s) => /\w/.test(s.body));
   if (prose.length) {
-    const done = chaptersDone(scenes);
+    const done = chaptersDone(scenes, working === 1);
     const target = note ? toNumber(note.data.target_words) : null;
     const percent = target ? pct(done.words, target) : pct(done.done, done.chapters);
     return {
