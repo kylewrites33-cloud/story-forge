@@ -924,6 +924,10 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   // ---- Saved drafts (Kyle, 2026-10-24: "i see value in at least labeling and keeping draft 1 accessible") ----
   const savedList = drafts ? drafts.saved : [];
   const working = workingNumber(savedList);
+  // In a first draft, a chapter before the last one with writing in it counts as done (Kyle, 2026-11-23: "yeah", to
+  // "a chapter counts as done once you start writing the next chapter").
+  let lastWritten = -Infinity;
+  if (book && drafts && working === 1 && !drafts.final) book.groups.forEach((g) => { if (g.num != null && g.num > lastWritten && g.scenes.some((n) => (n.path === note.path ? words : typedWords(n)) > 0)) lastWritten = g.num; });
   const viewKey = PREF.draftView + (bookFolder || '');
   const [draftView, setDraftViewState] = useState<number | null>(() => { const v = Number(readPref(viewKey, 'visit')); return v > 0 ? v : null; });
   const setDraftView = async (n: number | null) => {
@@ -1649,7 +1653,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
                       aria-current={inHere ? 'page' : undefined} title={chapterHeading(g)}>
                       <span class="side-num">{g.num}</span>
                       <span class="side-name">{g.title || sceneHeader(g.scenes[0].data, g.scenes[0].path)}</span>
-                      {g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : propText(n, 'status')) >= 0) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
+                      {(g.scenes.every((n) => DONE_STATUSES.indexOf(n.path === note.path ? sceneStatus : propText(n, 'status')) >= 0) || (g.num != null && g.num < lastWritten)) && <span class="side-done" title="Done"><Icon name="check" size={16} /><span class="visually-hidden">Done</span></span>}
                       {changes && (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open > 0 && (
                         <span class="side-changes" title="Changes from the team waiting">{g.num === chapterNum ? chAll.filter((c) => c.status === 'open').length : (changes.book.find((x) => x.chapter === g.num) || { open: 0 }).open}</span>
                       )}

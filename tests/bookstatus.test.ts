@@ -41,15 +41,15 @@ test('the rewrite pass counts chapters through and opens the last chapter Kyle w
   assert.equal(back.go, book.scenes[2]);
 });
 
-test('a first draft counts only chapters Kyle marked done', () => {
+test('a first draft counts chapters Kyle marked done and every chapter before the last one he has written in (2026-11-23)', () => {
   const { book, notes, scenes } = setup('B3', 'draft', 4, {}, { target_words: 4000 });
   scenes[0].data.status = 'revised';
   const index = { books: [book], notes } as unknown as VaultIndex;
   const st = bookStatus(index, book, [{ path: book.scenes[1], at: '2026-11-05T09:00:00Z' }]);
   assert.equal(st.phase, 'writing');
   assert.equal(st.stage, 'Draft 1: writing');
-  assert.equal(st.percent, 25);
-  assert.equal(st.detail, '1 of 4 chapters done');
+  assert.equal(st.percent, 75);
+  assert.equal(st.detail, '3 of 4 chapters done', 'chapter 4 has writing, so 1 to 3 are done');
   assert.equal(st.go, book.scenes[1]);
 });
 

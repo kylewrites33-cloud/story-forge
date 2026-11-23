@@ -481,7 +481,12 @@ add a dated line here when you add or change one.
   and the book's words are right; the Writing Log keeps each day's typing per book as well (`typed_books`,
   `typing_books`: "<book folder>: <number>", from the scene's path; `bookDay` in `src/lib/pomodoro.ts`), and the
   Overview's "words you typed in the last 7 days" counts only that book's lines. The timer's "Today" is still the whole
-  day. Days before 2026-11-16 have no per-book lines, so they count for no book. The guided next step (removed: the button left the Overview on 2026-11-06 and its code, `src/lib/nextstep.ts`, on 2026-11-10; what follows is how it worked) was
+  day. Days before 2026-11-16 have no per-book lines, so they count for no book.
+  2026-11-23, later (Kyle: "whats the logic for a chapter being done in the first draft? the following chapter being
+  opened up?", then "yeah"): in a first draft (no draft saved yet, not in publishing; `inFirstDraft`) a chapter also
+  counts as done once a later chapter has writing in it, on the Overview, the Books page, the Chapter Grid and the
+  writing screen's chapter ticks; marking a chapter done by hand still counts. Later drafts count only chapters marked
+  done. The guided next step (removed: the button left the Overview on 2026-11-06 and its code, `src/lib/nextstep.ts`, on 2026-11-10; what follows is how it worked) was
   one big button with a sentence of why: Kyle's own step (decide what waits on a board), a move to the next stage, or a
   `next-step` job whose ## Ask names the step and tells the team to stop at a gate for his yes (never made twice while
   one waits). Once every scene has a draft and the book has story calls or changes in the Edit room, the next step points there instead of moving the book to revise: Answer the story calls, then Go through the changes, else Open the Edit room (Kyle, 2026-10-28, asking what "Move the book to revise" meant on Quest Declined 1 mid proofread). Notes to the Team (`#/board/notes/<book>`, Plan): the book's `note` notes, open first, to the whole team or

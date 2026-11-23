@@ -9,7 +9,7 @@ import { cardFields, editableFields, propDef, propertyOrder } from '../lib/schem
 import { EditFields } from './EditFields.tsx';
 import { piles, type Decision } from '../lib/ideas.ts';
 import type { BookEntry, NoteRecord, Schema, VaultIndex, VaultSource } from '../lib/types.ts';
-import { chaptersDone } from '../lib/overview.ts';
+import { chaptersDone, inFirstDraft } from '../lib/overview.ts';
 import { bookProgress, labelHue, labelsOf, loadRates, parseOutline, readingLine, readingTime, type OutlineScene, type ReadRates } from '../lib/home.ts';
 import { Cover } from './Home.tsx';
 import type { Choice } from '../vault/choice.ts';
@@ -296,8 +296,8 @@ function loadGridView(): GridView {
 const STEP_NAME = { drafting: 'Drafting', revising: 'Revising', finishing: 'Finishing', done: 'Done' };
 
 /** The numbers at the top of the Chapter Grid, and a ring for how far the book is through the step it is in (Kyle, 2026-10-18). */
-function BookSummary({ stage, chapters, scenes, words, rates, order, counts }: {
-  stage: string; chapters: number; scenes: NoteRecord[]; words: number; rates: ReadRates; order: string[]; counts: Record<string, number>;
+function BookSummary({ stage, chapters, scenes, words, rates, order, counts, firstDraft }: {
+  firstDraft: boolean; stage: string; chapters: number; scenes: NoteRecord[]; words: number; rates: ReadRates; order: string[]; counts: Record<string, number>;
 }) {
   const p = bookProgress(scenes.map((s) => String(s.data.status || 'planned')), order);
   const r = 22, c = 2 * Math.PI * r;
@@ -319,7 +319,7 @@ function BookSummary({ stage, chapters, scenes, words, rates, order, counts }: {
       <div class="stats">
         {stat(stage ? stage[0].toUpperCase() + stage.slice(1) : '—', 'Stage')}
         {stat(chapters, chapters === 1 ? 'Chapter' : 'Chapters')}
-        {stat(chaptersDone(scenes.filter((n) => n.data.kind !== 'test')).done, 'Chapters done', 'done')}
+        {stat(chaptersDone(scenes.filter((n) => n.data.kind !== 'test'), firstDraft).done, 'Chapters done', 'done')}
         {stat(scenes.length, scenes.length === 1 ? 'Scene' : 'Scenes')}
         {stat(words.toLocaleString('en-US'), 'Words')}
         {stat('~' + pages, pages === 1 ? 'Page' : 'Pages')}
@@ -481,7 +481,7 @@ export function ChapterGrid({ schema, index, book, waiting, onDecide, onAdd, onA
         <div>
           <p class="crumb"><a href={href.series(book.seriesFolder)}>{book.seriesName}</a> · {(board && board.title) || 'Chapter Grid'}</p>
           <h1>{book.title}</h1>
-          <BookSummary stage={book.stage} chapters={allGroups.filter((g) => g.num != null).length} scenes={scenes} words={words} rates={rates} order={order} counts={counts} />
+          <BookSummary firstDraft={inFirstDraft(book, book.stage)} stage={book.stage} chapters={allGroups.filter((g) => g.num != null).length} scenes={scenes} words={words} rates={rates} order={order} counts={counts} />
           {(words > 0 || (onDecide && scenes.length > 0)) && (
             <p class="meta">
               {words ? readingTime(words, rates) : ''}

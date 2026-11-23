@@ -105,6 +105,30 @@ try {
     console.log('ok webkit', w + 'x' + h, 'book', before, '->', after, 'typed', typedNow);
     await js('localStorage.clear(); return true');
   }
+  // A first draft (no saved draft): chapters before the last one with writing in it count as done, on the Overview and
+  // with a tick in the writing screen's chapter list (Kyle, 2026-11-23).
+  await wd('POST', '/session/' + sid + '/window/rect', { width: 1180, height: 820 });
+  await wd('POST', '/session/' + sid + '/url', { url: APP + '#/settings' });
+  await js('localStorage.clear(); return true');
+  await wd('POST', '/session/' + sid + '/refresh', {});
+  await until("return !!document.querySelector('form.settings input')", 'settings form');
+  await js("const real = window.fetch.bind(window); window.fetch = (u, i) => real(String(u).replace('https://api.github.com', 'http://localhost:4488'), i); return true;");
+  fake = makeFake(DEMO, (start) => { for (const k of [...start.keys()]) if (k.startsWith(BOOK + '/Drafts/') || k.startsWith(BOOK + '/Changes/')) start.delete(k); const last = BOOK + '/Scenes/S-008 The Last Ring.md'; start.set(last, start.get(last).replace(/\n---\n[\s\S]*$/, '\n---\n')); });
+  await js("const i = document.querySelector('form.settings input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'test-token'); i.dispatchEvent(new Event('input', { bubbles: true })); return true;");
+  await press('Save');
+  await sleep(300);
+  await js("location.hash = arguments[0]; return true", '#/board/overview/' + encodeURIComponent(BOOK));
+  await until("return /chapters? done/.test(document.body.innerText)", 'the Overview', 30000).catch(async (e) => { console.log('PAGE', (await js('return location.hash + " " + document.body.innerText.slice(0, 1500)'))); throw e; });
+  const doneLine = await js("return (document.body.innerText.match(/(\\d+) of (\\d+) chapters done/) || []).slice(1, 3).join(' of ')");
+  // Chapter 3 (S-005) has writing, chapter 4 has none: chapters 1 and 2 are done.
+  assert.equal(doneLine, '2 of 4', 'first-draft chapters done: ' + doneLine);
+  await js("location.hash = arguments[0]; return true", '#/write/' + encodeURIComponent(SCENE));
+  await until("return [...document.querySelectorAll('button')].some((x) => x.textContent.trim() === 'Chapters')", 'the writing page', 30000);
+  if (!(await js("return !!document.querySelector('nav.scene-list')"))) await press('Chapters');
+  await until("return !!document.querySelector('nav.scene-list')", 'the chapter list');
+  const ticks = await js("return [...document.querySelectorAll('nav.scene-list a.side-chapter-row')].map((a) => !!a.querySelector('.side-done'))");
+  assert.deepEqual(ticks.slice(0, 4), [true, true, false, false], 'ticks: ' + JSON.stringify(ticks));
+  console.log('ok webkit first draft', doneLine, JSON.stringify(ticks));
   console.log('WEBKIT ALL OK');
   await done(0);
 } catch (e) {
