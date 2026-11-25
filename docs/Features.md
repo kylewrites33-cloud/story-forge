@@ -911,6 +911,10 @@ compare-versions screen and side by side were dropped; Workflow mode (Plan > Ste
   the right, so that the main text gets shoved to the right. That way it's closer to the writer's text"): the text moves
   right, next to the Rewrite column. Every device switched to it once; Right margin puts them back. Every scene of a
   chapter shows its notes this way (before, only the open scene did).
+  Fixed 2026-11-25 (Kyle, with an iPad picture of the text squeezed against the right edge and half the page empty:
+  "what is up with this view"): the text moves right only while the Team column is open beside it. With nothing open
+  on the right, the text keeps the middle of the page at its normal width and the notes sit just to its left; on a
+  narrow page it moves over only as far as the notes need. Same for the change labels in the left margin.
   Fixed 2026-11-12 (Kyle, the morning after the writing page moved to the new writing box: "the curly bracket comments
   arent showing up anymore"): the new box cut off anything outside its own edge, so a note in the margin showed only as
   a thin bar. The box no longer clips (`.cm-scroller` in `src/write/prose.ts`; the page scrolls, not the box). Checks
