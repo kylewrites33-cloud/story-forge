@@ -37,7 +37,8 @@ test('the names never change: a device already holds things under them', () => {
     'story-forge.grid-view-2', 'story-forge.tension-tab', 'story-forge.matrix-show', 'story-forge.plot-grid-mode', 'story-forge.promises-settled',
     'sf-castweb-focus:', 'story-forge.todo-view', 'story-forge.todo-map-filter', 'sf-team-sort', 'sf-chat-prefill', 'story-forge.rewrite-edits.',
     'story-forge.draft-view.', 'story-forge.rewrite-opened.', 'character-study.cache.', 'character-study.lens',
-    'sparrow-pocket.book', 'sparrow-pocket.place', 'sparrow-pocket.choices.', 'sparrow-pocket.notes.', 'sparrow.phone-report.', 'sparrow-pocket.mode', 'sparrow-pocket.folds'];
+    'sparrow-pocket.book', 'sparrow-pocket.place', 'sparrow-pocket.choices.', 'sparrow-pocket.notes.', 'sparrow.phone-report.', 'sparrow-pocket.mode', 'sparrow-pocket.folds',
+    'sparrow.dictation'];
   const names = Object.values(PREF) as string[];
   held.forEach((n) => assert.ok(names.indexOf(n) >= 0, n + ' is gone from PREF'));
   assert.equal(names.length, held.length, 'a new name goes in this list too');

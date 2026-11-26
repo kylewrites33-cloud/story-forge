@@ -2154,3 +2154,33 @@ open chapter has words waiting from the phone, a bar at the foot says "Your phon
 Put it in: it saves the page's own words, puts the book's phone notes in, and reloads the page, which then shows what was
 done until OK. Checked against a pretend GitHub: the same five presses on the phone and in Beats mode left the scene, the
 beats note and the Archive copy the same, byte for byte.
+
+## Dictate: a mic button in the writing screen (2026-11-26)
+
+Kyle, 2026-11-26 (order C-006 from his Chief of Staff): "Also for the dictation inside the Sparrow app, yes, let's
+definitely make a button within the app." Earlier (2026-10-22) he found Apple's dictation not good enough and Wispr's
+keyboard clumsy on the iPad (it jumps to its own app), and wanted the words to land right where he is typing.
+
+- **The button.** A mic in the writing screen's tool row, after Find, and in the row above the iPad's keyboard. Press it
+  and speak; it turns red and a line under the tool row says "Listening. Press the mic again when you are done." Press it
+  again: "Writing your words down…", then the words go in at the cursor (over any words picked; at the end if he has not
+  been in the page yet), with a space before them where one is needed and a capital at the start of a sentence. They go in
+  as his own typing: in the style at the cursor, counted in words and minutes typed, one Undo takes them out. Beats mode
+  has it too (the open beat). It stops by itself after five minutes. With a saved draft on screen (no writing box) the
+  words show in the line to copy.
+- **Where the words are made.** Kyle's own speech server on the Mac mini (no paid service, no second key). The app sends
+  the sound as it comes, one second at a time, as raw PCM (16-bit, mono, 16,000 a second): `PUT
+  <address>/v1/dictation/<id>/chunk/<n>` from 0, then `POST <address>/v1/dictation/<id>/finish?chunks=N&bytes=B`, which
+  answers with the text (plain, or JSON with `text`). The password goes with every request as `Authorization: Bearer
+  <password>`. The page is https, so the iPad only lets it call an https address; the Mac mini's side (https and letting
+  `https://kylewrites33-cloud.github.io` call it) is built in the Chief of Staff's "Build our own Wispr Flow replacement"
+  thread. If its notes change the sound format or the password header, they are constants at the top of
+  `src/lib/dictation.ts`.
+- **Settings, Dictation.** The speech server's address and password, typed once on each device and kept only there
+  (`sparrow.dictation` in `src/lib/prefs.ts`), never in the vault or a repository. Try it sends half a second of quiet
+  and says whether the server answered. A plain http address is caught with a sentence saying to use the https one.
+- **When it goes wrong**, a plain line under the tool row: no server set up (with Open Settings), the microphone turned
+  off for the browser (where to turn it on), the server not reached (is the Mac mini on), the password refused.
+- Checked in a real WebKit at iPad and desktop sizes (`tests/webkit/dictate.mjs`, a pretend microphone and a pretend
+  speech server): pieces go up in order with the password, finish names the count and bytes, the words land at the
+  cursor and nothing else on the page changes, one Undo takes them out, a refused password says so.

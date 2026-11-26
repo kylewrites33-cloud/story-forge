@@ -12,6 +12,7 @@ import { ASK_RE } from '../lib/brackets.ts';
 import { findEchoes, placeChanges, shortLabel, wordDiff, type Change } from '../lib/changes.ts';
 import { mentions } from '../lib/codex.ts';
 import { clip, edit, restAt, type Look } from '../lib/prosedit.ts';
+import { fitWords } from '../lib/dictation.ts';
 import { allRuns, findAll, insertText, marks, runs, stylesAt, toggleStyle, unstyle, type StyleKind, type StyleOptions } from '../lib/styled.ts';
 import { pasted } from './clipboard.ts';
 
@@ -393,6 +394,9 @@ export interface EditorCommands {
   /** Words that came from somewhere else (the team, another device): the new text, and how Kyle's cursor moves with it.
    * The cursor stays in his sentence, the page stays where it is and keeps focus; it is one step to undo. */
   apply: (text: string, map: (n: number) => number) => void;
+  /** Words Kyle dictated (the mic button): they go in at the cursor, over any words picked (at the end before he has
+   * been in the page), spaced and capitalised to fit, as his own typing, one step to undo. Answers where they went. */
+  dictate: (words: string) => { start: number; end: number } | null;
 }
 
 export interface ProseEvents {
@@ -684,6 +688,17 @@ export function proseBox(parent: HTMLElement, text: string, label: string, optio
       const was = view.state.doc.toString();
       if (t === was) return;
       view.dispatch({ changes: diff(0, was, t), selection: { anchor: 0 }, annotations: [own.of(true), Transaction.userEvent.of('input.replace'), isolateHistory.of('full')] });
+    },
+    dictate: (words) => {
+      const doc = view.state.doc, sel = view.state.selection.main;
+      const a = been ? sel.from : doc.length, b = been ? sel.to : doc.length;
+      const fit = fitWords(doc.sliceString(Math.max(0, a - 200), a), words, doc.sliceString(b, Math.min(doc.length, b + 20)));
+      if (!fit) return null;
+      // As typing (not marked as the app's own): the box keeps the style at the cursor, and the minutes typing run on.
+      view.dispatch({ changes: { from: a, to: b, insert: fit }, selection: { anchor: a + fit.length }, userEvent: 'input.type.dictate', scrollIntoView: true, annotations: isolateHistory.of('full') });
+      been = true;
+      const end = view.state.selection.main.head;
+      return { start: end - fit.length, end };
     },
     apply: (t, map) => {
       const was = view.state.doc.toString();
