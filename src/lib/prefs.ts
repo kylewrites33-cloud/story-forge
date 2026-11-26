@@ -72,6 +72,7 @@ export const PREF = {
   readRates: 'story-forge.read-rates', // words a page, words a minute
   checkShow: 'story-forge.check-show', // AI-phrase marks on the page: absent is on
   fillAuto: 'story-forge.fill-auto', // fill { } on their own
+  dictation: 'sparrow.dictation', // the speech server's address and password for the mic button (2026-11-26), this device only
   // ---- Where each page was left
   panelTab: 'story-forge.panel-tab', // the writing page's side column tab
   sideChapters: 'story-forge.chapters', // chapter list open or closed

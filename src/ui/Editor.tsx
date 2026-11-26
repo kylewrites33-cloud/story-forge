@@ -50,6 +50,7 @@ import { RewritePanel, loadLeftOff, saveLeftOff, type Put, type RewriteSection }
 import { findSpot, rewriteFor, spotOf, type Spot } from '../lib/rewrite.ts';
 import { AskForChanges, ChangesBar, ChangesPanel, DraftMenu, showCard, loadView, saveView, type ChangesView, type EchoInfo } from './Changes.tsx';
 import { ListenBar, useListen } from './Listen.tsx';
+import { DictateButton, DictateLine, useDictate } from './Dictate.tsx';
 import { OptionsAsk, OptionsPanel, usePassageOptions } from './OptionsPanel.tsx';
 import { SceneSection, type SectionApi } from './SceneSection.tsx';
 import {
@@ -768,6 +769,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
 
   // Tool buttons must not take the cursor out of the page.
   const keepFocus = { onMouseDown: (e: Event) => e.preventDefault(), onPointerDown: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') e.preventDefault(); } };
+  // Dictate: words spoken go to Kyle's speech server and come back at the cursor (2026-11-26, order C-006).
+  const dictate = useDictate(() => cmd());
 
   // Check, Listen and Options for a passage (Writers Room, Kyle 2026-10-18).
   const checkOptions = useMemo<CheckOptions>(() => checkOpts || { lint: {}, minSev: 1 }, [JSON.stringify(checkOpts || null)]);
@@ -1513,6 +1516,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           <button type="button" class="tool" aria-label="Highlight" title="Highlight: mark words to come back to" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
           <span class="bar-sep" aria-hidden="true" />
           <button type="button" class="tool" aria-label="Find and replace" title="Find and replace (Ctrl or Cmd+F)" aria-pressed={findOpen} onClick={() => setFindOpen(!findOpen)}><Icon name="search" /></button>
+          <DictateButton d={dictate} keep={keepFocus} />
         </span>
         <span class="bar-gap" />
         {beatsMode
@@ -1722,6 +1726,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
               <button type="button" class="tool" aria-label="Bold" aria-pressed={typing.b} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.bold(); }}><b>B</b></button>
               <button type="button" class="tool" aria-label="Italic" aria-pressed={typing.i} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.italic(); }}><i>I</i></button>
               <button type="button" class="tool" aria-label="Highlight" aria-pressed={typing.h} {...keepFocus} onClick={() => { const c = cmd(); if (c) c.highlight(); }}><Icon name="marker" /></button>
+              <span class="bar-sep" aria-hidden="true" />
+              <DictateButton d={dictate} keep={keepFocus} />
             </div>
           )}
           {((group && (group.num != null || group.scenes.length > 1)) || drafts) && (
@@ -1747,6 +1753,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           )}
           {optionsOpen && <OptionsAsk busy={opt.busy} keep={keepFocus} onClose={() => setOptionsOpen(false)}
             onAsk={async (m) => { if (await opt.ask(m)) setOptionsOpen(false); }} />}
+          <DictateLine d={dictate} />
           {opt.said && !opt.busy && (
             <p class={'tool-said ' + (opt.said.error ? 'error' : 'ok')} role="status">
               {opt.said.text}

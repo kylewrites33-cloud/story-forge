@@ -5,6 +5,7 @@ import { qrSvg } from '../lib/qr.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
 import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
+import { cleanAddress, loadDictation, saveDictation, tryServer } from '../lib/dictation.ts';
 import { loadTopRoom, saveTopRoom, type TopRoom } from '../lib/topbar.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
@@ -78,6 +79,7 @@ export function SettingsScreen(props: { settings: Settings; onSave: (s: Settings
         {result && <p class={result.ok ? 'ok' : 'error'} role="status">{result.text}</p>}
       </form>
       <AddPhone settings={props.settings} />
+      <Dictation />
       <ReadingRates />
       <h2>Forget</h2>
       <p>Removes the token and the saved copy of the vault from this browser.</p>
@@ -217,6 +219,55 @@ function TopOfScreen() {
         {button('none', 'No room')}
       </p>
       <p class="hint">{now ? 'Room is kept for the clock now.' : 'No room is kept now.'} Window {window.innerWidth} × {window.innerHeight}, screen {screen.width} × {screen.height}.</p>
+    </>
+  );
+}
+
+/** Dictation (2026-11-26, order C-006): the speech server on the Mac mini that the writing screen's mic button sends to.
+ * The address and password stay on this device only; each device is set up once. */
+function Dictation() {
+  const [form, setForm] = useState(loadDictation);
+  const [show, setShow] = useState(false);
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
+  const [trying, setTrying] = useState(false);
+  const save = (e: Event) => {
+    e.preventDefault();
+    saveDictation(form);
+    setForm(loadDictation());
+    setSaid({ ok: true, text: form.address.trim() ? 'Saved on this device.' : 'Dictation is off on this device.' });
+  };
+  const tryIt = async () => {
+    saveDictation(form);
+    setForm(loadDictation());
+    setTrying(true);
+    setSaid(null);
+    try { setSaid({ ok: true, text: await tryServer(loadDictation(), (u, i) => fetch(u, i as RequestInit), location.protocol) }); }
+    catch (e) { setSaid({ ok: false, text: (e as Error).message }); }
+    finally { setTrying(false); }
+  };
+  return (
+    <>
+      <h2>Dictation</h2>
+      <form class="settings" onSubmit={save}>
+        <p class="hint">The mic button in the writing screen sends what you say to your speech server on the Mac mini and puts the words at the cursor. Type its address and password once on each device. They stay on this device and go only to the speech server.</p>
+        <label>
+          Speech server address
+          <input value={form.address} onInput={(e) => setForm({ ...form, address: (e.currentTarget as HTMLInputElement).value })} onBlur={() => setForm({ ...form, address: cleanAddress(form.address) })}
+            inputMode="url" autocomplete="off" autocapitalize="off" spellcheck={false} placeholder="https://…" />
+        </label>
+        <label>
+          Password
+          <span class="row">
+            <input type={show ? 'text' : 'password'} value={form.password} onInput={(e) => setForm({ ...form, password: (e.currentTarget as HTMLInputElement).value })} autocomplete="off" autocapitalize="off" spellcheck={false} />
+            <button type="button" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+          </span>
+        </label>
+        <p class="buttons">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" onClick={tryIt} disabled={trying || !form.address.trim()}>{trying ? 'Trying…' : 'Try it'}</button>
+        </p>
+        {said && <p class={said.ok ? 'ok' : 'error'} role="status">{said.text}</p>}
+      </form>
     </>
   );
 }

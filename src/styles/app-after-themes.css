@@ -880,6 +880,12 @@ button, .button { border-radius: 12px; }
 .sel-more-menu button:hover { background: var(--hover); }
 .kb-row { position: fixed; z-index: 26; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 2px; padding: 0 max(12px, env(safe-area-inset-left)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06); }
 .writer.kb-up .bar-format { display: none; }
+/* Dictate (2026-11-26): red while it listens, a slow pulse beside the Listening line. */
+.writer-bar .tool.dictate-button.listening, .kb-row .tool.dictate-button.listening { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.tool.dictate-button:disabled { opacity: 0.6; }
+.dictate-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); flex: none; animation: dictate-pulse 1.2s ease-in-out infinite; }
+@keyframes dictate-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .dictate-dot { animation: none; } }
 @media (max-width: 1099px) { .writer-book { display: none; } }
 @media (max-width: 899px) { .bar-format { margin-left: 0; padding-left: 0; border-left: none; } .writer-bar .bar-label:not(.always) { display: none; } }
 @media (max-width: 699px) { .bar-format { display: none; } .bar-team .bar-label { display: none; } }
