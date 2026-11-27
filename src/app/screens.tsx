@@ -286,7 +286,7 @@ function writing({ source, schema, index: view, waiting, act }: AppCtx, route: R
   return (
     <Editor key={r.path + (beats ? ':beats' : '')} beats={beats} source={source} schema={schema} note={note} next={next} prev={prev}
       nextMentions={book && next && next.data.id ? mentionsOf(Object.values(view.notes).filter((n) => n.path.startsWith(book.folder + '/')), propText(next, 'id')) : []}
-      book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [] } : null}
+      book={book ? { title: book.title, folder: book.folder, groups, archive: book.archive || [], scaffold: book.scaffold || null } : null}
       onAdd={book && source.commit ? (ch, chapterTitle, title) => act.onAddScene(book, ch, chapterTitle, title) : undefined}
       onAddChapter={book && source.commit ? (after, chapterTitle) => act.onAddChapter(book, after, chapterTitle) : undefined}
       onRenameChapter={book && source.commit ? act.onRenameChapter : undefined}

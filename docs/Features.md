@@ -2196,3 +2196,25 @@ more with time to answer. A refused key is not a reason to switch. The one that 
 (`sparrow.dictation-last`); Try it tries the same way and says which answered. Also from the server's notes: when finish
 answers 409 with the pieces it missed, they go again and finish is asked again (each piece is kept until the words come
 back). Checked in real WebKit with a home address that never answers.
+
+## The Scaffold pane (2026-11-27)
+
+Kyle, 2026-11-27: "can we fold the quest declined 3 scaffold that the story specialist made into the sparrow app? It
+would have a special right hand pane that may need to be different than our current one. The scaffold would need to
+stretch to cover the whole right half of the ipad screen (like i currently use it now by using apples multi window mode
+...). i want to keep the dimensions of that one as they are ... I would want to in future books pull in the relevant
+story scaffold in the same way". He said "go" to the design the same day.
+
+- A book whose folder has `Scaffold page.html` (the Story Specialist's scaffold page, skill potentials) gets a
+  **Scaffold** button in the writing screen's top bar, beside Team. Books without one show no button.
+- It opens the page on the right half of the screen: the page and the scaffold meet in the middle, as in the iPad's
+  split view. The chapter list and the Team column step aside while it is open. Team (or Chapters) brings its column
+  back at its usual size (376 px) and closes the scaffold; the Team column's size never changes. Narrower than 900 px (an
+  iPad held upright, or Sparrow in half the screen) it slides over the page from the right.
+- The page is the vault's file as it is, in a sealed frame (it runs its own buttons and cannot reach the app or what the
+  app keeps). The app adds its colours on top, so it matches the theme, and hides the page's "Black on white" button
+  (that is for the phone). It opens at the chapter being written: the app sends the chapter number and the page opens
+  that card and brings it to the top (`openCh` in the page). The same file is the claude.ai scaffold page.
+- Kept on the device by blob sha, so it opens offline and downloads again only when the Story Specialist changes it.
+  Open or closed is kept per device (`sparrow.scaffold-open`).
+- Checked in real WebKit at 1366x1024, 1180x820 and 1600x1000 (tests/webkit/scaffold.mjs).

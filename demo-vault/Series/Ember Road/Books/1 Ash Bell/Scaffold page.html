@@ -1,0 +1,146 @@
+<title>Ash Bell Scaffold</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one vertical spine, acts as bands, beats hang off the spine.
+   The page opens dark (Kyle, 2026-11-26: "still defaulting to white background"). The button switches to black on white
+   for the e-ink phone, and that device remembers the choice. Dark is the default in the CSS itself, so no script has to
+   run before the page is dark. */
+:root{
+  --paper:#000000; --ink:#e6e6e6; --soft:#b4b4b4; --rule:#8a8a8a; --fill:#161616;
+  --sans: "Atkinson Hyperlegible", "Verdana", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Courier New", monospace;
+  color-scheme: dark;
+}
+:root.light{--paper:#ffffff; --ink:#000000; --soft:#3a3a3a; --rule:#000000; --fill:#ececec; color-scheme: light;}
+html{background:var(--paper)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#invert,#all{all:unset;box-sizing:border-box;border:3px solid var(--ink);padding:8px 12px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;background:var(--paper);color:var(--ink)}
+#invert:focus-visible,#all:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:26px;margin:0;text-wrap:balance}
+.sub{margin:0;font-size:16px;color:var(--soft)}
+.key{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:15px}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:14px;height:14px;border:2px solid var(--ink);display:inline-block;border-radius:50%}
+.dot.now{background:var(--ink)} .dot.open{background:var(--paper)} .dot.half{background:linear-gradient(90deg,var(--ink) 50%,var(--paper) 50%)}
+.act{border:3px solid var(--rule);display:flex;flex-direction:column}
+.act-head{background:var(--fill);color:var(--ink);border-bottom:3px solid var(--rule);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+:root.light .act-head{background:var(--ink);color:var(--paper);border-bottom:0}
+.act-head b{font-size:20px;letter-spacing:.02em}
+.act-head small{font-size:15px}
+.drawer{border-bottom:2px solid var(--rule);padding:8px 12px;background:var(--fill);font-size:15px}
+.drawer:last-child{border-bottom:0}
+.drawer em{font-style:normal;font-weight:700}
+.spine{display:flex;flex-direction:column}
+.beat{display:grid;grid-template-columns:56px 1fr;border-top:2px solid var(--rule);min-height:56px}
+.beat:first-child{border-top:0}
+.ch{border-right:3px solid var(--rule);font-family:var(--mono);font-size:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;text-align:center;font-variant-numeric:tabular-nums}
+.ch .d{margin-top:4px}
+button.b{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:12px 12px 14px;cursor:pointer;min-width:0}
+button.b:focus-visible{outline:3px solid var(--ink);outline-offset:-5px}
+.bt{font-weight:700;font-size:17px;display:flex;justify-content:space-between;gap:8px}
+.bt .pct{font-family:var(--mono);font-weight:400;font-size:13px;white-space:nowrap}
+.bw{font-size:16px;display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.ln em{font-style:normal;font-weight:700}
+.gist{font-size:18px;font-weight:700;line-height:1.3}
+.arr{display:inline-block;width:1em}
+.det{display:flex;flex-direction:column;gap:8px}
+.det[hidden]{display:none}
+.btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mode{color:var(--soft)}
+.beat.empty .bw{color:var(--soft)}
+.bt{font-size:14px;font-family:var(--mono);font-weight:400;text-transform:uppercase;letter-spacing:.04em}
+.more{font-size:15px;border-top:1px dashed var(--ink);margin-top:2px;padding-top:6px;color:var(--soft)}
+.fork{border:3px dashed var(--rule);padding:10px 12px;font-size:16px;display:flex;flex-direction:column;gap:6px}
+.fork b{font-size:17px}
+.foot{font-size:14px;color:var(--soft)}
+.col{display:flex;flex-direction:column;min-width:0}
+details.wr{border-top:1px dashed var(--ink);margin:0 12px 10px;font-size:16px}
+details.wr>summary{cursor:pointer;list-style:none;padding:10px 0 6px;font-family:var(--mono);font-size:14px;text-transform:uppercase;letter-spacing:.04em;min-height:24px}
+details.wr>summary::-webkit-details-marker{display:none}
+details.wr>summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+details.wr>summary .arr{font-family:var(--sans)}
+details.wr ul{margin:4px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.4}
+details.wr li em{font-style:normal;font-weight:700}
+.beat.here .ch{background:var(--fill)}
+</style>
+
+<div class="wrap">
+  <div class="top"><h1>Ash Bell scaffold</h1><span class="btns"><button id="all" aria-pressed="false">Show all</button><button id="invert" aria-pressed="false">Black on white</button></span></div>
+  <p class="sub">A demo scaffold: two acts, four chapters. Tap a chapter to see it.</p>
+  <div class="key" aria-label="Key">
+    <span><i class="dot now"></i>Kyle kept (for now)</span>
+    <span><i class="dot half"></i>leading guess</span>
+    <span><i class="dot open"></i>open</span>
+  </div>
+
+  
+  <div id="acts"></div>
+  <p class="foot">Demo vault.</p>
+</div>
+
+<script>
+// Built by potentials.mjs from Gestalt.md's Chapter plan. Do not edit by hand.
+const ACTS = [
+ {name:"Act 1", q:"What starts the trouble?", chapters:"Ch 1–2", range:[1,2], drawers:[["Ultimate event","the bell cracks"]]},
+ {name:"Act 2", q:"What makes it worse?", chapters:"Ch 3–4", range:[3,4], drawers:[["Ultimate event","the last ring"]]},
+];
+// Chapters. beat: the Save the Cat beat that lands here. s: now | half | open.
+const CH = [
+ {n:1,beat:"Opening Image",s:"now",g:"Frost on the bell tower. The bell cracks on the first cold morning and Tobin hears it from the ferry.",where:"the river town, first frost",mode:"discovery",w:"Want: Tobin wants to keep the ferry running before the river freezes. Turn: the crack means no warning bell for the ice. Change: the town needs a new way to know.",nw:"the bell, the ferry"},
+ {n:2,beat:"Setup",s:"now",g:"The Warden says the bell can wait until spring. Ice on the ford says it cannot.",w:"Want: the Warden wants calm. Turn: a cart goes through the ice at the ford. Change: Tobin takes the ledger."},
+ {n:3,beat:"Catalyst",s:"half",g:"The ledger shows the bell money was spent twice.",w:"Want: Tobin wants the truth. Turn: the market thaws early and everyone is watching. Change: he names the Warden."},
+ {n:4,beat:"Break into Two",s:"open",g:""},
+];
+// Each beat's job (Save the Cat). Every chapter is checked against the job of its beat.
+// Acts follow Save the Cat: Act 2 opens at Break into Two, Act 3 at Break into Three.
+(()=>{const f=r=>(CH.find(c=>r.test(c.beat))||{}).n; const b2=f(/Break into Two/), b3=f(/Break into Three/), N=CH.length; if(b2&&b3){ACTS[0].range=[1,b2-1];ACTS[1].range=[b2,b3-1];ACTS[2].range=[b3,N]; ACTS.forEach(x=>x.chapters=`Ch ${x.range[0]}–${x.range[1]}`);}})();
+const JOB={"Opening Image":"a snapshot of the hero before the change","Setup":"the hero's world and what's missing","Theme Stated":"someone else states the lesson","Catalyst":"the event that upends the old world","Debate":"the hero resists or weighs the call","Break into Two":"the hero chooses the new world","B Story":"the relationship that carries the theme","Fun and Games":"the promise of the premise, delivered","Midpoint":"a false victory or defeat; the stakes rise","Bad Guys Close In":"outside pressure and inside doubt tighten","All Is Lost":"the low point, with a whiff of death","Dark Night of the Soul":"the hero sits with the loss","Break into Three":"the realization, and a new plan","Finale":"the new way, proven in action","Final Image":"a mirror of the opening, changed"};
+const root=document.getElementById('acts');
+// "For the writing": details already thought of that belong to this chapter, items split by " • ", label before the first colon in bold.
+const wrHtml=(wr)=>{ if(!wr) return ''; const items=wr.split(' • ').map(t=>{ const m=t.match(/^([^:]{1,40}):\s*(.*)$/); return `<li>${m?`<em>${m[1]}:</em> ${m[2]}`:t}</li>`; }).join('');
+  return `<details class="wr"><summary><span class="arr" aria-hidden="true">▸</span> For the writing</summary><ul>${items}</ul></details>`; };
+ACTS.forEach((a,ai)=>{
+  const act=document.createElement('section'); act.className='act';
+  act.innerHTML=`<div class="act-head"><b>${a.name} · ${a.chapters}</b><small>${a.q}</small></div>`+
+    a.drawers.map(d=>`<div class="drawer"><em>${d[0]}:</em> ${d[1]}</div>`).join('');
+  const sp=document.createElement('div'); sp.className='spine';
+  const [lo,hi]=a.range;
+  CH.filter(c=>c.n>=lo&&c.n<=hi).forEach(x=>{
+    const id=`c${x.n}`;
+    const row=document.createElement('div'); row.className='beat'+(x.s==='open'&&!x.w?' empty':'');
+    const parts=[]; const w=x.w||''; const re=/(Want|Turn|Change):\s*/g; let m, last=null, idx=0; const seg=[];
+    while((m=re.exec(w))){ if(last) seg.push([last,w.slice(idx,m.index).trim()]); else if(m.index>0) seg.push(['',w.slice(0,m.index).trim()]); last=m[1]; idx=re.lastIndex; }
+    if(last) seg.push([last,w.slice(idx).trim()]); else if(w) seg.push(['',w]);
+    const line=(k,v)=>v?`<span class="ln">${k?`<em>${k}:</em> `:''}${v}</span>`:'';
+    const place=x.where?line('Where',x.where+(x.mode?` <span class="mode">(${x.mode})</span>`:'')):'';
+    row.innerHTML=`<div class="ch"><span>${x.n}</span><i class="dot ${x.s} d" aria-label="${x.s}"></i></div>
+      <div class="col"><button class="b" id="${id}" aria-expanded="false"><span class="bt">${x.beat}</span>
+      <span class="gist"><span class="arr" aria-hidden="true">▸</span> ${x.g||(seg.length?'Details':'Open.')}</span>
+      <span class="det" hidden><span class="bw">${place}${seg.map(([k,v])=>line(k,v)).join('')}${line('New',x.nw)}</span>
+      </span></button>${wrHtml(x.wr)}</div>`;
+    const btn=row.querySelector('button'); const det=row.querySelector('.det'); const arr=row.querySelector('.arr');
+    const set=(open)=>{ det.hidden=!open; btn.setAttribute('aria-expanded',String(open)); arr.textContent=open?'▾':'▸'; }; btn._set=set;
+    btn.addEventListener('click',()=>set(det.hidden));
+    const wd=row.querySelector('details.wr'); if(wd){ wd.addEventListener('toggle',()=>{ wd.querySelector('summary .arr').textContent=wd.open?'▾':'▸'; }); }
+    sp.appendChild(row);
+  });
+  act.appendChild(sp); root.appendChild(act);
+});
+const inv=document.getElementById('invert');
+// Dark unless this device chose black on white. The choice is kept on the device; where it cannot be kept, the page opens dark.
+const LOOK='scaffold-look';
+const setLight=(on)=>{document.documentElement.classList.toggle('light',on);inv.setAttribute('aria-pressed',String(on));inv.textContent=on?'White on black':'Black on white';};
+let look=null; try{look=localStorage.getItem(LOOK)}catch(e){}
+setLight(look==='light');
+inv.addEventListener('click',()=>{const on=!document.documentElement.classList.contains('light'); setLight(on); try{localStorage.setItem(LOOK,on?'light':'dark')}catch(e){}});
+const all=document.getElementById('all'); all.addEventListener('click',()=>{ const open=all.getAttribute('aria-pressed')!=='true'; document.querySelectorAll('button.b').forEach(b=>b._set&&b._set(open)); all.setAttribute('aria-pressed',String(open)); all.textContent=open?'Hide all':'Show all'; });
+root.style.display='flex'; root.style.flexDirection='column'; root.style.gap='14px';
+// Open one chapter's card and bring it to the top: from the address (#c12), or when Sparrow's writing screen, which
+// shows this page beside the page being written, sends the chapter open there (Kyle, 2026-11-27).
+const openCh=(n)=>{ const b=document.getElementById('c'+n); if(!b) return; document.querySelectorAll('.beat.here').forEach(r=>r.classList.remove('here')); if(b._set) b._set(true); const r=b.closest('.beat'); r.classList.add('here'); r.scrollIntoView({block:'start'}); };
+addEventListener('message',(e)=>{ const n=e.data&&e.data.sparrowChapter; if(n) openCh(Number(n)); });
+const hm=location.hash.match(/^#c(\d+)$/); if(hm) openCh(Number(hm[1]));
+</script>

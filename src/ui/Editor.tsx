@@ -14,6 +14,7 @@ import { propDef } from '../lib/schema.ts';
 import type { DeviceFile, FileEntry, NoteRecord, Schema, VaultSource } from '../lib/types.ts';
 import { href } from '../app/route.ts';
 import { Icon } from './Icon.tsx';
+import { ScaffoldPane } from './ScaffoldPane.tsx';
 import { DONE_STATUSES } from '../lib/overview.ts';
 import { toolLinks } from '../app/pages.ts';
 import { BeatsView, type BeatsApi } from './BeatsPage.tsx';
@@ -108,7 +109,7 @@ function loadTab(): Tab {
   try { const t = readPref(TAB_KEY) as Tab | null; return t && TABS.some(([k]) => k === t) ? t : 'chat'; } catch { return 'chat'; }
 }
 
-export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[] }
+export interface EditorBook { title: string; folder: string; groups: ChapterGroup[]; archive?: FileEntry[]; scaffold?: FileEntry | null }
 
 type Saving = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
@@ -602,9 +603,15 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
 
   // Between 900 and 1200 px only one side fits beside the page, so opening one closes the other.
   const shared = () => wide(WIDE_LEFT) && !wide(WIDE_RIGHT);
-  const toggleLeft = () => { const v = !left; setLeft(v); if (wide(WIDE_LEFT)) saveSide(PREF.sideChapters, v); if (v && right && shared()) setRight(false); };
+  // The Scaffold pane (2026-11-27): the book's scaffold on the right half. It takes turns with the Team column and the
+  // chapter list, so neither changes size; opening either of them closes it.
+  const [scaf, setScafState] = useState(() => readPref(PREF.scaffoldOpen) === '1');
+  const setScaf = (v: boolean) => { setScafState(v); writePref(PREF.scaffoldOpen, v ? '1' : null); };
+  const scafOn = Boolean(scaf && !focus && book && book.scaffold);
+  const toggleLeft = () => { const v = !left; if (v && scafOn) setScaf(false); setLeft(v); if (wide(WIDE_LEFT)) saveSide(PREF.sideChapters, v); if (v && right && shared()) setRight(false); };
   const showRight = (v: boolean) => { setRight(v); if (wide(WIDE_LEFT)) saveSide(PREF.sidePanel, v); if (v && left && shared()) setLeft(false); };
-  const toggleRight = () => showRight(!right);
+  const toggleRight = () => { if (scafOn) { setScaf(false); showRight(true); } else showRight(!right); };
+  const toggleScaffold = () => setScaf(!scafOn);
   // The chapter list keeps where Kyle left it scrolled, per book, across scenes and visits to other screens (Kyle,
   // 2026-10-22: "rather than moving the left side chapter bar as i select through ... simply remember its position when
   // i leave and re-enter"). Only the very first time, with nothing remembered, does it open at the chapter he is in.
@@ -631,7 +638,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
   }, [sideShown, sideKey]);
   const openTab = (t: Tab) => { setTab(t); if (!right) showRight(true); };
   // The dimmed page behind a panel that slides over it: pressing it closes that panel.
-  const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); } };
+  const closeOver = () => { if (!wide(WIDE_LEFT)) { setLeft(false); setRight(false); setScaf(false); } };
 
   // While the page shows the team's changes or a saved draft, the writing box is not there: tools and new words go to the text.
   const readOnly = useRef(false);
@@ -1488,7 +1495,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
     </div>
   );
   return (
-     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : look.asks === 'left' ? ' asks-margin asks-left' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus ? ' right-open' : '') + (left && right && !focus ? ' has-both' : '') + (right && ((tab === 'changes' && chNote) || (tab === 'rewrite' && hasRewrite)) ? ' edit-wide' : '')} style={lookStyle(look)}>
+     <div class={'writer paper-' + look.paper + (look.asks === 'margin' ? ' asks-margin' : look.asks === 'left' ? ' asks-margin asks-left' : '') + (kb ? ' kb-up' : '') + (focus ? ' focus' : '') + (left && !focus ? ' left-open' : '') + (right && !focus && !scafOn ? ' right-open' : '') + (scafOn ? ' scaffold-open' : '') + (left && right && !focus && !scafOn ? ' has-both' : '') + (right && !scafOn && ((tab === 'changes' && chNote) || (tab === 'rewrite' && hasRewrite)) ? ' edit-wide' : '')} style={lookStyle(look)}>
       {focus && (
         <div class="focus-corner">
           {timer && timer('focus')}
@@ -1523,7 +1530,9 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status + ' · ' + num(words) + (target ? ' of ' + num(target) : '') + ' words'} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}{sitting ? <span class="bar-label"> · {(sitting > 0 ? '+' : '') + num(sitting)} today</span> : null}</span>}
         {timer && timer('bar')}
-        <button type="button" class={'bar-team' + (right ? ' on' : '')} onClick={toggleRight} aria-expanded={right}
+        {book && book.scaffold && <button type="button" class={'bar-team' + (scafOn ? ' on' : '')} onClick={toggleScaffold} aria-expanded={scafOn} aria-label="Scaffold"
+          title="Show or hide the book's scaffold on the right half of the screen"><Icon name="outline" size={20} /><span class="bar-label">Scaffold</span></button>}
+        <button type="button" class={'bar-team' + (right && !scafOn ? ' on' : '')} onClick={toggleRight} aria-expanded={right && !scafOn}
           title="Show or hide the side column: chat, the scene's card and the chapter's plan"><Icon name="spark" size={20} /><span class="bar-label always">Team</span></button>
         <div class="more-wrap">
           <button type="button" class="bar-button compact" aria-label="More" aria-expanded={moreOpen} {...keepFocus} onClick={() => setMoreOpen(!moreOpen)}><Icon name="more" /></button>
@@ -1550,7 +1559,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
         </div>
       </header>
       <div class="writer-cols">
-        {book && left && !focus && (
+        {book && left && !focus && !scafOn && (
           <aside class="writer-side" aria-label="Chapters" ref={sideRef}>
             <div class="side-head">
               <strong>{book.title}</strong>
@@ -1859,7 +1868,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           </nav>
           </>}
         </div>
-        {right && !focus && (
+        {scafOn && book && book.scaffold && <ScaffoldPane source={source} file={book.scaffold} chapter={chapterNum} title={book.title} onClose={() => setScaf(false)} />}
+        {right && !focus && !scafOn && (
           <aside class="writer-right" aria-label="Scene panel" ref={rightRef}>
             {(() => {
               const mark = (k: Tab) => (k === 'todos' && openTodos > 0 ? <span class="count-badge">{openTodos}</span>
@@ -1986,7 +1996,7 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
             </>}
           </aside>
         )}
-        {(left || right) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
+        {(left || right || scafOn) && !focus && <div class="scrim" onClick={closeOver} aria-hidden="true" />}
       </div>
     </div>
   );

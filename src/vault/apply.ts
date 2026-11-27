@@ -58,7 +58,7 @@ export function withNotes(index: VaultIndex, schema: Schema, notes: Record<strin
   out.series.forEach((s) => { const was = index.series.find((x) => x.folder === s.folder); if (was) s.rocket = was.rocket; });
   out.books.forEach((b) => {
     const was = index.books.find((x) => x.folder === b.folder);
-    if (was) { b.cover = was.cover; b.archive = was.archive; b.drafts = was.drafts; b.rewrite = was.rewrite; }
+    if (was) { b.cover = was.cover; b.scaffold = was.scaffold; b.archive = was.archive; b.drafts = was.drafts; b.rewrite = was.rewrite; }
   });
   out.team = index.team;
   // The one warning that comes from the file list and not from the notes.

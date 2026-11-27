@@ -182,6 +182,8 @@ export interface BookEntry {
   rewrite?: FileEntry[];
   /** The book's cover picture (Cover.jpg or Cover.png in the book's folder), if it has one. */
   cover?: FileEntry | null;
+  /** The book's scaffold page (Scaffold page.html in the book's folder), shown in the writing screen's Scaffold pane (2026-11-27). */
+  scaffold?: FileEntry | null;
 }
 
 export interface VaultIndex {

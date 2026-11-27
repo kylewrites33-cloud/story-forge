@@ -4,7 +4,7 @@ import type { CommitPlan, CommitResult, FileEntry, Head, SaveEntry, VaultSource 
 
 // The team's files sit in a hidden folder, which a ** pattern skips, so they get their own pattern.
 const files = {
-  ...import.meta.glob('/demo-vault/**/*.{md,json}', { query: '?raw', import: 'default', eager: true }),
+  ...import.meta.glob(['/demo-vault/**/*.{md,json}', '/demo-vault/**/Scaffold page.html'], { query: '?raw', import: 'default', eager: true }),
   ...import.meta.glob('/demo-vault/.claude/**/*.md', { query: '?raw', import: 'default', eager: true })
 } as Record<string, string>;
 
