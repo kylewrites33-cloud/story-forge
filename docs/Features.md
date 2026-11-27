@@ -2184,3 +2184,15 @@ keyboard clumsy on the iPad (it jumps to its own app), and wanted the words to l
 - Checked in a real WebKit at iPad and desktop sizes (`tests/webkit/dictate.mjs`, a pretend microphone and a pretend
   speech server): pieces go up in order with the password, finish names the count and bytes, the words land at the
   cursor and nothing else on the page changes, one Undo takes them out, a refused password says so.
+
+**Away from home (2026-11-27).** Kyle: "Please add away-from-home support to the dictation button. Keep the home address
+(https://192.168.1.166:8443) and add an away address (https://10.66.0.1:8443), with both prefilled. On each dictation,
+try home first with about a 700 ms timeout, and if it doesn't answer, switch to away by itself. Remember whichever worked
+last and try it first next time. The same dictation key works on both." Settings, Dictation now has Home address, Away
+address (through the VPN; the iPad's WireGuard switches itself on off home Wi-Fi) and Dictation key, both addresses
+prefilled. The first piece of each dictation goes to the address that answered last (home the first time) and gets 700 ms;
+with no answer it goes to the other, and the rest of that dictation follows it. If neither answers, each is tried once
+more with time to answer. A refused key is not a reason to switch. The one that answered is kept on the device
+(`sparrow.dictation-last`); Try it tries the same way and says which answered. Also from the server's notes: when finish
+answers 409 with the pieces it missed, they go again and finish is asked again (each piece is kept until the words come
+back). Checked in real WebKit with a home address that never answers.

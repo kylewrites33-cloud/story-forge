@@ -73,6 +73,7 @@ export const PREF = {
   checkShow: 'story-forge.check-show', // AI-phrase marks on the page: absent is on
   fillAuto: 'story-forge.fill-auto', // fill { } on their own
   dictation: 'sparrow.dictation', // the speech server's address and password for the mic button (2026-11-26), this device only
+  dictationLast: 'sparrow.dictation-last', // which of its two addresses answered last: away, or home when absent (2026-11-27)
   // ---- Where each page was left
   panelTab: 'story-forge.panel-tab', // the writing page's side column tab
   sideChapters: 'story-forge.chapters', // chapter list open or closed

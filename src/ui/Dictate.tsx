@@ -3,7 +3,7 @@
 // back at the cursor. While it listens the button is red; while the server writes the words down a line says so. The
 // server's address and password are in Settings, on each device (src/lib/dictation.ts).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { addressProblem, dictationReady, loadDictation, Upload } from '../lib/dictation.ts';
+import { addresses, dictationId, lastPlace, loadDictation, saveLastPlace, setupProblem, Upload } from '../lib/dictation.ts';
 import { openMic, type Mic } from '../write/mic.ts';
 import type { EditorCommands } from '../write/prose.ts';
 import { href } from '../app/route.ts';
@@ -36,6 +36,9 @@ export function useDictate(box: () => EditorCommands | null): Dictation {
     set('writing');
     try {
       const words = await u.finish();
+      // The address that answered is tried first next time (home, or away through the VPN).
+      const place = u.place();
+      if (place) saveLastPlace(place);
       if (!live.current) return;
       if (!words) { setSaid({ text: 'Nothing was heard. Press the mic and speak, then press it again.', error: true }); return; }
       const c = box();
@@ -54,12 +57,11 @@ export function useDictate(box: () => EditorCommands | null): Dictation {
 
   const start = async () => {
     const s = loadDictation();
-    if (!dictationReady(s)) { setSaid({ text: 'Dictation needs your speech server. Add its address and password in Settings, under Dictation.', error: true, settings: true }); return; }
-    const p = addressProblem(s.address, location.protocol);
+    const p = setupProblem(s, location.protocol);
     if (p) { setSaid({ text: p, error: true, settings: true }); return; }
     setSaid(null);
     set('starting');
-    const u = new Upload(s, (url, init) => fetch(url, init as RequestInit));
+    const u = new Upload(s, (url, init) => fetch(url, init as RequestInit), dictationId(), addresses(s, lastPlace()));
     up.current = u;
     try {
       mic.current = await openMic((piece) => u.send(piece), () => { if (stateRef.current === 'listening') void finish(); });

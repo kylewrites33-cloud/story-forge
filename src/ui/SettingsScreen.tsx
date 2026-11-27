@@ -5,7 +5,7 @@ import { qrSvg } from '../lib/qr.ts';
 import { DEFAULT_RATES, loadRates, readingLine, saveRates } from '../lib/home.ts';
 import { BIRDS, loadPick, playBird, savePick, type Moment } from './chirp.ts';
 import { AUTO, THEMES, loadTheme, saveTheme, type Theme } from '../lib/theme.ts';
-import { cleanAddress, loadDictation, saveDictation, tryServer } from '../lib/dictation.ts';
+import { AWAY_ADDRESS, HOME_ADDRESS, cleanAddress, lastPlace, loadDictation, saveDictation, tryServer } from '../lib/dictation.ts';
 import { loadTopRoom, saveTopRoom, type TopRoom } from '../lib/topbar.ts';
 
 const TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
@@ -234,14 +234,14 @@ function Dictation() {
     e.preventDefault();
     saveDictation(form);
     setForm(loadDictation());
-    setSaid({ ok: true, text: form.address.trim() ? 'Saved on this device.' : 'Dictation is off on this device.' });
+    setSaid({ ok: true, text: 'Saved on this device.' });
   };
   const tryIt = async () => {
     saveDictation(form);
     setForm(loadDictation());
     setTrying(true);
     setSaid(null);
-    try { setSaid({ ok: true, text: await tryServer(loadDictation(), (u, i) => fetch(u, i as RequestInit), location.protocol) }); }
+    try { setSaid({ ok: true, text: await tryServer(loadDictation(), (u, i) => fetch(u, i as RequestInit), location.protocol, lastPlace()) }); }
     catch (e) { setSaid({ ok: false, text: (e as Error).message }); }
     finally { setTrying(false); }
   };
@@ -249,14 +249,21 @@ function Dictation() {
     <>
       <h2>Dictation</h2>
       <form class="settings" onSubmit={save}>
-        <p class="hint">The mic button in the writing screen sends what you say to your speech server on the Mac mini and puts the words at the cursor. Type its address and password once on each device. They stay on this device and go only to the speech server.</p>
+        <p class="hint">The mic button in the writing screen sends what you say to your speech server on the Mac mini and puts the words at the cursor. Type your dictation key once on each device; it stays on this device and goes only to the speech server. Each dictation tries the address that worked last, and switches to the other by itself if that one does not answer.</p>
         <label>
-          Speech server address
+          Home address
           <input value={form.address} onInput={(e) => setForm({ ...form, address: (e.currentTarget as HTMLInputElement).value })} onBlur={() => setForm({ ...form, address: cleanAddress(form.address) })}
-            inputMode="url" autocomplete="off" autocapitalize="off" spellcheck={false} placeholder="https://…" />
+            inputMode="url" autocomplete="off" autocapitalize="off" spellcheck={false} placeholder={HOME_ADDRESS} />
+          <span class="hint">On your home Wi-Fi.</span>
         </label>
         <label>
-          Password
+          Away address
+          <input value={form.away} onInput={(e) => setForm({ ...form, away: (e.currentTarget as HTMLInputElement).value })} onBlur={() => setForm({ ...form, away: cleanAddress(form.away) })}
+            inputMode="url" autocomplete="off" autocapitalize="off" spellcheck={false} placeholder={AWAY_ADDRESS} />
+          <span class="hint">Through the VPN when you are away from home.</span>
+        </label>
+        <label>
+          Dictation key
           <span class="row">
             <input type={show ? 'text' : 'password'} value={form.password} onInput={(e) => setForm({ ...form, password: (e.currentTarget as HTMLInputElement).value })} autocomplete="off" autocapitalize="off" spellcheck={false} />
             <button type="button" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
@@ -264,7 +271,7 @@ function Dictation() {
         </label>
         <p class="buttons">
           <button type="submit" class="primary">Save</button>
-          <button type="button" onClick={tryIt} disabled={trying || !form.address.trim()}>{trying ? 'Trying…' : 'Try it'}</button>
+          <button type="button" onClick={tryIt} disabled={trying || !form.password.trim()}>{trying ? 'Trying…' : 'Try it'}</button>
         </p>
         {said && <p class={said.ok ? 'ok' : 'error'} role="status">{said.text}</p>}
       </form>
