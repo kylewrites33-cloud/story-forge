@@ -78,6 +78,7 @@ export const PREF = {
   panelTab: 'story-forge.panel-tab', // the writing page's side column tab
   sideChapters: 'story-forge.chapters', // chapter list open or closed
   sidePanel: 'story-forge.scene-panel', // side column open or closed
+  scaffoldOpen: 'sparrow.scaffold-open', // the Scaffold pane open or closed (2026-11-27)
   sideTools: 'story-forge.side-tools',
   shownScenes: 'story-forge.shown-scenes.', // chapters whose scenes show in the list, per book
   chapterListScroll: 'story-forge.chapter-list-scroll.', // per book

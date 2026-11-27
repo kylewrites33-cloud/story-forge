@@ -1095,3 +1095,17 @@ a.button.talk { gap: 6px; padding: 6px 14px; }
 .tool-said.unplaced blockquote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--surface); white-space: pre-wrap; }
 .tool-said .job-dot { display: inline-block; }
 .writer-tools .tool .count-badge { margin-left: 2px; }
+
+/* The Scaffold pane (2026-11-27): the book's scaffold on the right half of the screen, so the page and the scaffold
+   meet in the middle, as in the iPad's split view. The Team column keeps its own 376 px; the two take turns. */
+.writer-scaffold {
+  flex: none; width: calc(50vw - 18px); display: flex; flex-direction: column; min-height: 0; padding: 10px 10px 0;
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.writer-scaffold .hint { padding: 0 6px; color: var(--muted); }
+.scaffold-frame { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; display: block; background: var(--surface); }
+/* Too narrow to share the screen (an iPad held upright, or Sparrow in half of one): it slides over the page. */
+@media (max-width: 899px) {
+  .writer-scaffold { position: absolute; z-index: 3; top: 0; bottom: 12px; right: 12px; width: min(640px, calc(100% - 24px)); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
+  .scaffold-open .scrim { display: block; }
+}

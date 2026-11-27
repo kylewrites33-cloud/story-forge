@@ -34,6 +34,7 @@ src/lib/bookstages.ts    the Overview's six stages (market research to publishin
 src/lib/stagetimes.ts    each stage's start and end days on the book note, how long each took, and the estimated publish date
 src/lib/home.ts          home page helpers: recent scenes, book sort, cover patterns, labels, reading time, filter, outline
 src/lib/search.ts        the Chapter Grid search: chapter and scene numbers, chapter titles, codex names, near misses, best first
+src/lib/scaffold.ts      the Scaffold pane's page: the vault's scaffold page with the app's colours (scaffoldDoc), the message that opens a chapter
 src/lib/covers.ts        book covers: shrink on the device, the two files to save (coverFiles: the full-size picture in Cover/ and Cover.jpg), keep on the device by blob sha
 src/lib/page.ts          the writing page's look per device (size, spacing, width, font, paper)
 src/lib/docx.ts          Export to Word: the book in reading order as a .docx made on the device, its file name, its backup copy ready to save (backupFile)
@@ -159,6 +160,7 @@ src/ui/IdeasBoard.tsx    the Ideas board: piles, cards, keep, later, drop, reaso
 src/ui/StoryBoards.tsx   the boards for every other proposal type
 src/ui/SettingsScreen.tsx  the Settings page: connection, colours, reading rates, sounds
 src/ui/Editor.tsx        the full-screen writing screen
+src/ui/ScaffoldPane.tsx  the writing screen's Scaffold pane: the book's scaffold page in a sealed frame on the right half, kept on the device by blob sha
 src/app/                 the frame around the pages (2026-11-11, step 2 of the code structure redesign)
 src/app/pages.ts         THE ONE LIST OF PAGES: each page's id, name, address, room, place under Book tools, what it tells the team chat, how often it wants the vault read again (waiting on the team is not a page's business: src/team/asks.ts); the rooms; `pageOf(route)`. A new page is one entry here and one in screens.tsx
 src/app/screens.tsx      what each page of the list draws, one entry a page (the compiler fails if one is missing); `Actions`, everything a page can ask the app to do; `AppCtx`, the app as a page sees it
@@ -185,5 +187,5 @@ src/vault/words.ts       the writing page's own saves through the saving system,
 src/vault/push.ts        sending the outbox up: one action one save, waiting ones together, made again if the vault moved; a new title's file rename and what follows it
 src/vault/choice.ts      a choice on a board (Choice: keep, later, drop, Rewrite, an edit to a card, a card dragged) and what it changes on a note
 tests/epubcheck/         the W3C's EPUBCheck on the Kindle files the app makes (run.sh downloads the checker; make.ts makes the demo book and a book of hard cases), in the GitHub tests
-tests/webkit/            page checks in a real WebKit, run on every pull request (the `webkit` job): run.sh; fake.mjs (a pretend GitHub that starts from demo-vault/); box, live, chapters, edit, echo (a repeat card lights its other place), light, watch, beats (notes typed in Beats mode stay out of the scene), progress (a book's words, words typed and first-draft chapters done), centre (the text stays in the middle of the page beside a left-margin note), dictate (the mic button against a pretend microphone and speech server); trial-text.mjs and light-measure.mjs are their helpers
+tests/webkit/            page checks in a real WebKit, run on every pull request (the `webkit` job): run.sh; fake.mjs (a pretend GitHub that starts from demo-vault/); box, live, chapters, edit, echo (a repeat card lights its other place), light, watch, beats (notes typed in Beats mode stay out of the scene), progress (a book's words, words typed and first-draft chapters done), centre (the text stays in the middle of the page beside a left-margin note), dictate (the mic button against a pretend microphone and speech server), scaffold (the Scaffold pane on the right half, at the chapter being written, on the demo vault); trial-text.mjs and light-measure.mjs are their helpers
 src/styles/index.css     THE STYLESHEET, as its parts in the order they apply: app.css (the frame, boards, the writing page), themes/colours.css (the eleven colour themes, one line of values each, and how loud their buttons are), themes/square-skins.css then one file per skin (marigold, lofi, retro, typewriter, library, pebble, prism: a theme with its own shapes and fonts), app-after-themes.css (pages added since; some rules count on coming after the themes). tests/theme.test.ts holds the order and that a skin's file styles only its own theme

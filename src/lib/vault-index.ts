@@ -96,7 +96,7 @@ export async function buildIndex(opts: BuildOptions): Promise<VaultIndex> {
   });
   const index = assemble(schema, records, opts.phase ?? 1);
   index.series.forEach((s) => { s.rocket = rocketFiles(opts.files, s.folder); });
-  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); b.archive = archiveFiles(opts.files, b.folder); b.drafts = savedDrafts(opts.files, b.folder); b.rewrite = rewriteFiles(opts.files, b.folder); });
+  index.books.forEach((b) => { b.cover = coverFile(opts.files, b.folder); b.scaffold = scaffoldFile(opts.files, b.folder); b.archive = archiveFiles(opts.files, b.folder); b.drafts = savedDrafts(opts.files, b.folder); b.rewrite = rewriteFiles(opts.files, b.folder); });
   index.team = await readTeam(opts.files, read, (opts.previous && opts.previous.team) || undefined);
   return index;
 }
@@ -115,6 +115,12 @@ export function coverFile(files: FileEntry[], bookFolder: string): FileEntry | n
     if (f) return f;
   }
   return null;
+}
+
+/** A book's scaffold page: Scaffold page.html right in the book's folder (the Story Specialist builds it; skill potentials). */
+export const SCAFFOLD_NAME = 'Scaffold page.html';
+export function scaffoldFile(files: FileEntry[], bookFolder: string): FileEntry | null {
+  return files.find((x) => x.path === bookFolder + '/' + SCAFFOLD_NAME) || null;
 }
 
 /** Sort scenes the way sf does: by order, then chapter, then ID number. */
