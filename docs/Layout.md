@@ -104,7 +104,7 @@ src/lib/listen.ts        Listen: sentences to say with their place on the page, 
 src/ui/CheckPanel.tsx    the Check tab beside the page (and Whole chapter's Check column)
 src/ui/OptionsPanel.tsx  the Options strip under the tool row and the Options tab
 src/ui/Listen.tsx        the Listen button and the bar under the tool row while it reads
-src/lib/dictation.ts     Dictate (2026-11-26): the speech server's address and password on this device, sound to raw PCM pieces, the upload and the finish, how dictated words fit beside the text
+src/lib/dictation.ts     Dictate (2026-11-26): the speech server's home and away addresses and key on this device, which answered last, sound to raw PCM pieces, the upload and the finish, how dictated words fit beside the text
 src/write/mic.ts         Dictate's microphone: the browser's sound turned into PCM pieces as Kyle speaks (one sound context for the page)
 src/ui/Dictate.tsx       the mic button for the tool rows, and the line under them while it listens or writes the words down
 src/lib/overview.ts      a book's Overview: numbers, what waits on Kyle, the Release runway, jobs seen on this device

@@ -32,6 +32,9 @@ const speechServer = http.createServer((req, res) => {
     res.writeHead(200, { ...scors, 'content-type': 'application/json' }); res.end(JSON.stringify({ text: 'and then the slime sneezed.' }));
   });
 }).listen(4499);
+// A home address that never answers (away from home): it takes the request and says nothing.
+let silentHits = 0;
+const silent = http.createServer((req) => { silentHits++; req.resume(); }).listen(4497);
 const xvfb = spawn('Xvfb', [':99', '-screen', '0', '1600x1200x24'], { stdio: 'ignore' });
 await sleep(800);
 const driver = spawn('WebKitWebDriver', ['--port=4477'], { env: { ...process.env, DISPLAY: ':99' }, stdio: 'ignore' });
@@ -44,7 +47,7 @@ const wd = async (method, p, body) => {
 };
 let sid = '', fail = 0;
 const ok = (c, what, more = '') => { if (!c) fail++; console.log((c ? 'ok   ' : 'FAIL ') + what + (more ? ' ' + more : '')); };
-const done = async (code) => { try { if (sid) await wd('DELETE', '/session/' + sid); } catch {} driver.kill(); xvfb.kill(); server.close(); speechServer.close(); process.exit(code); };
+const done = async (code) => { try { if (sid) await wd('DELETE', '/session/' + sid); } catch {} driver.kill(); xvfb.kill(); server.close(); speechServer.close(); silent.close(); process.exit(code); };
 try {
   const s = await wd('POST', '/session', { capabilities: { alwaysMatch: { browserName: 'MiniBrowser', 'webkitgtk:browserOptions': { binary: '/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1/MiniBrowser', args: ['--automation', '--autoplay-policy=allow'] } } } });
   sid = s.sessionId;
@@ -88,7 +91,7 @@ try {
     await sleep(300);
     const none = await js("const p = document.querySelector('.writer-page .tool-said'); return p ? p.innerText : ''");
     ok(/Settings/.test(none) && !!(await js("return !!document.querySelector('.writer-page .tool-said a[href=\"#/settings\"]')")), at + ': with no speech server the mic says to set one up in Settings', JSON.stringify(none));
-    await js("localStorage.setItem('sparrow.dictation', JSON.stringify({ address: 'http://localhost:4499', password: 'secret-pw' })); return true");
+    await js("localStorage.setItem('sparrow.dictation', JSON.stringify({ address: 'http://localhost:4499', away: 'http://localhost:4497', password: 'secret-pw' })); return true");
     // Put the cursor at the end of the first paragraph, then dictate.
     await js("const l = document.querySelector('.writer-page .cm-content .cm-line'); document.querySelector('.writer-page .cm-content').focus(); const r = document.createRange(); r.selectNodeContents(l); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true");
     await sleep(300);
@@ -116,6 +119,36 @@ try {
     await click('.writer-bar .tool', 'Undo');
     await sleep(300);
     ok((await text()) === before, at + ': one Undo takes the dictated words out');
+    // Away from home: home does not answer, so the dictation moves to the away address by itself and remembers it.
+    await js("localStorage.setItem('sparrow.dictation', JSON.stringify({ address: 'http://localhost:4497', away: 'http://localhost:4499', password: 'secret-pw' })); localStorage.removeItem('sparrow.dictation-last'); return true");
+    await js("const l = document.querySelector('.writer-page .cm-content .cm-line'); document.querySelector('.writer-page .cm-content').focus(); const r = document.createRange(); r.selectNodeContents(l); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true");
+    speech = { pieces: [], finish: null, auth: [], refuse: false };
+    silentHits = 0;
+    await js(fakeMic);
+    await click('.writer-bar .dictate-button.' + 'tool');
+    await listening('the mic listening, away');
+    await sleep(2200);
+    await click('.writer-bar .dictate-button.' + 'tool');
+    await until("return !document.querySelector('.writer-bar .dictate-button.writing') && !document.querySelector('.writer-bar .dictate-button.listening')", 'the words back, away', 15000);
+    await sleep(300);
+    ok(silentHits === 1 && speech.pieces.length >= 2 && speech.pieces[0].url.endsWith('/chunk/0'), at + ': home did not answer, so every piece went to the away address', silentHits + ' ' + speech.pieces.length);
+    ok((await text()).split('\n')[0] === firstLine + ' And then the slime sneezed.', at + ': the words came back from away');
+    ok((await js("return localStorage.getItem('sparrow.dictation-last')")) === 'away', at + ': away is remembered');
+    await click('.writer-bar .tool', 'Undo');
+    await sleep(300);
+    speech = { pieces: [], finish: null, auth: [], refuse: false };
+    silentHits = 0;
+    await js(fakeMic);
+    await click('.writer-bar .dictate-button.' + 'tool');
+    await listening('the mic listening, away again');
+    await sleep(1400);
+    await click('.writer-bar .dictate-button.' + 'tool');
+    await until("return !document.querySelector('.writer-bar .dictate-button.writing') && !document.querySelector('.writer-bar .dictate-button.listening')", 'the words back, away again', 15000);
+    ok(silentHits === 0 && speech.finish, at + ': the next dictation goes straight to away', String(silentHits));
+    await click('.writer-bar .tool', 'Undo');
+    await sleep(300);
+    ok((await text()) === before, at + ': Undo, page back as it was');
+    await js("localStorage.setItem('sparrow.dictation', JSON.stringify({ address: 'http://localhost:4499', away: 'http://localhost:4497', password: 'secret-pw' })); localStorage.removeItem('sparrow.dictation-last'); return true");
     // A refused password.
     speech = { pieces: [], finish: null, auth: [], refuse: true };
     await js(fakeMic);
@@ -125,7 +158,7 @@ try {
     await click('.writer-bar .dictate-button.' + 'tool');
     await until("const p = document.querySelector('.writer-page .tool-said.error'); return p && p.innerText", 'the refusal', 15000);
     const refused = await js("return document.querySelector('.writer-page .tool-said.error').innerText");
-    ok(/password/.test(refused), at + ': a refused password says so plainly', JSON.stringify(refused));
+    ok(/dictation key/.test(refused), at + ': a refused password says so plainly', JSON.stringify(refused));
     ok((await text()) === before, at + ': and the page is unchanged');
     ok(!(await js("return document.documentElement.scrollWidth > window.innerWidth + 1")), at + ': no sideways scroll');
     await wd('GET', '/session/' + sid + '/screenshot').then((b64) => import('node:fs').then((fs) => fs.writeFileSync('dictate-wk-' + w + '.png', Buffer.from(b64, 'base64'))));
