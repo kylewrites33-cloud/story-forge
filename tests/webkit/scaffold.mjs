@@ -30,8 +30,8 @@ try {
     await wd('POST', '/session/' + sid + '/url', { url: APP + scene });
     await js("try { localStorage.setItem('story-forge.theme', 'violet-night'); localStorage.removeItem('sparrow.scaffold-open'); } catch (e) {} return true;");
     await wd('POST', '/session/' + sid + '/refresh', {});
-    await until("return document.querySelector('.cm-content') && [...document.querySelectorAll('button')].some((b) => b.getAttribute('aria-label') === 'Scaffold')", 'the Scaffold button');
-    await click('Scaffold');
+    await until("return document.querySelector('.cm-content') && [...document.querySelectorAll('button')].some((b) => b.getAttribute('aria-label') === 'Outline')", 'the Outline button');
+    await click('Outline');
     await until("return document.querySelector('.scaffold-frame')", 'the scaffold frame');
     await sleep(900);
     const g = await js("const v = innerWidth, f = document.querySelector('.writer-scaffold').getBoundingClientRect(), p = document.querySelector('.writer-page').getBoundingClientRect(); return { v, left: f.left, right: f.right, pr: p.right, side: !!document.querySelector('.writer-side'), team: !!document.querySelector('.writer-right') };");
@@ -56,7 +56,7 @@ try {
     await sleep(500);
     const t = await js("const r = document.querySelector('.writer-right'); return { w: r ? Math.round(r.getBoundingClientRect().width) : 0, scaf: !!document.querySelector('.writer-scaffold') };");
     ok(t.w === 376 && !t.scaf, 'Team swaps in at its own 376 px and the scaffold closes', JSON.stringify(t));
-    await click('Scaffold');
+    await click('Outline');
     await until("return document.querySelector('.scaffold-frame') && !document.querySelector('.writer-right')", 'scaffold back');
     await wd('POST', '/session/' + sid + '/refresh', {});
     await until("return document.querySelector('.cm-content')", 'page again');

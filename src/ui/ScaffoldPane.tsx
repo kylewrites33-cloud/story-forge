@@ -33,7 +33,7 @@ export function ScaffoldPane({ source, file, chapter, title, onClose }: {
     let live = true;
     setProblem('');
     load(source, file).then((t) => { if (live) setHtml(t); })
-      .catch(() => { if (live) setProblem('The scaffold could not be opened. Check the connection and press Scaffold again.'); });
+      .catch(() => { if (live) setProblem('The outline could not be opened. Check the connection and press Outline again.'); });
     return () => { live = false; };
   }, [source, file.sha]);
   const doc = useMemo(() => (html == null ? '' : scaffoldDoc(html, colours())), [html]);
@@ -41,15 +41,15 @@ export function ScaffoldPane({ source, file, chapter, title, onClose }: {
   const send = () => { const w = frame.current && frame.current.contentWindow; if (w && chapter != null) w.postMessage(chapterMessage(chapter), '*'); };
   useEffect(send, [chapter]);
   return (
-    <aside class="writer-scaffold" aria-label="Scaffold">
+    <aside class="writer-scaffold" aria-label="Outline">
       <div class="side-head">
-        <strong>{chapter != null ? 'Scaffold · chapter ' + chapter : 'Scaffold'}</strong>
+        <strong>{chapter != null ? 'Outline · chapter ' + chapter : 'Outline'}</strong>
         <button type="button" class="icon-button" onClick={onClose} aria-label="Close the scaffold"><Icon name="close" /></button>
       </div>
       {problem
         ? <p class="hint">{problem}</p>
         : html == null
-          ? <p class="hint">Opening the scaffold…</p>
+          ? <p class="hint">Opening the outline…</p>
           /* Sealed: the page runs its own buttons but cannot reach the app or anything the app keeps. */
           : <iframe ref={frame} class="scaffold-frame" title={title + ' scaffold'} sandbox="allow-scripts" srcdoc={doc} onLoad={send} />}
     </aside>
