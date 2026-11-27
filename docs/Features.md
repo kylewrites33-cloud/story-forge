@@ -2218,3 +2218,5 @@ story scaffold in the same way". He said "go" to the design the same day.
 - Kept on the device by blob sha, so it opens offline and downloads again only when the Story Specialist changes it.
   Open or closed is kept per device (`sparrow.scaffold-open`).
 - Checked in real WebKit at 1366x1024, 1180x820 and 1600x1000 (tests/webkit/scaffold.mjs).
+- The button is called **Outline** (Kyle, 2026-11-27: "can you change button text from scaffold to outline"); the pane's
+  header says "Outline · chapter N". The vault file keeps its name, `Scaffold page.html`.

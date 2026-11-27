@@ -1530,8 +1530,8 @@ export function Editor({ source, schema, note, next, prev, nextMentions, book, b
           ? <span class={'save-chip ' + beatsChip.cls} role="status">{beatsChip.cls === 'good' && <Icon name="check" size={16} />}{beatsChip.text}</span>
           : <span class={'save-chip ' + chip.cls} title={status + ' · ' + num(words) + (target ? ' of ' + num(target) : '') + ' words'} role="status">{chip.cls === 'good' && <Icon name="check" size={16} />}{chip.text}{sitting ? <span class="bar-label"> · {(sitting > 0 ? '+' : '') + num(sitting)} today</span> : null}</span>}
         {timer && timer('bar')}
-        {book && book.scaffold && <button type="button" class={'bar-team' + (scafOn ? ' on' : '')} onClick={toggleScaffold} aria-expanded={scafOn} aria-label="Scaffold"
-          title="Show or hide the book's scaffold on the right half of the screen"><Icon name="outline" size={20} /><span class="bar-label">Scaffold</span></button>}
+        {book && book.scaffold && <button type="button" class={'bar-team' + (scafOn ? ' on' : '')} onClick={toggleScaffold} aria-expanded={scafOn} aria-label="Outline"
+          title="Show or hide the book's outline (its scaffold) on the right half of the screen"><Icon name="outline" size={20} /><span class="bar-label">Outline</span></button>}
         <button type="button" class={'bar-team' + (right && !scafOn ? ' on' : '')} onClick={toggleRight} aria-expanded={right && !scafOn}
           title="Show or hide the side column: chat, the scene's card and the chapter's plan"><Icon name="spark" size={20} /><span class="bar-label always">Team</span></button>
         <div class="more-wrap">
